@@ -78,7 +78,7 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 
 ## 🧠 AI Integration
 
-Uses **Claude Sonnet** (`claude-sonnet-4-20250514`) via Anthropic API.
+Uses **Claude Sonnet** (`claude-sonnet-6`) via Anthropic API.
 
 The AI analyzes plain-English financial descriptions and returns structured JSON with:
 - Financial health score (0–100)
@@ -94,7 +94,7 @@ The edge function returns structured errors with failure stage (`parse_error`, `
 
 ## 📦 Tech Stack
 
-- **Expo** ~53.0.0
+- **Expo** ~54.0.0
 - **React Native** 0.79.6
 - **TypeScript**
 - **React Navigation** v7 (Native Stack + Bottom Tabs)

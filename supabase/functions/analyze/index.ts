@@ -147,12 +147,12 @@ async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any
           'x-api-key': ANTHROPIC_API_KEY,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2500,
-          system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
-          messages,
-        }),
+body: JSON.stringify({
+  model: 'claude-sonnet-6',
+  max_tokens: 2500,
+  system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
+  messages,
+}),
       });
 
       if (response.status === 429) {
