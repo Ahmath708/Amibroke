@@ -52,12 +52,13 @@ export default function ProcessingScreen({ navigation, route }: Props) {
       trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
       setDone(true);
       setTimeout(() => navigation.replace('Results', { analysis, userInput }), 400);
-    } catch (e) {
-      clearTimeout(timeout);
-      const msg = e instanceof Error ? e.message : 'Analysis failed. Please try again.';
-      trackError('analysis_failed', msg, 'ProcessingScreen');
-      setError(msg);
-    }
+} catch (e) {
+  clearTimeout(timeout);
+  const msg = e instanceof Error ? e.message : 'Analysis failed. Please try again.';
+  trackError('analysis_failed', msg, 'ProcessingScreen');
+  // Navigate to home/dashboard on analysis error
+  navigation.replace('Home');
+}
   }, [userInput, tone, user, navigation]);
 
   useEffect(() => {
