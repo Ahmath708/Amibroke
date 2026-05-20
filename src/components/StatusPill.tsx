@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Radius, Typography } from '../theme/colors';
+import { Colors, Radius, Typography } from '@/theme/colors';
 
 type Variant = 'good' | 'warning' | 'danger' | 'info' | 'premium' | 'muted';
 

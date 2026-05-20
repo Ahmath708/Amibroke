@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList, DebtItem } from '../types';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
-import GlassCard from '../components/GlassCard';
-import StatusPill from '../components/StatusPill';
+import { RouteProp, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList, DebtItem } from '@/types';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import GlassCard from '@/components/GlassCard';
+import StatusPill from '@/components/StatusPill';
+import LoadingState from '@/components/LoadingState';
+import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
 
 type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
 
@@ -32,7 +35,26 @@ function calcPayoff(debts: DebtItem[], extraMonthly: number, strategy: Strategy)
 
 export default function DebtPayoffScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
   const debts = route.params?.debts?.length > 0 ? route.params.debts : DEFAULT_DEBTS;
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const tier = await getPurchaseTier();
+      if (hasAccessTo(tier, 'deep_dive')) {
+        setAuthorized(true);
+      } else {
+        navigation.replace('Paywall');
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <LoadingState />;
+  if (!authorized) return null;
+
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);
 
@@ -147,49 +169,49 @@ export default function DebtPayoffScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: 16 },
-  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
-  summaryCard: { flex: 1, padding: 12, alignItems: 'center' },
-  summaryNum: { fontFamily: Typography.fonts.heading, fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  summaryLabel: { fontFamily: Typography.fonts.body, fontSize: 11, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  summaryRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xxl },
+  summaryCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },
+  summaryNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
+  summaryLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
   sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: 13, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8,
+    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
   },
   segmentRow: {
     flexDirection: 'row', backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.md, padding: 3, marginBottom: 10, gap: 2,
+    borderRadius: Radius.md, padding: Spacing.xs, marginBottom: Spacing.md, gap: 2,
   },
-  segment: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: Radius.sm },
+  segment: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm },
   segmentActive: { backgroundColor: Colors.groupedRow },
-  segmentText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Colors.textSecondary },
+  segmentText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
   segmentTextActive: { color: Colors.textPrimary, fontFamily: Typography.fonts.bodyMed },
-  stratDesc: { padding: 12, marginBottom: 24 },
-  stratDescText: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
-  extraGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  stratDesc: { padding: Spacing.md, marginBottom: Spacing.xxl },
+  stratDescText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
+  extraGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.xxl },
   extraBtn: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.pill,
     backgroundColor: Colors.backgroundSecondary,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
   extraBtnActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
-  extraBtnText: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textSecondary },
+  extraBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   extraBtnTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   debtGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
   debtSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 54 },
-  debtRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  debtRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
   debtPriority: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 28, height: 28, borderRadius: Radius.lg,
     backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
   },
-  debtPriorityNum: { fontFamily: Typography.fonts.heading, fontSize: 13, fontWeight: '700', color: Colors.primary },
-  debtInfo: { flex: 1, gap: 5 },
-  debtHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  debtName: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.textPrimary, fontWeight: '500' },
+  debtPriorityNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.footnote.fontSize, fontWeight: '700', color: Colors.primary },
+  debtInfo: { flex: 1, gap: Spacing.xs },
+  debtHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
+  debtName: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   debtStats: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  debtStat: { fontFamily: Typography.fonts.body, fontSize: 12, color: Colors.textSecondary },
-  debtStatSep: { color: Colors.textMuted, fontSize: 12 },
+  debtStat: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+  debtStatSep: { color: Colors.textMuted, fontSize: Typography.caption1.fontSize },
 });

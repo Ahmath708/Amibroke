@@ -17,7 +17,10 @@ import {
 } from '@expo-google-fonts/inter';
 
 import AppNavigator from './src/navigation/AppNavigator';
+import { AuthProvider } from './src/context/AuthContext';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/theme/colors';
+import { initAnalytics } from './src/services/analytics';
 
 // Keep the splash screen visible while fonts load
 SplashScreen.preventAutoHideAsync();
@@ -26,7 +29,7 @@ export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
-    async function loadFonts() {
+    async function bootstrap() {
       try {
         await Font.loadAsync({
           SpaceGrotesk_400Regular,
@@ -45,7 +48,8 @@ export default function App() {
       }
     }
 
-    loadFonts();
+    bootstrap();
+    initAnalytics().catch(() => {});
   }, []);
 
   if (!fontsLoaded) {
@@ -59,6 +63,8 @@ export default function App() {
         backgroundColor={Colors.background}
         translucent
       />
+      <AuthProvider>
+      <ErrorBoundary>
       <NavigationContainer
         theme={{
           dark: true,
@@ -80,6 +86,8 @@ export default function App() {
       >
         <AppNavigator />
       </NavigationContainer>
+      </ErrorBoundary>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

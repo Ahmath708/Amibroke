@@ -1,22 +1,15 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
-import StatusPill from '../components/StatusPill';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import StatusPill from '@/components/StatusPill';
+import { AFFILIATE_PRODUCTS, trackAffiliateClick } from '@/services/affiliate';
+import { trackEvent } from '@/services/analytics';
 
-type Category = 'all' | 'savings' | 'cards' | 'investing' | 'tools';
-
-const PRODUCTS = [
-  { id: '1', name: 'Marcus by Goldman', category: 'savings', icon: '🏦', apy: '5.50% APY', badge: 'Top Pick', desc: 'High-yield savings. No fees. FDIC insured up to $250k.', cta: 'Open Account', commission: '$30' },
-  { id: '2', name: 'Fidelity Investments', category: 'investing', icon: '📈', apy: '$0 fees', badge: 'Best Free', desc: 'Zero-fee index funds and fractional shares from $1.', cta: 'Start Investing', commission: '$25' },
-  { id: '3', name: 'YNAB', category: 'tools', icon: '📊', apy: '34-day free', badge: 'Fan Fave', desc: 'Zero-based budgeting app. Average user saves $600 in month 1.', cta: 'Try Free', commission: '$15' },
-  { id: '4', name: 'Citi Double Cash', category: 'cards', icon: '💳', apy: '2% cashback', badge: 'No Annual Fee', desc: 'Simple flat 2% on everything. No categories to track.', cta: 'Apply Now', commission: '$75' },
-  { id: '5', name: 'Betterment', category: 'investing', icon: '🤖', apy: '0.25%/yr', badge: 'Robo-Advisor', desc: 'Automated investing with tax-loss harvesting and rebalancing.', cta: 'Get Started', commission: '$20' },
-  { id: '6', name: 'Ally Bank', category: 'savings', icon: '🐷', apy: '4.75% APY', badge: 'Fan Fave', desc: 'Online bank with no minimums, great rates, and 24/7 support.', cta: 'Open Account', commission: '$30' },
-];
+type Category = 'all' | 'savings' | 'cards' | 'investing' | 'tools' | 'insurance';
 
 const TABS: { key: Category; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -24,13 +17,28 @@ const TABS: { key: Category; label: string }[] = [
   { key: 'cards', label: 'Cards' },
   { key: 'investing', label: 'Investing' },
   { key: 'tools', label: 'Tools' },
+  { key: 'insurance', label: 'Insurance' },
 ];
 
 export default function AffiliateScreen() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Category>('all');
 
-  const filtered = tab === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.category === tab);
+  const filtered = tab === 'all' ? AFFILIATE_PRODUCTS : AFFILIATE_PRODUCTS.filter((p) => p.category === tab);
+
+  const handleProductClick = async (product: typeof AFFILIATE_PRODUCTS[0]) => {
+    await trackAffiliateClick(product.id);
+    await trackEvent('affiliate_product_clicked', {
+      product_id: product.id,
+      product_name: product.name,
+      category: product.category,
+      commission: product.commission,
+    });
+
+    Linking.openURL(product.affiliateUrl).catch(() => {
+      Alert.alert('Could not open link', 'Please try again later.');
+    });
+  };
 
   return (
     <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
@@ -78,12 +86,15 @@ export default function AffiliateScreen() {
                 <View style={styles.productInfo}>
                   <View style={styles.productHeader}>
                     <Text style={styles.productName}>{p.name}</Text>
-                    <StatusPill label={p.badge} variant="premium" />
+                    <StatusPill label={p.featured ? 'Featured' : p.category} variant="premium" />
                   </View>
-                  <Text style={[styles.productApy, { color: Colors.success }]}>{p.apy}</Text>
-                  <Text style={styles.productDesc}>{p.desc}</Text>
-                  <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.75}>
-                    <Text style={styles.ctaBtnText}>{p.cta} →</Text>
+                  <Text style={[styles.productApy, { color: Colors.success }]}>{p.description}</Text>
+                  <TouchableOpacity
+                    style={styles.ctaBtn}
+                    activeOpacity={0.75}
+                    onPress={() => handleProductClick(p)}
+                  >
+                    <Text style={styles.ctaBtnText}>Learn More →</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -98,7 +109,7 @@ export default function AffiliateScreen() {
         >
           <Text style={styles.earnTitle}>💰 Earn on referrals</Text>
           <Text style={styles.earnBody}>
-            Share these products and earn $15–75 per signup. Visit the Creator Dashboard to track your earnings.
+            Share these products and earn commissions per signup. Visit the Creator Dashboard to track your earnings.
           </Text>
         </LinearGradient>
       </ScrollView>
@@ -108,44 +119,44 @@ export default function AffiliateScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: 16 },
-  intro: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 12 },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  intro: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
   disclaimer: {
-    backgroundColor: Colors.infoContainer, borderRadius: Radius.md, padding: 10, marginBottom: 16,
+    backgroundColor: Colors.infoContainer, borderRadius: Radius.md, padding: Spacing.sm + 2, marginBottom: Spacing.lg,
   },
-  disclaimerText: { fontFamily: Typography.fonts.body, fontSize: 12, color: Colors.secondary, lineHeight: 17 },
-  tabScroll: { marginHorizontal: -Spacing.xl, marginBottom: 20 },
-  tabContent: { paddingHorizontal: Spacing.xl, gap: 8 },
+  disclaimerText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.secondary, lineHeight: 17 },
+  tabScroll: { marginHorizontal: -Spacing.xl, marginBottom: Spacing.xl },
+  tabContent: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },
   tabBtn: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.pill,
     backgroundColor: Colors.backgroundSecondary,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
   tabBtnActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
-  tabText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Colors.textSecondary },
+  tabText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
   tabTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   productGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: 20,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: Spacing.xl,
   },
   productSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 60 },
-  productRow: { flexDirection: 'row', padding: 14, gap: 12 },
+  productRow: { flexDirection: 'row', padding: Spacing.md, gap: Spacing.md },
   productIcon: {
-    width: 44, height: 44, borderRadius: 10,
+    width: 44, height: 44, borderRadius: Radius.md,
     backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center',
   },
-  productIconText: { fontSize: 22 },
-  productInfo: { flex: 1, gap: 4 },
-  productHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  productName: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.textPrimary, fontWeight: '500' },
-  productApy: { fontFamily: Typography.fonts.bodySemi, fontSize: 13, fontWeight: '600' },
-  productDesc: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
-  ctaBtn: { alignSelf: 'flex-start', marginTop: 4 },
-  ctaBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: 14, color: Colors.tint, fontWeight: '500' },
+  productIconText: { fontSize: Typography.title2.fontSize },
+  productInfo: { flex: 1, gap: Spacing.xs },
+  productHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
+  productName: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
+  productApy: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, fontWeight: '600' },
+  productDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
+  ctaBtn: { alignSelf: 'flex-start', marginTop: Spacing.xs },
+  ctaBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.tint, fontWeight: '500' },
   earnBanner: {
-    borderRadius: Radius.lg, padding: 16, gap: 6,
+    borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.xs + 2,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  earnTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: 16, color: Colors.textPrimary, fontWeight: '600' },
-  earnBody: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  earnTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, fontWeight: '600' },
+  earnBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19 },
 });

@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 export default function PrivacyPolicyScreen() {
   const insets = useSafeAreaInsets();
@@ -105,25 +105,25 @@ export default function PrivacyPolicyScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: 16 },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   lastUpdated: {
     fontFamily: Typography.fonts.body,
-    fontSize: 13,
+    fontSize: Typography.footnote.fontSize,
     color: Colors.textMuted,
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   heading: {
     fontFamily: Typography.fonts.headingSemi,
     fontSize: 18,
     color: Colors.textPrimary,
-    marginTop: 24,
-    marginBottom: 8,
+    marginTop: Spacing.xxl,
+    marginBottom: Spacing.sm,
   },
   paragraph: {
     fontFamily: Typography.fonts.body,
-    fontSize: 15,
+    fontSize: Typography.subhead.fontSize,
     color: Colors.textSecondary,
     lineHeight: 24,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
 });

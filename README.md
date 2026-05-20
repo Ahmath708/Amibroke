@@ -11,12 +11,21 @@ A viral Gen Z fintech app built with Expo + TypeScript. Drop your financial situ
 npm install
 ```
 
-### 2. Add your Claude API key
-Open `src/services/claudeApi.ts` and replace:
-```ts
-const CLAUDE_API_KEY = 'YOUR_ANTHROPIC_API_KEY_HERE';
-```
-Get your key at https://console.anthropic.com
+### 2. Set up Supabase + Claude (edge function)
+1. Create a Supabase project at https://supabase.com
+2. Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env` (copied from Supabase dashboard → Settings → API)
+3. Deploy the edge function:
+   ```bash
+   npx supabase functions deploy analyze
+   ```
+4. Set the Anthropic key as a secret:
+   ```bash
+   npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   ```
+5. Apply database migrations:
+   ```bash
+   npx supabase migration up
+   ```
 
 ### 3. Start the app
 ```bash
@@ -26,7 +35,7 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 
 ---
 
-## 📱 Screens (19 total)
+## 📱 Screens (23 total)
 
 | Screen | Route | Description |
 |--------|-------|-------------|
@@ -50,6 +59,9 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 | Affiliates | `Affiliate` | Curated financial products |
 | Monthly Check-In | `MonthlyCheckIn` | Mood + update tracker |
 | Creator Dashboard | `CreatorDashboard` | Referral analytics + earnings |
+| Privacy Policy | `PrivacyPolicy` | Legal + data handling |
+| Terms of Service | `TermsOfService` | Usage terms |
+| Help & FAQ | `HelpFAQ` | Frequently asked questions |
 
 ---
 
@@ -76,16 +88,17 @@ The AI analyzes plain-English financial descriptions and returns structured JSON
 - 90-day action plan steps
 - Key financial insights
 
-A mock fallback is included so the app works without an API key in development.
+The edge function returns structured errors with failure stage (`parse_error`, `claude_api_error`, `validation_error`) so the client can display useful error messages.
 
 ---
 
 ## 📦 Tech Stack
 
-- **Expo** ~51.0.0
-- **React Native** 0.74
+- **Expo** ~53.0.0
+- **React Native** 0.79.6
 - **TypeScript**
-- **React Navigation** v6 (Stack + Tabs)
+- **React Navigation** v7 (Native Stack + Bottom Tabs)
+- **Supabase** — Auth, Edge Functions, Database
 - **expo-linear-gradient** — gradients
 - **expo-blur** — glassmorphism
 - **expo-haptics** — tactile feedback
@@ -123,7 +136,10 @@ AmIBroke/
     │   ├── GlassCard.tsx
     │   ├── NeonButton.tsx
     │   ├── ScoreRing.tsx
-    │   └── StatusPill.tsx
+    │   ├── StatusPill.tsx
+    │   ├── LoadingState.tsx
+    │   ├── EmptyState.tsx
+    │   └── ErrorState.tsx
     ├── navigation/
     │   └── AppNavigator.tsx
     ├── screens/
@@ -147,6 +163,10 @@ AmIBroke/
     │   ├── AffiliateScreen.tsx
     │   ├── MonthlyCheckInScreen.tsx
     │   └── CreatorDashboardScreen.tsx
+    ├── context/
+    │   └── AuthContext.tsx
+    ├── config/
+    │   └── features.ts
     ├── services/
     │   └── claudeApi.ts
     ├── theme/

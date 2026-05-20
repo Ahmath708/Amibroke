@@ -1,12 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../types';
-import { analyzeFinances } from '../services/claudeApi';
-import { Colors, Typography, Spacing } from '../theme/colors';
+import { RootStackParamList } from '@/types';
+import { analyzeFinances, saveAnalysis } from '@/services/claudeApi';
+import { useAuth } from '@/context/AuthContext';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { trackFunnelStep, trackError } from '@/services/analytics';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Processing'>;
@@ -23,13 +25,40 @@ const STEPS = [
 
 export default function ProcessingScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { userInput } = route.params;
+  const { userInput, tone } = route.params;
+  const { user } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const spin = useRef(new Animated.Value(0)).current;
   const stepOpacity = useRef(new Animated.Value(1)).current;
   const progressWidth = useRef(new Animated.Value(0)).current;
+
+  const doAnalysis = useCallback(async () => {
+    setError(null);
+    setDone(false);
+    progressWidth.setValue(0);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal);
+      clearTimeout(timeout);
+      if (user) {
+        await saveAnalysis(user.id, userInput, analysis);
+      }
+      trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
+      setDone(true);
+      setTimeout(() => navigation.replace('Results', { analysis, userInput }), 400);
+    } catch (e) {
+      clearTimeout(timeout);
+      const msg = e instanceof Error ? e.message : 'Analysis failed. Please try again.';
+      trackError('analysis_failed', msg, 'ProcessingScreen');
+      setError(msg);
+    }
+  }, [userInput, tone, user, navigation]);
 
   useEffect(() => {
     // Spin animation
@@ -49,15 +78,10 @@ export default function ProcessingScreen({ navigation, route }: Props) {
     // Progress bar
     Animated.timing(progressWidth, { toValue: 1, duration: 6000, useNativeDriver: false }).start();
 
-    // API call
-    analyzeFinances(userInput).then((analysis) => {
-      clearInterval(interval);
-      setDone(true);
-      setTimeout(() => navigation.replace('Results', { analysis, userInput }), 400);
-    });
+    doAnalysis();
 
     return () => clearInterval(interval);
-  }, []);
+  }, [doAnalysis]);
 
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
@@ -74,25 +98,37 @@ export default function ProcessingScreen({ navigation, route }: Props) {
             />
           </Animated.View>
           <View style={styles.ringCenter}>
-            <Text style={styles.centerEmoji}>{done ? '✅' : STEPS[stepIndex].emoji}</Text>
+            <Text style={styles.centerEmoji}>{done ? '✅' : error ? '⚠️' : STEPS[stepIndex].emoji}</Text>
           </View>
         </View>
 
         {/* Status */}
-        <Animated.Text style={[styles.stepText, { opacity: stepOpacity }]}>
-          {done ? 'Analysis complete!' : STEPS[stepIndex].label}
-        </Animated.Text>
+        {error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : (
+          <Animated.Text style={[styles.stepText, { opacity: stepOpacity }]}>
+            {done ? 'Analysis complete!' : STEPS[stepIndex].label}
+          </Animated.Text>
+        )}
 
         {/* Progress bar */}
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, {
-            width: progressWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] })
-          }]} />
-        </View>
+        {!error && (
+          <View style={styles.progressTrack}>
+            <Animated.View style={[styles.progressFill, {
+              width: progressWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] })
+            }]} />
+          </View>
+        )}
 
-        <Text style={styles.hint}>
-          Claude is analyzing your finances with brutal honesty ✨
-        </Text>
+        {error ? (
+          <TouchableOpacity style={styles.retryButton} onPress={doAnalysis} activeOpacity={0.7}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.hint}>
+            Claude is analyzing your finances with brutal honesty ✨
+          </Text>
+        )}
       </View>
     </LinearGradient>
   );
@@ -100,7 +136,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, gap: 28 },
+  inner: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, gap: Spacing.xxl },
   ringWrap: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
   ring: {
     position: 'absolute', width: 120, height: 120, borderRadius: 60,
@@ -114,12 +150,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.primaryContainer,
     shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5, shadowRadius: 20,
+    shadowOpacity: 0.5, shadowRadius: 20, elevation: 10,
   },
   centerEmoji: { fontSize: 36 },
   stepText: {
     fontFamily: Typography.fonts.bodyMed,
-    fontSize: 17, color: Colors.textPrimary, textAlign: 'center',
+    fontSize: Typography.headline.fontSize, color: Colors.textPrimary, textAlign: 'center',
   },
   progressTrack: {
     width: '80%', height: 4, backgroundColor: Colors.backgroundSecondary,
@@ -131,6 +167,22 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontFamily: Typography.fonts.body,
-    fontSize: 13, color: Colors.textMuted, textAlign: 'center',
+    fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center',
+  },
+  errorText: {
+    fontFamily: Typography.fonts.bodyMed,
+    fontSize: Typography.subhead.fontSize, color: Colors.danger, textAlign: 'center',
+    marginHorizontal: Spacing.xl,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: 40,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.md,
+  },
+  retryText: {
+    fontFamily: Typography.fonts.bodyMed,
+    fontSize: Typography.callout.fontSize, color: Colors.background, textAlign: 'center',
   },
 });

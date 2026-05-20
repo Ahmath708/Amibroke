@@ -1,15 +1,17 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   TouchableOpacity,
+  TouchableNativeFeedback,
   Text,
   StyleSheet,
   ViewStyle,
   ActivityIndicator,
   View,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius, Spacing, Typography } from '../theme/colors';
+import { Colors, Radius, Spacing, Typography } from '@/theme/colors';
 
 interface Props {
   label: string;
@@ -21,6 +23,8 @@ interface Props {
   style?: ViewStyle;
   icon?: string;
 }
+
+const Touchable = Platform.OS === 'android' ? TouchableNativeFeedback : TouchableOpacity;
 
 export default function NeonButton({
   label,
@@ -43,7 +47,7 @@ export default function NeonButton({
 
   if (variant === 'primary') {
     return (
-      <TouchableOpacity onPress={handlePress} disabled={disabled || loading} style={[styles.wrapper, style]} activeOpacity={0.85}>
+      <Touchable onPress={handlePress} disabled={disabled || loading} style={[styles.wrapper, style]}>
         <LinearGradient
           colors={disabled ? ['#3a2540', '#3a2540'] : Colors.gradientPrimary}
           start={{ x: 0, y: 0 }}
@@ -60,16 +64,15 @@ export default function NeonButton({
               </View>
           }
         </LinearGradient>
-      </TouchableOpacity>
+      </Touchable>
     );
   }
 
   if (variant === 'secondary') {
     return (
-      <TouchableOpacity
+      <Touchable
         onPress={handlePress}
         disabled={disabled || loading}
-        activeOpacity={0.75}
         style={[styles.secondaryBtn, { height: heights[size] }, style]}
       >
         {loading
@@ -79,43 +82,40 @@ export default function NeonButton({
               <Text style={[styles.secondaryLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
             </View>
         }
-      </TouchableOpacity>
+      </Touchable>
     );
   }
 
   if (variant === 'tinted') {
     return (
-      <TouchableOpacity
+      <Touchable
         onPress={handlePress}
         disabled={disabled || loading}
-        activeOpacity={0.75}
         style={[styles.tintedBtn, { height: heights[size] }, style]}
       >
         {icon ? <Text style={styles.icon}>{icon}</Text> : null}
         <Text style={[styles.tintedLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
-      </TouchableOpacity>
+      </Touchable>
     );
   }
 
   if (variant === 'danger') {
     return (
-      <TouchableOpacity
+      <Touchable
         onPress={handlePress}
         disabled={disabled || loading}
-        activeOpacity={0.75}
         style={[styles.dangerBtn, { height: heights[size] }, style]}
       >
         {icon ? <Text style={styles.icon}>{icon}</Text> : null}
         <Text style={[styles.dangerLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
-      </TouchableOpacity>
+      </Touchable>
     );
   }
 
-  // plain
   return (
-    <TouchableOpacity onPress={handlePress} disabled={disabled} activeOpacity={0.5} style={[styles.wrapper, style]}>
+    <Touchable onPress={handlePress} disabled={disabled} style={[styles.wrapper, style]}>
       <Text style={[styles.plainLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  inner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs + 2 },
   icon: { fontSize: 17 },
   label: {
     fontFamily: Typography.fonts.bodySemi,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: Spacing.xs + 2,
   },
   secondaryLabel: {
     fontFamily: Typography.fonts.bodySemi,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: Spacing.xs + 2,
   },
   tintedLabel: {
     fontFamily: Typography.fonts.bodyMed,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: Spacing.xs + 2,
   },
   dangerLabel: {
     fontFamily: Typography.fonts.bodyMed,
@@ -183,6 +183,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.body,
     color: Colors.tint,
     textAlign: 'center',
-    paddingVertical: 10,
+    paddingVertical: Spacing.sm + 2,
   },
 });

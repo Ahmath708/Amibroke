@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
-import NeonButton from '../components/NeonButton';
-import GlassCard from '../components/GlassCard';
+import { StackActions, useNavigation } from '@react-navigation/native';
+import { RootStackParamList, CheckIn } from '@/types';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import NeonButton from '@/components/NeonButton';
+import GlassCard from '@/components/GlassCard';
+import { getCheckIns, saveCheckIn } from '@/services/claudeApi';
+import { useAuth } from '@/context/AuthContext';
+import LoadingState from '@/components/LoadingState';
+import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'MonthlyCheckIn'> };
 
@@ -23,18 +28,71 @@ const MOODS = ['😭', '😟', '😐', '🙂', '🤑'];
 
 export default function MonthlyCheckInScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const nav = useNavigation();
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [mood, setMood] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const tier = await getPurchaseTier();
+      if (hasAccessTo(tier, 'action_plan')) {
+        setAuthorized(true);
+      } else {
+        nav.dispatch(StackActions.replace('Paywall'));
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <LoadingState />;
+  if (!authorized) return null;
   const [note, setNote] = useState('');
   const [step, setStep] = useState<'form' | 'mood' | 'note'>('form');
+  const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null);
+  const [loadingLast, setLoadingLast] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setLoadingLast(false);
+      return;
+    }
+    getCheckIns(user.id).then((data) => {
+      if (data.length > 0) setLastCheckIn(data[0]);
+    }).catch(() => {
+      console.warn('Failed to load last check-in');
+    }).finally(() => {
+      setLoadingLast(false);
+    });
+  }, [user]);
 
   const setAnswer = (id: string, val: string) =>
     setAnswers((prev) => ({ ...prev, [id]: val }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) return;
     const income = parseFloat(answers.income || '0');
     const expenses = parseFloat(answers.expenses || '0');
-    const situationText = `Monthly check-in: income $${income}, expenses $${expenses}, saved $${answers.savings || 0}, total debt $${answers.debt || 0}. Mood: ${mood !== null ? MOODS[mood] : 'not set'}. Note: ${note || 'none'}`;
+    const savings = parseFloat(answers.savings || '0');
+    const debt = parseFloat(answers.debt || '0');
+
+    try {
+      await saveCheckIn(user.id, {
+        mood: mood ?? 2,
+        notes: note || undefined,
+        income: income || undefined,
+        expenses: expenses || undefined,
+        savings: savings || undefined,
+        debt: debt || undefined,
+      });
+    } catch {
+      Alert.alert('Error', 'Failed to save check-in data.');
+      return;
+    }
+
+    const situationText = `Monthly check-in: income $${income}, expenses $${expenses}, saved $${savings}, total debt $${debt}. Mood: ${mood !== null ? MOODS[mood] : 'not set'}. Note: ${note || 'none'}`;
     navigation.replace('Processing', { userInput: situationText });
   };
 
@@ -85,22 +143,23 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
             </View>
 
             {/* Quick comparison vs last month */}
-            <GlassCard style={styles.lastMonthCard}>
-              <Text style={styles.lastMonthTitle}>vs. Last Month (April)</Text>
-              <View style={styles.lastMonthRow}>
-                {[
-                  { label: 'Score', last: '38', change: '+4' },
-                  { label: 'Income', last: '$3,100', change: '+$100' },
-                  { label: 'Saved', last: '$310', change: '+$90' },
-                ].map((item) => (
-                  <View key={item.label} style={styles.lastMonthItem}>
-                    <Text style={styles.lastMonthLabel}>{item.label}</Text>
-                    <Text style={styles.lastMonthValue}>{item.last}</Text>
-                    <Text style={[styles.lastMonthChange, { color: Colors.success }]}>{item.change}</Text>
-                  </View>
-                ))}
-              </View>
-            </GlassCard>
+            {!loadingLast && lastCheckIn && (
+              <GlassCard style={styles.lastMonthCard}>
+                <Text style={styles.lastMonthTitle}>vs. Last Check-In</Text>
+                <View style={styles.lastMonthRow}>
+                  {[
+                    { label: 'Income', last: lastCheckIn.income ? `$${lastCheckIn.income}` : '—', current: answers.income || '—' },
+                    { label: 'Saved', last: lastCheckIn.savings ? `$${lastCheckIn.savings}` : '—', current: answers.savings || '—' },
+                  ].map((item) => (
+                    <View key={item.label} style={styles.lastMonthItem}>
+                      <Text style={styles.lastMonthLabel}>{item.label}</Text>
+                      <Text style={styles.lastMonthValue}>{item.last}</Text>
+                      <Text style={[styles.lastMonthChange, { color: Colors.textMuted }]}>→ {item.current}</Text>
+                    </View>
+                  ))}
+                </View>
+              </GlassCard>
+            )}
 
             <NeonButton label="Continue →" onPress={() => setStep('mood')} />
           </>
@@ -173,10 +232,10 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: 16 },
-  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xxl + Spacing.xs },
   stepDot: {
-    width: 10, height: 10, borderRadius: 5,
+    width: 10, height: 10, borderRadius: Radius.xs,
     backgroundColor: Colors.backgroundSecondary,
     borderWidth: 1.5, borderColor: Colors.separator,
   },
@@ -188,45 +247,45 @@ const styles = StyleSheet.create({
     fontSize: 26, fontWeight: '700',
     color: Colors.textPrimary, marginBottom: 6,
   },
-  stepSubtitle: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary, marginBottom: 28, lineHeight: 22 },
+  stepSubtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl + Spacing.xs, lineHeight: 22 },
   sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: 13, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8,
+    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
   },
   formGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: Spacing.lg,
   },
-  cellSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 16 },
+  cellSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   formCell: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 13, minHeight: 50,
+    paddingHorizontal: Spacing.lg, paddingVertical: 13, minHeight: 50,
   },
-  formLabel: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textPrimary },
+  formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   formInputRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  formPrefix: { fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.textSecondary },
-  formInput: { fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.textPrimary, minWidth: 80, textAlign: 'right' },
-  lastMonthCard: { padding: 14, marginBottom: 24 },
-  lastMonthTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: 13, color: Colors.textSecondary, marginBottom: 12, fontWeight: '500' },
+  formPrefix: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
+  formInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minWidth: 80, textAlign: 'right' },
+  lastMonthCard: { padding: Spacing.md, marginBottom: Spacing.xxl },
+  lastMonthTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.md, fontWeight: '500' },
   lastMonthRow: { flexDirection: 'row', justifyContent: 'space-around' },
   lastMonthItem: { alignItems: 'center', gap: 3 },
-  lastMonthLabel: { fontFamily: Typography.fonts.body, fontSize: 11, color: Colors.textMuted },
-  lastMonthValue: { fontFamily: Typography.fonts.heading, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  lastMonthChange: { fontFamily: Typography.fonts.bodyMed, fontSize: 12, fontWeight: '600' },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, paddingHorizontal: 8 },
+  lastMonthLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
+  lastMonthValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700', color: Colors.textPrimary },
+  lastMonthChange: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.xl, paddingHorizontal: Spacing.sm },
   moodBtn: {
     width: 58, height: 58, borderRadius: 29,
     backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: 'transparent',
   },
   moodBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
-  moodEmoji: { fontSize: 28 },
-  moodLabel: { padding: 12, marginBottom: 28, alignItems: 'center' },
-  moodLabelText: { fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.primary, fontWeight: '500' },
-  navButtons: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  moodEmoji: { fontSize: Typography.title1.fontSize },
+  moodLabel: { padding: Spacing.md, marginBottom: Spacing.xxl + Spacing.xs, alignItems: 'center' },
+  moodLabelText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '500' },
+  navButtons: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
   backBtn: { flex: 1 },
   nextBtn: { flex: 2 },
-  noteCard: { padding: 14, marginBottom: 20 },
-  noteInput: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textPrimary, minHeight: 100, lineHeight: 23 },
-  skipNote: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
+  noteCard: { padding: Spacing.md, marginBottom: Spacing.xl },
+  noteInput: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minHeight: 100, lineHeight: 23 },
+  skipNote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center' },
 });

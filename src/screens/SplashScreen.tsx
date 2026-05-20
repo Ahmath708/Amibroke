@@ -1,18 +1,22 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { Colors, Typography } from '../theme/colors';
+import { RootStackParamList } from '@/types';
+import { Colors, Typography, Spacing } from '@/theme/colors';
+import { useAuth } from '@/context/AuthContext';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Splash'> };
 
 export default function SplashScreen({ navigation }: Props) {
+  const { user, loading } = useAuth();
   const scale = useRef(new Animated.Value(0.82)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (loading) return;
+
     Animated.sequence([
       Animated.parallel([
         Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
@@ -22,10 +26,10 @@ export default function SplashScreen({ navigation }: Props) {
     ]).start();
 
     const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
+      navigation.replace('Landing');
     }, 2200);
     return () => clearTimeout(timer);
-  }, []);
+  }, [loading, user]);
 
   return (
     <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
@@ -51,7 +55,7 @@ export default function SplashScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 32 },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.xxl + Spacing.sm },
   logoWrap: { alignItems: 'center', justifyContent: 'center' },
   logoCircle: {
     width: 96,
@@ -72,14 +76,14 @@ const styles = StyleSheet.create({
   logoEmoji: { fontSize: 44 },
   appName: {
     fontFamily: Typography.fonts.heading,
-    fontSize: 32,
+    fontSize: Typography.largeTitle.fontSize,
     color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
   tagline: {
     fontFamily: Typography.fonts.body,
-    fontSize: 15,
+    fontSize: Typography.subhead.fontSize,
     color: Colors.textSecondary,
-    marginTop: 6,
+    marginTop: Spacing.xs,
   },
 });

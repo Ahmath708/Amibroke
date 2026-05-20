@@ -44,8 +44,7 @@
             "newArchEnabled": true
           }
         }
-      ],
-      "expo-background-task"
+      ]
     ]
   }
 }

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+﻿import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 const FAQS = [
   {
@@ -88,13 +88,13 @@ export default function HelpFAQScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: 16 },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   intro: {
     fontFamily: Typography.fonts.body,
-    fontSize: 15,
+    fontSize: Typography.subhead.fontSize,
     color: Colors.textSecondary,
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   faqGroup: {
     backgroundColor: Colors.groupedRow,
@@ -103,8 +103,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.glassBorder,
   },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 16 },
-  faqRow: { paddingHorizontal: 16, paddingVertical: 14 },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
+  faqRow: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
   faqHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -112,23 +112,23 @@ const styles = StyleSheet.create({
   },
   faqQuestion: {
     fontFamily: Typography.fonts.bodyMed,
-    fontSize: 15,
+    fontSize: Typography.subhead.fontSize,
     color: Colors.textPrimary,
     flex: 1,
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   faqChevron: {
     fontFamily: Typography.fonts.headingMed,
-    fontSize: 20,
+    fontSize: Typography.title3.fontSize,
     color: Colors.primary,
     width: 24,
     textAlign: 'center',
   },
   faqAnswer: {
     fontFamily: Typography.fonts.body,
-    fontSize: 14,
+    fontSize: Typography.callout.fontSize,
     color: Colors.textSecondary,
     lineHeight: 22,
-    marginTop: 10,
+    marginTop: Spacing.sm + 2,
   },
 });

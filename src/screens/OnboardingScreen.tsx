@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Dimensions, FlatList,
   TouchableOpacity, Animated, ViewToken,
@@ -6,9 +6,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
-import NeonButton from '../components/NeonButton';
+import { RootStackParamList } from '@/types';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import NeonButton from '@/components/NeonButton';
 
 const { width } = Dimensions.get('window');
 
@@ -117,15 +117,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: Spacing.xl,
     zIndex: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
   },
-  skipText: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary },
+  skipText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
   slide: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 60,
+    paddingTop: Spacing.section + Spacing.xxl,
   },
   emojiCard: {
     width: 140,
@@ -133,32 +133,33 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 48,
+    marginBottom: Spacing.section + Spacing.md,
     shadowColor: Colors.primarySolid,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 24,
+    elevation: 10,
   },
   slideEmoji: { fontSize: 56 },
   slideTitle: {
     fontFamily: Typography.fonts.heading,
-    fontSize: 28,
+    fontSize: Typography.title1.fontSize,
     fontWeight: '700',
     color: Colors.textPrimary,
     textAlign: 'center',
     lineHeight: 34,
     letterSpacing: -0.5,
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   slideBody: {
     fontFamily: Typography.fonts.body,
-    fontSize: 16,
+    fontSize: Typography.callout.fontSize,
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: 300,
   },
-  dotsRow: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 28 },
+  dotsRow: { flexDirection: 'row', gap: Spacing.xs, justifyContent: 'center', marginBottom: Spacing.xxl },
   dot: { height: 6, borderRadius: Radius.pill },
   footer: { paddingHorizontal: Spacing.xl },
 });

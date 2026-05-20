@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Switch,
-  TouchableOpacity, Alert, Linking,
+  TouchableOpacity, Alert, Linking, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
+import { RootStackParamList } from '@/types';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { FEATURES } from '@/config/features';
+import { useAuth } from '@/context/AuthContext';
+import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/gdpr';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'> };
 
@@ -18,6 +21,7 @@ type SettingRow =
 
 export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { signOut, user } = useAuth();
   const [toggles, setToggles] = useState({
     notifications: true,
     weeklyReminder: false,
@@ -25,18 +29,88 @@ export default function SettingsScreen({ navigation }: Props) {
     haptics: true,
     faceID: false,
   });
+  const [gdprLoading, setGdprLoading] = useState<string | null>(null);
 
   const toggle = (key: string) =>
     setToggles((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
 
+  const handleExportData = async () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to export your data.');
+      return;
+    }
+    setGdprLoading('export');
+    const success = await downloadUserData(user.id);
+    setGdprLoading(null);
+    if (success) {
+      Alert.alert('Data Exported', 'Your data has been downloaded as a JSON file.');
+    } else {
+      Alert.alert('Export Failed', 'Could not export your data. Please try again.');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    Alert.alert(
+      'Delete Account?',
+      'All your data will be permanently deleted. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setGdprLoading('delete');
+            const result = await deleteUserData(user.id);
+            setGdprLoading(null);
+            if (result.success) {
+              Alert.alert('Account Deleted', 'Your data has been permanently removed.', [
+                { text: 'OK', onPress: () => { signOut(); navigation.reset({ index: 0, routes: [{ name: 'Splash' }] }); } },
+              ]);
+            } else {
+              Alert.alert('Delete Failed', result.error || 'Could not delete your account.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleAnonymize = async () => {
+    if (!user) return;
+    Alert.alert(
+      'Anonymize Account?',
+      'This will remove your personal info but keep your analysis history.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Anonymize',
+          style: 'destructive',
+          onPress: async () => {
+            setGdprLoading('anonymize');
+            const result = await anonymizeUserData(user.id);
+            setGdprLoading(null);
+            if (result.success) {
+              Alert.alert('Anonymized', 'Your account has been anonymized.');
+            } else {
+              Alert.alert('Failed', result.error || 'Could not anonymize your account.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const accountRows: SettingRow[] = [
+    { type: 'nav', label: 'Profile', icon: '👤', detail: '@yourusername', onPress: () => (navigation.navigate as any)('Home', { screen: 'Profile' }) },
+    { type: 'nav', label: 'Subscription', icon: '⭐', detail: 'Free Plan', onPress: () => navigation.navigate('Paywall') },
+    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: '📊' as const, onPress: () => navigation.navigate('CreatorDashboard') }] : []),
+  ];
+
   const SECTIONS: { title: string; rows: SettingRow[] }[] = [
     {
       title: 'Account',
-      rows: [
-        { type: 'nav', label: 'Profile', icon: '👤', detail: '@yourusername', onPress: () => (navigation.navigate as any)('Home', { screen: 'Profile' }) },
-        { type: 'nav', label: 'Subscription', icon: '⭐', detail: 'Free Plan', onPress: () => navigation.navigate('Paywall') },
-        { type: 'nav', label: 'Creator Dashboard', icon: '📊', onPress: () => navigation.navigate('CreatorDashboard') },
-      ],
+      rows: accountRows,
     },
     {
       title: 'Notifications',
@@ -70,10 +144,19 @@ export default function SettingsScreen({ navigation }: Props) {
       ],
     },
     {
+      title: 'Privacy & Data',
+      rows: [
+        { type: 'action', label: 'Export My Data', icon: '📥', detail: 'Download all your data as JSON', onPress: handleExportData },
+        { type: 'action', label: 'Anonymize Account', icon: '👤', detail: 'Remove personal info', onPress: handleAnonymize },
+        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => navigation.navigate('PrivacyPolicy') },
+      ],
+    },
+    {
       title: 'Danger Zone',
       rows: [
+        { type: 'action', label: 'Sign Out', icon: '🚪', destructive: true, onPress: () => { signOut(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); } },
         { type: 'action', label: 'Clear Analysis History', icon: '🗑️', destructive: true, onPress: () => Alert.alert('Clear History?', 'This cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Clear', style: 'destructive', onPress: () => {} }]) },
-        { type: 'action', label: 'Delete Account', icon: '❌', destructive: true, onPress: () => Alert.alert('Delete Account?', 'All your data will be permanently deleted.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => {} }]) },
+        { type: 'action', label: 'Delete Account', icon: '❌', destructive: true, onPress: handleDeleteAccount },
       ],
     },
   ];
@@ -124,7 +207,10 @@ export default function SettingsScreen({ navigation }: Props) {
                             ios_backgroundColor={Colors.backgroundSecondary}
                           />
                         )}
-                        {(row.type === 'nav' || row.type === 'action') && (
+                        {row.type === 'action' && gdprLoading === row.label.toLowerCase().split(' ')[0] && (
+                          <ActivityIndicator size="small" color={row.destructive ? Colors.danger : Colors.textMuted} />
+                        )}
+                        {(row.type === 'nav' || (row.type === 'action' && gdprLoading !== row.label.toLowerCase().split(' ')[0])) && (
                           <Text style={styles.chevron}>›</Text>
                         )}
                       </View>
@@ -152,47 +238,47 @@ export default function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: 8 },
-  appInfo: { alignItems: 'center', marginBottom: 28, paddingTop: 8 },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm },
+  appInfo: { alignItems: 'center', marginBottom: Spacing.xxl, paddingTop: Spacing.sm },
   appIcon: {
-    width: 72, height: 72, borderRadius: 18,
+    width: 72, height: 72, borderRadius: Radius.xxl,
     backgroundColor: Colors.primaryContainer,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
   },
   appIconEmoji: { fontSize: 32 },
-  appName: { fontFamily: Typography.fonts.heading, fontSize: 20, color: Colors.textPrimary, fontWeight: '700' },
-  appVersion: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  section: { marginBottom: 28 },
+  appName: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
+  appVersion: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginTop: 2 },
+  section: { marginBottom: Spacing.xxl },
   sectionTitle: {
     fontFamily: Typography.fonts.bodyMed,
-    fontSize: 13, color: Colors.textSecondary,
+    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0.6,
-    marginBottom: 8, paddingLeft: 4,
+    marginBottom: Spacing.sm, paddingLeft: Spacing.xs,
   },
   group: {
     backgroundColor: Colors.groupedRow,
     borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 56 },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.rowHeightLg },
   cell: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingRight: 16, paddingVertical: 11, paddingLeft: 12,
+    paddingRight: Spacing.lg, paddingVertical: Spacing.sm, paddingLeft: Spacing.md,
     minHeight: 50,
   },
-  cellLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  cellLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: Spacing.md },
   iconBadge: {
-    width: 32, height: 32, borderRadius: 7,
+    width: 32, height: 32, borderRadius: Radius.sm,
     backgroundColor: Colors.primaryContainer,
     alignItems: 'center', justifyContent: 'center',
   },
   iconBadgeDanger: { backgroundColor: Colors.dangerContainer },
-  cellIcon: { fontSize: 16 },
-  cellLabel: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textPrimary },
+  cellIcon: { fontSize: Typography.callout.fontSize },
+  cellLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   cellLabelDanger: { color: Colors.danger },
-  cellDetail: { fontFamily: Typography.fonts.body, fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
-  cellRight: { marginLeft: 8 },
+  cellDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
+  cellRight: { marginLeft: Spacing.sm },
   chevronBtn: { padding: 4 },
-  chevron: { fontSize: 22, color: Colors.textMuted, fontWeight: '300' },
+  chevron: { fontSize: Typography.title2.fontSize, color: Colors.textMuted, fontWeight: '300' },
 });

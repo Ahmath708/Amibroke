@@ -1,36 +1,37 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../types';
-import { Colors, Spacing, Typography } from '../theme/colors';
+import { RootStackParamList } from '@/types';
+import { Colors, Spacing, Typography } from '@/theme/colors';
 
 // Screens
-import SplashScreen from '../screens/SplashScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
-import LoginScreen from '../screens/LoginScreen';
-import HomeScreen from '../screens/HomeScreen';
-import ProcessingScreen from '../screens/ProcessingScreen';
-import ResultsScreen from '../screens/ResultsScreen';
-import ActionPlanScreen from '../screens/ActionPlanScreen';
-import DebtPayoffScreen from '../screens/DebtPayoffScreen';
-import ShareScreen from '../screens/ShareScreen';
-import PaywallScreen from '../screens/PaywallScreen';
-import PaymentScreen from '../screens/PaymentScreen';
-import HistoryScreen from '../screens/HistoryScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import CommunityFeedScreen from '../screens/CommunityFeedScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
-import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
-import HelpFAQScreen from '../screens/HelpFAQScreen';
-import ScenarioSimulatorScreen from '../screens/ScenarioSimulatorScreen';
-import SubscriptionAuditScreen from '../screens/SubscriptionAuditScreen';
-import AffiliateScreen from '../screens/AffiliateScreen';
-import MonthlyCheckInScreen from '../screens/MonthlyCheckInScreen';
-import CreatorDashboardScreen from '../screens/CreatorDashboardScreen';
+import SplashScreen from '@/screens/SplashScreen';
+import OnboardingScreen from '@/screens/OnboardingScreen';
+import LandingScreen from '@/screens/LandingScreen';
+import LoginScreen from '@/screens/LoginScreen';
+import HomeScreen from '@/screens/HomeScreen';
+import ProcessingScreen from '@/screens/ProcessingScreen';
+import ResultsScreen from '@/screens/ResultsScreen';
+import ActionPlanScreen from '@/screens/ActionPlanScreen';
+import DebtPayoffScreen from '@/screens/DebtPayoffScreen';
+import ShareScreen from '@/screens/ShareScreen';
+import PaywallScreen from '@/screens/PaywallScreen';
+import PaymentScreen from '@/screens/PaymentScreen';
+import HistoryScreen from '@/screens/HistoryScreen';
+import ProfileScreen from '@/screens/ProfileScreen';
+import CommunityFeedScreen from '@/screens/CommunityFeedScreen';
+import SettingsScreen from '@/screens/SettingsScreen';
+import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
+import HelpFAQScreen from '@/screens/HelpFAQScreen';
+import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
+import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
+import AffiliateScreen from '@/screens/AffiliateScreen';
+import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
+import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -126,6 +127,7 @@ export default function AppNavigator() {
       screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'none' }} />
+      <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade', headerShown: false }} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
       <Stack.Screen name="Home" component={MainTabs} options={{ animation: 'fade' }} />

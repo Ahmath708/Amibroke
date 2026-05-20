@@ -1,28 +1,63 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
-  StyleSheet as RNStyleSheet,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { Colors, Typography, Spacing, Radius } from '../theme/colors';
-import NeonButton from '../components/NeonButton';
+import { RootStackParamList } from '@/types';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import NeonButton from '@/components/NeonButton';
+import { useAuth } from '@/context/AuthContext';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Login'> };
 
 export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { signIn, signUp, signInWithApple, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
-  const handleAuth = () => {
+  const handleAuth = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing fields', 'Please enter your email and password.');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => { setLoading(false); navigation.replace('Home'); }, 1400);
+    const fn = mode === 'login' ? signIn : signUp;
+    const { error } = await fn(email.trim(), password);
+    setLoading(false);
+    if (error) {
+      Alert.alert('Authentication failed', error);
+    } else {
+      navigation.replace('Home');
+    }
+  };
+
+  const handleApple = async () => {
+    setSocialLoading('apple');
+    const { error } = await signInWithApple();
+    setSocialLoading(null);
+    if (error) {
+      Alert.alert('Apple Sign-In', error);
+    } else {
+      navigation.replace('Home');
+    }
+  };
+
+  const handleGoogle = async () => {
+    setSocialLoading('google');
+    const { error } = await signInWithGoogle();
+    setSocialLoading(null);
+    if (error) {
+      Alert.alert('Google Sign-In', error);
+    } else {
+      navigation.replace('Home');
+    }
   };
 
   return (
@@ -32,9 +67,9 @@ export default function LoginScreen({ navigation }: Props) {
         <View style={styles.handle} />
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + Spacing.xxl }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -68,13 +103,13 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
 
           {/* Social buttons */}
-          <TouchableOpacity style={styles.socialBtn} onPress={handleAuth} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.socialBtn} onPress={handleApple} disabled={socialLoading !== null} activeOpacity={0.75}>
             <Text style={styles.socialIcon}>🍎</Text>
-            <Text style={styles.socialLabel}>Continue with Apple</Text>
+            <Text style={styles.socialLabel}>{socialLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialBtn} onPress={handleAuth} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.socialBtn} onPress={handleGoogle} disabled={socialLoading !== null} activeOpacity={0.75}>
             <Text style={[styles.socialIcon, { fontWeight: '700' }]}>G</Text>
-            <Text style={styles.socialLabel}>Continue with Google</Text>
+            <Text style={styles.socialLabel}>{socialLoading === 'google' ? 'Signing in...' : 'Continue with Google'}</Text>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -146,68 +181,68 @@ export default function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  dragHandle: { alignItems: 'center', paddingBottom: 8 },
+  dragHandle: { alignItems: 'center', paddingBottom: Spacing.sm },
   handle: { width: 36, height: 5, borderRadius: Radius.pill, backgroundColor: Colors.separator },
   scroll: { paddingHorizontal: Spacing.xl },
-  header: { alignItems: 'center', marginBottom: 28, marginTop: 8 },
+  header: { alignItems: 'center', marginBottom: Spacing.xxl, marginTop: Spacing.sm },
   logoMini: {
-    width: 64, height: 64, borderRadius: 18,
+    width: 64, height: 64, borderRadius: Radius.xxl,
     backgroundColor: Colors.primaryContainer,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4, shadowRadius: 20,
+    shadowOpacity: 0.4, shadowRadius: 20, elevation: 8,
   },
-  logoEmoji: { fontSize: 28 },
+  logoEmoji: { fontSize: Typography.title1.fontSize },
   title: {
     fontFamily: Typography.fonts.heading,
-    fontSize: 28, fontWeight: '700',
-    color: Colors.textPrimary, letterSpacing: -0.5, marginBottom: 4,
+    fontSize: Typography.title1.fontSize, fontWeight: '700',
+    color: Colors.textPrimary, letterSpacing: -0.5, marginBottom: Spacing.xs,
   },
   subtitle: {
     fontFamily: Typography.fonts.body,
-    fontSize: 15, color: Colors.textSecondary,
+    fontSize: Typography.subhead.fontSize, color: Colors.textSecondary,
   },
   segmentRow: {
     flexDirection: 'row',
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: Radius.md,
-    padding: 3,
-    marginBottom: 20,
+    padding: Spacing.xs,
+    marginBottom: Spacing.xl,
   },
-  segment: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: Radius.sm },
+  segment: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm },
   segmentActive: { backgroundColor: Colors.groupedRow },
-  segmentText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Colors.textSecondary },
+  segmentText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
   segmentTextActive: { color: Colors.textPrimary, fontFamily: Typography.fonts.bodyMed },
   socialBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     backgroundColor: Colors.groupedRow,
-    borderRadius: Radius.lg, paddingVertical: 15, paddingHorizontal: 18,
+    borderRadius: Radius.lg, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
   },
-  socialIcon: { fontSize: 18, color: Colors.textPrimary, width: 22, textAlign: 'center' },
-  socialLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.textPrimary },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  socialIcon: { fontSize: Typography.headline.fontSize, color: Colors.textPrimary, width: 22, textAlign: 'center' },
+  socialLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginVertical: Spacing.lg },
   divLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator },
-  divText: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textMuted },
+  divText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
   formGroup: {
     backgroundColor: Colors.groupedRow,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.glassBorder,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  formCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, minHeight: 48 },
-  formLabel: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textPrimary, width: 80 },
-  formInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textPrimary, textAlign: 'right' },
-  cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 16 },
-  forgotRow: { alignItems: 'flex-end', paddingVertical: 4, marginBottom: 20 },
-  forgotText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Colors.tint },
-  ctaBtn: { marginBottom: 12 },
-  skipRow: { alignItems: 'center', paddingVertical: 12, marginBottom: 12 },
-  skipText: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary },
-  legal: { fontFamily: Typography.fonts.body, fontSize: 12, color: Colors.textMuted, textAlign: 'center', lineHeight: 18 },
+  formCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
+  formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, width: 80 },
+  formInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, textAlign: 'right' },
+  cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
+  forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.xl },
+  forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
+  ctaBtn: { marginBottom: Spacing.md },
+  skipRow: { alignItems: 'center', paddingVertical: Spacing.md, marginBottom: Spacing.md },
+  skipText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
+  legal: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', lineHeight: 18 },
   legalLink: { color: Colors.tint },
 });

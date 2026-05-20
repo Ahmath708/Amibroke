@@ -1,0 +1,3 @@
+export const FEATURES = {
+  CREATOR_DASHBOARD: process.env.EXPO_PUBLIC_FEATURE_CREATOR_DASHBOARD === 'true',
+};
