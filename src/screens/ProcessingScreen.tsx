@@ -54,10 +54,10 @@ export default function ProcessingScreen({ navigation, route }: Props) {
       setTimeout(() => navigation.replace('Results', { analysis, userInput }), 400);
 } catch (e) {
   clearTimeout(timeout);
-  const msg = e instanceof Error ? e.message : 'Analysis failed. Please try again.';
+  // Use a generic, user-friendly error message
+  const msg = 'Something went wrong while analyzing. Please try again.';
   trackError('analysis_failed', msg, 'ProcessingScreen');
-  // Navigate to home/dashboard on analysis error
-  navigation.replace('Home');
+  setError(msg);
 }
   }, [userInput, tone, user, navigation]);
 
