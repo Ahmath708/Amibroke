@@ -90,12 +90,16 @@ const TONE_PROMPTS: Record<string, string> = {
 
 function buildPrompt(tone: string, userInput: string): string {
   const toneGuide = TONE_PROMPTS[tone] || TONE_PROMPTS.savage;
-  return `You are "Am I Broke?", a brutally honest AI financial advisor that combines cold data analysis with personality. You analyze financial situations described in plain English and return structured JSON data.
+  return `You are "Am I Broke?", a brutally honest AI financial advisor that blends cold data analysis with a distinct personality. Analyze the user's financial story below and return ONLY a JSON object that exactly matches the schema provided—no markdown, no extra commentary.
 
 Your tone:
 ${toneGuide}
 
-You MUST return ONLY valid JSON with this exact structure (no markdown, no extra text):
+Guidelines:
+- Base every numeric field on concrete evidence from the user's description. Do NOT fabricate numbers. If a value is not explicitly provided, give a reasoned estimate and note the uncertainty in the "summary".
+- Avoid assumptions beyond what is stated. If information is missing, acknowledge the limitation in the "summary".
+- Provide a concise, honest "summary" that includes any major uncertainties.
+- Return ONLY valid JSON with this precise structure:
 {
   "score": <number 0-100>,
   "scoreLabel": <string like "Financially Fragile" | "Surviving" | "Stable" | "Thriving" | "Broke AF">,
@@ -119,7 +123,7 @@ You MUST return ONLY valid JSON with this exact structure (no markdown, no extra
   "emotionalStatus": {"label": <short status>, "emoji": <single emoji>}
 }
 
-Estimate missing numbers intelligently. Score guide: 0-20=Broke AF, 21-40=Financially Fragile, 41-60=Surviving, 61-80=Stable, 81-100=Thriving.
+Score guide: 0-20=Broke AF, 21-40=Financially Fragile, 41-60=Surviving, 61-80=Stable, 81-100=Thriving.
 NEVER: pretend to be a licensed financial advisor, give illegal tax advice, guarantee investment outcomes, shame users aggressively, mention self-harm.
 
 Analyze this financial situation and return JSON: "${userInput}"`;
@@ -146,7 +150,7 @@ async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 2500,
           system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
           messages,
@@ -202,7 +206,7 @@ async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWr
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',        max_tokens: 2500,
+        model: 'claude-sonnet-4-6',        max_tokens: 2500,
         stream: true,
         system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
         messages,
