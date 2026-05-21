@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import StatusPill from '@/components/StatusPill';
@@ -68,7 +69,9 @@ export default function ProfileScreen({ navigation }: Props) {
         setDisplayName(profile.display_name || '');
         if (profile.avatar_url) setAvatarUri(profile.avatar_url);
       } else {
+        // Fallback if profile row doesn't exist yet
         setUserName(user.email?.split('@')[0] || 'user');
+        setDisplayName(user.email?.split('@')[0] || 'User');
       }
       if (history && history.length > 0) {
         setAnalysisCount(history.length);
@@ -76,6 +79,10 @@ export default function ProfileScreen({ navigation }: Props) {
         setLatestLabel(history[0].score_label);
         setLatestDate(history[0].created_at);
         setBestScore(Math.max(...history.map((h) => h.score)));
+      } else {
+        setAnalysisCount(0);
+        setLatestScore(null);
+        setBestScore(null);
       }
     } catch {
       setError('Failed to load profile.');
@@ -84,9 +91,11 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   const saveUsername = async () => {
     if (!user) return;
@@ -98,10 +107,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: async () => {
-        await signOut();
-        navigation.reset({ index: 0, routes: [{ name: 'Login', params: undefined }] });
-      }},
+      { text: 'Sign Out', style: 'destructive', onPress: signOut },
     ]);
   };
 
@@ -352,4 +358,4 @@ const styles = StyleSheet.create({
   menuChevron: { fontSize: Typography.title2.fontSize, color: Colors.textMuted, fontWeight: '300' },
   signOutBtn: { alignItems: 'center', paddingVertical: Spacing.lg },
   signOutText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.danger },
-});
+  });

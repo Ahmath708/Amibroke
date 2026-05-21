@@ -58,8 +58,10 @@ export default function TypingPlaceholder({
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.text}>{displayText}</Text>
-      <Text style={[styles.cursor, { opacity: isPaused ? 0.3 : 1 }]}>|</Text>
+      <Text style={styles.text}>
+        {displayText}
+        <Text style={[styles.cursor, { opacity: isPaused ? 0.3 : 1 }]}>|</Text>
+      </Text>
     </View>
   );
 }
@@ -67,8 +69,9 @@ export default function TypingPlaceholder({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     minHeight: 24,
+    paddingTop: 2,
   },
   text: {
     fontFamily: Typography.fonts.body,

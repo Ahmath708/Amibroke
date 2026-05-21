@@ -49,7 +49,7 @@ export default function LandingScreen({ navigation }: Props) {
 
   const handleStart = () => {
     trackFunnelStep('landing_cta_clicked');
-    navigation.replace('Home');
+    navigation.replace('MainTabs');
   };
 
   const handleSignIn = () => {

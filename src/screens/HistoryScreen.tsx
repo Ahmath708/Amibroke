@@ -4,6 +4,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import StatusPill from '@/components/StatusPill';
@@ -19,6 +22,7 @@ const MAX_SCORE = 100;
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,9 +85,13 @@ export default function HistoryScreen() {
       >
         {/* Large title */}
         <Text style={styles.largeTitle}>History</Text>
-        <Text style={styles.subtitle}>
-          {user ? `${history.length} analyses` : 'Sign in to track your progress'}
-        </Text>
+        {user ? (
+          <Text style={styles.subtitle}>{history.length} analyses</Text>
+        ) : (
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={[styles.subtitle, styles.signInLink]}>Sign in to track your progress →</Text>
+          </TouchableOpacity>
+        )}
 
         {history.length === 0 ? (
           <EmptyState emoji="📊" title="No analyses yet" body="Run your first analysis to start tracking your financial progress over time." />
@@ -198,6 +206,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, marginBottom: Spacing.xs,
   },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
+  signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   chartCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   chartTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginBottom: Spacing.lg, fontWeight: '600' },
   chart: { flexDirection: 'row', height: 120, gap: Spacing.sm, alignItems: 'flex-end' },

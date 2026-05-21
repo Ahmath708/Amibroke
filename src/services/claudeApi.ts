@@ -1,5 +1,6 @@
 ﻿import { createClient } from '@supabase/supabase-js';
-import { FinancialAnalysis, SpendingCategory, DebtItem, ActionStep, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone } from '@/types';
+import { FinancialAnalysis, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone } from '@/types';
+import { FinancialAnalysisSchema } from '@/lib/validations';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -13,49 +14,8 @@ function getSupabase() {
   return supabase;
 }
 
-function isStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((i) => typeof i === 'string');
-}
-
-function isSpendingCategory(v: unknown): v is SpendingCategory {
-  if (!v || typeof v !== 'object') return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.name === 'string' && typeof o.amount === 'number' && typeof o.percentage === 'number' && typeof o.color === 'string' && (o.status === 'good' || o.status === 'warning' || o.status === 'danger');
-}
-
-function isDebtItem(v: unknown): v is DebtItem {
-  if (!v || typeof v !== 'object') return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.name === 'string' && typeof o.balance === 'number' && typeof o.interestRate === 'number' && typeof o.minimumPayment === 'number' && (o.urgency === 'low' || o.urgency === 'medium' || o.urgency === 'high' || o.urgency === 'critical');
-}
-
-function isActionStep(v: unknown): v is ActionStep {
-  if (!v || typeof v !== 'object') return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.week === 'number' && typeof o.title === 'string' && typeof o.description === 'string' && typeof o.impact === 'string' && (o.category === 'savings' || o.category === 'debt' || o.category === 'income' || o.category === 'mindset') && typeof o.completed === 'boolean';
-}
-
 export function isFinancialAnalysis(x: unknown): x is FinancialAnalysis {
-  if (!x || typeof x !== 'object') return false;
-  const o = x as Record<string, unknown>;
-  const required =
-    typeof o.score === 'number' &&
-    typeof o.scoreLabel === 'string' &&
-    typeof o.scoreColor === 'string' &&
-    typeof o.summary === 'string' &&
-    typeof o.roast === 'string' &&
-    typeof o.monthlyIncome === 'number' &&
-    typeof o.monthlyExpenses === 'number' &&
-    typeof o.monthlySavings === 'number' &&
-    typeof o.debtTotal === 'number' &&
-    typeof o.savingsRate === 'number' &&
-    typeof o.emergencyFundMonths === 'number' &&
-    typeof o.debtToIncomeRatio === 'number' &&
-    Array.isArray(o.spendingBreakdown) && o.spendingBreakdown.every(isSpendingCategory) &&
-    Array.isArray(o.debts) && o.debts.every(isDebtItem) &&
-    Array.isArray(o.actionPlan) && o.actionPlan.every(isActionStep) &&
-    isStringArray(o.insights);
-  return required;
+  return FinancialAnalysisSchema.safeParse(x).success;
 }
 
 function cleanUserInput(input: string): string {
@@ -102,12 +62,30 @@ export async function analyzeFinancialSituation(
       });
 
       if (error) {
-        console.error('[analyze] invoke error — message:', error.message, 'context:', JSON.stringify(error.context || {}));
-        const ctx = error.context as any;
-        const stage = ctx?.stage || 'unknown';
-        const detail = ctx?.rawResponse ? ctx.rawResponse.slice(0, 300) : error.message;
+        console.error('[analyze] invoke error — message:', error.message);
+        
+        // Detailed logging of error context if available
+        let stage = 'unknown';
+        let detail = error.message;
+        
+        try {
+          // Supabase Functions error structure check
+          const errData = error.context ? await (error.context as any).json() : null;
+          if (errData) {
+            console.error('[analyze] Error detail:', JSON.stringify(errData));
+            stage = errData.stage || stage;
+            detail = errData.error || errData.message || detail;
+          }
+        } catch {
+          // Fallback if error.context is not JSON
+          const ctx = error.context as any;
+          if (ctx?.stage) stage = ctx.stage;
+          if (ctx?.rawResponse) detail = ctx.rawResponse.slice(0, 300);
+        }
+
         lastError = new Error(`Analysis failed at stage "${stage}": ${detail}`);
         if (attempt < retries) {
+          console.log(`[analyze] Retrying in ${attempt + 1}s...`);
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
           continue;
         }
@@ -117,10 +95,9 @@ export async function analyzeFinancialSituation(
       console.log('[analyze] Received data from edge function, validating...');
       if (!isFinancialAnalysis(data)) {
         console.error('[analyze] type validation FAILED — received shape:', JSON.stringify(data).slice(0, 500));
-        // Fall back to mock data with user-visible toast would be handled by the client
-        // For now, we'll throw an error that the client can catch and handle appropriately
         lastError = new Error('Analysis returned unexpected data format. Please try again.');
         if (attempt < retries) {
+          console.log(`[analyze] Retrying after validation failure...`);
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
           continue;
         }
@@ -131,7 +108,10 @@ export async function analyzeFinancialSituation(
       return data;
     } catch (e) {
       console.error('[analyze] Caught exception in attempt', attempt + 1, ':', e);
-      if (e === lastError) throw e;
+      if (e instanceof Error && e.name === 'AbortError') {
+        console.log('[analyze] Request aborted');
+        throw e;
+      }
       lastError = e instanceof Error ? e : new Error('Unknown error');
       if (attempt < retries) {
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
@@ -146,7 +126,10 @@ export async function analyzeFinancialSituation(
 export async function saveAnalysis(userId: string, input: string, analysis: FinancialAnalysis): Promise<string | null> {
   const client = getSupabase();
   if (!client) return null;
+  console.log('[analyze] Saving analysis to database for user:', userId);
   try {
+    // Note: spending_breakdown, debts, action_plan, insights are passed as objects/arrays.
+    // Supabase JS auto-serializes these to JSONB.
     const { data, error } = await (client as any).from('analyses').insert({
       user_id: userId,
       input_text: input,
@@ -167,13 +150,19 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
       action_plan: analysis.actionPlan,
       insights: analysis.insights,
     }).select('id').single();
-    if (error) throw error;
+
+    if (error) {
+      console.error('[analyze] Database save error:', error.message, error.details);
+      throw error;
+    }
+    console.log('[analyze] Analysis saved successfully, ID:', data.id);
     return data.id;
   } catch (error) {
     console.warn('Failed to save analysis:', error);
     return null;
   }
 }
+
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
   const client = getSupabase();

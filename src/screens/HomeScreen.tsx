@@ -121,10 +121,12 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.pageHeader}>
             <Text style={styles.pageLargeTitle}>Am I Broke?</Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Settings')}
+              onPress={() => navigation.navigate(user ? 'Settings' : 'Login')}
               style={styles.settingsBtn}
+              activeOpacity={0.7}
             >
-              <Text style={styles.settingsIcon}>⚙️</Text>
+              <Text style={styles.settingsIcon}>{user ? '⚙️' : '👤'}</Text>
+              {!user && <Text style={styles.loginHint}>Log In</Text>}
             </TouchableOpacity>
           </View>
           <Text style={styles.pageSubtitle}>
@@ -133,20 +135,24 @@ export default function HomeScreen({ navigation }: Props) {
 
           {/* Input card */}
           <GlassCard variant="inset" style={styles.inputCard}>
-            <TextInput
-              ref={inputRef}
-              style={styles.textInput}
-              placeholder={input.length === 0 ? undefined : "Add more details..."}
-              placeholderTextColor={Colors.textMuted}
-              multiline
-              value={input}
-              onChangeText={setInput}
-              returnKeyType="default"
-              textAlignVertical="top"
-            />
-            {input.length === 0 && (
-              <TypingPlaceholder placeholders={PLACEHOLDERS} />
-            )}
+            <View style={styles.inputFieldWrap}>
+              <TextInput
+                ref={inputRef}
+                style={styles.textInput}
+                placeholder=""
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                value={input}
+                onChangeText={setInput}
+                returnKeyType="default"
+                textAlignVertical="top"
+              />
+              {input.length === 0 && (
+                <View style={styles.placeholderOverlay} pointerEvents="none">
+                  <TypingPlaceholder placeholders={PLACEHOLDERS} />
+                </View>
+              )}
+            </View>
             <View style={styles.inputFooter}>
               <Text style={styles.charCount}>{input.length} chars</Text>
               <View style={styles.inputActions}>
@@ -258,14 +264,19 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.heading,
     color: Colors.textPrimary,
   },
-  settingsBtn: { marginTop: Spacing.xs },
+  settingsBtn: { marginTop: Spacing.xs, alignItems: 'center' },
   settingsIcon: { fontSize: Typography.title2.fontSize },
+  loginHint: { fontFamily: Typography.fonts.bodyMed, fontSize: 10, color: Colors.primary, marginTop: 2 },
   pageSubtitle: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.subhead.fontSize, color: Colors.textSecondary,
     marginBottom: Spacing.xxl, lineHeight: 21,
   },
   inputCard: { padding: Spacing.lg, marginBottom: Spacing.lg },
+  inputFieldWrap: { position: 'relative', minHeight: 120 },
+  placeholderOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+  },
   textInput: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.callout.fontSize, color: Colors.textPrimary,

@@ -1,10 +1,10 @@
-﻿import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useNavigation } from '@react-navigation/native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -16,12 +16,38 @@ type CardFormat = 'tall' | 'square';
 type CardTheme = 'dark' | 'light';
 
 export default function ShareScreen({ route }: Props) {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { analysis } = route.params;
-  const cardRef = useRef<ViewShot>(null) as React.MutableRefObject<ViewShot>;
+  const cardRef = useRef<any>(null);
   const [format, setFormat] = useState<CardFormat>('tall');
   const [theme, setTheme] = useState<CardTheme>('dark');
   const [exporting, setExporting] = useState(false);
+
+  // Set header with back arrow
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      headerTitle: 'Share Result',
+      headerTitleStyle: {
+        fontFamily: Typography.fonts.headingSemi,
+        fontSize: Typography.headline.fontSize,
+        color: Colors.textPrimary,
+      },
+      headerStyle: {
+        backgroundColor: Colors.background,
+      },
+      headerLeft: () => (
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          activeOpacity={0.7} 
+          style={{ padding: Spacing.xs, marginLeft: 8 }}
+        >
+          <Text style={{ fontSize: 24, color: Colors.primary, fontWeight: '300' }}>‹</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const scoreColor = analysis.score < 40 ? Colors.danger : analysis.score < 65 ? Colors.warning : Colors.success;
   const variant = analysis.score < 40 ? 'danger' : analysis.score < 65 ? 'warning' : 'good';
@@ -33,10 +59,13 @@ export default function ShareScreen({ route }: Props) {
   };
 
   const handleExportPNG = async () => {
-    if (!cardRef.current || !cardRef.current.capture) return;
+    if (!cardRef.current) return;
     setExporting(true);
     try {
-      const uri = await cardRef.current.capture();
+      const uri = await captureRef(cardRef, {
+        format: 'png',
+        quality: 1.0,
+      });
       await Share.share({ url: uri, message: shareText });
     } catch (e) {
       Alert.alert('Export failed', 'Could not capture the card image.');
@@ -60,7 +89,6 @@ export default function ShareScreen({ route }: Props) {
   const cardBg = isDark ? ['#1a0026', '#0d001a'] : ['#ffffff', '#f0f0f5'];
   const cardTextColor = isDark ? Colors.textPrimary : '#1a1a2e';
   const cardSubtextColor = isDark ? Colors.textSecondary : '#555';
-  const cardBorderColor = isDark ? Colors.glassBorderLight : '#ddd';
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });

@@ -3,13 +3,14 @@ import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, consumePendingRedirect } from '@/context/AuthContext';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Login'> };
 
@@ -21,20 +22,36 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   const handleAuth = async () => {
-    if (!email.trim() || !password.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password.trim()) {
       Alert.alert('Missing fields', 'Please enter your email and password.');
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address (e.g., name@example.com).');
+      return;
+    }
+
     setLoading(true);
     const fn = mode === 'login' ? signIn : signUp;
-    const { error } = await fn(email.trim(), password);
+    const { error } = await fn(trimmedEmail, password);
     setLoading(false);
     if (error) {
       Alert.alert('Authentication failed', error);
+      return;
+    }
+    const redirect = consumePendingRedirect();
+    if (redirect) {
+      navigation.replace(redirect.to as any, redirect.params);
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
     } else {
-      navigation.replace('Home');
+      navigation.replace('MainTabs');
     }
   };
 
@@ -44,8 +61,15 @@ export default function LoginScreen({ navigation }: Props) {
     setSocialLoading(null);
     if (error) {
       Alert.alert('Apple Sign-In', error);
+      return;
+    }
+    const redirect = consumePendingRedirect();
+    if (redirect) {
+      navigation.replace(redirect.to as any, redirect.params);
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
     } else {
-      navigation.replace('Home');
+      navigation.replace('MainTabs');
     }
   };
 
@@ -55,8 +79,15 @@ export default function LoginScreen({ navigation }: Props) {
     setSocialLoading(null);
     if (error) {
       Alert.alert('Google Sign-In', error);
+      return;
+    }
+    const redirect = consumePendingRedirect();
+    if (redirect) {
+      navigation.replace(redirect.to as any, redirect.params);
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
     } else {
-      navigation.replace('Home');
+      navigation.replace('MainTabs');
     }
   };
 
@@ -103,13 +134,27 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
 
           {/* Social buttons */}
-          <TouchableOpacity style={styles.socialBtn} onPress={handleApple} disabled={socialLoading !== null} activeOpacity={0.75}>
-            <Text style={styles.socialIcon}>🍎</Text>
-            <Text style={styles.socialLabel}>{socialLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}</Text>
+          <TouchableOpacity
+            style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
+            onPress={handleApple}
+            disabled={!termsAgreed || socialLoading !== null}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.socialIcon, !termsAgreed && styles.socialIconDisabled]}>🍎</Text>
+            <Text style={[styles.socialLabel, !termsAgreed && styles.socialLabelDisabled]}>
+              {!termsAgreed ? 'Agree to terms first' : socialLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialBtn} onPress={handleGoogle} disabled={socialLoading !== null} activeOpacity={0.75}>
-            <Text style={[styles.socialIcon, { fontWeight: '700' }]}>G</Text>
-            <Text style={styles.socialLabel}>{socialLoading === 'google' ? 'Signing in...' : 'Continue with Google'}</Text>
+          <TouchableOpacity
+            style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
+            onPress={handleGoogle}
+            disabled={!termsAgreed || socialLoading !== null}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.socialIcon, !termsAgreed && styles.socialIconDisabled]}>G</Text>
+            <Text style={[styles.socialLabel, !termsAgreed && styles.socialLabelDisabled]}>
+              {!termsAgreed ? 'Agree to terms first' : socialLoading === 'google' ? 'Signing in...' : 'Continue with Google'}
+            </Text>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -156,23 +201,41 @@ export default function LoginScreen({ navigation }: Props) {
             </TouchableOpacity>
           )}
 
+          {/* Terms agreement */}
+          <TouchableOpacity
+            style={styles.termsRow}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setTermsAgreed(!termsAgreed);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, termsAgreed && styles.checkboxActive]}>
+              {termsAgreed && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.termsText}>
+              I agree to the{' '}
+              <Text style={styles.legalLink} onPress={() => navigation.navigate('TermsOfService')}>
+                Terms of Service
+              </Text>
+              {' '}and{' '}
+              <Text style={styles.legalLink} onPress={() => navigation.navigate('PrivacyPolicy')}>
+                Privacy Policy
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
           <NeonButton
             label={mode === 'login' ? 'Sign In' : 'Create Account'}
             onPress={handleAuth}
             loading={loading}
+            disabled={!termsAgreed}
             style={styles.ctaBtn}
           />
 
-          <TouchableOpacity onPress={() => navigation.replace('Home')} style={styles.skipRow}>
-            <Text style={styles.skipText}>Continue without account</Text>
+          <TouchableOpacity onPress={() => navigation.replace('Landing')} style={styles.skipRow}>
+            <Text style={styles.skipText}>Back</Text>
           </TouchableOpacity>
-
-          <Text style={styles.legal}>
-            By continuing you agree to our{' '}
-            <Text style={styles.legalLink}>Terms</Text>
-            {' '}and{' '}
-            <Text style={styles.legalLink}>Privacy Policy</Text>
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -223,6 +286,9 @@ const styles = StyleSheet.create({
   },
   socialIcon: { fontSize: Typography.headline.fontSize, color: Colors.textPrimary, width: 22, textAlign: 'center' },
   socialLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  socialBtnDisabled: { opacity: 0.4 },
+  socialIconDisabled: { opacity: 0.5 },
+  socialLabelDisabled: { opacity: 0.5 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginVertical: Spacing.lg },
   divLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator },
   divText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
@@ -240,9 +306,29 @@ const styles = StyleSheet.create({
   cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.xl },
   forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
+  termsRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginBottom: Spacing.lg, paddingHorizontal: Spacing.xs,
+  },
+  checkbox: {
+    width: 22, height: 22, borderRadius: Radius.xs,
+    borderWidth: 2, borderColor: Colors.glassBorder,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: Colors.primary, borderColor: Colors.primary,
+  },
+  checkmark: {
+    fontSize: 14, color: Colors.background, fontWeight: '700',
+  },
+  termsText: {
+    flex: 1,
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.caption1.fontSize, color: Colors.textSecondary,
+    lineHeight: 18,
+  },
   ctaBtn: { marginBottom: Spacing.md },
   skipRow: { alignItems: 'center', paddingVertical: Spacing.md, marginBottom: Spacing.md },
   skipText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  legal: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', lineHeight: 18 },
-  legalLink: { color: Colors.tint },
+  legalLink: { color: Colors.tint, textDecorationLine: 'underline' },
 });

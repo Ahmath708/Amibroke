@@ -6,11 +6,11 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info',
 };
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_MAX_REQUESTS = 20; // Increased for production stability
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
@@ -125,11 +125,8 @@ NEVER: pretend to be a licensed financial advisor, give illegal tax advice, guar
 Analyze this financial situation and return JSON: "${userInput}"`;
 }
 
-function jsonResponse(body: unknown, status = 200, extraHeaders = {}, httpStatus?: number) {
+function jsonResponse(body: unknown, status = 200, extraHeaders = {}) {
   const headers = { ...CORS_HEADERS, 'Content-Type': 'application/json', ...extraHeaders };
-  if (httpStatus !== undefined) {
-    headers['X-HTTP-Status'] = httpStatus.toString();
-  }
   return new Response(JSON.stringify(body), {
     status,
     headers,
@@ -137,9 +134,10 @@ function jsonResponse(body: unknown, status = 200, extraHeaders = {}, httpStatus
 }
 
 async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any> {
-  let lastError: Error | null = null;
+  let lastError: any = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`[claude] Calling API, attempt ${attempt + 1}`);
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -147,39 +145,48 @@ async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any
           'x-api-key': ANTHROPIC_API_KEY,
           'anthropic-version': '2023-06-01',
         },
-body: JSON.stringify({
-  model: 'claude-sonnet-6',
-  max_tokens: 2500,
-  system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
-  messages,
-}),
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2500,
+          system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
+          messages,
+        }),
       });
 
       if (response.status === 429) {
         const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+        console.warn(`[claude] Rate limited, retrying after ${retryAfter}s`);
         await new Promise((r) => setTimeout(r, retryAfter * 1000));
         continue;
       }
+
       if (response.status >= 500) {
+        console.warn(`[claude] Server error ${response.status}, retrying...`);
         await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
         continue;
       }
+
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
-        const error = new Error(`Claude API error: ${response.status} - ${errorBody.slice(0, 200)}`);
+        console.error(`[claude] API error: ${response.status}`, errorBody);
+        const error: any = new Error(`Claude API error: ${response.status}`);
         error.status = response.status;
         error.rawResponse = errorBody;
+        error.stage = 'claude_api_error';
         throw error;
       }
-      return await response.json();
+
+      const data = await response.json();
+      console.log('[claude] API success');
+      return data;
     } catch (e) {
-      lastError = e instanceof Error ? e : new Error('Unknown error');
+      lastError = e;
       if (attempt < maxRetries) {
         await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
   }
-  throw lastError || new Error('Claude API call failed after retries');
+  throw lastError;
 }
 
 // ─── Streaming Response Support ────────────────────────────────────────────────
@@ -195,8 +202,7 @@ async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWr
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2500,
+        model: 'claude-sonnet-4-20250514',        max_tokens: 2500,
         stream: true,
         system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
         messages,
@@ -205,7 +211,7 @@ async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWr
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
-      await writer.write(encoder.encode(JSON.stringify({ error: `Claude API error: ${response.status}`, stage: 'claude_api_error' })));
+      await writer.write(encoder.encode(JSON.stringify({ error: `Claude API error: ${response.status}`, stage: 'claude_api_error', rawResponse: errorBody })));
       await writer.close();
       return;
     }
@@ -254,7 +260,7 @@ async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWr
     try {
       analysis = JSON.parse(cleaned);
     } catch {
-      await writer.write(encoder.encode(JSON.stringify({ error: 'Failed to parse Claude response as JSON', stage: 'parse_error' })));
+      await writer.write(encoder.encode(JSON.stringify({ error: 'Failed to parse Claude response as JSON', stage: 'parse_error', rawResponse: cleaned })));
       await writer.close();
       return;
     }
@@ -280,7 +286,7 @@ serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed', stage: 'request_validation' }, 405, 405);
+    return jsonResponse({ error: 'Method not allowed', stage: 'request_validation' }, 405);
   }
 
   const clientIP = getClientIP(req);
@@ -302,13 +308,13 @@ serve(async (req) => {
     const { userInput, tone, stream } = body;
 
     if (!userInput || typeof userInput !== 'string') {
-      return jsonResponse({ error: 'userInput is required', stage: 'parse_error' }, 400, {}, 400);
+      return jsonResponse({ error: 'userInput is required', stage: 'parse_error' }, 400);
     }
 
     // Moderation
     const moderation = moderateInput(userInput);
     if (!moderation.safe) {
-      return jsonResponse({ error: moderation.reason, stage: 'moderation_failed' }, 400, {}, 400);
+      return jsonResponse({ error: moderation.reason, stage: 'moderation_failed' }, 400);
     }
 
     const validTones = ['gentle', 'savage', 'therapist', 'older_sibling', 'finance_bro'];
@@ -342,8 +348,13 @@ serve(async (req) => {
     let analysis: any;
     try {
       analysis = JSON.parse(cleaned);
-    } catch {
-      return jsonResponse({ error: 'Failed to parse Claude response as JSON', stage: 'parse_error', httpStatus: 502, rawResponse: cleaned.slice(0, 1000) }, 502);
+    } catch (e) {
+      console.error('[analyze] JSON parse failed:', e);
+      return jsonResponse({ 
+        error: 'Failed to parse Claude response as JSON', 
+        stage: 'parse_error', 
+        rawResponse: cleaned.slice(0, 1000) 
+      }, 502);
     }
 
     if (analysis.roast) analysis.roast = moderateRoast(analysis.roast);
@@ -351,14 +362,37 @@ serve(async (req) => {
       analysis.actionPlan = analysis.actionPlan.map((step: any) => ({ ...step, completed: false }));
     }
 
-    if (!analysis.score || typeof analysis.score !== 'number') {
-      return jsonResponse({ error: 'Claude response missing required fields', stage: 'validation_error', httpStatus: 502, rawResponse: cleaned.slice(0, 1000) }, 502);
+    // Basic validation of required fields
+    const requiredFields = ['score', 'scoreLabel', 'scoreColor', 'summary', 'roast', 'monthlyIncome', 'monthlyExpenses'];
+    const missingFields = requiredFields.filter(f => analysis[f] === undefined);
+    
+    if (missingFields.length > 0) {
+      return jsonResponse({ 
+        error: `Claude response missing required fields: ${missingFields.join(', ')}`, 
+        stage: 'validation_error', 
+        rawResponse: cleaned.slice(0, 1000) 
+      }, 502);
     }
 
     return jsonResponse(analysis, 200, { 'X-RateLimit-Remaining': String(rateLimit.remaining) });
-  } catch (error) {
-    console.error('Analysis error:', error);
+    } catch (error: any) {
+    console.error('[analyze] Analysis error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return jsonResponse({ error: `Analysis failed: ${message}`, stage: 'exception' }, 500);
+    const stage = error.stage || 'exception';
+    const status = error.status || 500;
+    const rawResponse = error.rawResponse?.slice(0, 500);
+    const httpStatus = error.httpStatus || null;
+
+    const envelope = {
+      error: `Analysis failed: ${message}`,
+      stage,
+      httpStatus,
+      rawResponse,
+      detail: error.detail || null,
+    };
+
+    console.error('[analyze] Error envelope:', JSON.stringify(envelope));
+    
+    return jsonResponse(envelope, status);
   }
 });

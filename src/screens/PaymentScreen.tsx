@@ -22,16 +22,16 @@ export default function PaymentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { product } = route.params;
+  const [paymentMethod, setPaymentMethod] = useState<'apple_pay' | 'card'>('apple_pay');
   const [processing, setProcessing] = useState(false);
   const info = PURCHASE_PRODUCTS[product];
 
   const handlePay = async () => {
     if (!user) {
-      Alert.alert('Sign In Required', 'Please create an account to complete your purchase.');
+      Alert.alert('Sign In Required', 'Please sign in to complete your purchase.');
       navigation.navigate('Login');
       return;
     }
-
     setProcessing(true);
     await trackPurchaseInitiated(product, info!.price);
 
@@ -90,34 +90,71 @@ export default function PaymentScreen({ navigation, route }: Props) {
 
         <Text style={styles.sectionLabel}>Payment Method</Text>
         <View style={styles.methodGroup}>
-          <TouchableOpacity style={[styles.methodRow, styles.methodRowActive]} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.methodRow, paymentMethod === 'apple_pay' && styles.methodRowActive]}
+            onPress={() => setPaymentMethod('apple_pay')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.methodIcon}>🍎</Text>
             <Text style={styles.methodLabel}>Apple Pay</Text>
-            <View style={[styles.radio, styles.radioActive]}>
-              <View style={styles.radioDot} />
+            <View style={[styles.radio, paymentMethod === 'apple_pay' && styles.radioActive]}>
+              {paymentMethod === 'apple_pay' && <View style={styles.radioDot} />}
             </View>
           </TouchableOpacity>
           <View style={styles.orderSep} />
-          <TouchableOpacity style={styles.methodRow} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.methodRow, paymentMethod === 'card' && styles.methodRowActive]}
+            onPress={() => setPaymentMethod('card')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.methodIcon}>💳</Text>
             <Text style={styles.methodLabel}>Credit / Debit Card</Text>
-            <View style={styles.radio} />
+            <View style={[styles.radio, paymentMethod === 'card' && styles.radioActive]}>
+              {paymentMethod === 'card' && <View style={styles.radioDot} />}
+            </View>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.applePayBtn} onPress={handlePay} disabled={processing} activeOpacity={0.85}>
-          {processing
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.applePayText}> Pay ${info.price.toFixed(2)}</Text>
-          }
-        </TouchableOpacity>
+        {paymentMethod === 'card' && (
+          <View style={styles.cardForm}>
+            <View style={styles.cardField}>
+              <Text style={styles.cardFieldLabel}>Card Number</Text>
+              <View style={styles.cardFieldInput}>
+                <Text style={styles.cardFieldPlaceholder}>4242 4242 4242 4242</Text>
+              </View>
+            </View>
+            <View style={styles.cardRow}>
+              <View style={[styles.cardField, { flex: 1 }]}>
+                <Text style={styles.cardFieldLabel}>Expiry</Text>
+                <View style={styles.cardFieldInput}>
+                  <Text style={styles.cardFieldPlaceholder}>MM / YY</Text>
+                </View>
+              </View>
+              <View style={[styles.cardField, { flex: 1 }]}>
+                <Text style={styles.cardFieldLabel}>CVC</Text>
+                <View style={styles.cardFieldInput}>
+                  <Text style={styles.cardFieldPlaceholder}>123</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
-        <NeonButton
-          label={processing ? '' : `Pay $${info.price.toFixed(2)}`}
-          onPress={handlePay}
-          loading={processing}
-          style={styles.payBtn}
-        />
+        {paymentMethod === 'apple_pay' ? (
+          <TouchableOpacity style={styles.applePayBtn} onPress={handlePay} disabled={processing} activeOpacity={0.85}>
+            {processing
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.applePayText}> Pay ${info.price.toFixed(2)}</Text>
+            }
+          </TouchableOpacity>
+        ) : (
+          <NeonButton
+            label={processing ? '' : `Pay $${info.price.toFixed(2)}`}
+            onPress={handlePay}
+            loading={processing}
+            style={styles.payBtn}
+          />
+        )}
 
         <Text style={styles.secureNote}>🔒 Secured by Stripe · SSL encrypted</Text>
         <Text style={styles.legal}>
@@ -166,6 +203,12 @@ const styles = StyleSheet.create({
   },
   applePayText: { fontSize: Typography.title2.fontSize, color: '#fff', fontWeight: '600' },
   payBtn: { marginBottom: Spacing.md },
+  cardForm: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: Spacing.xxl, gap: Spacing.md },
+  cardField: { gap: Spacing.xs },
+  cardFieldLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+  cardFieldInput: { backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm + 2, borderWidth: 1, borderColor: Colors.glassBorder },
+  cardFieldPlaceholder: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textMuted },
+  cardRow: { flexDirection: 'row', gap: Spacing.md },
   secureNote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.sm },
   legal: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textAlign: 'center', lineHeight: 16 },
 });

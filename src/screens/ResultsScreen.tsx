@@ -260,7 +260,15 @@ export default function ResultsScreen({ navigation, route }: Props) {
             style={styles.actionBtn}
             icon="📤"
           />
-          {user && !shared && (
+          {!user ? (
+            <NeonButton
+              label="Sign in to Share to Community"
+              onPress={() => navigation.navigate('Login')}
+              variant="secondary"
+              style={styles.actionBtn}
+              icon="🔑"
+            />
+          ) : !shared ? (
             <NeonButton
               label="+ Share to Community Feed"
               onPress={handleShareToFeed}
@@ -268,8 +276,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               style={styles.actionBtn}
               icon="🌐"
             />
-          )}
-          {shared && (
+          ) : (
             <NeonButton
               label="✓ Shared to Community Feed"
               onPress={() => navigation.navigate('CommunityFeed')}

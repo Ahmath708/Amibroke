@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -9,7 +11,32 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectTo = makeRedirectUri();
+const redirectTo = Platform.OS === 'web'
+  ? 'https://zefhsplmgxefmpdqbbvv.supabase.co/auth/v1/callback'
+  : makeRedirectUri();
+
+const supabaseStorage = Platform.OS === 'web'
+  ? undefined
+  : {
+      getItem: async (key: string) => {
+        try { return await AsyncStorage.getItem(key); } catch { return null; }
+      },
+      setItem: async (key: string, value: string) => {
+        try { await AsyncStorage.setItem(key, value); } catch {}
+      },
+      removeItem: async (key: string) => {
+        try { await AsyncStorage.removeItem(key); } catch {}
+      },
+    };
+
+let pendingRedirect: { to: string; params?: any } | null = null;
+export function setPendingRedirect(to: string, params?: any) { pendingRedirect = { to, params }; }
+export function consumePendingRedirect() {
+  const r = pendingRedirect;
+  pendingRedirect = null;
+  return r;
+}
+export function getPendingRedirect() { return pendingRedirect; }
 
 type AuthContextType = {
   user: User | null;
@@ -27,7 +54,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      flowType: 'pkce',
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: supabaseStorage,
+    },
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,10 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithApple = async (): Promise<{ error?: string }> => {
+  const signInWithOAuthProvider = async (provider: 'google' | 'apple'): Promise<{ error?: string }> => {
     try {
+      if (Platform.OS === 'web') {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined },
+        });
+        if (error) return { error: error.message };
+        // Supabase client normally redirects automatically, but just in case:
+        if (data?.url && typeof window !== 'undefined') {
+          window.location.href = data.url;
+        }
+        return {};
+      }
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
+        provider,
         options: { redirectTo, skipBrowserRedirect: true },
       });
       if (error) return { error: error.message };
@@ -92,26 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return {};
     } catch (e) {
-      return { error: e instanceof Error ? e.message : 'Apple sign-in failed' };
+      return { error: e instanceof Error ? e.message : `${provider} sign-in failed` };
     }
   };
 
-  const signInWithGoogle = async (): Promise<{ error?: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo, skipBrowserRedirect: true },
-      });
-      if (error) return { error: error.message };
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        if (result.type !== 'success') return { error: 'Authentication was cancelled' };
-      }
-      return {};
-    } catch (e) {
-      return { error: e instanceof Error ? e.message : 'Google sign-in failed' };
-    }
-  };
+  const signInWithApple = () => signInWithOAuthProvider('apple');
+  const signInWithGoogle = () => signInWithOAuthProvider('google');
 
   const signOut = async () => {
     try {

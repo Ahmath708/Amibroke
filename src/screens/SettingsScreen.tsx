@@ -9,7 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { FEATURES } from '@/config/features';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, setPendingRedirect } from '@/context/AuthContext';
 import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/gdpr';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'> };
@@ -103,7 +103,14 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const accountRows: SettingRow[] = [
     { type: 'nav', label: 'Profile', icon: '👤', detail: '@yourusername', onPress: () => (navigation.navigate as any)('Home', { screen: 'Profile' }) },
-    { type: 'nav', label: 'Subscription', icon: '⭐', detail: 'Free Plan', onPress: () => navigation.navigate('Paywall') },
+    { type: 'nav', label: 'Subscription', icon: '⭐', detail: 'Free Plan', onPress: () => {
+      if (user) {
+        navigation.navigate('Paywall');
+      } else {
+        setPendingRedirect('Paywall');
+        navigation.navigate('Login');
+      }
+    }},
     ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: '📊' as const, onPress: () => navigation.navigate('CreatorDashboard') }] : []),
   ];
 
@@ -154,7 +161,7 @@ export default function SettingsScreen({ navigation }: Props) {
     {
       title: 'Danger Zone',
       rows: [
-        { type: 'action', label: 'Sign Out', icon: '🚪', destructive: true, onPress: () => { signOut(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); } },
+        { type: 'action', label: 'Sign Out', icon: '🚪', destructive: true, onPress: () => signOut() },
         { type: 'action', label: 'Clear Analysis History', icon: '🗑️', destructive: true, onPress: () => Alert.alert('Clear History?', 'This cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Clear', style: 'destructive', onPress: () => {} }]) },
         { type: 'action', label: 'Delete Account', icon: '❌', destructive: true, onPress: handleDeleteAccount },
       ],

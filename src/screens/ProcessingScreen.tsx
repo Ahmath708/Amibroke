@@ -46,19 +46,21 @@ export default function ProcessingScreen({ navigation, route }: Props) {
     try {
       const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal);
       clearTimeout(timeout);
-      if (user) {
-        await saveAnalysis(user.id, userInput, analysis);
-      }
       trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
       setDone(true);
       setTimeout(() => navigation.replace('Results', { analysis, userInput }), 400);
-} catch (e) {
-  clearTimeout(timeout);
-  // Use a generic, user-friendly error message
-  const msg = 'Something went wrong while analyzing. Please try again.';
-  trackError('analysis_failed', msg, 'ProcessingScreen');
-  setError(msg);
-}
+    } catch (e) {
+      clearTimeout(timeout);
+      let msg = e instanceof Error ? e.message : 'Something went wrong while analyzing. Please try again.';
+      console.error('[Processing] Analysis error:', e);
+      
+      if (e instanceof Error && e.name === 'AbortError') {
+        msg = 'Request timed out after 30 seconds. Check your internet connection and try again.';
+      }
+      
+      trackError('analysis_failed', msg, 'ProcessingScreen');
+      setError(msg);
+    }
   }, [userInput, tone, user, navigation]);
 
   useEffect(() => {
@@ -88,6 +90,9 @@ export default function ProcessingScreen({ navigation, route }: Props) {
 
   return (
     <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+      <TouchableOpacity style={[styles.backBtn, { marginTop: insets.top + 8 }]} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })} activeOpacity={0.7}>
+        <Text style={styles.backBtnText}>← Back</Text>
+      </TouchableOpacity>
       <View style={[styles.inner, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* Rotating ring */}
         <View style={styles.ringWrap}>
@@ -122,9 +127,14 @@ export default function ProcessingScreen({ navigation, route }: Props) {
         )}
 
         {error ? (
-          <TouchableOpacity style={styles.retryButton} onPress={doAnalysis} activeOpacity={0.7}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
+          <View style={styles.errorActions}>
+            <TouchableOpacity style={styles.retryButton} onPress={doAnalysis} activeOpacity={0.7}>
+              <Text style={styles.retryText}>Try Again</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.retryButtonSecondary} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })} activeOpacity={0.7}>
+              <Text style={styles.retryTextSecondary}>Back to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <Text style={styles.hint}>
             Claude is analyzing your finances with brutal honesty ✨
@@ -175,15 +185,38 @@ const styles = StyleSheet.create({
     fontSize: Typography.subhead.fontSize, color: Colors.danger, textAlign: 'center',
     marginHorizontal: Spacing.xl,
   },
+  errorActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    width: '100%',
+    paddingHorizontal: Spacing.xl,
+  },
   retryButton: {
+    flex: 1,
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
-    paddingHorizontal: 40,
     borderRadius: Radius.lg,
     marginTop: Spacing.md,
+    alignItems: 'center',
+  },
+  retryButtonSecondary: {
+    flex: 1,
+    backgroundColor: Colors.groupedRow,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.glassBorder,
   },
   retryText: {
     fontFamily: Typography.fonts.bodyMed,
     fontSize: Typography.callout.fontSize, color: Colors.background, textAlign: 'center',
   },
+  retryTextSecondary: {
+    fontFamily: Typography.fonts.bodyMed,
+    fontSize: Typography.callout.fontSize, color: Colors.textPrimary, textAlign: 'center',
+  },
+  backBtn: { position: 'absolute', top: 0, left: 16, zIndex: 10, padding: Spacing.sm },
+  backBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
 });
