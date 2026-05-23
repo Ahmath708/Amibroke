@@ -9,7 +9,7 @@ interface Props {
   style?: any;
 }
 
-export default function EmptyState({ emoji = '📊', title, body, style }: Props) {
+export default function EmptyState({ emoji = '📭', title, body, style }: Props) {
   return (
     <View style={[styles.wrap, style]}>
       <Text style={styles.emoji}>{emoji}</Text>

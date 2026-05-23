@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
+const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
 const CORS_HEADERS = {
@@ -172,11 +172,19 @@ async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
-        console.error(`[claude] API error: ${response.status}`, errorBody);
-        const error: any = new Error(`Claude API error: ${response.status}`);
+        console.error(`[claude] API error: ${response.status} — body: ${errorBody}`);
+        let apiMessage = `Claude API error: ${response.status}`;
+        try {
+          const parsed = JSON.parse(errorBody);
+          if (parsed.error?.message) {
+            apiMessage = `Claude API error: ${parsed.error.message}`;
+          }
+        } catch { /* ignore parse errors */ }
+        const error: any = new Error(apiMessage);
         error.status = response.status;
         error.rawResponse = errorBody;
         error.stage = 'claude_api_error';
+        error.detail = apiMessage;
         throw error;
       }
 
@@ -215,7 +223,14 @@ async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWr
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
-      await writer.write(encoder.encode(JSON.stringify({ error: `Claude API error: ${response.status}`, stage: 'claude_api_error', rawResponse: errorBody })));
+      let apiMessage = `Claude API error: ${response.status}`;
+      try {
+        const parsed = JSON.parse(errorBody);
+        if (parsed.error?.message) {
+          apiMessage = `Claude API error: ${parsed.error.message}`;
+        }
+      } catch { /* ignore parse errors */ }
+      await writer.write(encoder.encode(JSON.stringify({ error: apiMessage, stage: 'claude_api_error', rawResponse: errorBody })));
       await writer.close();
       return;
     }
@@ -291,6 +306,11 @@ serve(async (req) => {
 
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed', stage: 'request_validation' }, 405);
+  }
+
+  if (!ANTHROPIC_API_KEY) {
+    console.error('[analyze] ANTHROPIC_API_KEY secret is not set in Supabase');
+    return jsonResponse({ error: 'Server misconfiguration: API key not set. Run: npx supabase secrets set ANTHROPIC_API_KEY=<your_key>', stage: 'config_error' }, 500);
   }
 
   const clientIP = getClientIP(req);

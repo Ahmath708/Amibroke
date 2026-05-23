@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import GlassCard from '@/components/GlassCard';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
 
@@ -39,6 +41,9 @@ export default function DebtPayoffScreen({ route }: Props) {
   const debts = route.params?.debts?.length > 0 ? route.params.debts : DEFAULT_DEBTS;
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [strategy, setStrategy] = useState<Strategy>('avalanche');
+  const [extra, setExtra] = useState(100);
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     (async () => {
@@ -55,9 +60,6 @@ export default function DebtPayoffScreen({ route }: Props) {
   if (loading) return <LoadingState />;
   if (!authorized) return null;
 
-  const [strategy, setStrategy] = useState<Strategy>('avalanche');
-  const [extra, setExtra] = useState(100);
-
   const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
   const totalMin = debts.reduce((s, d) => s + d.minimumPayment, 0);
   const months = calcPayoff(debts, extra, strategy);
@@ -71,7 +73,8 @@ export default function DebtPayoffScreen({ route }: Props) {
   const urgencyVariant = (u: string) => u === 'critical' ? 'danger' : u === 'high' ? 'warning' : u === 'medium' ? 'info' : 'muted';
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="debt" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -163,7 +166,7 @@ export default function DebtPayoffScreen({ route }: Props) {
           ))}
         </View>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

@@ -8,17 +8,17 @@ export function isPremium(tier: PurchaseTier): boolean {
 }
 
 export function hasAccessTo(tier: PurchaseTier, required: 'action_plan' | 'deep_dive'): boolean {
-  // Unlock all features regardless of tier.
-  return true;
+  if (required === 'action_plan') return tier === 'action_plan' || tier === 'deep_dive';
+  if (required === 'deep_dive') return tier === 'deep_dive';
+  return false;
 }
 
 export async function getPurchaseTier(): Promise<PurchaseTier> {
   try {
     const val = await AsyncStorage.getItem(TIER_KEY);
-    // If a tier is stored, keep it; otherwise unlock all features by default.
-    if (val === 'action_plan' || val === 'deep_dive') return val as PurchaseTier;
-  } catch { }
-  // Default to the highest tier to unlock all premium features.
+    if (val === 'action_plan' || val === 'deep_dive' || val === 'free') return val as PurchaseTier;
+  } catch {}
+  // Default to deep_dive so all features are accessible by default.
   return 'deep_dive';
 }
 

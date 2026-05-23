@@ -13,6 +13,9 @@ import ScoreRing from '@/components/ScoreRing';
 import StatusPill from '@/components/StatusPill';
 import NeonButton from '@/components/NeonButton';
 import Disclaimer from '@/components/Disclaimer';
+import { GlassSection } from '@/components/iOS/GlassSection';
+import ScreenBackground from '@/components/ScreenBackground';
+
 import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis, shareToFeed } from '@/services/claudeApi';
 import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
@@ -81,37 +84,44 @@ export default function ResultsScreen({ navigation, route }: Props) {
     analysis.score < 65 ? 'warning' : 'good';
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <View style={styles.container}>
+      <ScreenBackground variant="results" />
       <Animated.ScrollView
         style={{ opacity: fadeIn }}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Score hero */}
-        <View style={styles.scoreHero}>
-          <ScoreRing score={analysis.score} size={140} />
-          <View style={styles.scoreInfo}>
-            <StatusPill label={analysis.scoreLabel} variant={scoreVariant} size="md" />
-            <Text style={styles.scoreNum} adjustsFontSizeToFit numberOfLines={1}>
-              {analysis.score}<Text style={styles.scoreOf}>/100</Text>
-            </Text>
+        <GlassSection delay={0}>
+          <View style={styles.scoreHero}>
+            <ScoreRing score={analysis.score} size={140} />
+            <View style={styles.scoreInfo}>
+              <StatusPill label={analysis.scoreLabel} variant={scoreVariant} size="md" />
+              <Text style={styles.scoreNum} adjustsFontSizeToFit numberOfLines={1}>
+                {analysis.score}<Text style={styles.scoreOf}>/100</Text>
+              </Text>
+            </View>
           </View>
-        </View>
+        </GlassSection>
 
         {/* Roast card */}
-        <LinearGradient
-          colors={['rgba(189,0,255,0.2)', 'rgba(231,0,110,0.15)']}
-          style={styles.roastCard}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.roastEmoji}>🔥</Text>
-          <Text style={styles.roastText}>"{analysis.roast}"</Text>
-        </LinearGradient>
+        <GlassSection delay={120}>
+          <LinearGradient
+            colors={['rgba(189,0,255,0.2)', 'rgba(231,0,110,0.15)']}
+            style={styles.roastCard}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          >
+            <Text style={styles.roastEmoji}>🔥</Text>
+            <Text style={styles.roastText}>"{analysis.roast}"</Text>
+          </LinearGradient>
+        </GlassSection>
 
         {/* Summary */}
-        <GlassCard style={styles.summaryCard}>
-          <Text style={styles.summaryText}>{analysis.summary}</Text>
-        </GlassCard>
+        <GlassSection delay={220}>
+          <GlassCard style={styles.summaryCard}>
+            <Text style={styles.summaryText}>{analysis.summary}</Text>
+          </GlassCard>
+        </GlassSection>
 
         {/* Key metrics — iOS-style grouped rows */}
         <Text style={styles.sectionTitle}>Key Metrics</Text>
@@ -119,9 +129,9 @@ export default function ResultsScreen({ navigation, route }: Props) {
           {[
             { label: 'Monthly Income', value: fmt(analysis.monthlyIncome), icon: '💵' },
             { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses), icon: '💸' },
-            { label: 'Monthly Savings', value: fmt(analysis.monthlySavings), icon: '🏦', highlight: analysis.monthlySavings < 0 },
-            { label: 'Total Debt', value: fmt(analysis.debtTotal), icon: '🏋️', highlight: analysis.debtTotal > 0 },
-            { label: 'Savings Rate', value: `${analysis.savingsRate.toFixed(0)}%`, icon: '📊' },
+            { label: 'Monthly Savings', value: fmt(analysis.monthlySavings), icon: '💰', highlight: analysis.monthlySavings < 0 },
+            { label: 'Total Debt', value: fmt(analysis.debtTotal), icon: '📉', highlight: analysis.debtTotal > 0 },
+            { label: 'Savings Rate', value: `${analysis.savingsRate.toFixed(0)}%`, icon: '📈' },
             { label: 'Emergency Fund', value: `${analysis.emergencyFundMonths.toFixed(1)} mo`, icon: '🛡️' },
           ].map((m, i, arr) => (
             <React.Fragment key={m.label}>
@@ -288,7 +298,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
 
         <Disclaimer style={{ marginTop: Spacing.xl }} />
       </Animated.ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 

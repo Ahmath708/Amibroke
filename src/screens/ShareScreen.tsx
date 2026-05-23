@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,8 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import StatusPill from '@/components/StatusPill';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { route: RouteProp<RootStackParamList, 'Share'> };
 
@@ -23,6 +25,7 @@ export default function ShareScreen({ route }: Props) {
   const [format, setFormat] = useState<CardFormat>('tall');
   const [theme, setTheme] = useState<CardTheme>('dark');
   const [exporting, setExporting] = useState(false);
+  const { animatedStyle } = useEntryAnimation();
 
   // Set header with back arrow
   React.useLayoutEffect(() => {
@@ -94,7 +97,8 @@ export default function ShareScreen({ route }: Props) {
   const dateStr = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="share" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -222,7 +226,7 @@ export default function ShareScreen({ route }: Props) {
           <Text style={styles.nativeShareText}>📤  Share with Other Apps</Text>
         </TouchableOpacity>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

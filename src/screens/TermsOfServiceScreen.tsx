@@ -2,16 +2,18 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import ScreenBackground from '@/components/ScreenBackground';
 
 export default function TermsOfServiceScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 40 }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
+      <ScreenBackground variant="info" />
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
       <Text style={styles.lastUpdated}>Last Updated: May 2026</Text>
 
       <Text style={styles.paragraph}>
@@ -98,6 +100,7 @@ export default function TermsOfServiceScreen() {
         For questions about these terms, contact us at legal@amibroke.app.
       </Text>
     </ScrollView>
+    </View>
   );
 }
 

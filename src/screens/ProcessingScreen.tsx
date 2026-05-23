@@ -1,26 +1,29 @@
 ﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
-import { analyzeFinances, saveAnalysis } from '@/services/claudeApi';
+import { analyzeFinances } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { trackFunnelStep, trackError } from '@/services/analytics';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Processing'>;
   route: RouteProp<RootStackParamList, 'Processing'>;
 };
 
-const STEPS = [
-  { label: 'Reading your situation...', emoji: '📖' },
-  { label: 'Calculating your score...', emoji: '🧮' },
-  { label: 'Finding where you\'re bleeding...', emoji: '🩸' },
-  { label: 'Writing your roast...', emoji: '🔥' },
-  { label: 'Building your action plan...', emoji: '🗓️' },
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+const STEPS: { label: string; icon: IoniconsName }[] = [
+  { label: 'Reading your situation...', icon: 'book-outline' },
+  { label: 'Calculating your score...', icon: 'calculator-outline' },
+  { label: 'Finding where you\'re bleeding...', icon: 'trending-down-outline' },
+  { label: 'Writing your roast...', icon: 'flame-outline' },
+  { label: 'Building your action plan...', icon: 'calendar-outline' },
 ];
 
 export default function ProcessingScreen({ navigation, route }: Props) {
@@ -32,13 +35,24 @@ export default function ProcessingScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const spin = useRef(new Animated.Value(0)).current;
-  const stepOpacity = useRef(new Animated.Value(1)).current;
+  const stepOpacity = useRef(new Animated.Value(0)).current;
   const progressWidth = useRef(new Animated.Value(0)).current;
+
+  const ringPulse = useRef(new Animated.Value(1)).current;
+  const successScale = useRef(new Animated.Value(0.92)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
+  const errorShake = useRef(new Animated.Value(0)).current;
+
 
   const doAnalysis = useCallback(async () => {
     setError(null);
     setDone(false);
     progressWidth.setValue(0);
+    successOpacity.setValue(0);
+    successScale.setValue(0.92);
+    errorShake.setValue(0);
+    stepOpacity.setValue(1);
+
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -47,49 +61,79 @@ export default function ProcessingScreen({ navigation, route }: Props) {
       const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal);
       clearTimeout(timeout);
       trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
+
+      // Success animation
+      Animated.parallel([
+        Animated.spring(successScale, { toValue: 1, friction: 7, tension: 55, useNativeDriver: true }),
+        Animated.timing(successOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start();
+
       setDone(true);
-      setTimeout(() => navigation.replace('Results', { analysis, userInput }), 400);
+      setTimeout(() => navigation.replace('Results', { analysis, userInput }), 520);
+
     } catch (e) {
       clearTimeout(timeout);
       let msg = e instanceof Error ? e.message : 'Something went wrong while analyzing. Please try again.';
       console.error('[Processing] Analysis error:', e);
-      
+
       if (e instanceof Error && e.name === 'AbortError') {
         msg = 'Request timed out after 30 seconds. Check your internet connection and try again.';
       }
-      
+
+      // Error microinteraction
+      Animated.sequence([
+        Animated.timing(errorShake, { toValue: 1, duration: 140, useNativeDriver: true }),
+        Animated.timing(errorShake, { toValue: 0, duration: 140, useNativeDriver: true }),
+      ]).start();
+
       trackError('analysis_failed', msg, 'ProcessingScreen');
       setError(msg);
     }
+
   }, [userInput, tone, user, navigation]);
 
   useEffect(() => {
     // Spin animation
-    Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 1600, easing: Easing.linear, useNativeDriver: true })
-    ).start();
+    const spinAnim = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 1600, easing: Easing.linear, useNativeDriver: true }),
+    );
+    spinAnim.start();
 
-    // Step cycling
+    // Initial fade-in
+    Animated.timing(stepOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+
+
+    // Step cycling (iOS-ish crossfade + pulse)
     const interval = setInterval(() => {
-      Animated.sequence([
-        Animated.timing(stepOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(stepOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start();
-      setStepIndex((i) => (i + 1) % STEPS.length);
+      Animated.parallel([
+        Animated.timing(stepOpacity, { toValue: 0, duration: 140, useNativeDriver: true }),
+        Animated.timing(ringPulse, { toValue: 1.15, duration: 180, useNativeDriver: true }),
+      ]).start(() => {
+        setStepIndex((i) => (i + 1) % STEPS.length);
+        Animated.parallel([
+          Animated.timing(stepOpacity, { toValue: 1, duration: 160, useNativeDriver: true }),
+          Animated.timing(ringPulse, { toValue: 1, duration: 220, useNativeDriver: true }),
+        ]).start();
+      });
     }, 1200);
 
-    // Progress bar
-    Animated.timing(progressWidth, { toValue: 1, duration: 6000, useNativeDriver: false }).start();
+    // Progress bar (non-native driver because we're animating width)
+    Animated.timing(progressWidth, { toValue: 1, duration: 6500, useNativeDriver: false }).start();
 
     doAnalysis();
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      spinAnim.stop();
+    };
   }, [doAnalysis]);
+
 
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <View style={styles.container}>
+      <ScreenBackground variant="processing" />
       <TouchableOpacity style={[styles.backBtn, { marginTop: insets.top + 8 }]} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })} activeOpacity={0.7}>
         <Text style={styles.backBtnText}>← Back</Text>
       </TouchableOpacity>
@@ -104,9 +148,28 @@ export default function ProcessingScreen({ navigation, route }: Props) {
             />
           </Animated.View>
           <View style={styles.ringCenter}>
-            <Text style={styles.centerEmoji}>{done ? '✅' : error ? '⚠️' : STEPS[stepIndex].emoji}</Text>
+            <Animated.View
+              style={{
+                transform: [
+                  { scale: done ? successScale : 1 },
+                  { translateX: error ? errorShake.interpolate({ inputRange: [0, 1], outputRange: [-6, 6] }) : 0 },
+                ],
+              }}
+            >
+              <Animated.View style={{ opacity: done && !error ? successOpacity : 1 }}>
+                {done ? (
+                  <Ionicons name="checkmark-circle" size={36} color={Colors.success} />
+                ) : error ? (
+                  <Ionicons name="warning" size={36} color={Colors.warning} />
+                ) : (
+                  <Ionicons name={STEPS[stepIndex].icon} size={36} color={Colors.primary} />
+                )}
+              </Animated.View>
+            </Animated.View>
           </View>
+
         </View>
+
 
         {/* Status */}
         {error ? (
@@ -141,7 +204,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
           </Text>
         )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -163,7 +226,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5, shadowRadius: 20, elevation: 10,
   },
-  centerEmoji: { fontSize: 36 },
+  centerEmoji: {},
   stepText: {
     fontFamily: Typography.fonts.bodyMed,
     fontSize: Typography.headline.fontSize, color: Colors.textPrimary, textAlign: 'center',

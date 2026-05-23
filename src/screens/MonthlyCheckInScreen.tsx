@@ -1,8 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StackActions, useNavigation } from '@react-navigation/native';
@@ -14,6 +13,8 @@ import { getCheckIns, saveCheckIn } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'MonthlyCheckIn'> };
 
@@ -26,14 +27,23 @@ const QUESTIONS = [
 
 const MOODS = ['😭', '😟', '😐', '🙂', '🤑'];
 
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 export default function MonthlyCheckInScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const nav = useNavigation();
   const { user } = useAuth();
+
+  // All hooks must be at top, no conditional hook calls
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [mood, setMood] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [note, setNote] = useState('');
+  const [step, setStep] = useState<'form' | 'mood' | 'note'>('form');
+  const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null);
+  const [loadingLast, setLoadingLast] = useState(true);
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     (async () => {
@@ -47,15 +57,8 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
     })();
   }, []);
 
-  if (loading) return <LoadingState />;
-  if (!authorized) return null;
-  const [note, setNote] = useState('');
-  const [step, setStep] = useState<'form' | 'mood' | 'note'>('form');
-  const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null);
-  const [loadingLast, setLoadingLast] = useState(true);
-
   useEffect(() => {
-    if (!user) {
+    if (!user || !authorized) {
       setLoadingLast(false);
       return;
     }
@@ -66,7 +69,7 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
     }).finally(() => {
       setLoadingLast(false);
     });
-  }, [user]);
+  }, [user, authorized]);
 
   const setAnswer = (id: string, val: string) =>
     setAnswers((prev) => ({ ...prev, [id]: val }));
@@ -96,8 +99,15 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
     navigation.replace('Processing', { userInput: situationText });
   };
 
+  if (loading) return <LoadingState style={{ flex: 1 }} />;
+  if (!authorized) return null;
+
+  const now = new Date();
+  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="checkin" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -107,7 +117,11 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
         <View style={styles.stepRow}>
           {(['form', 'mood', 'note'] as const).map((s, i) => (
             <React.Fragment key={s}>
-              <View style={[styles.stepDot, step === s && styles.stepDotActive, (step === 'mood' && i === 0) || (step === 'note' && i < 2) ? styles.stepDotDone : null]} />
+              <View style={[
+                styles.stepDot,
+                step === s && styles.stepDotActive,
+                (step === 'mood' && i === 0) || (step === 'note' && i < 2) ? styles.stepDotDone : null,
+              ]} />
               {i < 2 && <View style={styles.stepLine} />}
             </React.Fragment>
           ))}
@@ -115,7 +129,7 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
 
         {step === 'form' && (
           <>
-            <Text style={styles.stepTitle}>May 2026 Numbers</Text>
+            <Text style={styles.stepTitle}>{monthLabel} Numbers</Text>
             <Text style={styles.stepSubtitle}>Quick snapshot — takes 30 seconds.</Text>
 
             <Text style={styles.sectionLabel}>This Month's Figures</Text>
@@ -148,8 +162,8 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
                 <Text style={styles.lastMonthTitle}>vs. Last Check-In</Text>
                 <View style={styles.lastMonthRow}>
                   {[
-                    { label: 'Income', last: lastCheckIn.income ? `$${lastCheckIn.income}` : '—', current: answers.income || '—' },
-                    { label: 'Saved', last: lastCheckIn.savings ? `$${lastCheckIn.savings}` : '—', current: answers.savings || '—' },
+                    { label: 'Income', last: lastCheckIn.income ? `$${lastCheckIn.income}` : '—', current: answers.income ? `$${answers.income}` : '—' },
+                    { label: 'Saved', last: lastCheckIn.savings ? `$${lastCheckIn.savings}` : '—', current: answers.savings ? `$${answers.savings}` : '—' },
                   ].map((item) => (
                     <View key={item.label} style={styles.lastMonthItem}>
                       <Text style={styles.lastMonthLabel}>{item.label}</Text>
@@ -217,7 +231,7 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
 
             <View style={styles.navButtons}>
               <NeonButton label="← Back" onPress={() => setStep('mood')} variant="tinted" style={styles.backBtn} />
-              <NeonButton label="Run Analysis ⚡" onPress={handleSubmit} style={styles.nextBtn} />
+              <NeonButton label="Run Analysis 🚀" onPress={handleSubmit} style={styles.nextBtn} />
             </View>
 
             <Text style={styles.skipNote}>
@@ -226,7 +240,7 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
           </>
         )}
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

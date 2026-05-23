@@ -2,28 +2,32 @@ import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
+import ScreenBackground from '@/components/ScreenBackground';
 import { trackFunnelStep } from '@/services/analytics';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Landing'> };
 
 const { width } = Dimensions.get('window');
 
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
 const HERO_LINES = [
   { text: 'Find out if your finances', emoji: '' },
-  { text: 'are cooked.', emoji: '🍳' },
+  { text: 'are cooked.', emoji: '' },
 ];
 
-const VALUE_PROPS = [
-  { emoji: '📝', title: 'Type your finances', desc: 'Plain English. No spreadsheets.' },
-  { emoji: '🔥', title: 'Get roasted by AI', desc: 'Brutally honest but never cruel.' },
-  { emoji: '📊', title: 'See your score', desc: '0–100 financial health rating.' },
-  { emoji: '🗓️', title: 'Fix your life', desc: 'Personalized 90-day action plan.' },
+const VALUE_PROPS: { icon: IoniconsName; title: string; desc: string }[] = [
+  { icon: 'create-outline',    title: 'Type your finances', desc: 'Plain English. No spreadsheets.' },
+  { icon: 'flame-outline',     title: 'Get roasted by AI',  desc: 'Brutally honest but never cruel.' },
+  { icon: 'bar-chart-outline', title: 'See your score',     desc: '0–100 financial health rating.' },
+  { icon: 'calendar-outline',  title: 'Fix your life',      desc: 'Personalized 90-day action plan.' },
 ];
 
 export default function LandingScreen({ navigation }: Props) {
@@ -58,7 +62,8 @@ export default function LandingScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <View style={styles.container}>
+      <ScreenBackground variant="home" />
       <View style={[styles.content, { paddingTop: insets.top + Spacing.xxl }]}>
         {/* Hero Section */}
         <Animated.View style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -67,7 +72,6 @@ export default function LandingScreen({ navigation }: Props) {
             {HERO_LINES.map((line, i) => (
               <View key={i} style={styles.heroLine}>
                 <Text style={styles.heroTitle}>{line.text}</Text>
-                {line.emoji && <Text style={styles.heroEmoji}>{line.emoji}</Text>}
               </View>
             ))}
           </View>
@@ -81,7 +85,7 @@ export default function LandingScreen({ navigation }: Props) {
           {VALUE_PROPS.map((v, i) => (
             <View key={i} style={styles.valueRow}>
               <View style={styles.valueIcon}>
-                <Text style={styles.valueEmoji}>{v.emoji}</Text>
+                <Ionicons name={v.icon} size={22} color={Colors.primary} />
               </View>
               <View style={styles.valueText}>
                 <Text style={styles.valueTitle}>{v.title}</Text>
@@ -115,7 +119,7 @@ export default function LandingScreen({ navigation }: Props) {
           This app is for educational and entertainment purposes only and does not constitute financial advice.
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 

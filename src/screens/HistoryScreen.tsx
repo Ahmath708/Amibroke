@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated,
 } from 'react-native';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -9,12 +10,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
-import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import EmptyState from '@/components/EmptyState';
-import { getAnalysisHistory, getCheckIns } from '@/services/claudeApi';
+import { getAnalysisHistory, getCheckIns, getAnalysisById } from '@/services/claudeApi';
 import { AnalysisHistoryItem, CheckIn } from '@/types';
+import ScreenBackground from '@/components/ScreenBackground';
 import { useAuth } from '@/context/AuthContext';
 
 const MAX_SCORE = 100;
@@ -26,15 +27,16 @@ export default function HistoryScreen() {
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [rowLoading, setRowLoading] = useState<string | null>(null);
+  const { animatedStyle } = useEntryAnimation();
 
   const fetchHistory = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
     }
-    setLoading(true);
     setError(null);
     try {
       const [data, checkinData] = await Promise.all([
@@ -47,12 +49,33 @@ export default function HistoryScreen() {
       setError('Failed to load history.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [user]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleRowPress = async (id: string) => {
+    if (rowLoading) return;
+    setRowLoading(id);
+    try {
+      const analysis = await getAnalysisById(id);
+      if (analysis) {
+        navigation.navigate('Results', { analysis, userInput: '' });
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setRowLoading(null);
+    }
+  };
 
   const barData = [...history].reverse();
 
@@ -63,30 +86,39 @@ export default function HistoryScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+      <View style={styles.container}>
         <LoadingState style={{ paddingTop: insets.top + 80 }} />
-      </LinearGradient>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+      <View style={styles.container}>
         <ErrorState message={error} onRetry={fetchHistory} style={{ paddingTop: insets.top + 80 }} />
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="history" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primarySolid]}
+          />
+        }
       >
         {/* Large title */}
         <Text style={styles.largeTitle}>History</Text>
         {user ? (
-          <Text style={styles.subtitle}>{history.length} analyses</Text>
+          <Text style={styles.subtitle}>{history.length} {history.length === 1 ? 'analysis' : 'analyses'}</Text>
         ) : (
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
             <Text style={[styles.subtitle, styles.signInLink]}>Sign in to track your progress →</Text>
@@ -94,7 +126,7 @@ export default function HistoryScreen() {
         )}
 
         {history.length === 0 ? (
-          <EmptyState emoji="📊" title="No analyses yet" body="Run your first analysis to start tracking your financial progress over time." />
+          <EmptyState emoji="📋" title="No analyses yet" body="Run your first analysis to start tracking your financial progress over time." />
         ) : (
           <>
             {/* Chart card */}
@@ -109,7 +141,7 @@ export default function HistoryScreen() {
                       <TouchableOpacity
                         key={item.id}
                         style={styles.barCol}
-                        onPress={() => setSelected(selected === item.id ? null : item.id)}
+                        onPress={() => handleRowPress(item.id)}
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.barNum, { color }]}>{item.score}</Text>
@@ -130,53 +162,76 @@ export default function HistoryScreen() {
             {/* List */}
             <Text style={styles.sectionLabel}>All Analyses</Text>
             <View style={styles.historyGroup}>
-              {history.map((item: AnalysisHistoryItem, i: number) => {
-                const variant = item.score < 40 ? 'danger' : item.score < 65 ? 'warning' : 'good';
-                const scoreColor = item.score < 40 ? Colors.danger : item.score < 65 ? Colors.warning : Colors.success;
+              {history.map((h, i) => {
+                const color = h.score < 40 ? Colors.danger : h.score < 65 ? Colors.warning : Colors.success;
+                let deltaText = '';
+                let deltaColor = Colors.textMuted;
+                if (i < history.length - 1) {
+                  const prev = history[i + 1].score;
+                  const diff = h.score - prev;
+                  if (diff > 0) {
+                    deltaText = `+${diff}`;
+                    deltaColor = Colors.success;
+                  } else if (diff < 0) {
+                    deltaText = `${diff}`;
+                    deltaColor = Colors.danger;
+                  }
+                }
+                const isLoading = rowLoading === h.id;
+
                 return (
-                  <React.Fragment key={item.id}>
+                  <React.Fragment key={h.id}>
                     {i > 0 && <View style={styles.rowSep} />}
-                    <TouchableOpacity style={styles.historyRow} activeOpacity={0.7}>
-                      <View style={[styles.scoreCircle, { borderColor: scoreColor }]}>
-                        <Text style={[styles.scoreCircleNum, { color: scoreColor }]}>{item.score}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleRowPress(h.id)}
+                      activeOpacity={0.7}
+                      style={[styles.historyRow, isLoading && { opacity: 0.6 }]}
+                      disabled={!!rowLoading}
+                    >
+                      <View style={[styles.scoreCircle, { borderColor: color }]}>
+                        <Text style={[styles.scoreCircleNum, { color }]}>{h.score}</Text>
                       </View>
                       <View style={styles.historyInfo}>
                         <View style={styles.historyMeta}>
-                          <Text style={styles.historyDate}>{fmtDate(item.created_at)}</Text>
+                          <Text style={styles.historyDate}>{fmtDate(h.created_at)}</Text>
+                          {deltaText ? (
+                            <Text style={[styles.historyDelta, { color: deltaColor }]}>
+                              {deltaText}
+                            </Text>
+                          ) : null}
                         </View>
-                        <StatusPill label={item.score_label} variant={variant} />
-                        <Text style={styles.historySummary} numberOfLines={2}>{item.summary}</Text>
+                        <Text style={styles.historySummary} numberOfLines={2}>
+                          {h.summary}
+                        </Text>
                       </View>
-                      <Text style={styles.chevron}>›</Text>
+                      <Text style={styles.chevron}>{isLoading ? '⏳' : '›'}</Text>
                     </TouchableOpacity>
                   </React.Fragment>
                 );
               })}
             </View>
 
-            {/* Check-ins */}
+            {/* Check-ins list */}
             {checkIns.length > 0 && (
               <>
-                <Text style={[styles.sectionLabel, { marginTop: Spacing.xxl }]}>Monthly Check-Ins</Text>
+                <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>Monthly Check-Ins</Text>
                 <View style={styles.historyGroup}>
                   {checkIns.map((c, i) => {
-                    const moodLabels = ['Stressed', 'Worried', 'Getting By', 'Feeling Good', 'On Fire'];
-                    const moodEmojis = ['😭', '😟', '😐', '🙂', '🤑'];
+                    const MOODS = ['😭', '😟', '😐', '🙂', '🤑'];
                     return (
                       <React.Fragment key={c.id}>
                         {i > 0 && <View style={styles.rowSep} />}
                         <View style={styles.historyRow}>
                           <View style={styles.checkinEmoji}>
-                            <Text style={styles.checkinEmojiText}>{moodEmojis[c.mood] || '😐'}</Text>
+                            <Text style={styles.checkinEmojiText}>{MOODS[c.mood] || '😐'}</Text>
                           </View>
                           <View style={styles.historyInfo}>
-                            <View style={styles.historyMeta}>
-                              <Text style={styles.historyDate}>{fmtDate(c.created_at)}</Text>
-                              <StatusPill label={moodLabels[c.mood] || 'Getting By'} variant="info" />
-                            </View>
-                            <Text style={styles.historySummary} numberOfLines={1}>
-                              {c.notes || `${c.income ? `$${c.income}` : '—'} income · ${c.savings ? `$${c.savings}` : '—'} saved`}
-                            </Text>
+                            <Text style={styles.historyDate}>{fmtDate(c.created_at)}</Text>
+                            {c.notes ? (
+                              <Text style={styles.historySummary} numberOfLines={2}>
+                                "{c.notes}"
+                              </Text>
+                            ) : null}
                           </View>
                         </View>
                       </React.Fragment>
@@ -188,18 +243,13 @@ export default function HistoryScreen() {
           </>
         )}
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: Spacing.xl },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
-  emptyState: { alignItems: 'center', paddingTop: Spacing.section + Spacing.xxl, paddingHorizontal: Spacing.xl },
-  emptyEmoji: { fontSize: 48, marginBottom: Spacing.lg },
-  emptyTitle: { fontFamily: Typography.fonts.heading, ...Typography.title3, color: Colors.textPrimary, marginBottom: Spacing.sm },
-  emptyBody: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   largeTitle: {
     fontFamily: Typography.fonts.heading,
     ...Typography.largeTitle,
@@ -242,11 +292,6 @@ const styles = StyleSheet.create({
   historyDelta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
   historySummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
   chevron: { fontSize: Typography.title2.fontSize, color: Colors.textMuted, fontWeight: '300' },
-  retryBtn: {
-    marginTop: Spacing.xl, paddingHorizontal: Spacing.xxl + Spacing.xs, paddingVertical: Spacing.md,
-    backgroundColor: Colors.primaryContainer, borderRadius: Radius.md,
-  },
-  retryBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '600' },
   checkinEmoji: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',

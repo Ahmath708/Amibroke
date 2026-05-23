@@ -1,4 +1,4 @@
-﻿import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { FinancialAnalysis, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone } from '@/types';
 import { FinancialAnalysisSchema } from '@/lib/validations';
 
@@ -213,6 +213,55 @@ export async function updateProfile(userId: string, updates: { username?: string
   }
 }
 
+export async function uploadAvatar(userId: string, localUri: string): Promise<string | null> {
+  const client = getSupabase();
+  if (!client) {
+    console.warn('[uploadAvatar] Supabase client not available');
+    return null;
+  }
+
+  try {
+    console.log('[uploadAvatar] Fetching local image URI:', localUri);
+    const response = await fetch(localUri);
+    const blob = await response.blob();
+
+    const fileExt = localUri.split('.').pop() || 'jpg';
+    const fileName = `avatar-${Date.now()}.${fileExt}`;
+    // Store inside a folder named after user's ID to match the RLS policy folder segment
+    const filePath = `${userId}/${fileName}`;
+
+    console.log('[uploadAvatar] Uploading image blob to storage bucket "avatars":', filePath);
+    const { error: uploadError } = await client.storage
+      .from('avatars')
+      .upload(filePath, blob, {
+        contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('[uploadAvatar] Storage upload failed:', uploadError.message);
+      throw uploadError;
+    }
+
+    const { data } = client.storage.from('avatars').getPublicUrl(filePath);
+    const publicUrl = data.publicUrl;
+    console.log('[uploadAvatar] Upload succeeded. Public URL:', publicUrl);
+
+    // Save public URL to profile database row
+    const ok = await updateProfile(userId, { avatar_url: publicUrl });
+    if (!ok) {
+      console.warn('[uploadAvatar] Failed to update profile database row with avatar URL');
+      return null;
+    }
+
+    return publicUrl;
+  } catch (error) {
+    console.warn('[uploadAvatar] Failed to upload avatar:', error);
+    return null;
+  }
+}
+
+
 // ─── Community Feed ──────────────────────────────────────────────
 
 export async function getCommunityFeed(userId?: string): Promise<CommunityPost[]> {
@@ -355,7 +404,7 @@ export async function getSubscriptions(userId: string): Promise<Subscription[]> 
       id: s.id,
       name: s.name,
       amount: parseFloat(s.amount),
-      icon: s.icon || '💳',
+      icon: s.icon || '💸',
       category: s.category || '',
       last_used: s.last_used || '',
     }));
@@ -448,6 +497,41 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
   } catch (error) {
     console.warn('Failed to fetch check-ins:', error);
     return [];
+  }
+}
+
+export async function getAnalysisById(id: string): Promise<FinancialAnalysis | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  try {
+    const { data, error } = await (client as any)
+      .from('analyses')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      score: data.score,
+      scoreLabel: data.score_label,
+      scoreColor: data.score_color,
+      summary: data.summary,
+      roast: data.roast,
+      monthlyIncome: parseFloat(data.monthly_income),
+      monthlyExpenses: parseFloat(data.monthly_expenses),
+      monthlySavings: parseFloat(data.monthly_savings),
+      debtTotal: parseFloat(data.debt_total),
+      savingsRate: parseFloat(data.savings_rate),
+      emergencyFundMonths: parseFloat(data.emergency_fund_months),
+      debtToIncomeRatio: parseFloat(data.debt_to_income_ratio),
+      spendingBreakdown: data.spending_breakdown || [],
+      debts: data.debts || [],
+      actionPlan: data.action_plan || [],
+      insights: data.insights || [],
+    };
+  } catch (err) {
+    console.warn('Failed to fetch analysis by id:', err);
+    return null;
   }
 }
 

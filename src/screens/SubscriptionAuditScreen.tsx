@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,16 +12,25 @@ import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
-const ICONS = ['🎬', '🎵', '💪', '🎨', '💼', '🦜', '☁️', '🏰', '📦', '📰', '🧘', '🍿'];
+const ICONS = ['🎬', '🎵', '💪', '🎨', '💼', '🦜', '☁️', '🏰', '📦', '📰', '🧘', '🍿', '📺', '🎮', '📚'];
 
 export default function SubscriptionAuditScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { user } = useAuth();
+
+  // All useState calls must be at top — no conditional hooks
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [decisions, setDecisions] = useState<Record<string, boolean | null>>({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     (async () => {
@@ -34,12 +43,6 @@ export default function SubscriptionAuditScreen() {
       setLoading(false);
     })();
   }, []);
-
-  if (!authorized && !loading) return null;
-  const [decisions, setDecisions] = useState<Record<string, boolean | null>>({});
-  const [showAdd, setShowAdd] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newAmount, setNewAmount] = useState('');
 
   const fetchSubs = async () => {
     if (!user) return;
@@ -56,8 +59,8 @@ export default function SubscriptionAuditScreen() {
   };
 
   useEffect(() => {
-    fetchSubs();
-  }, [user]);
+    if (authorized) fetchSubs();
+  }, [user, authorized]);
 
   const decide = (id: string, keep: boolean) => {
     setDecisions((prev) => ({ ...prev, [id]: prev[id] === keep ? null : keep }));
@@ -88,16 +91,21 @@ export default function SubscriptionAuditScreen() {
     if (!user) return;
     Alert.alert('Delete', 'Remove this subscription?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try {
-          await deleteSubscription(user.id, subId);
-          fetchSubs();
-        } catch {
-          Alert.alert('Error', 'Failed to delete subscription.');
-        }
-      }},
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await deleteSubscription(user.id, subId);
+            fetchSubs();
+          } catch {
+            Alert.alert('Error', 'Failed to delete subscription.');
+          }
+        },
+      },
     ]);
   };
+
+  if (loading) return <LoadingState style={{ flex: 1, paddingTop: 120 }} />;
+  if (!authorized) return null;
 
   const keepCount = Object.values(decisions).filter((v) => v === true).length;
   const cutCount = Object.values(decisions).filter((v) => v === false).length;
@@ -106,7 +114,8 @@ export default function SubscriptionAuditScreen() {
   const totalMonthly = subs.reduce((s, sub) => s + sub.amount, 0);
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="subscriptions" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -131,13 +140,10 @@ export default function SubscriptionAuditScreen() {
           </View>
         )}
 
-        {loading ? (
-          <LoadingState style={{ paddingTop: 60 }} />
-        ) : subs.length === 0 ? (
+        {subs.length === 0 ? (
           <EmptyState emoji="🗂️" title="No subscriptions yet" body="Add your subscriptions manually to audit your monthly spending." />
         ) : (
           <>
-            {/* Subs list */}
             <Text style={styles.sectionLabel}>Your Subscriptions · {subs.length} found</Text>
             <View style={styles.subGroup}>
               {subs.map((sub, i) => {
@@ -229,7 +235,7 @@ export default function SubscriptionAuditScreen() {
           </LinearGradient>
         )}
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -290,7 +296,6 @@ const styles = StyleSheet.create({
   },
   resultTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, lineHeight: 22 },
   resultSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-
   addCard: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.xl,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, gap: 10,

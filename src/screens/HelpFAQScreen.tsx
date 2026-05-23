@@ -2,6 +2,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import ScreenBackground from '@/components/ScreenBackground';
 
 const FAQS = [
   {
@@ -51,11 +52,12 @@ export default function HelpFAQScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 40 }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
+      <ScreenBackground variant="info" />
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
       <Text style={styles.intro}>
         Everything you need to know about Am I Broke?. Can't find what you're looking for? Email
         us at support@amibroke.app.
@@ -83,6 +85,7 @@ export default function HelpFAQScreen() {
         })}
       </View>
     </ScrollView>
+    </View>
   );
 }
 

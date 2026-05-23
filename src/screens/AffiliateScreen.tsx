@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,8 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import StatusPill from '@/components/StatusPill';
 import { AFFILIATE_PRODUCTS, trackAffiliateClick } from '@/services/affiliate';
 import { trackEvent } from '@/services/analytics';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Category = 'all' | 'savings' | 'cards' | 'investing' | 'tools' | 'insurance';
 
@@ -23,6 +25,7 @@ const TABS: { key: Category; label: string }[] = [
 export default function AffiliateScreen() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Category>('all');
+  const { animatedStyle } = useEntryAnimation();
 
   const filtered = tab === 'all' ? AFFILIATE_PRODUCTS : AFFILIATE_PRODUCTS.filter((p) => p.category === tab);
 
@@ -41,7 +44,8 @@ export default function AffiliateScreen() {
   };
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="affiliate" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -113,7 +117,7 @@ export default function AffiliateScreen() {
           </Text>
         </LinearGradient>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

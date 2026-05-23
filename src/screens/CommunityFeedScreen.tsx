@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated,
 } from 'react-native';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -13,6 +14,7 @@ import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import { getCommunityFeed, addReaction, removeReaction } from '@/services/claudeApi';
+import ScreenBackground from '@/components/ScreenBackground';
 import { useAuth } from '@/context/AuthContext';
 
 function timeAgo(iso: string) {
@@ -35,10 +37,11 @@ export default function CommunityFeedScreen() {
   const [tab, setTab] = useState<TabType>('recent');
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { animatedStyle } = useEntryAnimation();
 
-  const fetchFeed = async () => {
-    setLoading(true);
+  const fetchFeed = useCallback(async () => {
     setError(null);
     try {
       const data = await getCommunityFeed(user?.id);
@@ -47,12 +50,18 @@ export default function CommunityFeedScreen() {
       setError('Failed to load feed.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchFeed();
-  }, [user]);
+  }, [fetchFeed]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchFeed();
+  }, [fetchFeed]);
 
   const handleReact = async (postId: string, emoji: string) => {
     if (!user) return;
@@ -80,14 +89,23 @@ export default function CommunityFeedScreen() {
   if (tab === 'lowest') sorted.sort((a, b) => a.score - b.score);
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="community" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primarySolid]}
+          />
+        }
       >
         {/* Large title */}
         <Text style={styles.largeTitle}>Community</Text>
-        <Text style={styles.subtitle}>Anonymous financial roasts from the community 👀</Text>
+        <Text style={styles.subtitle}>Anonymous financial roasts from the community 💸</Text>
 
         {/* Segmented control */}
         <View style={styles.segmentRow}>
@@ -172,7 +190,7 @@ export default function CommunityFeedScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

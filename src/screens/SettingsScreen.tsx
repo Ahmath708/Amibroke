@@ -1,14 +1,16 @@
 ﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Switch,
-  TouchableOpacity, Alert, Linking, ActivityIndicator,
+  TouchableOpacity, Alert, Linking, ActivityIndicator, Animated,
 } from 'react-native';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { FEATURES } from '@/config/features';
+import ScreenBackground from '@/components/ScreenBackground';
 import { useAuth, setPendingRedirect } from '@/context/AuthContext';
 import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/gdpr';
 
@@ -30,6 +32,7 @@ export default function SettingsScreen({ navigation }: Props) {
     faceID: false,
   });
   const [gdprLoading, setGdprLoading] = useState<string | null>(null);
+  const { animatedStyle } = useEntryAnimation();
 
   const toggle = (key: string) =>
     setToggles((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
@@ -65,7 +68,7 @@ export default function SettingsScreen({ navigation }: Props) {
             setGdprLoading(null);
             if (result.success) {
               Alert.alert('Account Deleted', 'Your data has been permanently removed.', [
-                { text: 'OK', onPress: () => { signOut(); navigation.reset({ index: 0, routes: [{ name: 'Splash' }] }); } },
+                { text: 'OK', onPress: () => { signOut(); navigation.reset({ index: 0, routes: [{ name: 'Landing' }] }); } },
               ]);
             } else {
               Alert.alert('Delete Failed', result.error || 'Could not delete your account.');
@@ -103,7 +106,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const accountRows: SettingRow[] = [
     { type: 'nav', label: 'Profile', icon: '👤', detail: '@yourusername', onPress: () => (navigation.navigate as any)('Home', { screen: 'Profile' }) },
-    { type: 'nav', label: 'Subscription', icon: '⭐', detail: 'Free Plan', onPress: () => {
+    { type: 'nav', label: 'Subscription', icon: '💳', detail: 'Free Plan', onPress: () => {
       if (user) {
         navigation.navigate('Paywall');
       } else {
@@ -111,7 +114,7 @@ export default function SettingsScreen({ navigation }: Props) {
         navigation.navigate('Login');
       }
     }},
-    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: '📊' as const, onPress: () => navigation.navigate('CreatorDashboard') }] : []),
+    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: '📈' as const, onPress: () => navigation.navigate('CreatorDashboard') }] : []),
   ];
 
   const SECTIONS: { title: string; rows: SettingRow[] }[] = [
@@ -169,7 +172,8 @@ export default function SettingsScreen({ navigation }: Props) {
   ];
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="settings" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -239,7 +243,7 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         ))}
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

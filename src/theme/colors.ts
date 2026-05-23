@@ -81,6 +81,12 @@ export const Typography = {
   footnote:    { fontSize: 13, fontWeight: '400' as const, letterSpacing: -0.08 },
   caption1:    { fontSize: 12, fontWeight: '400' as const, letterSpacing: 0 },
   caption2:    { fontSize: 11, fontWeight: '400' as const, letterSpacing: 0.06 },
+  // Additional screen-specific sizes
+  hero:        { fontSize: 42, fontWeight: '700' as const },
+  heroSmall:   { fontSize: 32, fontWeight: '700' as const },
+  heroLarge:   { fontSize: 56, fontWeight: '700' as const },
+  display:     { fontSize: 72, fontWeight: '700' as const, letterSpacing: -3 },
+  stepTitle:   { fontSize: 26, fontWeight: '700' as const },
 };
 
 // ── iOS Spacing ───────────────────────────────────────────────────────────────

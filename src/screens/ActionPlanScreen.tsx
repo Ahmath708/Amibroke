@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
 import { trackActionPlanViewed } from '@/services/analytics';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>;
@@ -114,6 +116,7 @@ export default function ActionPlanScreen({ route }: Props) {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     (async () => {
@@ -148,7 +151,8 @@ export default function ActionPlanScreen({ route }: Props) {
   if (!authorized) return null;
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="actionPlan" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -206,7 +210,7 @@ export default function ActionPlanScreen({ route }: Props) {
 
         <Disclaimer style={styles.disclaimer} />
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

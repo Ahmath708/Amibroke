@@ -1,0 +1,10 @@
+{
+  "profile": "openai",
+  "env": {
+    "OPENAI_BASE_URL": "https://api.groq.com/openai/v1",
+    "OPENAI_MODEL": "llama-3.3-70b-versatile",
+    "OPENAI_AUTH_HEADER": "ss",
+    "OPENAI_AUTH_SCHEME": "raw"
+  },
+  "createdAt": "2026-05-21T18:13:52.377Z"
+}

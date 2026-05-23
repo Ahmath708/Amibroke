@@ -1,12 +1,14 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '@/types';
 import { Colors, Spacing, Typography } from '@/theme/colors';
 import { useAuth } from '@/context/AuthContext';
+
 
 // Screens
 import SplashScreen from '@/screens/SplashScreen';
@@ -37,11 +39,12 @@ import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
-const ICONS: Record<string, { active: string; inactive: string }> = {
-  Home:      { active: '🏠', inactive: '🏠' },
-  History:   { active: '📊', inactive: '📊' },
-  Community: { active: '💬', inactive: '💬' },
-  Profile:   { active: '👤', inactive: '👤' },
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+const TAB_ICONS: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
+  Home:      { active: 'home',        inactive: 'home-outline' },
+  History:   { active: 'stats-chart', inactive: 'stats-chart-outline' },
+  Community: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
+  Profile:   { active: 'person',      inactive: 'person-outline' },
 };
 
 function IOSTabBar({ state, descriptors, navigation }: any) {
@@ -54,9 +57,8 @@ function IOSTabBar({ state, descriptors, navigation }: any) {
         <View style={tabStyles.separator} />
         <View style={[tabStyles.tabRow, { height: TAB_HEIGHT }]}>
           {state.routes.map((route: any, index: number) => {
-            const { options } = descriptors[route.key];
             const focused = state.index === index;
-            const icon = ICONS[route.name];
+            const icons = TAB_ICONS[route.name];
 
             return (
               <TouchableOpacity
@@ -68,9 +70,12 @@ function IOSTabBar({ state, descriptors, navigation }: any) {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={[tabStyles.tabIcon, { opacity: focused ? 1 : 0.45 }]}>
-                  {focused ? icon.active : icon.inactive}
-                </Text>
+                <Ionicons
+                  name={focused ? icons.active : icons.inactive}
+                  size={22}
+                  color={focused ? Colors.tint : Colors.textSecondary}
+                  style={{ opacity: focused ? 1 : 0.55 }}
+                />
                 <Text style={[tabStyles.tabLabel, focused && tabStyles.tabLabelActive]}>
                   {route.name}
                 </Text>
@@ -107,7 +112,7 @@ const sharedHeader = {
   },
   headerShadowVisible: false,
   headerBackTitleVisible: false,
-  contentStyle: { backgroundColor: Colors.background },
+  contentStyle: { backgroundColor: 'transparent' },
 } as const;
 
 export default function AppNavigator() {
@@ -118,38 +123,40 @@ export default function AppNavigator() {
   }
 
   return (
-    <Stack.Navigator
-      initialRouteName="MainTabs"
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}
-    >
-      {/* Auth screens */}
-      <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
-      <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'slide_from_right' }} />
+    <View style={{ flex: 1 }}>
+      <Stack.Navigator
+        initialRouteName="MainTabs"
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}
+      >
+        {/* Auth screens */}
+        <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'slide_from_right' }} />
 
-      {/* Main tabs */}
-      <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
+        {/* Main tabs */}
+        <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
 
-      {/* Push screens */}
-      <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
-      <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
-      <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
-      <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Settings', animation: 'slide_from_right' }} />
-      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ ...sharedHeader, headerShown: true, title: 'Privacy Policy', animation: 'slide_from_right' }} />
-      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ ...sharedHeader, headerShown: true, title: 'Terms of Service', animation: 'slide_from_right' }} />
-      <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
-      <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
-      <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
-      <Stack.Screen name="Affiliate" component={AffiliateScreen} options={{ ...sharedHeader, headerShown: true, title: 'Recommendations', animation: 'slide_from_right' }} />
-      <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
+        {/* Push screens */}
+        <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
+        <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
+        <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Settings', animation: 'slide_from_right' }} />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ ...sharedHeader, headerShown: true, title: 'Privacy Policy', animation: 'slide_from_right' }} />
+        <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ ...sharedHeader, headerShown: true, title: 'Terms of Service', animation: 'slide_from_right' }} />
+        <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
+        <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
+        <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
+        <Stack.Screen name="Affiliate" component={AffiliateScreen} options={{ ...sharedHeader, headerShown: true, title: 'Recommendations', animation: 'slide_from_right' }} />
+        <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
 
-      {/* Modal sheets */}
-      <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
-      <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="Payment" component={PaymentScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Upgrade' }} />
-      <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
-    </Stack.Navigator>
+        {/* Modal sheets */}
+        <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
+        <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="Payment" component={PaymentScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Upgrade' }} />
+        <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
+      </Stack.Navigator>
+    </View>
   );
 }
 
@@ -176,7 +183,7 @@ const tabStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 6,
   },
-  tabIcon: { fontSize: 22 },
+  tabIcon: {},
   tabLabel: {
     fontFamily: Typography.fonts.body,
     fontSize: 10,

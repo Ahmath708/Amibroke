@@ -1,8 +1,9 @@
 ﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, Alert, Animated,
 } from 'react-native';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import { useAuth, consumePendingRedirect } from '@/context/AuthContext';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Login'> };
 
@@ -23,6 +25,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const { animatedStyle } = useEntryAnimation();
 
   const handleAuth = async () => {
     const trimmedEmail = email.trim();
@@ -92,7 +95,8 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="login" />
       {/* Drag handle for modal */}
       <View style={[styles.dragHandle, { marginTop: insets.top > 0 ? 8 : 16 }]}>
         <View style={styles.handle} />
@@ -238,7 +242,7 @@ export default function LoginScreen({ navigation }: Props) {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

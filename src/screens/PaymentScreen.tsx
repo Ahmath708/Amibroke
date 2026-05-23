@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import NeonButton from '@/components/NeonButton';
 import { createPaymentIntent, confirmPurchase } from '@/services/stripe';
 import { useAuth } from '@/context/AuthContext';
 import { trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Payment'>;
@@ -25,6 +27,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
   const [paymentMethod, setPaymentMethod] = useState<'apple_pay' | 'card'>('apple_pay');
   const [processing, setProcessing] = useState(false);
   const info = PURCHASE_PRODUCTS[product];
+  const { animatedStyle } = useEntryAnimation();
 
   const handlePay = async () => {
     if (!user) {
@@ -66,7 +69,8 @@ export default function PaymentScreen({ navigation, route }: Props) {
   if (!info) return null;
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="paywall" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -161,7 +165,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
           One-time purchase. No recurring charges. Instant access after payment.
         </Text>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

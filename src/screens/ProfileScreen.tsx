@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, Animated,
 } from 'react-native';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,23 +14,24 @@ import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
-import { getProfile, updateProfile, getAnalysisHistory } from '@/services/claudeApi';
+import { getProfile, updateProfile, getAnalysisHistory, uploadAvatar } from '@/services/claudeApi';
 import { getPurchaseTier, isPremium } from '@/services/purchases';
 import { FEATURES } from '@/config/features';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'> };
 
 const BASE_MENU_ITEMS = [
-  { icon: '⭐', label: 'Subscription', detail: 'Free Plan', nav: 'Paywall' as const },
-  { icon: '🎯', label: '90-Day Action Plan', detail: '3/8 complete', nav: 'ActionPlan' as const, params: { steps: [] } },
-  { icon: '🎲', label: 'Scenario Simulator', nav: 'ScenarioSimulator' as const },
-  { icon: '🗂️', label: 'Subscription Audit', nav: 'SubscriptionAudit' as const },
-  { icon: '🤝', label: 'Affiliate Picks', nav: 'Affiliate' as const },
+  { icon: '💳', label: 'Subscription', detail: 'Free Plan', nav: 'Paywall' as const },
+  { icon: '📋', label: '90-Day Action Plan', detail: '3/8 complete', nav: 'ActionPlan' as const, params: { steps: [] } },
+  { icon: '🔮', label: 'Scenario Simulator', nav: 'ScenarioSimulator' as const },
+  { icon: '🔍', label: 'Subscription Audit', nav: 'SubscriptionAudit' as const },
+  { icon: '🛍️', label: 'Affiliate Picks', nav: 'Affiliate' as const },
   { icon: '⚙️', label: 'Settings', nav: 'Settings' as const, detail: undefined },
 ];
 
 const MENU_ITEMS = FEATURES.CREATOR_DASHBOARD
-  ? [...BASE_MENU_ITEMS.slice(0, -1), { icon: '📊', label: 'Creator Dashboard', nav: 'CreatorDashboard' as const, detail: undefined }, ...BASE_MENU_ITEMS.slice(-1)]
+  ? [...BASE_MENU_ITEMS.slice(0, -1), { icon: '📈', label: 'Creator Dashboard', nav: 'CreatorDashboard' as const, detail: undefined }, ...BASE_MENU_ITEMS.slice(-1)]
   : BASE_MENU_ITEMS;
 
 export default function ProfileScreen({ navigation }: Props) {
@@ -47,6 +49,8 @@ export default function ProfileScreen({ navigation }: Props) {
   const [bestScore, setBestScore] = useState<number | null>(null);
   const [latestDate, setLatestDate] = useState('');
   const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     getPurchaseTier().then(setPurchaseTier);
@@ -112,6 +116,7 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   const pickImage = async () => {
+    if (!user) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Allow access to your photo library to set a profile picture.');
@@ -124,7 +129,22 @@ export default function ProfileScreen({ navigation }: Props) {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri);
+      const pickedUri = result.assets[0].uri;
+      setUploadingAvatar(true);
+      try {
+        const publicUrl = await uploadAvatar(user.id, pickedUri);
+        if (publicUrl) {
+          setAvatarUri(publicUrl);
+          Alert.alert('Success', 'Profile picture updated successfully!');
+        } else {
+          Alert.alert('Error', 'Failed to upload profile picture.');
+        }
+      } catch (err) {
+        console.warn(err);
+        Alert.alert('Error', 'An error occurred while uploading.');
+      } finally {
+        setUploadingAvatar(false);
+      }
     }
   };
 
@@ -139,22 +159,23 @@ export default function ProfileScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+      <View style={styles.container}>
         <LoadingState style={{ paddingTop: insets.top + 80 }} />
-      </LinearGradient>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+      <View style={styles.container}>
         <ErrorState message={error} onRetry={fetchData} style={{ paddingTop: insets.top + 80 }} />
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="profile" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -164,12 +185,15 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* Avatar card */}
         <View style={styles.avatarCard}>
-          <TouchableOpacity onPress={pickImage}>
+          <TouchableOpacity onPress={pickImage} disabled={uploadingAvatar}>
             <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
               {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                <Image source={{ uri: avatarUri }} style={[styles.avatarImage, uploadingAvatar && { opacity: 0.4 }]} />
               ) : (
-                <Text style={styles.avatarEmoji}>🤑</Text>
+                <Text style={[styles.avatarEmoji, uploadingAvatar && { opacity: 0.4 }]}>💸</Text>
+              )}
+              {uploadingAvatar && (
+                <ActivityIndicator size="small" color="#fff" style={StyleSheet.absoluteFill} />
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -277,7 +301,7 @@ export default function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -286,6 +310,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: Spacing.xl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
   largeTitle: {
+    fontFamily: Typography.fonts.heading,
     ...Typography.largeTitle,
     color: Colors.textPrimary, marginBottom: Spacing.xl,
   },

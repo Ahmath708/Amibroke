@@ -1,9 +1,10 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
   Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +17,8 @@ import { getAnalysisHistory } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { trackFunnelStep } from '@/services/analytics';
+import ScreenBackground from '@/components/ScreenBackground';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
 
@@ -28,12 +31,13 @@ const CHIPS = [
   'I have no emergency fund',
 ];
 
-const TONES: { key: RoastTone; label: string; emoji: string }[] = [
-  { key: 'savage', label: 'Savage', emoji: '🔥' },
-  { key: 'gentle', label: 'Gentle', emoji: '🤗' },
-  { key: 'therapist', label: 'Therapist', emoji: '🛋️' },
-  { key: 'older_sibling', label: 'Big Sibling', emoji: '💪' },
-  { key: 'finance_bro', label: 'Finance Bro', emoji: '📈' },
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+const TONES: { key: RoastTone; label: string; icon: IoniconsName }[] = [
+  { key: 'savage',        label: 'Savage',       icon: 'flame-outline' },
+  { key: 'gentle',        label: 'Gentle',       icon: 'heart-outline' },
+  { key: 'therapist',     label: 'Therapist',    icon: 'medical-outline' },
+  { key: 'older_sibling', label: 'Big Sibling',  icon: 'fitness-outline' },
+  { key: 'finance_bro',   label: 'Finance Bro',  icon: 'trending-up-outline' },
 ];
 
 const PLACEHOLDERS = [
@@ -55,6 +59,7 @@ export default function HomeScreen({ navigation }: Props) {
   const micPulse = useRef(new Animated.Value(1)).current;
 
   const { listening, transcript, startListening, stopListening, supported, error } = useVoiceInput();
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     if (!user) {
@@ -110,7 +115,8 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="home" />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + Spacing.xxl }]}
@@ -125,7 +131,11 @@ export default function HomeScreen({ navigation }: Props) {
               style={styles.settingsBtn}
               activeOpacity={0.7}
             >
-              <Text style={styles.settingsIcon}>{user ? '⚙️' : '👤'}</Text>
+              <Ionicons
+                name={user ? 'settings-outline' : 'person-outline'}
+                size={22}
+                color={Colors.textSecondary}
+              />
               {!user && <Text style={styles.loginHint}>Log In</Text>}
             </TouchableOpacity>
           </View>
@@ -167,9 +177,13 @@ export default function HomeScreen({ navigation }: Props) {
                     style={[styles.micBtn, listening && styles.micBtnActive]}
                     activeOpacity={0.7}
                   >
-                    <Animated.Text style={[styles.micIcon, { transform: [{ scale: micPulse }] }]}>
-                      {listening ? '⏹️' : '🎤'}
-                    </Animated.Text>
+                    <Animated.View style={{ transform: [{ scale: micPulse }] }}>
+                      <Ionicons
+                        name={listening ? 'stop-circle-outline' : 'mic-outline'}
+                        size={20}
+                        color={listening ? Colors.danger : Colors.textSecondary}
+                      />
+                    </Animated.View>
                   </TouchableOpacity>
                 )}
               </View>
@@ -201,7 +215,11 @@ export default function HomeScreen({ navigation }: Props) {
                 onPress={() => setSelectedTone(tone.key)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.toneEmoji}>{tone.emoji}</Text>
+                <Ionicons
+                  name={tone.icon}
+                  size={16}
+                  color={selectedTone === tone.key ? Colors.primary : Colors.textSecondary}
+                />
                 <Text style={[styles.toneLabel, selectedTone === tone.key && styles.toneLabelActive]}>{tone.label}</Text>
               </TouchableOpacity>
             ))}
@@ -243,7 +261,7 @@ export default function HomeScreen({ navigation }: Props) {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
               <View>
-                <Text style={styles.premiumTitle}>✨ Go Premium</Text>
+                <Text style={styles.premiumTitle}>Go Premium</Text>
                 <Text style={styles.premiumBody}>Debt payoff planner, scenario simulator, monthly check-ins & more.</Text>
               </View>
               <Text style={styles.premiumChevron}>›</Text>
@@ -251,7 +269,7 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
+import ScreenBackground from '@/components/ScreenBackground';
 
 const { width } = Dimensions.get('window');
 
@@ -16,13 +17,13 @@ type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Onboar
 
 const SLIDES = [
   {
-    emoji: '🧠',
+    emoji: '💬',
     title: 'Describe your finances\nin plain English',
     body: 'No spreadsheets. No jargon. Just tell us what\'s going on like you\'re texting a friend.',
     gradient: ['#1a0026', '#19101c'] as [string, string],
   },
   {
-    emoji: '⚡',
+    emoji: '🔥',
     title: 'Get an AI-powered\nfinancial roast',
     body: 'Claude scores your financial health 0–100 and tells you exactly where you\'re bleeding money.',
     gradient: ['#001a26', '#19101c'] as [string, string],
@@ -55,6 +56,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   return (
     <LinearGradient colors={['#19101c', '#1a0a30']} style={styles.container}>
+      <ScreenBackground variant="onboarding" />
       {/* Skip */}
       <TouchableOpacity
         onPress={() => navigation.replace('Home')}

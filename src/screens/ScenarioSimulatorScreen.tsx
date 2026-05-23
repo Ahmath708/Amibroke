@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,9 @@ import NeonButton from '@/components/NeonButton';
 import LoadingState from '@/components/LoadingState';
 import ScoreRing from '@/components/ScoreRing';
 import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
-import { getAnalysisHistory } from '@/services/claudeApi';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ScreenBackground from '@/components/ScreenBackground';
+import { getAnalysisHistory, getAnalysisById } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'ScenarioSimulator'> };
@@ -46,6 +48,7 @@ export default function ScenarioSimulatorScreen({ navigation, route }: Props & {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [baseAnalysis, setBaseAnalysis] = useState<FinancialAnalysis | null>(null);
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     (async () => {
@@ -59,29 +62,8 @@ export default function ScenarioSimulatorScreen({ navigation, route }: Props & {
       if (user) {
         const history = await getAnalysisHistory(user.id);
         if (history && history.length > 0) {
-          const latest = history[0];
-          setBaseAnalysis({
-            score: latest.score,
-            scoreLabel: latest.score_label,
-            scoreColor: latest.score < 40 ? '#ff453a' : latest.score < 65 ? '#ff6b00' : '#39FF14',
-            summary: latest.summary,
-            roast: '',
-            monthlyIncome: 5000,
-            monthlyExpenses: 3500,
-            monthlySavings: 1500,
-            debtTotal: 15000,
-            savingsRate: 0.05,
-            emergencyFundMonths: 1.5,
-            debtToIncomeRatio: 15000 / (5000 * 12),
-            spendingBreakdown: [
-              { name: 'Housing', amount: 1400, percentage: 0.28, color: '#00e0ff', status: 'good' },
-              { name: 'Food', amount: 600, percentage: 0.12, color: '#39FF14', status: 'warning' },
-              { name: 'Transport', amount: 400, percentage: 0.08, color: '#bf5af2', status: 'good' },
-            ],
-            debts: [],
-            actionPlan: [],
-            insights: [],
-          });
+          const full = await getAnalysisById(history[0].id);
+          if (full) setBaseAnalysis(full);
         }
       }
 
@@ -140,7 +122,8 @@ export default function ScenarioSimulatorScreen({ navigation, route }: Props & {
     : null;
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="scenarios" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -236,7 +219,7 @@ export default function ScenarioSimulatorScreen({ navigation, route }: Props & {
         />
         <Text style={styles.ctaHint}>Uses your stored financial profile · Score shown is an estimate</Text>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 

@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,11 +10,12 @@ import { RootStackParamList, PURCHASE_PRODUCTS } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import { trackPaywallViewed } from '@/services/analytics';
+import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Paywall'> };
 
 const FREE_FEATURES = [
-  { icon: '📊', label: 'Financial Health Score (0–100)' },
+  { icon: '💯', label: 'Financial Health Score (0–100)' },
   { icon: '🍩', label: 'Spending Breakdown Chart' },
   { icon: '🔥', label: 'AI Roast One-Liner' },
   { icon: '🖼️', label: 'Shareable Result Card' },
@@ -33,6 +35,7 @@ const COMPARE = [
 export default function PaywallScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<'action_plan' | 'deep_dive'>('deep_dive');
+  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     trackPaywallViewed(selected);
@@ -41,7 +44,8 @@ export default function PaywallScreen({ navigation }: Props) {
   const product = PURCHASE_PRODUCTS[selected];
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30', '#19101c']} style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <ScreenBackground variant="paywall" />
       <View style={[styles.handleRow, { marginTop: insets.top > 0 ? 8 : 16 }]}>
         <View style={styles.handle} />
       </View>
@@ -182,7 +186,7 @@ export default function PaywallScreen({ navigation }: Props) {
           One-time purchase. No recurring charges. Instant access after payment.
         </Text>
       </ScrollView>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 
