@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '@/types';
+import { RootStackParamList, AiProvider } from '@/types';
 import { analyzeFinances } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -28,7 +28,7 @@ const STEPS: { label: string; icon: IoniconsName }[] = [
 
 export default function ProcessingScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { userInput, tone } = route.params;
+  const { userInput, tone, provider } = route.params;
   const { user } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
@@ -58,7 +58,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal);
+      const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal, 2, provider || 'claude');
       clearTimeout(timeout);
       trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
 
@@ -200,7 +200,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
           </View>
         ) : (
           <Text style={styles.hint}>
-            Claude is analyzing your finances with brutal honesty ✨
+            {provider === 'groq' ? 'Groq' : 'Claude'} is analyzing your finances with brutal honesty ✨
           </Text>
         )}
       </View>

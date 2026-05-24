@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, AnalysisHistoryItem, RoastTone } from '@/types';
+import { RootStackParamList, AnalysisHistoryItem, RoastTone, AiProvider } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
@@ -53,6 +53,7 @@ export default function HomeScreen({ navigation }: Props) {
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
+  const [selectedProvider, setSelectedProvider] = useState<AiProvider>('claude');
   const inputRef = useRef<TextInput>(null);
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
@@ -102,8 +103,8 @@ export default function HomeScreen({ navigation }: Props) {
       inputRef.current?.focus();
       return;
     }
-    trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone });
-    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone });
+    trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone, provider: selectedProvider });
+    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone, provider: selectedProvider });
   };
 
   const handleVoiceToggle = async () => {
@@ -225,6 +226,25 @@ export default function HomeScreen({ navigation }: Props) {
             ))}
           </ScrollView>
 
+          {/* AI Provider toggle */}
+          <Text style={styles.sectionLabel}>AI Engine</Text>
+          <View style={styles.providerRow}>
+            <TouchableOpacity
+              style={[styles.providerChip, selectedProvider === 'claude' && styles.providerChipActive]}
+              onPress={() => setSelectedProvider('claude')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.providerText, selectedProvider === 'claude' && styles.providerTextActive]}>Claude</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.providerChip, selectedProvider === 'groq' && styles.providerChipActive]}
+              onPress={() => setSelectedProvider('groq')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.providerText, selectedProvider === 'groq' && styles.providerTextActive]}>Groq</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* CTA */}
           <NeonButton
             label="Analyze My Finances"
@@ -232,7 +252,7 @@ export default function HomeScreen({ navigation }: Props) {
             disabled={!input.trim()}
             style={styles.cta}
           />
-          <Text style={styles.ctaHint}>Powered by Claude AI · Usually takes ~5 seconds</Text>
+          <Text style={styles.ctaHint}>Powered by {selectedProvider === 'groq' ? 'Groq (Llama 3.3)' : 'Claude Sonnet'} · Usually takes ~5 seconds</Text>
 
           {/* Recent scores */}
           {!scoresLoading && recentScores.length > 0 && (
@@ -333,6 +353,17 @@ const styles = StyleSheet.create({
   toneEmoji: { fontSize: Typography.subhead.fontSize },
   toneLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   toneLabelActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  providerRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+  providerChip: {
+    flex: 1, alignItems: 'center',
+    backgroundColor: Colors.groupedRow,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1.5, borderColor: Colors.glassBorder,
+  },
+  providerChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
+  providerText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
+  providerTextActive: { color: Colors.primary },
   cta: { marginBottom: Spacing.sm },
   ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xxl + Spacing.xs },
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },

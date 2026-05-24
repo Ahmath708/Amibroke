@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { FinancialAnalysis, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone } from '@/types';
+import { FinancialAnalysis, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone, AiProvider } from '@/types';
 import { FinancialAnalysisSchema } from '@/lib/validations';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -41,8 +41,9 @@ export async function analyzeFinancialSituation(
   tone: RoastTone = 'savage',
   signal?: AbortSignal,
   retries = 2,
+  provider: AiProvider = 'claude',
 ): Promise<FinancialAnalysis> {
-  console.log('[analyze] Starting analysis', { userInputLength: userInput.length, tone });
+  console.log('[analyze] Starting analysis', { userInputLength: userInput.length, tone, provider });
   const cleaned = cleanUserInput(userInput);
   console.log('[analyze] Cleaned input:', cleaned.substring(0, 100) + (cleaned.length > 100 ? '...' : ''));
   const client = getSupabase();
@@ -55,9 +56,9 @@ export async function analyzeFinancialSituation(
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      console.log('[analyze] Invoking analyze function, attempt:', attempt + 1);
+      console.log('[analyze] Invoking analyze function, attempt:', attempt + 1, 'provider:', provider);
       const { data, error } = await client.functions.invoke('analyze', {
-        body: { userInput: cleaned, tone },
+        body: { userInput: cleaned, tone, provider },
         signal,
       });
 

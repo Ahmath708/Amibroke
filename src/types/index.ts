@@ -1,4 +1,5 @@
 export type RoastTone = 'gentle' | 'savage' | 'therapist' | 'older_sibling' | 'finance_bro';
+export type AiProvider = 'claude' | 'groq';
 
 export interface FinancialAnalysis {
   score: number; // 0–100
@@ -121,7 +122,7 @@ export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   Input: undefined;
-  Processing: { userInput: string; tone?: RoastTone };
+  Processing: { userInput: string; tone?: RoastTone; provider?: AiProvider };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;

@@ -1,7 +1,9 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
-const API_URL = 'https://api.anthropic.com/v1/messages';
+const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -201,6 +203,73 @@ async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any
   throw lastError;
 }
 
+async function callGroqWithRetry(messages: any[], maxRetries = 3): Promise<any> {
+  let lastError: any = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[groq] Calling API, attempt ${attempt + 1}`);
+      const response = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 2500,
+          temperature: 0.7,
+          messages: [
+            { role: 'system', content: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.' },
+            ...messages,
+          ],
+        }),
+      });
+
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+        console.warn(`[groq] Rate limited, retrying after ${retryAfter}s`);
+        await new Promise((r) => setTimeout(r, retryAfter * 1000));
+        continue;
+      }
+
+      if (response.status >= 500) {
+        console.warn(`[groq] Server error ${response.status}, retrying...`);
+        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
+        console.error(`[groq] API error: ${response.status} — body: ${errorBody}`);
+        let apiMessage = `Groq API error: ${response.status}`;
+        try {
+          const parsed = JSON.parse(errorBody);
+          if (parsed.error?.message) {
+            apiMessage = `Groq API error: ${parsed.error.message}`;
+          }
+        } catch { /* ignore parse errors */ }
+        const error: any = new Error(apiMessage);
+        error.status = response.status;
+        error.rawResponse = errorBody;
+        error.stage = 'groq_api_error';
+        error.detail = apiMessage;
+        throw error;
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      console.log('[groq] API success');
+      return { content: [{ text: content }] };
+    } catch (e) {
+      lastError = e;
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // ─── Streaming Response Support ────────────────────────────────────────────────
 async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWriter<Uint8Array>) {
   const encoder = new TextEncoder();
@@ -308,11 +377,6 @@ serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed', stage: 'request_validation' }, 405);
   }
 
-  if (!ANTHROPIC_API_KEY) {
-    console.error('[analyze] ANTHROPIC_API_KEY secret is not set in Supabase');
-    return jsonResponse({ error: 'Server misconfiguration: API key not set. Run: npx supabase secrets set ANTHROPIC_API_KEY=<your_key>', stage: 'config_error' }, 500);
-  }
-
   const clientIP = getClientIP(req);
   const rateLimit = checkRateLimit(clientIP);
 
@@ -329,10 +393,21 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { userInput, tone, stream } = body;
+    const { userInput, tone, stream, provider } = body;
+    const selectedProvider: string = (provider === 'groq' ? 'groq' : 'claude');
 
     if (!userInput || typeof userInput !== 'string') {
       return jsonResponse({ error: 'userInput is required', stage: 'parse_error' }, 400);
+    }
+
+    // Provider key check
+    if (selectedProvider === 'groq' && !GROQ_API_KEY) {
+      console.error('[analyze] GROQ_API_KEY secret is not set in Supabase');
+      return jsonResponse({ error: 'Server misconfiguration: Groq API key not set. Run: npx supabase secrets set GROQ_API_KEY=<your_key>', stage: 'config_error' }, 500);
+    }
+    if (selectedProvider === 'claude' && !ANTHROPIC_API_KEY) {
+      console.error('[analyze] ANTHROPIC_API_KEY secret is not set in Supabase');
+      return jsonResponse({ error: 'Server misconfiguration: Claude API key not set. Run: npx supabase secrets set ANTHROPIC_API_KEY=<your_key>', stage: 'config_error' }, 500);
     }
 
     // Moderation
@@ -345,8 +420,8 @@ serve(async (req) => {
     const selectedTone = validTones.includes(tone) ? tone : 'savage';
     const userMessage = buildPrompt(selectedTone, userInput);
 
-    // Streaming mode
-    if (stream) {
+    // Streaming mode (Claude only)
+    if (stream && selectedProvider === 'claude') {
       const { readable, writable } = new TransformStream();
       const writer = writable.getWriter();
 
@@ -364,7 +439,10 @@ serve(async (req) => {
     }
 
     // Non-streaming mode (default)
-    const data = await callClaudeWithRetry([{ role: 'user', content: userMessage }]);
+    const messages = [{ role: 'user', content: userMessage }];
+    const data = selectedProvider === 'groq'
+      ? await callGroqWithRetry(messages)
+      : await callClaudeWithRetry(messages);
 
     const content = data.content[0]?.text || '';
     const cleaned = content.replace(/```json|```/g, '').trim();
@@ -374,8 +452,9 @@ serve(async (req) => {
       analysis = JSON.parse(cleaned);
     } catch (e) {
       console.error('[analyze] JSON parse failed:', e);
+      const providerLabel = selectedProvider === 'groq' ? 'Groq' : 'Claude';
       return jsonResponse({ 
-        error: 'Failed to parse Claude response as JSON', 
+        error: `Failed to parse ${providerLabel} response as JSON`, 
         stage: 'parse_error', 
         rawResponse: cleaned.slice(0, 1000) 
       }, 502);
@@ -391,14 +470,15 @@ serve(async (req) => {
     const missingFields = requiredFields.filter(f => analysis[f] === undefined);
     
     if (missingFields.length > 0) {
+      const providerLabel = selectedProvider === 'groq' ? 'Groq' : 'Claude';
       return jsonResponse({ 
-        error: `Claude response missing required fields: ${missingFields.join(', ')}`, 
+        error: `${providerLabel} response missing required fields: ${missingFields.join(', ')}`, 
         stage: 'validation_error', 
         rawResponse: cleaned.slice(0, 1000) 
       }, 502);
     }
 
-    return jsonResponse(analysis, 200, { 'X-RateLimit-Remaining': String(rateLimit.remaining) });
+    return jsonResponse({ ...analysis, _provider: selectedProvider }, 200, { 'X-RateLimit-Remaining': String(rateLimit.remaining) });
     } catch (error: any) {
     console.error('[analyze] Analysis error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
