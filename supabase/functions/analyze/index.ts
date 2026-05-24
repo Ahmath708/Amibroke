@@ -98,8 +98,12 @@ Your tone:
 ${toneGuide}
 
 Guidelines:
-- Base every numeric field on concrete evidence from the user's description. Do NOT fabricate numbers. If a value is not explicitly provided, give a reasoned estimate and note the uncertainty in the "summary".
-- Avoid assumptions beyond what is stated. If information is missing, acknowledge the limitation in the "summary".
+- CRITICAL: You MUST estimate ALL numeric fields based on context clues. NEVER return 0 for monthlyIncome, monthlyExpenses, debtTotal, or savingsRate. If the user doesn't give exact figures, infer from their lifestyle cues (job mentions, spending habits, location hints, age, etc.) using realistic typical values.
+- Example: if someone says "I eat out too much" estimate ~$400-800/mo for dining and reasonable income based on their implied lifestyle.
+- Example: if someone says "I'm a student" estimate $0-2000/mo income, $1000-2500 expenses.
+- If no debt is mentioned, set debtTotal to 0 and debts to [].
+- If no subscriptions are mentioned, still include at least 2 generic subscription categories in spendingBreakdown.
+- Always return at least 3 items in spendingBreakdown and at least 3 actionPlan steps.
 - Provide a concise, honest "summary" that includes any major uncertainties.
 - Return ONLY valid JSON with this precise structure:
 {
@@ -485,6 +489,9 @@ serve(async (req) => {
     if (!analysis.insights) analysis.insights = [];
     if (!analysis.topProblems) analysis.topProblems = [];
     if (!analysis.positiveBehaviors) analysis.positiveBehaviors = [];
+    if (!analysis.topFix) analysis.topFix = { action: 'Track your spending for 30 days', monthlyImpact: 0 };
+    if (!analysis.emotionalStatus) analysis.emotionalStatus = { label: 'Concerned', emoji: '😬' };
+    if (!analysis.savingsRate && analysis.monthlyIncome > 0) analysis.savingsRate = ((analysis.monthlyIncome - analysis.monthlyExpenses) / analysis.monthlyIncome);
 
     return jsonResponse({ ...analysis, _provider: selectedProvider }, 200, { 'X-RateLimit-Remaining': String(rateLimit.remaining) });
     } catch (error: any) {
