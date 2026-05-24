@@ -93,8 +93,10 @@ export default function NeonButton({
         disabled={disabled || loading}
         style={[styles.tintedBtn, { height: heights[size] }, style]}
       >
-        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-        <Text style={[styles.tintedLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
+        <View style={styles.inner}>
+          {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+          <Text style={[styles.tintedLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
+        </View>
       </Touchable>
     );
   }
@@ -106,8 +108,10 @@ export default function NeonButton({
         disabled={disabled || loading}
         style={[styles.dangerBtn, { height: heights[size] }, style]}
       >
-        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-        <Text style={[styles.dangerLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
+        <View style={styles.inner}>
+          {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+          <Text style={[styles.dangerLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
+        </View>
       </Touchable>
     );
   }
