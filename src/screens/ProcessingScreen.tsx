@@ -55,7 +55,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
 
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 45000);
 
     try {
       const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal, 2, provider || 'claude');
@@ -115,10 +115,10 @@ export default function ProcessingScreen({ navigation, route }: Props) {
           Animated.timing(ringPulse, { toValue: 1, duration: 220, useNativeDriver: true }),
         ]).start();
       });
-    }, 1200);
+    }, 2000);
 
     // Progress bar (non-native driver because we're animating width)
-    Animated.timing(progressWidth, { toValue: 1, duration: 6500, useNativeDriver: false }).start();
+    Animated.timing(progressWidth, { toValue: 1, duration: 10000, useNativeDriver: false }).start();
 
     doAnalysis();
 

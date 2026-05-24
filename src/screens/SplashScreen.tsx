@@ -19,18 +19,18 @@ export default function SplashScreen() {
     Animated.sequence([
       // Glow blooms first
       Animated.parallel([
-        Animated.timing(glowOpacity, { toValue: 0.28, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.timing(glowScale, { toValue: 1, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(glowOpacity, { toValue: 0.28, duration: 800, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(glowScale, { toValue: 1, duration: 800, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]),
       // Logo springs in
       Animated.parallel([
-        Animated.spring(scale, { toValue: 1, tension: 55, friction: 7, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: 320, useNativeDriver: true }),
+        Animated.spring(scale, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]),
       // App name fades in
-      Animated.timing(textOpacity, { toValue: 1, duration: 280, delay: 60, useNativeDriver: true }),
+      Animated.timing(textOpacity, { toValue: 1, duration: 400, delay: 100, useNativeDriver: true }),
       // Tagline slides in
-      Animated.timing(taglineOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.timing(taglineOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start(() => {
       // After everything loads, pulse the ring
       Animated.loop(
