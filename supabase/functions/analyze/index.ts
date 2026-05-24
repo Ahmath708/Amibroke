@@ -478,6 +478,14 @@ serve(async (req) => {
       }, 502);
     }
 
+    // Fill defaults for array/object fields that may be missing
+    if (!analysis.spendingBreakdown) analysis.spendingBreakdown = [];
+    if (!analysis.debts) analysis.debts = [];
+    if (!analysis.actionPlan) analysis.actionPlan = [];
+    if (!analysis.insights) analysis.insights = [];
+    if (!analysis.topProblems) analysis.topProblems = [];
+    if (!analysis.positiveBehaviors) analysis.positiveBehaviors = [];
+
     return jsonResponse({ ...analysis, _provider: selectedProvider }, 200, { 'X-RateLimit-Remaining': String(rateLimit.remaining) });
     } catch (error: any) {
     console.error('[analyze] Analysis error:', error);
