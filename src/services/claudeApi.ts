@@ -94,8 +94,10 @@ export async function analyzeFinancialSituation(
       }
 
       console.log('[analyze] Received data from edge function, validating...');
-      if (!isFinancialAnalysis(data)) {
-        console.error('[analyze] type validation FAILED — received shape:', JSON.stringify(data).slice(0, 500));
+      const validationResult = FinancialAnalysisSchema.safeParse(data);
+      if (!validationResult.success) {
+        console.error('[analyze] type validation FAILED — errors:', JSON.stringify(validationResult.error.issues));
+        console.error('[analyze] type validation FAILED — received shape:', JSON.stringify(data).slice(0, 600));
         lastError = new Error('Analysis returned unexpected data format. Please try again.');
         if (attempt < retries) {
           console.log(`[analyze] Retrying after validation failure...`);
