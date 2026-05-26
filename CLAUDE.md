@@ -1,0 +1,1 @@
+When you are about to run a script that calls the Anthropic API, the Groq API, or any other paid external API, first tell the human how many calls the script will make and the estimated cost. Wait for human confirmation before executing. Do not run paid scripts silently.

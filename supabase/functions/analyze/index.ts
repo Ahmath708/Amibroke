@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 
+import type { Placeholder } from '../../../shared/types.ts';
+
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
