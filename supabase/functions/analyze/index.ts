@@ -148,7 +148,7 @@ async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       console.log(`[claude] Calling API, attempt ${attempt + 1}`);
-      const response = await fetch(API_URL, {
+      const response = await fetch(CLAUDE_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +279,7 @@ async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWr
   const encoder = new TextEncoder();
 
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(CLAUDE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
