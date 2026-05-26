@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { FinancialAnalysis, ActionStep, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone, AiProvider } from '@/types';
 import { FinancialAnalysisSchema } from '@/lib/validations';
-import { calculateFinancialScore } from '@/services/scoring';
+import { calculateFinancialScore, SCORE_CONFIG } from '@/services/scoring';
+import { SCORING_THRESHOLDS } from '@/config/scoring';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -110,6 +111,40 @@ export async function analyzeFinancialSituation(
           continue;
         }
         throw lastError;
+      }
+
+      // Derive missing spendingBreakdown fields (percentage, status, color) when possible
+      try {
+        const breakdown = Array.isArray(data.spendingBreakdown) ? data.spendingBreakdown : [];
+        const income = data.monthlyIncome ?? 0;
+        const totalFromBreakdown = breakdown.reduce((s: number, b: any) => s + (b.amount ?? 0), 0);
+        const base = income > 0 ? income : (data.monthlyExpenses ?? totalFromBreakdown) || 1;
+        const discretionaryThresholds = SCORING_THRESHOLDS.discretionarySpending;
+
+        data.spendingBreakdown = breakdown.map((b: any) => {
+          const amount = typeof b.amount === 'number' ? b.amount : 0;
+          const percentage = typeof b.percentage === 'number' && b.percentage > 0
+            ? b.percentage
+            : Math.round((amount / base) * 100 * 100) / 100; // two decimals
+
+          // Determine status for discretionary-like categories, otherwise default heuristics
+          let status: 'good' | 'warning' | 'danger' = b.status || 'good';
+          if (percentage >= (discretionaryThresholds.poor || 30)) status = 'danger';
+          else if (percentage >= (discretionaryThresholds.fair || 20)) status = 'warning';
+          else status = 'good';
+
+          const color = b.color || (status === 'good' ? SCORE_CONFIG.labels.stable.color : status === 'warning' ? SCORE_CONFIG.labels.surviving.color : SCORE_CONFIG.labels.critical.color);
+
+          return {
+            name: b.name || 'Other',
+            amount,
+            percentage,
+            color,
+            status,
+          };
+        });
+      } catch (err) {
+        console.warn('[analyze] Failed to normalize spendingBreakdown:', err);
       }
 
       // Recompute and normalize score locally to ensure consistent labels/colors
