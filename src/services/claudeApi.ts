@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { FinancialAnalysis, ActionStep, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone, AiProvider } from '@/types';
 import { FinancialAnalysisSchema } from '@/lib/validations';
+import { calculateFinancialScore } from '@/services/scoring';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -109,6 +110,26 @@ export async function analyzeFinancialSituation(
           continue;
         }
         throw lastError;
+      }
+
+      // Recompute and normalize score locally to ensure consistent labels/colors
+      try {
+        const scoreResult = calculateFinancialScore({
+          monthlyIncome: data.monthlyIncome ?? 0,
+          monthlyExpenses: data.monthlyExpenses ?? 0,
+          monthlySavings: data.monthlySavings ?? 0,
+          debtTotal: data.debtTotal ?? 0,
+          savingsRate: data.savingsRate ?? 0,
+          emergencyFundMonths: data.emergencyFundMonths ?? 0,
+          debtToIncomeRatio: data.debtToIncomeRatio ?? 0,
+          spendingBreakdown: data.spendingBreakdown ?? [],
+        });
+        console.log('[analyze] Recomputed local score:', scoreResult.score, scoreResult.label);
+        data.score = scoreResult.score;
+        data.scoreLabel = scoreResult.label;
+        data.scoreColor = scoreResult.color;
+      } catch (err) {
+        console.warn('[analyze] Failed to recompute score locally:', err);
       }
 
       console.log('[analyze] Analysis successful, returning data');
