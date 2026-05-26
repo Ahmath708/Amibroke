@@ -58,7 +58,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "jest"
+    "test": "jest",
+    "test:purchases": "jest src/services/__tests__/purchases.test.ts --runInBand"
   },
   "jest": {
     "preset": "jest-expo",

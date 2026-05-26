@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { FinancialAnalysis, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone, AiProvider } from '@/types';
+import { FinancialAnalysis, ActionStep, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone, AiProvider } from '@/types';
 import { FinancialAnalysisSchema } from '@/lib/validations';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -7,7 +7,11 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 let supabase: ReturnType<typeof createClient> | null = null;
 
-function getSupabase() {
+export function __setSupabaseForTests(client: ReturnType<typeof createClient> | null) {
+  supabase = client;
+}
+
+export function getSupabase() {
   if (!supabase && supabaseUrl && supabaseAnonKey) {
     supabase = createClient(supabaseUrl, supabaseAnonKey);
   }
@@ -166,6 +170,31 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
   }
 }
 
+export async function fetchActionPlan(userId: string, analysisId?: string): Promise<ActionStep[]> {
+  const client = getSupabase();
+  if (!client) return [];
+
+  try {
+    const { data, error } = await client.functions.invoke('action-plan', {
+      body: { userId, analysisId },
+    });
+
+    if (error) {
+      console.error('[claudeApi] fetchActionPlan error:', error);
+      return [];
+    }
+
+    if (!data?.actionPlan || !Array.isArray(data.actionPlan)) {
+      console.warn('[claudeApi] fetchActionPlan returned malformed action plan');
+      return [];
+    }
+
+    return data.actionPlan as ActionStep[];
+  } catch (e) {
+    console.error('[claudeApi] fetchActionPlan exception:', e);
+    return [];
+  }
+}
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
   const client = getSupabase();

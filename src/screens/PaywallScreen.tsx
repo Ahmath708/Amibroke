@@ -39,9 +39,11 @@ export default function PaywallScreen({ navigation }: Props) {
 
   useEffect(() => {
     trackPaywallViewed(selected);
-  }, []);
+  }, [selected]);
 
   const product = PURCHASE_PRODUCTS[selected];
+  const actionPlan = PURCHASE_PRODUCTS.action_plan!;
+  const deepDive = PURCHASE_PRODUCTS.deep_dive!;
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -127,8 +129,8 @@ export default function PaywallScreen({ navigation }: Props) {
             onPress={() => setSelected('action_plan')}
             activeOpacity={0.8}
           >
-            <Text style={styles.planName}>Action Plan</Text>
-            <Text style={styles.planPrice}>$4.99</Text>
+            <Text style={styles.planName}>{actionPlan.label}</Text>
+            <Text style={styles.planPrice}>${actionPlan.price.toFixed(2)}</Text>
             <Text style={styles.planDesc}>One-time</Text>
           </TouchableOpacity>
 
@@ -140,8 +142,8 @@ export default function PaywallScreen({ navigation }: Props) {
             <View style={styles.planBadge}>
               <Text style={styles.planBadgeText}>BEST VALUE</Text>
             </View>
-            <Text style={styles.planName}>Deep Dive</Text>
-            <Text style={styles.planPrice}>$9.99</Text>
+            <Text style={styles.planName}>{deepDive.label}</Text>
+            <Text style={styles.planPrice}>${deepDive.price.toFixed(2)}</Text>
             <Text style={styles.planDesc}>One-time</Text>
           </TouchableOpacity>
         </View>

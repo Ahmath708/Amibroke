@@ -18,8 +18,7 @@ export async function getPurchaseTier(): Promise<PurchaseTier> {
     const val = await AsyncStorage.getItem(TIER_KEY);
     if (val === 'action_plan' || val === 'deep_dive' || val === 'free') return val as PurchaseTier;
   } catch {}
-  // Default to deep_dive so all features are accessible by default.
-  return 'deep_dive';
+  return 'free';
 }
 
 export async function setPurchaseTier(tier: PurchaseTier): Promise<void> {
