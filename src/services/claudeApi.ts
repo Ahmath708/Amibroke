@@ -125,12 +125,12 @@ export async function analyzeFinancialSituation(
           const amount = typeof b.amount === 'number' ? b.amount : 0;
           const percentage = typeof b.percentage === 'number' && b.percentage > 0
             ? b.percentage
-            : Math.round((amount / base) * 100 * 100) / 100; // two decimals
+            : Math.round((amount / base) * 100) / 100; // decimal 0-1 with two decimals
 
           // Determine status for discretionary-like categories, otherwise default heuristics
           let status: 'good' | 'warning' | 'danger' = b.status || 'good';
-          if (percentage >= (discretionaryThresholds.poor || 30)) status = 'danger';
-          else if (percentage >= (discretionaryThresholds.fair || 20)) status = 'warning';
+          if (percentage >= (discretionaryThresholds.poor || 0.40)) status = 'danger';
+          else if (percentage >= (discretionaryThresholds.fair || 0.30)) status = 'warning';
           else status = 'good';
 
           const color = b.color || (status === 'good' ? SCORE_CONFIG.labels.stable.color : status === 'warning' ? SCORE_CONFIG.labels.surviving.color : SCORE_CONFIG.labels.critical.color);
