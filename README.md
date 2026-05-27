@@ -87,17 +87,50 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 
 ## 🧠 AI Integration
 
-Uses **Claude Sonnet 4** (`claude-sonnet-4-20250514`) via Anthropic API.
+Uses **Claude Sonnet 4** (`claude-sonnet-4-20250514`) via Anthropic API with **tool-use** for guaranteed structured output.
 
 The AI analyzes plain-English financial descriptions and returns structured JSON with:
-- Financial health score (0–100)
-- Spending breakdown by category
-- Debt risk assessment
+- Financial health score (0–100) computed via **official CFPB IRT formula**
+- Confidence-weighted scoring (low/medium/high per response attenuate the score)
+- Deterministic server-side metrics (savings rate, DTI, emergency fund months)
+- CFPB Financial Well-Being Scale (10 questions, IRT-scored)
 - Personalized roast/reality check (5 tone modes)
-- 90-day action plan steps
-- Key financial insights
+- Key financial insights, top problems, and positive behaviors
+- Mentioned spending categories (user-stated only, never fabricated)
 
-The edge function returns structured errors with failure stage (`parse_error`, `claude_api_error`, `validation_error`) so the client can display useful error messages.
+### Architecture
+
+The backend was rebuilt to separate AI judgment from deterministic math:
+
+1. **AI does**: extract numbers, judge tone, infer CFPB responses, assign confidence
+2. **Code does**: compute CFPB IRT score, savings rate, DTI, emergency fund months, score bands
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /analyze` | Main analysis — uses Anthropic tool-use, validates with Zod, computes derived metrics + CFPB score |
+| `POST /action-plan` | 90-day plan generation — separate endpoint, called when user taps "View Plan" |
+
+### Prompt System
+
+System prompts live in **external `.txt` files** (not embedded in source) for easy editing:
+- `supabase/functions/analyze/prompts/system.txt`
+- `supabase/functions/action-plan/prompts/system.txt`
+
+Prompts are loaded once at module startup via `Deno.readTextFileSync` and cached with Anthropic's `cache_control: { type: 'ephemeral' }`.
+
+### Testing Infrastructure
+
+| Tool | Purpose |
+|------|---------|
+| `scripts/eval/runner.ts` | Automated eval harness — 13 fixtures, pass/fail assertions, 40-call hard cap |
+| `scripts/eval/fixtures.ts` | 13 test cases across 5 groups (vague, partial, detailed, edge cases, CFPB) |
+| `scripts/eval/assertions.ts` | Zod schema validation, confidence distribution checks, forbidden string checks |
+| `scripts/manual-test.ts` | Human-review testing with `--input <name>` and `--save` flags |
+| `scripts/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
+
+The edge function returns structured errors with failure stage (`parse_error`, `claude_api_error`, `validation_error`, `tool_use_missing`) so the client can display useful error messages.
 
 ---
 
@@ -140,14 +173,57 @@ AmIBroke/
 ├── tsconfig.json
 ├── babel.config.js
 ├── .env.example
+├── CLAUDE.md                  # AI safety rules
+├── DECISIONS.md               # Architecture decisions log
+├── FRONTEND_TODO.md           # Known frontend gaps
+├── shared/                    # Shared types & logic (frontend + backend)
+│   ├── types.ts               # TypeScript types (inferred from Zod)
+│   ├── schemas.ts             # Zod schemas (request, AI output, final response)
+│   ├── calculations.ts        # Deterministic financial math
+│   ├── calculations.test.ts
+│   ├── baselines/             # State + national reference data
+│   │   ├── national.ts        # Country-wide defaults (CC APR, student loan rate)
+│   │   ├── states.ts          # Per-state rows (50 states + DC, cited sources)
+│   │   └── index.ts           # getBaselines(state) helper
+│   └── scoring/               # CFPB IRT scoring module
+│       ├── cfpb_irt.ts        # Official CFPB graded-response IRT scorer
+│       ├── bands.ts           # Score → label/color (Fragile/Surviving/Stable/Thriving)
+│       ├── index.ts           # computeFinalScore() with confidence attenuation
+│       └── __tests__/
+│           └── cfpb.test.ts
 ├── supabase/
 │   ├── config.toml
 │   ├── migrations/            # 5 SQL migrations
 │   └── functions/
-│       ├── analyze/           # Claude AI proxy
+│       ├── analyze/           # Main analysis endpoint (Anthropic tool-use)
+│       │   ├── index.ts       # Handler: validate → call AI → compute → return
+│       │   ├── tool.ts        # submit_analysis tool JSON Schema definition
+│       │   ├── getBaselinesForRequest.ts
+│       │   ├── prompts/
+│       │   │   └── system.txt # External system prompt (cache-able)
+│       │   └── prompt.ts      # DEPRECATED (kept for reference)
+│       ├── action-plan/       # 90-day plan endpoint
+│       │   ├── index.ts
+│       │   ├── tool.ts
+│       │   ├── prompts/
+│       │   │   └── system.txt
+│       │   └── prompt.ts      # DEPRECATED (kept for reference)
 │       ├── create-payment-intent/
 │       ├── confirm-purchase/
 │       └── verify-purchase/
+├── scripts/                   # Testing infrastructure
+│   ├── lib/
+│   │   └── call-counter.ts    # 40-call session hard cap
+│   ├── eval/
+│   │   ├── fixtures.ts        # 13 eval test cases
+│   │   ├── assertions.ts      # Zod + custom assertion helpers
+│   │   └── runner.ts          # Eval harness runner
+│   ├── manual-test.ts         # Human-review test tool
+│   ├── test-snapshots/
+│   │   ├── inputs/            # 5 starter input fixtures (JSON)
+│   │   ├── outputs/           # Saved AI responses (committed)
+│   │   └── REVIEW.md          # Manual review ratings
+│   └── test_anthropic.ts      # DEPRECATED
 └── src/
     ├── components/            # Reusable UI primitives
     │   ├── GlassCard.tsx
