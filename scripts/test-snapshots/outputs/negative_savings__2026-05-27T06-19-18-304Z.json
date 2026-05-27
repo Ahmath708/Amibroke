@@ -1,0 +1,132 @@
+{
+  "inputFile": "negative_savings",
+  "timestamp": "2026-05-27T06:19:18.305Z",
+  "request": {
+    "freeText": "I spend about $4500 a month and only make $3800. Living off cards.",
+    "userContext": {
+      "state": "FL",
+      "ageBracket": "25-29",
+      "incomeBracket": "2k_4k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "5k_15k",
+      "liquidSavingsBracket": "none"
+    },
+    "tone": "therapist"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 3800,
+      "confidence": "high"
+    },
+    "monthlyExpenses": {
+      "value": 4500,
+      "confidence": "high"
+    },
+    "liquidSavings": {
+      "value": 0,
+      "confidence": "high"
+    },
+    "debts": [
+      {
+        "name": "Credit cards",
+        "balance": 10000,
+        "interestRate": 0.21,
+        "minimumPayment": 250,
+        "urgency": "critical"
+      }
+    ],
+    "cfpb_responses": [
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 4,
+        "confidence": "high"
+      },
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 4,
+        "confidence": "high"
+      },
+      {
+        "value": 4,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 4,
+        "confidence": "high"
+      },
+      {
+        "value": 4,
+        "confidence": "high"
+      }
+    ],
+    "scoreModifier": -5,
+    "scoreModifierReason": "Spending exceeds income by $700/month with no savings buffer, meaning credit card debt is actively growing every single month with no clear path to reversal.",
+    "summary": "You're spending $700 more than you earn every month, and the gap is being filled by credit cards — which means your debt is growing, not shrinking. This isn't a budgeting tweak situation; it's a structural imbalance that needs immediate attention. The good news is that the gap is identifiable and closeable.",
+    "roast": "It seems like your credit cards have quietly become a co-signer on your lifestyle. That $700 monthly shortfall isn't a rough patch — it's a pattern worth exploring together.",
+    "insights": [
+      "You're running a $700/month deficit — that's $8,400 added to debt per year before interest.",
+      "At 21% APR, every $1,000 on the card costs about $210/year just to exist there.",
+      "With no liquid savings, any unexpected expense deepens the debt hole further.",
+      "The deficit may feel normal by now, but it's compounding silently in the background.",
+      "Closing a $700 gap is hard but achievable — even a $350 fix cuts the bleeding in half."
+    ],
+    "topProblems": [
+      "Monthly spending exceeds income by $700, causing debt to grow every month.",
+      "No emergency fund means every surprise expense goes directly onto high-interest cards.",
+      "Credit card debt likely growing faster than minimum payments can offset."
+    ],
+    "positiveBehaviors": [
+      "You named the problem clearly and honestly — that level of self-awareness is genuinely the hardest first step.",
+      "You know your numbers, which means you have the information needed to make a real change."
+    ],
+    "topFix": {
+      "action": "Identify and cut $700/month in spending — even $350 in cuts plus a small income boost closes the gap and stops the debt from growing further.",
+      "monthlyImpact": 700
+    },
+    "emotionalStatus": {
+      "label": "Overwhelmed but self-aware",
+      "emoji": "😔"
+    },
+    "mentionedSpending": [
+      {
+        "category": "total monthly spending",
+        "amount": 4500,
+        "source": "user_stated"
+      }
+    ],
+    "monthlySavings": -700,
+    "savingsRate": -0.18421052631578946,
+    "debtTotal": 10000,
+    "monthlyDebtService": 250,
+    "emergencyFundMonths": 0,
+    "debtToIncomeRatio": 0.06578947368421052,
+    "score": 15,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.975,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 17144,
+    "model": "claude-sonnet-4-6"
+  }
+}

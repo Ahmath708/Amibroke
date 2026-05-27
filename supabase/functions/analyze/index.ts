@@ -4,7 +4,9 @@ import { getBaselinesForRequest } from './getBaselinesForRequest.ts';
 import type { FinalAnalysis, UserContext } from '../../../shared/types.ts';
 import { deriveMetrics } from '../../../shared/calculations.ts';
 import { computeFinalScore } from '../../../shared/scoring/index.ts';
-import { SYSTEM_PROMPT } from './prompt.ts';
+const SYSTEM_PROMPT = Deno.readTextFileSync(
+  new URL('./prompts/system.txt', import.meta.url)
+);
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
@@ -251,6 +253,25 @@ async function callGroq(messages: Array<{ role: string; content: string }>): Pro
   return parsed;
 }
 
+function sanitizeAiOutput(raw: any): any {
+  const clone = JSON.parse(JSON.stringify(raw));
+  const truncate = (s: any, max: number) => typeof s === 'string' && s.length > max ? s.slice(0, max) : s;
+  if (clone.summary) clone.summary = truncate(clone.summary, 400);
+  if (clone.roast) clone.roast = truncate(clone.roast, 240);
+  if (clone.scoreModifierReason) clone.scoreModifierReason = truncate(clone.scoreModifierReason, 200);
+  if (clone.emotionalStatus) {
+    clone.emotionalStatus.label = truncate(clone.emotionalStatus.label, 40);
+    clone.emotionalStatus.emoji = truncate(clone.emotionalStatus.emoji, 4);
+  }
+  if (clone.topFix?.action) clone.topFix.action = truncate(clone.topFix.action, 200);
+  for (const key of ['insights', 'topProblems', 'positiveBehaviors'] as const) {
+    if (Array.isArray(clone[key])) {
+      clone[key] = clone[key].map((s: string) => truncate(s, key === 'insights' ? 160 : 140));
+    }
+  }
+  return clone;
+}
+
 function composeFinalAnalysis(rawOutput: any): any {
   const derived = deriveMetrics({
     monthlyIncome: rawOutput.monthlyIncome.value,
@@ -338,19 +359,8 @@ serve(async (req) => {
       rawOutput = toolUse.input;
     }
 
-    const aiValidation = validateAiOutput(rawOutput);
-    if (!aiValidation.valid) {
-      console.error('[analyze] AI output validation failed:', aiValidation.error);
-      const providerLabel = selectedProvider === 'groq' ? 'Groq' : 'Claude';
-      return jsonResponse({
-        error: `${providerLabel} output failed validation`,
-        stage: 'validation_error',
-        detail: aiValidation.error,
-        rawResponse: JSON.stringify(rawOutput).slice(0, 1000),
-      }, 502);
-    }
-
-    const finalAnalysis = composeFinalAnalysis(aiValidation.parsed);
+    const sanitized = sanitizeAiOutput(rawOutput);
+    const finalAnalysis = composeFinalAnalysis(sanitized);
 
     return jsonResponse(
       { ...finalAnalysis, _provider: selectedProvider },

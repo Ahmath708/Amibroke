@@ -95,3 +95,27 @@ export const FinalAnalysisSchema = AIRawOutputSchema.extend({
   debtToIncomeRatio: z.number(),
   avgConfidence: z.number().min(0).max(1),
 });
+
+// ─── Action plan schemas ─────────────────────────────────────────
+
+export const ToneSchema = z.enum(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']);
+
+export const ActionPlanStepSchema = z.object({
+  week: z.string().max(20),
+  title: z.string().max(80),
+  description: z.string().max(300),
+  category: z.enum(['savings', 'debt', 'income', 'mindset']),
+  impact: z.string().max(200),
+  confidence: z.enum(['low', 'medium', 'high']),
+});
+
+export const ActionPlanRequestSchema = z.object({
+  analysis: FinalAnalysisSchema,
+  tone: ToneSchema,
+  userContext: UserContextSchema,
+});
+
+export const ActionPlanResponseSchema = z.object({
+  steps: z.array(ActionPlanStepSchema).min(4).max(6),
+  overallMessage: z.string().max(400),
+});

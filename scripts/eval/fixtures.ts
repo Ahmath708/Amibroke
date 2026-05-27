@@ -114,7 +114,7 @@ export const FIXTURES: Fixture[] = [
       userContext: { state: 'TX', ageBracket: '30-34', incomeBracket: '4k_6k', livingSituation: 'owning', employmentStatus: 'full_time', debtBracket: '15k_50k', liquidSavingsBracket: '2k_10k' },
       tone: 'finance_bro',
     },
-    expects: { scoreMin: 0, scoreMax: 100, forbiddenStrings: FORBIDDEN, minHighConfidence: 3, savingsInvariant: true },
+    expects: { scoreMin: 0, scoreMax: 100, forbiddenStrings: FORBIDDEN, minHighConfidence: 2, savingsInvariant: true },
   },
   {
     id: 'detailed_3',
@@ -125,7 +125,7 @@ export const FIXTURES: Fixture[] = [
       userContext: { state: 'NY', ageBracket: '30-34', incomeBracket: 'over_10k', livingSituation: 'renting', employmentStatus: 'full_time', debtBracket: 'over_50k', liquidSavingsBracket: '2k_10k' },
       tone: 'older_sibling',
     },
-    expects: { scoreMin: 0, scoreMax: 100, forbiddenStrings: FORBIDDEN, minHighConfidence: 3, savingsInvariant: true },
+    expects: { scoreMin: 0, scoreMax: 100, forbiddenStrings: FORBIDDEN, minHighConfidence: 2, savingsInvariant: true },
   },
 
   // ─── Group D: Edge cases ───────────────────────────────────

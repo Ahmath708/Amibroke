@@ -1,0 +1,119 @@
+{
+  "inputFile": "vague_broke",
+  "timestamp": "2026-05-27T06:18:20.359Z",
+  "request": {
+    "freeText": "I'm broke lol",
+    "userContext": {
+      "state": "CA",
+      "ageBracket": "25-29",
+      "incomeBracket": "4k_6k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "none",
+      "liquidSavingsBracket": "under_500"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 5000,
+      "confidence": "low"
+    },
+    "monthlyExpenses": {
+      "value": 4600,
+      "confidence": "low"
+    },
+    "liquidSavings": {
+      "value": 250,
+      "confidence": "medium"
+    },
+    "debts": [],
+    "cfpb_responses": [
+      {
+        "value": 0,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "low"
+      },
+      {
+        "value": 0,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      }
+    ],
+    "scoreModifier": -3,
+    "scoreModifierReason": "Under $500 in liquid savings in a VHCOL state with full-time employment signals a dangerously thin buffer that the scale alone doesn't fully penalize.",
+    "summary": "You're 25-29, employed full-time in California, and have less than $500 to your name. No debt is genuinely the one bright spot here, but with near-zero savings in a VHCOL state, one bad week — a car repair, a medical bill, a missed shift — and you're in the red. The gap between income and savings rate is the whole problem.",
+    "roast": "Bestie, \"I'm broke lol\" is not a personality trait — it's a cry for help. You have a full-time job in California and less than $500 saved. The \"lol\" is doing a LOT of heavy lifting rn.",
+    "insights": [
+      "Under $500 in savings means you are literally one flat tire away from financial chaos in a VHCOL state.",
+      "With no debt, you have a rare clean slate — your only enemy right now is your own spending rate.",
+      "At your income bracket, a healthy 15% savings rate means stashing $600-$900/mo — you're nowhere near that.",
+      "Full-time employed with no savings at 25-29 usually means lifestyle creep is quietly eating your paycheck.",
+      "Building even a $1,500 starter emergency fund would put you ahead of where you are by a mile."
+    ],
+    "topProblems": [
+      "Near-zero liquid savings creates extreme vulnerability to any unexpected expense.",
+      "Savings rate appears to be effectively 0% despite full-time employment in a decent income bracket.",
+      "Living in a VHCOL state with no financial cushion amplifies every financial risk."
+    ],
+    "positiveBehaviors": [
+      "Zero debt is a genuinely strong position — most people your age are carrying thousands in high-interest balances.",
+      "You're aware enough to check your situation instead of ignoring it — that self-awareness matters.",
+      "Full-time employment gives you a stable income base to actually fix this if you choose to."
+    ],
+    "topFix": {
+      "action": "Set up an automatic transfer of $300-$500 on payday to a high-yield savings account before you can spend it — hit a $1,500 emergency fund in 3-5 months.",
+      "monthlyImpact": 400
+    },
+    "emotionalStatus": {
+      "label": "Broke but fixable",
+      "emoji": "💸"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 400,
+    "savingsRate": 0.08,
+    "debtTotal": 0,
+    "monthlyDebtService": 0,
+    "emergencyFundMonths": 0.05434782608695652,
+    "debtToIncomeRatio": 0,
+    "score": 37,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.675,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 17948,
+    "model": "claude-sonnet-4-6"
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "inputFile": "detailed_sf",
+  "timestamp": "2026-05-27T06:18:50.493Z",
+  "request": {
+    "freeText": "Net $4,800/mo, rent $1,800 in SF, $7,200 in CC debt at 24% APR, no savings",
+    "userContext": {
+      "state": "CA",
+      "ageBracket": "25-29",
+      "incomeBracket": "4k_6k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "5k_15k",
+      "liquidSavingsBracket": "none"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 4800,
+      "confidence": "high"
+    },
+    "monthlyExpenses": {
+      "value": 3900,
+      "confidence": "low"
+    },
+    "liquidSavings": {
+      "value": 0,
+      "confidence": "high"
+    },
+    "debts": [
+      {
+        "name": "Credit card",
+        "balance": 7200,
+        "interestRate": 0.24,
+        "minimumPayment": 216,
+        "urgency": "high"
+      }
+    ],
+    "cfpb_responses": [
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      }
+    ],
+    "scoreModifier": -3,
+    "scoreModifierReason": "$7,200 in revolving CC debt at 24% APR with zero emergency buffer creates compounding fragility the scale alone doesn't fully capture.",
+    "summary": "You're pulling $4,800/mo in SF but 37.5% goes straight to rent and $144/mo evaporates in CC interest before you touch principal. Zero savings means one bad week — a car repair, a medical bill — and that $7,200 balance grows. You're not broke, but you're one emergency away from it.",
+    "roast": "Bestie, $0 in savings, $7,200 in CC debt, and you're paying SF rent prices — you're not building wealth, you're funding your landlord's retirement and Visa's quarterly earnings call. We need to talk.",
+    "insights": [
+      "Your rent is 37.5% of take-home — above the 35% guideline and brutal in VHCOL SF with nothing left to buffer shocks.",
+      "That CC balance costs ~$144/mo in interest alone. You're paying rent to Visa on top of your actual rent.",
+      "Zero emergency fund means any unexpected expense goes directly onto the same 24% APR card, compounding the hole.",
+      "Your effective savings rate is negative once interest accrual outpaces any spare cash you might have.",
+      "You earn well above the age-bracket median ($4,800 vs $3,200) — the income isn't the problem, the leakage is."
+    ],
+    "topProblems": [
+      "Zero emergency fund — one surprise expense snowballs straight onto a 24% APR card.",
+      "Credit card debt costing $144/mo in interest with no paydown momentum.",
+      "Rent consuming 37.5% of take-home in VHCOL city, leaving razor-thin margin."
+    ],
+    "positiveBehaviors": [
+      "You earn meaningfully above the age-median net income — the raw material to fix this is there.",
+      "You know your numbers cold — income, rate, balance. That self-awareness is rarer than you think.",
+      "Full-time employment gives you a stable base to execute a paydown plan without gig-income volatility."
+    ],
+    "topFix": {
+      "action": "Attack the CC with every spare dollar: pay $500/mo total (minimums + extra) and you're debt-free in ~17 months, saving ~$1,600 in interest. Then redirect that $500 to an emergency fund.",
+      "monthlyImpact": 144
+    },
+    "emotionalStatus": {
+      "label": "One paycheck from the edge",
+      "emoji": "😬"
+    },
+    "mentionedSpending": [
+      {
+        "category": "rent",
+        "amount": 1800,
+        "source": "user_stated"
+      }
+    ],
+    "monthlySavings": 900,
+    "savingsRate": 0.1875,
+    "debtTotal": 7200,
+    "monthlyDebtService": 216,
+    "emergencyFundMonths": 0,
+    "debtToIncomeRatio": 0.045,
+    "score": 33,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.875,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 19122,
+    "model": "claude-sonnet-4-6"
+  }
+}

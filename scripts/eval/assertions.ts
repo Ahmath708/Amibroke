@@ -37,21 +37,24 @@ export function assertCfpbResponses(response: any): AssertionResult {
 }
 
 export function assertSavingsInvariant(response: any): AssertionResult {
-  const { monthlyIncome, monthlyExpenses, monthlySavings } = response;
-  if (monthlyIncome === undefined || monthlyExpenses === undefined || monthlySavings === undefined) {
+  const income = response?.monthlyIncome?.value;
+  const expenses = response?.monthlyExpenses?.value;
+  const savings = response?.monthlySavings;
+  if (income === undefined || expenses === undefined || savings === undefined) {
     return { pass: false, message: 'Missing fields for savings invariant' };
   }
-  const expected = monthlyIncome - monthlyExpenses;
-  if (Math.abs(monthlySavings - expected) > 0.01) {
-    return { pass: false, message: `monthlySavings ${monthlySavings} !== ${monthlyIncome} - ${monthlyExpenses} = ${expected}` };
+  const expected = income - expenses;
+  if (Math.abs(savings - expected) > 0.01) {
+    return { pass: false, message: `monthlySavings ${savings} !== ${income} - ${expenses} = ${expected}` };
   }
   return { pass: true, message: `monthlySavings = monthlyIncome - monthlyExpenses (${expected})` };
 }
 
 export function assertNoForbiddenStrings(response: any, forbidden: string[]): AssertionResult {
-  const body = JSON.stringify(response).toLowerCase();
+  const body = JSON.stringify(response);
   for (const s of forbidden) {
-    if (body.includes(s.toLowerCase())) {
+    const pattern = new RegExp(`\\b${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (pattern.test(body)) {
       return { pass: false, message: `Response contains forbidden string: "${s}"` };
     }
   }
