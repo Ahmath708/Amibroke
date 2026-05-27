@@ -1,0 +1,5 @@
+{
+  "freeText": "I'm a student working part-time, $1200/mo from a campus job, parents pay rent and food",
+  "userContext": { "state":"TX","ageBracket":"18-24","incomeBracket":"under_2k","livingSituation":"dorm","employmentStatus":"student","debtBracket":"none","liquidSavingsBracket":"under_500" },
+  "tone": "gentle"
+}

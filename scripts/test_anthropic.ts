@@ -1,4 +1,7 @@
-// Test script to call Anthropic Claude Sonnet model directly.
+// DEPRECATED. Use scripts/manual-test.ts (Node + tsx) instead.
+// This Deno-based script does not work with the new tool-use architecture.
+
+// Test script to call Anthropic Claude Sonnet model directly. (OLD APPROACH — DO NOT USE)
 // Usage (with Deno): deno run -A scripts/test_anthropic.ts "<user input>" [tone]
 // Example: deno run -A scripts/test_anthropic.ts "I earn $5000 a month and spend $3000 on rent and groceries" savage
 

@@ -1,0 +1,317 @@
+export type StateBaseline = {
+  colTier: 'low' | 'medium' | 'high' | 'vhcol';
+  medianRent1br: number;
+  medianNetIncome: number;
+  recommendedRentPctOfIncome: number;
+};
+
+export const STATE_BASELINES: Record<string, StateBaseline> = {
+  // Source: Census ACS 2025 (S1901_C01_012E), statranker.org; HUD FY2025 FMR, RentData.org
+  AL: {
+    colTier: 'low',
+    medianRent1br: 758,
+    medianNetIncome: 2800,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  AK: {
+    colTier: 'high',
+    medianRent1br: 1170,
+    medianNetIncome: 4000,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  AZ: {
+    colTier: 'medium',
+    medianRent1br: 1163,
+    medianNetIncome: 3400,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  AR: {
+    colTier: 'low',
+    medianRent1br: 716,
+    medianNetIncome: 2600,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  CA: {
+    colTier: 'vhcol',
+    medianRent1br: 1565,
+    medianNetIncome: 4200,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  CO: {
+    colTier: 'high',
+    medianRent1br: 1137,
+    medianNetIncome: 4000,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  CT: {
+    colTier: 'high',
+    medianRent1br: 1392,
+    medianNetIncome: 4000,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  DE: {
+    colTier: 'high',
+    medianRent1br: 1253,
+    medianNetIncome: 3600,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  DC: {
+    // Source: Census ACS 2024, census.gov ACSBR-025
+    colTier: 'vhcol',
+    medianRent1br: 2056,
+    medianNetIncome: 4600,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  FL: {
+    colTier: 'medium',
+    medianRent1br: 1216,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  GA: {
+    colTier: 'medium',
+    medianRent1br: 972,
+    medianNetIncome: 3300,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  HI: {
+    colTier: 'vhcol',
+    medianRent1br: 1684,
+    medianNetIncome: 4200,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  ID: {
+    colTier: 'medium',
+    medianRent1br: 908,
+    medianNetIncome: 3400,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  IL: {
+    colTier: 'high',
+    medianRent1br: 814,
+    medianNetIncome: 3500,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  IN: {
+    colTier: 'low',
+    medianRent1br: 836,
+    medianNetIncome: 3000,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  IA: {
+    colTier: 'medium',
+    medianRent1br: 746,
+    medianNetIncome: 3100,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  KS: {
+    colTier: 'medium',
+    medianRent1br: 735,
+    medianNetIncome: 3100,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  KY: {
+    colTier: 'low',
+    medianRent1br: 776,
+    medianNetIncome: 2700,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  LA: {
+    colTier: 'low',
+    medianRent1br: 867,
+    medianNetIncome: 2500,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  ME: {
+    colTier: 'medium',
+    medianRent1br: 958,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  MD: {
+    colTier: 'high',
+    medianRent1br: 1445,
+    medianNetIncome: 4300,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  MA: {
+    colTier: 'vhcol',
+    medianRent1br: 1679,
+    medianNetIncome: 4400,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  MI: {
+    colTier: 'low',
+    medianRent1br: 837,
+    medianNetIncome: 3000,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  MN: {
+    colTier: 'high',
+    medianRent1br: 862,
+    medianNetIncome: 3600,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  MS: {
+    colTier: 'low',
+    medianRent1br: 828,
+    medianNetIncome: 2500,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  MO: {
+    colTier: 'low',
+    medianRent1br: 730,
+    medianNetIncome: 3000,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  MT: {
+    colTier: 'medium',
+    medianRent1br: 889,
+    medianNetIncome: 3100,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  NE: {
+    colTier: 'medium',
+    medianRent1br: 741,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  NV: {
+    colTier: 'medium',
+    medianRent1br: 1080,
+    medianNetIncome: 3400,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  NH: {
+    colTier: 'high',
+    medianRent1br: 1212,
+    medianNetIncome: 4200,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  NJ: {
+    colTier: 'high',
+    medianRent1br: 1627,
+    medianNetIncome: 4300,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  NM: {
+    colTier: 'low',
+    medianRent1br: 853,
+    medianNetIncome: 2800,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  NY: {
+    colTier: 'vhcol',
+    medianRent1br: 1219,
+    medianNetIncome: 3600,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  NC: {
+    colTier: 'low',
+    medianRent1br: 942,
+    medianNetIncome: 3100,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  ND: {
+    colTier: 'medium',
+    medianRent1br: 735,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  OH: {
+    colTier: 'low',
+    medianRent1br: 730,
+    medianNetIncome: 3000,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  OK: {
+    colTier: 'low',
+    medianRent1br: 777,
+    medianNetIncome: 2800,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  OR: {
+    colTier: 'high',
+    medianRent1br: 1090,
+    medianNetIncome: 3600,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  PA: {
+    colTier: 'medium',
+    medianRent1br: 854,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  RI: {
+    colTier: 'high',
+    medianRent1br: 1344,
+    medianNetIncome: 3500,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  SC: {
+    colTier: 'low',
+    medianRent1br: 790,
+    medianNetIncome: 3000,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  SD: {
+    colTier: 'medium',
+    medianRent1br: 750,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  TN: {
+    colTier: 'low',
+    medianRent1br: 925,
+    medianNetIncome: 3000,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  TX: {
+    colTier: 'medium',
+    medianRent1br: 905,
+    medianNetIncome: 3300,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  UT: {
+    colTier: 'high',
+    medianRent1br: 977,
+    medianNetIncome: 4000,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  VT: {
+    colTier: 'high',
+    medianRent1br: 1094,
+    medianNetIncome: 3400,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  VA: {
+    colTier: 'high',
+    medianRent1br: 1151,
+    medianNetIncome: 3800,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  WA: {
+    colTier: 'vhcol',
+    medianRent1br: 1157,
+    medianNetIncome: 4100,
+    recommendedRentPctOfIncome: 0.35,
+  },
+  WV: {
+    colTier: 'low',
+    medianRent1br: 754,
+    medianNetIncome: 2500,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  WI: {
+    colTier: 'medium',
+    medianRent1br: 832,
+    medianNetIncome: 3200,
+    recommendedRentPctOfIncome: 0.30,
+  },
+  WY: {
+    colTier: 'medium',
+    medianRent1br: 790,
+    medianNetIncome: 3100,
+    recommendedRentPctOfIncome: 0.30,
+  },
+};

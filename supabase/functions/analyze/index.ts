@@ -1,6 +1,10 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-
-import type { Placeholder } from '../../../shared/types.ts';
+import { submitAnalysisTool } from './tool.ts';
+import { getBaselinesForRequest } from './getBaselinesForRequest.ts';
+import type { FinalAnalysis, UserContext } from '../../../shared/types.ts';
+import { deriveMetrics } from '../../../shared/calculations.ts';
+import { computeFinalScore } from '../../../shared/scoring/index.ts';
+import { SYSTEM_PROMPT } from './prompt.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
@@ -14,8 +18,25 @@ const CORS_HEADERS = {
 };
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 20; // Increased for production stability
+const RATE_LIMIT_MAX_REQUESTS = 20;
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+const VALID_STATES = new Set([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+  'DC', 'unknown',
+]);
+
+const VALID_AGE_BRACKETS = new Set(['18-24', '25-29', '30-34', '35-44', '45+', 'unknown']);
+const VALID_INCOME_BRACKETS = new Set(['under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k', 'unknown']);
+const VALID_LIVING_SITUATIONS = new Set(['renting', 'owning', 'with_family', 'dorm', 'other', 'unknown']);
+const VALID_EMPLOYMENT_STATUSES = new Set(['full_time', 'part_time', 'self_employed', 'student', 'between_jobs', 'unknown']);
+const VALID_DEBT_BRACKETS = new Set(['none', 'under_5k', '5k_15k', '15k_50k', 'over_50k', 'unknown']);
+const VALID_SAVINGS_BRACKETS = new Set(['none', 'under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k', 'unknown']);
+const VALID_TONES = new Set(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']);
 
 function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
   const now = Date.now();
@@ -48,332 +69,208 @@ function moderateInput(text: string): { safe: boolean; reason: string | null } {
   return { safe: true, reason: null };
 }
 
-function moderateRoast(text: string): string {
-  const replacements: [string, string][] = [
-    ['you are broke', 'your finances are strained'],
-    ['you\'re broke', 'you\'re financially strained'],
-    ['you\'re poor', 'money is tight right now'],
-    ['you are poor', 'money is tight right now'],
-    ['you\'re failing', 'you\'re struggling'],
-    ['you are failing', 'you\'re struggling'],
-    ['you\'re terrible', 'there\'s room for improvement'],
-    ['you are terrible', 'there\'s room for improvement'],
-    ['you\'re hopeless', 'it feels overwhelming'],
-    ['you are hopeless', 'it feels overwhelming'],
-  ];
-  let result = text;
-  for (const [bad, good] of replacements) {
-    result = result.replace(new RegExp(bad, 'gi'), good);
-  }
-  return result;
-}
-
-const TONE_PROMPTS: Record<string, string> = {
-  gentle: `- Warm and supportive, like a caring friend who wants the best for you
-- Soften hard truths with encouragement
-- Focus on hope and possibility
-- Use phrases like "here's the thing..." and "let's work on this together"`,
-  savage: `- Brutally honest, no sugar-coating
-- Gen-Z / TikTok native language
-- Funny but cutting one-liners
-- Use phrases like "bestie..." and "we need to talk"
-- Make it memeable and screenshot-worthy`,
-  therapist: `- Calm, analytical, and psychologically-minded
-- Connect spending patterns to emotional needs
-- Use phrases like "it seems like..." and "have you considered..."
-- Focus on the "why" behind the behavior`,
-  older_sibling: `- Tough love from someone who's been there
-- Mix of "I'm not mad, I'm disappointed" and genuine care
-- Practical, street-smart advice
-- Use phrases like "look, I get it..." and "here's what I'd do"`,
-  finance_bro: `- Confident, hype-man energy
-- Use phrases like "we're gonna fix this" and "let's get that bread"
-- Optimistic but grounded in reality
-- Crunch the numbers with personality`,
-};
-
-function buildPrompt(tone: string, userInput: string): string {
-  const toneGuide = TONE_PROMPTS[tone] || TONE_PROMPTS.savage;
-  return `You are "Am I Broke?", a brutally honest AI financial advisor that blends cold data analysis with a distinct personality. Analyze the user's financial story below and return ONLY a JSON object that exactly matches the schema provided—no markdown, no extra commentary.
-
-Your tone:
-${toneGuide}
-
-Guidelines:
-- CRITICAL: You MUST estimate ALL numeric fields based on context clues. NEVER return 0 for monthlyIncome, monthlyExpenses, debtTotal, or savingsRate. If the user doesn't give exact figures, infer from their lifestyle cues (job mentions, spending habits, location hints, age, etc.) using realistic typical values.
-- Example: if someone says "I eat out too much" estimate ~$400-800/mo for dining and reasonable income based on their implied lifestyle.
-- Example: if someone says "I'm a student" estimate $0-2000/mo income, $1000-2500 expenses.
-- If no debt is mentioned, set debtTotal to 0 and debts to [].
-- If no subscriptions are mentioned, still include at least 2 generic subscription categories in spendingBreakdown.
-- Always return at least 3 items in spendingBreakdown and at least 3 actionPlan steps.
-- Provide a concise, honest "summary" that includes any major uncertainties.
-- Return ONLY valid JSON with this precise structure:
-{
-  "score": <number 0-100>,
-  "scoreLabel": <string like "Financially Fragile" | "Surviving" | "Stable" | "Thriving" | "Broke AF">,
-  "scoreColor": <hex color>,
-  "summary": <2-3 sentence honest summary>,
-  "roast": <1-2 sentence roast matching the selected tone>,
-  "monthlyIncome": <estimated monthly income number>,
-  "monthlyExpenses": <estimated monthly expenses number>,
-  "monthlySavings": <income minus expenses, can be negative>,
-  "debtTotal": <total debt estimate>,
-  "savingsRate": <percentage as decimal e.g. 0.15>,
-  "emergencyFundMonths": <months of emergency fund, 0 if none>,
-  "debtToIncomeRatio": <ratio as decimal>,
-  "spendingBreakdown": [{"name": <category>, "amount": <monthly amount>, "percentage": <of income>, "color": <hex>, "status": <"good"|"warning"|"danger">}],
-  "debts": [{"name": <debt name>, "balance": <amount>, "interestRate": <decimal>, "minimumPayment": <monthly>, "urgency": <"low"|"medium"|"high"|"critical">}],
-  "actionPlan": [{"week": <1-12>, "title": <short title>, "description": <what to do>, "impact": <expected impact>, "category": <"savings"|"debt"|"income"|"mindset">, "completed": false}],
-  "insights": [<3-5 specific insight strings>],
-  "topProblems": [<2-3 biggest financial problems>],
-  "positiveBehaviors": [<1-3 things they're doing right>],
-  "topFix": {"action": <single most impactful action>, "monthlyImpact": <estimated monthly savings in dollars>},
-  "emotionalStatus": {"label": <short status>, "emoji": <single emoji>}
-}
-
-Score guide: 0-20=Broke AF, 21-40=Financially Fragile, 41-60=Surviving, 61-80=Stable, 81-100=Thriving.
-NEVER: pretend to be a licensed financial advisor, give illegal tax advice, guarantee investment outcomes, shame users aggressively, mention self-harm.
-
-Analyze this financial situation and return JSON: "${userInput}"`;
-}
-
 function jsonResponse(body: unknown, status = 200, extraHeaders = {}) {
   const headers = { ...CORS_HEADERS, 'Content-Type': 'application/json', ...extraHeaders };
-  return new Response(JSON.stringify(body), {
-    status,
-    headers,
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+function validateRequest(body: any): { valid: boolean; error?: string; parsed?: any } {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Request body must be a JSON object' };
+  }
+
+  const { freeText, userContext, tone } = body;
+
+  if (typeof freeText !== 'string' || freeText.length < 10 || freeText.length > 5000) {
+    return { valid: false, error: 'freeText must be a string between 10 and 5000 characters' };
+  }
+
+  if (!userContext || typeof userContext !== 'object') {
+    return { valid: false, error: 'userContext is required' };
+  }
+
+  if (!VALID_STATES.has(userContext.state)) return { valid: false, error: `Invalid state: ${userContext.state}` };
+  if (!VALID_AGE_BRACKETS.has(userContext.ageBracket)) return { valid: false, error: `Invalid ageBracket: ${userContext.ageBracket}` };
+  if (!VALID_INCOME_BRACKETS.has(userContext.incomeBracket)) return { valid: false, error: `Invalid incomeBracket: ${userContext.incomeBracket}` };
+  if (!VALID_LIVING_SITUATIONS.has(userContext.livingSituation)) return { valid: false, error: `Invalid livingSituation: ${userContext.livingSituation}` };
+  if (!VALID_EMPLOYMENT_STATUSES.has(userContext.employmentStatus)) return { valid: false, error: `Invalid employmentStatus: ${userContext.employmentStatus}` };
+
+  const debtBracket = userContext.debtBracket || 'none';
+  if (!VALID_DEBT_BRACKETS.has(debtBracket)) return { valid: false, error: `Invalid debtBracket: ${debtBracket}` };
+
+  const liquidSavingsBracket = userContext.liquidSavingsBracket || 'under_500';
+  if (!VALID_SAVINGS_BRACKETS.has(liquidSavingsBracket)) return { valid: false, error: `Invalid liquidSavingsBracket: ${liquidSavingsBracket}` };
+
+  if (!VALID_TONES.has(tone)) return { valid: false, error: `Invalid tone: ${tone}` };
+
+  return {
+    valid: true,
+    parsed: {
+      freeText,
+      userContext: { state: userContext.state, ageBracket: userContext.ageBracket, incomeBracket: userContext.incomeBracket, livingSituation: userContext.livingSituation, employmentStatus: userContext.employmentStatus, debtBracket, liquidSavingsBracket, primaryConcern: userContext.primaryConcern },
+      tone,
+    },
+  };
+}
+
+function validateAiOutput(raw: any): { valid: boolean; error?: string; parsed?: any } {
+  if (!raw || typeof raw !== 'object') return { valid: false, error: 'AI output must be a JSON object' };
+
+  const required = ['monthlyIncome', 'monthlyExpenses', 'liquidSavings', 'debts', 'cfpb_responses', 'scoreModifier', 'summary'];
+  for (const field of required) {
+    if (raw[field] === undefined || raw[field] === null) return { valid: false, error: `Missing required field: ${field}` };
+  }
+
+  for (const field of ['monthlyIncome', 'monthlyExpenses', 'liquidSavings'] as const) {
+    const obj = raw[field];
+    if (typeof obj.value !== 'number' || obj.value < 0) return { valid: false, error: `${field}.value must be non-negative` };
+    if (!['low', 'medium', 'high'].includes(obj.confidence)) return { valid: false, error: `${field}.confidence invalid` };
+  }
+
+  if (!Array.isArray(raw.debts) || raw.debts.length > 8) return { valid: false, error: 'debts must be array ≤ 8' };
+
+  const cfpb = raw.cfpb_responses;
+  if (!Array.isArray(cfpb) || cfpb.length !== 10) return { valid: false, error: 'cfpb_responses must be exactly 10' };
+  for (let i = 0; i < cfpb.length; i++) {
+    const r = cfpb[i];
+    if (typeof r.value !== 'number' || !Number.isInteger(r.value) || r.value < 0 || r.value > 4) return { valid: false, error: `cfpb_responses[${i}].value must be int 0-4` };
+    if (!['low', 'medium', 'high'].includes(r.confidence)) return { valid: false, error: `cfpb_responses[${i}].confidence invalid` };
+  }
+
+  if (typeof raw.scoreModifier !== 'number' || !Number.isInteger(raw.scoreModifier) || raw.scoreModifier < -10 || raw.scoreModifier > 10) return { valid: false, error: 'scoreModifier must be int -10..10' };
+
+  return { valid: true, parsed: raw };
+}
+
+async function callClaude(messages: Array<{ role: string; content: string }>): Promise<any> {
+  const response = await fetch(CLAUDE_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2500,
+      temperature: 0.2,
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      tools: [submitAnalysisTool],
+      tool_choice: { type: 'tool', name: 'submit_analysis' },
+      messages,
+    }),
   });
-}
 
-async function callClaudeWithRetry(messages: any[], maxRetries = 3): Promise<any> {
-  let lastError: any = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[claude] Calling API, attempt ${attempt + 1}`);
-      const response = await fetch(CLAUDE_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 2500,
-          system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
-          messages,
-        }),
-      });
-
-      if (response.status === 429) {
-        const retryAfter = parseInt(response.headers.get('retry-after') || '5');
-        console.warn(`[claude] Rate limited, retrying after ${retryAfter}s`);
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
-        continue;
-      }
-
-      if (response.status >= 500) {
-        console.warn(`[claude] Server error ${response.status}, retrying...`);
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => '');
-        console.error(`[claude] API error: ${response.status} — body: ${errorBody}`);
-        let apiMessage = `Claude API error: ${response.status}`;
-        try {
-          const parsed = JSON.parse(errorBody);
-          if (parsed.error?.message) {
-            apiMessage = `Claude API error: ${parsed.error.message}`;
-          }
-        } catch { /* ignore parse errors */ }
-        const error: any = new Error(apiMessage);
-        error.status = response.status;
-        error.rawResponse = errorBody;
-        error.stage = 'claude_api_error';
-        error.detail = apiMessage;
-        throw error;
-      }
-
-      const data = await response.json();
-      console.log('[claude] API success');
-      return data;
-    } catch (e) {
-      lastError = e;
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-      }
-    }
+  if (response.status === 429) {
+    const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+    console.warn(`[claude] Rate limited, retrying after ${retryAfter}s`);
+    await new Promise((r) => setTimeout(r, retryAfter * 1000));
+    return callClaude(messages);
   }
-  throw lastError;
-}
 
-async function callGroqWithRetry(messages: any[], maxRetries = 3): Promise<any> {
-  let lastError: any = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[groq] Calling API, attempt ${attempt + 1}`);
-      const response = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          max_tokens: 2500,
-          temperature: 0.7,
-          messages: [
-            { role: 'system', content: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.' },
-            ...messages,
-          ],
-        }),
-      });
-
-      if (response.status === 429) {
-        const retryAfter = parseInt(response.headers.get('retry-after') || '5');
-        console.warn(`[groq] Rate limited, retrying after ${retryAfter}s`);
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
-        continue;
-      }
-
-      if (response.status >= 500) {
-        console.warn(`[groq] Server error ${response.status}, retrying...`);
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => '');
-        console.error(`[groq] API error: ${response.status} — body: ${errorBody}`);
-        let apiMessage = `Groq API error: ${response.status}`;
-        try {
-          const parsed = JSON.parse(errorBody);
-          if (parsed.error?.message) {
-            apiMessage = `Groq API error: ${parsed.error.message}`;
-          }
-        } catch { /* ignore parse errors */ }
-        const error: any = new Error(apiMessage);
-        error.status = response.status;
-        error.rawResponse = errorBody;
-        error.stage = 'groq_api_error';
-        error.detail = apiMessage;
-        throw error;
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
-      console.log('[groq] API success');
-      return { content: [{ text: content }] };
-    } catch (e) {
-      lastError = e;
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-      }
-    }
+  if (response.status >= 500) {
+    console.warn(`[claude] Server error ${response.status}, retrying...`);
+    await new Promise((r) => setTimeout(r, 2000));
+    return callClaude(messages);
   }
-  throw lastError;
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    console.error(`[claude] API error: ${response.status} — body: ${errorBody}`);
+    let apiMessage = `Claude API error: ${response.status}`;
+    try { const parsed = JSON.parse(errorBody); if (parsed.error?.message) apiMessage = `Claude API error: ${parsed.error.message}`; } catch { /* ignore */ }
+    const error: any = new Error(apiMessage);
+    error.status = response.status;
+    error.rawResponse = errorBody;
+    error.stage = 'claude_api_error';
+    error.detail = apiMessage;
+    throw error;
+  }
+
+  const data = await response.json();
+  console.log('[claude] API success');
+  return data;
 }
 
-// ─── Streaming Response Support ────────────────────────────────────────────────
-async function callClaudeStream(messages: any[], writer: WritableStreamDefaultWriter<Uint8Array>) {
-  const encoder = new TextEncoder();
+async function callGroq(messages: Array<{ role: string; content: string }>): Promise<any> {
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 2500,
+      temperature: 0.2,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+    }),
+  });
 
+  if (response.status === 429) {
+    const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+    console.warn(`[groq] Rate limited, retrying after ${retryAfter}s`);
+    await new Promise((r) => setTimeout(r, retryAfter * 1000));
+    return callGroq(messages);
+  }
+
+  if (response.status >= 500) {
+    console.warn(`[groq] Server error ${response.status}, retrying...`);
+    await new Promise((r) => setTimeout(r, 2000));
+    return callGroq(messages);
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    console.error(`[groq] API error: ${response.status} — body: ${errorBody}`);
+    let apiMessage = `Groq API error: ${response.status}`;
+    try { const parsed = JSON.parse(errorBody); if (parsed.error?.message) apiMessage = `Groq API error: ${parsed.error.message}`; } catch { /* ignore */ }
+    const error: any = new Error(apiMessage);
+    error.status = response.status;
+    error.rawResponse = errorBody;
+    error.stage = 'groq_api_error';
+    error.detail = apiMessage;
+    throw error;
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  console.log('[groq] API success');
+
+  let parsed: any;
   try {
-    const response = await fetch(CLAUDE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',        max_tokens: 2500,
-        stream: true,
-        system: 'You are a financial analysis AI that returns ONLY valid JSON. No markdown, no extra text.',
-        messages,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-      let apiMessage = `Claude API error: ${response.status}`;
-      try {
-        const parsed = JSON.parse(errorBody);
-        if (parsed.error?.message) {
-          apiMessage = `Claude API error: ${parsed.error.message}`;
-        }
-      } catch { /* ignore parse errors */ }
-      await writer.write(encoder.encode(JSON.stringify({ error: apiMessage, stage: 'claude_api_error', rawResponse: errorBody })));
-      await writer.close();
-      return;
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      await writer.write(encoder.encode(JSON.stringify({ error: 'No stream body', stage: 'stream_error' })));
-      await writer.close();
-      return;
-    }
-
-    let fullText = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = new TextDecoder().decode(value);
-      const lines = chunk.split('\n').filter((line) => line.startsWith('data: '));
-
-      for (const line of lines) {
-        const data = line.slice(6);
-        if (data === '[DONE]') continue;
-
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-            fullText += parsed.delta.text;
-            // Send incremental JSON to client
-            const cleaned = fullText.replace(/```json|```/g, '').trim();
-            try {
-              const partial = JSON.parse(cleaned);
-              await writer.write(encoder.encode(JSON.stringify({ streaming: true, partial, done: false }) + '\n'));
-            } catch {
-              // Partial JSON not yet valid, skip
-            }
-          }
-        } catch {
-          // Skip malformed SSE data
-        }
-      }
-    }
-
-    // Send final complete response
-    const cleaned = fullText.replace(/```json|```/g, '').trim();
-    let analysis: any;
-    try {
-      analysis = JSON.parse(cleaned);
-    } catch {
-      await writer.write(encoder.encode(JSON.stringify({ error: 'Failed to parse Claude response as JSON', stage: 'parse_error', rawResponse: cleaned })));
-      await writer.close();
-      return;
-    }
-
-    if (analysis.roast) analysis.roast = moderateRoast(analysis.roast);
-    if (analysis.actionPlan) {
-      analysis.actionPlan = analysis.actionPlan.map((step: any) => ({ ...step, completed: false }));
-    }
-
-    await writer.write(encoder.encode(JSON.stringify({ streaming: true, data: analysis, done: true }) + '\n'));
-    await writer.close();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    await writer.write(encoder.encode(JSON.stringify({ error: `Streaming failed: ${message}`, stage: 'exception' })));
-    await writer.close();
+    const cleaned = content.replace(/```json|```/g, '').trim();
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const error: any = new Error('Failed to parse Groq response as JSON');
+    error.stage = 'parse_error';
+    error.rawResponse = content;
+    throw error;
   }
+
+  return parsed;
 }
 
-// ─── Main Server ───────────────────────────────────────────────────────────────
+function composeFinalAnalysis(rawOutput: any): any {
+  const derived = deriveMetrics({
+    monthlyIncome: rawOutput.monthlyIncome.value,
+    monthlyExpenses: rawOutput.monthlyExpenses.value,
+    liquidSavings: rawOutput.liquidSavings.value,
+    debts: rawOutput.debts,
+  });
+
+  const scoring = computeFinalScore(rawOutput.cfpb_responses, rawOutput.scoreModifier);
+
+  return {
+    ...rawOutput,
+    ...derived,
+    score: scoring.score,
+    scoreLabel: scoring.scoreLabel,
+    scoreColor: scoring.scoreColor,
+    avgConfidence: scoring.avgConfidence,
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -387,11 +284,7 @@ serve(async (req) => {
   const rateLimit = checkRateLimit(clientIP);
 
   if (!rateLimit.allowed) {
-    return jsonResponse({
-      error: 'Rate limit exceeded. Please wait before trying again.',
-      stage: 'rate_limit',
-      remaining: 0,
-    }, 429, {
+    return jsonResponse({ error: 'Rate limit exceeded', stage: 'rate_limit', remaining: 0 }, 429, {
       'X-RateLimit-Remaining': '0',
       'Retry-After': String(RATE_LIMIT_WINDOW_MS / 1000),
     });
@@ -399,104 +292,72 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { userInput, tone, stream, provider } = body;
+    const { provider } = body;
     const selectedProvider: string = (provider === 'groq' ? 'groq' : 'claude');
 
-    if (!userInput || typeof userInput !== 'string') {
-      return jsonResponse({ error: 'userInput is required', stage: 'parse_error' }, 400);
+    const validation = validateRequest(body);
+    if (!validation.valid) {
+      return jsonResponse({ error: validation.error, stage: 'parse_error' }, 400);
     }
 
-    // Provider key check
+    const { freeText, userContext, tone } = validation.parsed;
+
     if (selectedProvider === 'groq' && !GROQ_API_KEY) {
-      console.error('[analyze] GROQ_API_KEY secret is not set in Supabase');
-      return jsonResponse({ error: 'Server misconfiguration: Groq API key not set. Run: npx supabase secrets set GROQ_API_KEY=<your_key>', stage: 'config_error' }, 500);
+      return jsonResponse({ error: 'Server misconfiguration: Groq API key not set.', stage: 'config_error' }, 500);
     }
     if (selectedProvider === 'claude' && !ANTHROPIC_API_KEY) {
-      console.error('[analyze] ANTHROPIC_API_KEY secret is not set in Supabase');
-      return jsonResponse({ error: 'Server misconfiguration: Claude API key not set. Run: npx supabase secrets set ANTHROPIC_API_KEY=<your_key>', stage: 'config_error' }, 500);
+      return jsonResponse({ error: 'Server misconfiguration: Claude API key not set.', stage: 'config_error' }, 500);
     }
 
-    // Moderation
-    const moderation = moderateInput(userInput);
+    const moderation = moderateInput(freeText);
     if (!moderation.safe) {
       return jsonResponse({ error: moderation.reason, stage: 'moderation_failed' }, 400);
     }
 
-    const validTones = ['gentle', 'savage', 'therapist', 'older_sibling', 'finance_bro'];
-    const selectedTone = validTones.includes(tone) ? tone : 'savage';
-    const userMessage = buildPrompt(selectedTone, userInput);
+    const userMessage = JSON.stringify({
+      freeText,
+      userContext,
+      baselines: getBaselinesForRequest(userContext),
+      tone,
+    });
 
-    // Streaming mode (Claude only)
-    if (stream && selectedProvider === 'claude') {
-      const { readable, writable } = new TransformStream();
-      const writer = writable.getWriter();
-
-      callClaudeStream([{ role: 'user', content: userMessage }], writer);
-
-      return new Response(readable, {
-        headers: {
-          ...CORS_HEADERS,
-          'Content-Type': 'application/x-ndjson',
-          'X-RateLimit-Remaining': String(rateLimit.remaining),
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
-    }
-
-    // Non-streaming mode (default)
+    let rawOutput: any;
     const messages = [{ role: 'user', content: userMessage }];
-    const data = selectedProvider === 'groq'
-      ? await callGroqWithRetry(messages)
-      : await callClaudeWithRetry(messages);
 
-    const content = data.content[0]?.text || '';
-    const cleaned = content.replace(/```json|```/g, '').trim();
+    if (selectedProvider === 'groq') {
+      rawOutput = await callGroq(messages);
+    } else {
+      const data = await callClaude(messages);
+      const toolUse = data.content.find((c: any) => c.type === 'tool_use');
+      if (!toolUse) {
+        const error: any = new Error('No tool_use block in response');
+        error.stage = 'tool_use_missing';
+        error.rawResponse = JSON.stringify(data);
+        throw error;
+      }
+      rawOutput = toolUse.input;
+    }
 
-    let analysis: any;
-    try {
-      analysis = JSON.parse(cleaned);
-    } catch (e) {
-      console.error('[analyze] JSON parse failed:', e);
+    const aiValidation = validateAiOutput(rawOutput);
+    if (!aiValidation.valid) {
+      console.error('[analyze] AI output validation failed:', aiValidation.error);
       const providerLabel = selectedProvider === 'groq' ? 'Groq' : 'Claude';
-      return jsonResponse({ 
-        error: `Failed to parse ${providerLabel} response as JSON`, 
-        stage: 'parse_error', 
-        rawResponse: cleaned.slice(0, 1000) 
+      return jsonResponse({
+        error: `${providerLabel} output failed validation`,
+        stage: 'validation_error',
+        detail: aiValidation.error,
+        rawResponse: JSON.stringify(rawOutput).slice(0, 1000),
       }, 502);
     }
 
-    if (analysis.roast) analysis.roast = moderateRoast(analysis.roast);
-    if (analysis.actionPlan) {
-      analysis.actionPlan = analysis.actionPlan.map((step: any) => ({ ...step, completed: false }));
-    }
+    const finalAnalysis = composeFinalAnalysis(aiValidation.parsed);
 
-    // Basic validation of required fields
-    const requiredFields = ['score', 'scoreLabel', 'scoreColor', 'summary', 'roast', 'monthlyIncome', 'monthlyExpenses'];
-    const missingFields = requiredFields.filter(f => analysis[f] === undefined);
-    
-    if (missingFields.length > 0) {
-      const providerLabel = selectedProvider === 'groq' ? 'Groq' : 'Claude';
-      return jsonResponse({ 
-        error: `${providerLabel} response missing required fields: ${missingFields.join(', ')}`, 
-        stage: 'validation_error', 
-        rawResponse: cleaned.slice(0, 1000) 
-      }, 502);
-    }
-
-    // Fill defaults for array/object fields that may be missing
-    if (!analysis.spendingBreakdown) analysis.spendingBreakdown = [];
-    if (!analysis.debts) analysis.debts = [];
-    if (!analysis.actionPlan) analysis.actionPlan = [];
-    if (!analysis.insights) analysis.insights = [];
-    if (!analysis.topProblems) analysis.topProblems = [];
-    if (!analysis.positiveBehaviors) analysis.positiveBehaviors = [];
-    if (!analysis.topFix) analysis.topFix = { action: 'Track your spending for 30 days', monthlyImpact: 0 };
-    if (!analysis.emotionalStatus) analysis.emotionalStatus = { label: 'Concerned', emoji: '😬' };
-    if (!analysis.savingsRate && analysis.monthlyIncome > 0) analysis.savingsRate = ((analysis.monthlyIncome - analysis.monthlyExpenses) / analysis.monthlyIncome);
-
-    return jsonResponse({ ...analysis, _provider: selectedProvider }, 200, { 'X-RateLimit-Remaining': String(rateLimit.remaining) });
-    } catch (error: any) {
+    return jsonResponse(
+      { ...finalAnalysis, _provider: selectedProvider },
+      200,
+      { 'X-RateLimit-Remaining': String(rateLimit.remaining) },
+    );
+  } catch (error: any) {
     console.error('[analyze] Analysis error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     const stage = error.stage || 'exception';
@@ -504,16 +365,9 @@ serve(async (req) => {
     const rawResponse = error.rawResponse?.slice(0, 500);
     const httpStatus = error.httpStatus || null;
 
-    const envelope = {
-      error: `Analysis failed: ${message}`,
-      stage,
-      httpStatus,
-      rawResponse,
-      detail: error.detail || null,
-    };
-
+    const envelope = { error: `Analysis failed: ${message}`, stage, httpStatus, rawResponse, detail: error.detail || null };
     console.error('[analyze] Error envelope:', JSON.stringify(envelope));
-    
+
     return jsonResponse(envelope, status);
   }
 });
