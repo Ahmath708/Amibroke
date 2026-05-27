@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, FinancialAnalysis } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { calculateFinancialScore } from '@/services/scoring';
+import { calculateFinancialScore } from '@/services/scoring'; // LEGACY: client-side scoring for scenario projections only. Backend uses CFPB IRT scoring.
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
 import LoadingState from '@/components/LoadingState';
@@ -74,12 +74,12 @@ export default function ScenarioSimulatorScreen({ navigation, route }: Props & {
   if (loading) return <LoadingState />;
   if (!authorized) return null;
 
-  const income = baseAnalysis?.monthlyIncome || 5000;
-  const expenses = baseAnalysis?.monthlyExpenses || 3500;
+  const income = typeof baseAnalysis?.monthlyIncome === 'number' ? baseAnalysis.monthlyIncome : (baseAnalysis?.monthlyIncome?.value ?? 5000);
+  const expenses = typeof baseAnalysis?.monthlyExpenses === 'number' ? baseAnalysis.monthlyExpenses : (baseAnalysis?.monthlyExpenses?.value ?? 3500);
   const debt = baseAnalysis?.debtTotal || 15000;
   const savingsRate = baseAnalysis?.savingsRate || 0.05;
   const emergencyFund = baseAnalysis?.emergencyFundMonths || 1.5;
-  const breakdown = baseAnalysis?.spendingBreakdown || [
+  const breakdown = [
     { name: 'Housing', amount: 1400, percentage: 0.28 },
     { name: 'Food', amount: 600, percentage: 0.12 },
     { name: 'Transport', amount: 400, percentage: 0.08 },

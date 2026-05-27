@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { FinancialAnalysis, ActionStep, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn, RoastTone, AiProvider } from '@/types';
-import { FinancialAnalysisSchema } from '@/lib/validations';
-import { calculateFinancialScore, SCORE_CONFIG } from '@/services/scoring';
-import { SCORING_THRESHOLDS } from '@/config/scoring';
+import { FinalAnalysisSchema, ActionPlanResponseSchema } from '@shared/schemas';
+import { FinalAnalysis, ActionPlanStep } from '@shared/types';
+import { RoastTone, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn } from '@/types';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -20,8 +19,8 @@ export function getSupabase() {
   return supabase;
 }
 
-export function isFinancialAnalysis(x: unknown): x is FinancialAnalysis {
-  return FinancialAnalysisSchema.safeParse(x).success;
+export function isFinancialAnalysis(x: unknown): x is FinalAnalysis {
+  return FinalAnalysisSchema.safeParse(x).success;
 }
 
 function cleanUserInput(input: string): string {
@@ -47,9 +46,9 @@ export async function analyzeFinancialSituation(
   tone: RoastTone = 'savage',
   signal?: AbortSignal,
   retries = 2,
-  provider: AiProvider = 'claude',
-): Promise<FinancialAnalysis> {
-  console.log('[analyze] Starting analysis', { userInputLength: userInput.length, tone, provider });
+  userContext?: Record<string, unknown>,
+): Promise<FinalAnalysis> {
+  console.log('[analyze] Starting analysis', { userInputLength: userInput.length, tone });
   const cleaned = cleanUserInput(userInput);
   console.log('[analyze] Cleaned input:', cleaned.substring(0, 100) + (cleaned.length > 100 ? '...' : ''));
   const client = getSupabase();
@@ -62,21 +61,23 @@ export async function analyzeFinancialSituation(
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      console.log('[analyze] Invoking analyze function, attempt:', attempt + 1, 'provider:', provider);
+      console.log('[analyze] Invoking analyze function, attempt:', attempt + 1);
       const { data, error } = await client.functions.invoke('analyze', {
-        body: { userInput: cleaned, tone, provider },
+        body: {
+          freeText: cleaned,
+          tone,
+          userContext: userContext ?? {},
+        },
         signal,
       });
 
       if (error) {
         console.error('[analyze] invoke error — message:', error.message);
-        
-        // Detailed logging of error context if available
+
         let stage = 'unknown';
         let detail = error.message;
-        
+
         try {
-          // Supabase Functions error structure check
           const errData = error.context ? await (error.context as any).json() : null;
           if (errData) {
             console.error('[analyze] Error detail:', JSON.stringify(errData));
@@ -84,7 +85,6 @@ export async function analyzeFinancialSituation(
             detail = errData.error || errData.message || detail;
           }
         } catch {
-          // Fallback if error.context is not JSON
           const ctx = error.context as any;
           if (ctx?.stage) stage = ctx.stage;
           if (ctx?.rawResponse) detail = ctx.rawResponse.slice(0, 300);
@@ -101,7 +101,7 @@ export async function analyzeFinancialSituation(
 
       console.log('[analyze] Received data from edge function, validating...');
       if (!isFinancialAnalysis(data)) {
-        const issues = FinancialAnalysisSchema.safeParse(data).error?.issues ?? [];
+        const issues = FinalAnalysisSchema.safeParse(data).error?.issues ?? [];
         console.error('[analyze] type validation FAILED — errors:', JSON.stringify(issues));
         console.error('[analyze] type validation FAILED — received shape:', JSON.stringify(data).slice(0, 600));
         lastError = new Error(`Analysis returned unexpected data format: ${issues.map(i => i.path.join('.') + ': ' + i.message).join('; ')}`);
@@ -113,62 +113,8 @@ export async function analyzeFinancialSituation(
         throw lastError;
       }
 
-      // Derive missing spendingBreakdown fields (percentage, status, color) when possible
-      try {
-        const breakdown = Array.isArray(data.spendingBreakdown) ? data.spendingBreakdown : [];
-        const income = data.monthlyIncome ?? 0;
-        const totalFromBreakdown = breakdown.reduce((s: number, b: any) => s + (b.amount ?? 0), 0);
-        const base = income > 0 ? income : (data.monthlyExpenses ?? totalFromBreakdown) || 1;
-        const discretionaryThresholds = SCORING_THRESHOLDS.discretionarySpending;
-
-        data.spendingBreakdown = breakdown.map((b: any) => {
-          const amount = typeof b.amount === 'number' ? b.amount : 0;
-          const percentage = typeof b.percentage === 'number' && b.percentage > 0
-            ? b.percentage
-            : Math.round((amount / base) * 100) / 100; // decimal 0-1 with two decimals
-
-          // Determine status for discretionary-like categories, otherwise default heuristics
-          let status: 'good' | 'warning' | 'danger' = b.status || 'good';
-          if (percentage >= (discretionaryThresholds.poor || 0.40)) status = 'danger';
-          else if (percentage >= (discretionaryThresholds.fair || 0.30)) status = 'warning';
-          else status = 'good';
-
-          const color = b.color || (status === 'good' ? SCORE_CONFIG.labels.stable.color : status === 'warning' ? SCORE_CONFIG.labels.surviving.color : SCORE_CONFIG.labels.critical.color);
-
-          return {
-            name: b.name || 'Other',
-            amount,
-            percentage,
-            color,
-            status,
-          };
-        });
-      } catch (err) {
-        console.warn('[analyze] Failed to normalize spendingBreakdown:', err);
-      }
-
-      // Recompute and normalize score locally to ensure consistent labels/colors
-      try {
-        const scoreResult = calculateFinancialScore({
-          monthlyIncome: data.monthlyIncome ?? 0,
-          monthlyExpenses: data.monthlyExpenses ?? 0,
-          monthlySavings: data.monthlySavings ?? 0,
-          debtTotal: data.debtTotal ?? 0,
-          savingsRate: data.savingsRate ?? 0,
-          emergencyFundMonths: data.emergencyFundMonths ?? 0,
-          debtToIncomeRatio: data.debtToIncomeRatio ?? 0,
-          spendingBreakdown: data.spendingBreakdown ?? [],
-        });
-        console.log('[analyze] Recomputed local score:', scoreResult.score, scoreResult.label);
-        data.score = scoreResult.score;
-        data.scoreLabel = scoreResult.label;
-        data.scoreColor = scoreResult.color;
-      } catch (err) {
-        console.warn('[analyze] Failed to recompute score locally:', err);
-      }
-
       console.log('[analyze] Analysis successful, returning data');
-      return data;
+      return data as FinalAnalysis;
     } catch (e) {
       console.error('[analyze] Caught exception in attempt', attempt + 1, ':', e);
       if (e instanceof Error && e.name === 'AbortError') {
@@ -186,13 +132,11 @@ export async function analyzeFinancialSituation(
   throw lastError || new Error('Analysis failed after retries');
 }
 
-export async function saveAnalysis(userId: string, input: string, analysis: FinancialAnalysis): Promise<string | null> {
+export async function saveAnalysis(userId: string, input: string, analysis: FinalAnalysis): Promise<string | null> {
   const client = getSupabase();
   if (!client) return null;
   console.log('[analyze] Saving analysis to database for user:', userId);
   try {
-    // Note: spending_breakdown, debts, action_plan, insights are passed as objects/arrays.
-    // Supabase JS auto-serializes these to JSONB.
     const { data, error } = await (client as any).from('analyses').insert({
       user_id: userId,
       input_text: input,
@@ -201,17 +145,26 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
       score_color: analysis.scoreColor,
       summary: analysis.summary,
       roast: analysis.roast,
-      monthly_income: analysis.monthlyIncome,
-      monthly_expenses: analysis.monthlyExpenses,
+      monthly_income: analysis.monthlyIncome?.value ?? analysis.monthlyIncome,
+      monthly_expenses: analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses,
       monthly_savings: analysis.monthlySavings,
       debt_total: analysis.debtTotal,
       savings_rate: analysis.savingsRate,
       emergency_fund_months: analysis.emergencyFundMonths,
       debt_to_income_ratio: analysis.debtToIncomeRatio,
-      spending_breakdown: analysis.spendingBreakdown,
+      liquid_savings: analysis.liquidSavings?.value,
+      monthly_debt_service: analysis.monthlyDebtService,
+      avg_confidence: analysis.avgConfidence,
       debts: analysis.debts,
-      action_plan: analysis.actionPlan,
       insights: analysis.insights,
+      cfpb_responses: analysis.cfpb_responses,
+      score_modifier: analysis.scoreModifier,
+      score_modifier_reason: analysis.scoreModifierReason,
+      top_problems: analysis.topProblems,
+      positive_behaviors: analysis.positiveBehaviors,
+      top_fix: analysis.topFix,
+      emotional_status: analysis.emotionalStatus,
+      mentioned_spending: analysis.mentionedSpending,
     }).select('id').single();
 
     if (error) {
@@ -226,7 +179,7 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
   }
 }
 
-export async function fetchActionPlan(userId: string, analysisId?: string): Promise<ActionStep[]> {
+export async function fetchActionPlan(userId: string, analysisId?: string): Promise<ActionPlanStep[]> {
   const client = getSupabase();
   if (!client) return [];
 
@@ -240,12 +193,13 @@ export async function fetchActionPlan(userId: string, analysisId?: string): Prom
       return [];
     }
 
-    if (!data?.actionPlan || !Array.isArray(data.actionPlan)) {
-      console.warn('[claudeApi] fetchActionPlan returned malformed action plan');
+    const parsed = ActionPlanResponseSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn('[claudeApi] fetchActionPlan returned malformed response');
       return [];
     }
 
-    return data.actionPlan as ActionStep[];
+    return parsed.data.steps;
   } catch (e) {
     console.error('[claudeApi] fetchActionPlan exception:', e);
     return [];
@@ -315,7 +269,6 @@ export async function uploadAvatar(userId: string, localUri: string): Promise<st
 
     const fileExt = localUri.split('.').pop() || 'jpg';
     const fileName = `avatar-${Date.now()}.${fileExt}`;
-    // Store inside a folder named after user's ID to match the RLS policy folder segment
     const filePath = `${userId}/${fileName}`;
 
     console.log('[uploadAvatar] Uploading image blob to storage bucket "avatars":', filePath);
@@ -335,7 +288,6 @@ export async function uploadAvatar(userId: string, localUri: string): Promise<st
     const publicUrl = data.publicUrl;
     console.log('[uploadAvatar] Upload succeeded. Public URL:', publicUrl);
 
-    // Save public URL to profile database row
     const ok = await updateProfile(userId, { avatar_url: publicUrl });
     if (!ok) {
       console.warn('[uploadAvatar] Failed to update profile database row with avatar URL');
@@ -437,7 +389,7 @@ export async function addReaction(postId: string, userId: string, emoji: string)
     const { error } = await (client as any)
       .from('post_reactions')
       .insert({ post_id: postId, user_id: userId, emoji });
-    if (error?.code === '23505') return false; // already reacted
+    if (error?.code === '23505') return false;
     if (error) throw error;
 
     const emojiKey = emoji === '🔥' ? 'fire' : emoji === '😭' ? 'cry' : 'skull';
@@ -588,7 +540,7 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
   }
 }
 
-export async function getAnalysisById(id: string): Promise<FinancialAnalysis | null> {
+export async function getAnalysisById(id: string): Promise<FinalAnalysis | null> {
   const client = getSupabase();
   if (!client) return null;
   try {
@@ -600,22 +552,31 @@ export async function getAnalysisById(id: string): Promise<FinancialAnalysis | n
     if (error) throw error;
     if (!data) return null;
     return {
+      monthlyIncome: { value: parseFloat(data.monthly_income), confidence: 'medium' },
+      monthlyExpenses: { value: parseFloat(data.monthly_expenses), confidence: 'medium' },
+      liquidSavings: { value: data.liquid_savings ?? 0, confidence: data.avg_confidence ? 'medium' : 'low' },
+      monthlySavings: parseFloat(data.monthly_savings),
+      savingsRate: parseFloat(data.savings_rate),
+      debtTotal: parseFloat(data.debt_total),
+      monthlyDebtService: data.monthly_debt_service ?? 0,
+      emergencyFundMonths: parseFloat(data.emergency_fund_months),
+      debtToIncomeRatio: parseFloat(data.debt_to_income_ratio),
+      avgConfidence: data.avg_confidence ?? 0.5,
       score: data.score,
       scoreLabel: data.score_label,
       scoreColor: data.score_color,
       summary: data.summary,
       roast: data.roast,
-      monthlyIncome: parseFloat(data.monthly_income),
-      monthlyExpenses: parseFloat(data.monthly_expenses),
-      monthlySavings: parseFloat(data.monthly_savings),
-      debtTotal: parseFloat(data.debt_total),
-      savingsRate: parseFloat(data.savings_rate),
-      emergencyFundMonths: parseFloat(data.emergency_fund_months),
-      debtToIncomeRatio: parseFloat(data.debt_to_income_ratio),
-      spendingBreakdown: data.spending_breakdown || [],
       debts: data.debts || [],
-      actionPlan: data.action_plan || [],
+      cfpb_responses: data.cfpb_responses ?? [],
+      scoreModifier: data.score_modifier ?? 0,
+      scoreModifierReason: data.score_modifier_reason ?? '',
       insights: data.insights || [],
+      topProblems: data.top_problems ?? [],
+      positiveBehaviors: data.positive_behaviors ?? [],
+      topFix: data.top_fix ?? null,
+      emotionalStatus: data.emotional_status ?? null,
+      mentionedSpending: data.mentioned_spending ?? [],
     };
   } catch (err) {
     console.warn('Failed to fetch analysis by id:', err);

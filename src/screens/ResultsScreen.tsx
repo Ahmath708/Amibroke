@@ -127,8 +127,8 @@ export default function ResultsScreen({ navigation, route }: Props) {
         <Text style={styles.sectionTitle}>Key Metrics</Text>
         <View style={styles.metricsGroup}>
           {[
-            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome), icon: '💵' },
-            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses), icon: '💸' },
+            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome.value), icon: '💵' },
+            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses.value), icon: '💸' },
             { label: 'Monthly Savings', value: fmt(analysis.monthlySavings), icon: '💰', highlight: analysis.monthlySavings < 0 },
             { label: 'Total Debt', value: fmt(analysis.debtTotal), icon: '📉', highlight: analysis.debtTotal > 0 },
             { label: 'Savings Rate', value: `${analysis.savingsRate.toFixed(0)}%`, icon: '📈' },
@@ -145,31 +145,14 @@ export default function ResultsScreen({ navigation, route }: Props) {
           ))}
         </View>
 
-        {/* Spending breakdown */}
-        {analysis.spendingBreakdown.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Spending Breakdown</Text>
-            <GlassCard style={styles.breakdownCard}>
-              {analysis.spendingBreakdown.map((cat, i) => (
-                <View key={cat.name}>
-                  <View style={styles.breakdownRow}>
-                    <View style={styles.breakdownLeft}>
-                      <Text style={styles.breakdownName}>{cat.name}</Text>
-                      <Text style={styles.breakdownPct}>{cat.percentage.toFixed(0)}%</Text>
-                    </View>
-                    <View style={styles.breakdownBarWrap}>
-                      <View style={[styles.breakdownBar, {
-                        width: `${cat.percentage}%`,
-                        backgroundColor: cat.status === 'danger' ? Colors.danger : cat.status === 'warning' ? Colors.warning : Colors.success
-                      }]} />
-                    </View>
-                    <Text style={styles.breakdownAmt}>{fmt(cat.amount)}</Text>
-                  </View>
-                  {i < analysis.spendingBreakdown.length - 1 && <View style={styles.rowSep} />}
-                </View>
-              ))}
-            </GlassCard>
-          </>
+        {/* Cfpb insight */}
+        {analysis.avgConfidence > 0 && (
+          <GlassCard style={styles.emotionCard}>
+            <Text style={styles.emotionLabel}>Data Confidence</Text>
+            <Text style={styles.emotionText}>
+              {analysis.avgConfidence >= 0.8 ? 'High' : analysis.avgConfidence >= 0.5 ? 'Medium' : 'Low'}
+            </Text>
+          </GlassCard>
         )}
 
         {/* Emotional status */}
@@ -244,7 +227,11 @@ export default function ResultsScreen({ navigation, route }: Props) {
           {hasAccessTo(purchaseTier, 'action_plan') ? (
             <NeonButton
               label="View 90-Day Action Plan"
-              onPress={() => navigation.navigate('ActionPlan', { steps: analysis.actionPlan })}
+              onPress={async () => {
+                const { fetchActionPlan } = await import('@/services/claudeApi');
+                const steps = analysisId ? await fetchActionPlan(user?.id ?? '', analysisId) : [];
+                navigation.navigate('ActionPlan', { steps: steps as any });
+              }}
               style={styles.actionBtn}
             />
           ) : (
@@ -258,7 +245,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
           {analysis.debtTotal > 0 && hasAccessTo(purchaseTier, 'deep_dive') && (
             <NeonButton
               label="Debt Payoff Calculator"
-              onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts, monthlyIncome: analysis.monthlyIncome })}
+              onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts, monthlyIncome: analysis.monthlyIncome.value })}
               variant="secondary"
               style={styles.actionBtn}
             />

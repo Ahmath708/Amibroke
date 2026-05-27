@@ -90,10 +90,10 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 Uses **Claude Sonnet 4** (`claude-sonnet-4-20250514`) via Anthropic API with **tool-use** for guaranteed structured output.
 
 The AI analyzes plain-English financial descriptions and returns structured JSON with:
-- Financial health score (0–100) computed via **official CFPB IRT formula**
+- Financial health score (0–100) computed via **official CFPB scoring methodology (published lookup table)**
 - Confidence-weighted scoring (low/medium/high per response attenuate the score)
 - Deterministic server-side metrics (savings rate, DTI, emergency fund months)
-- CFPB Financial Well-Being Scale (10 questions, IRT-scored)
+- CFPB Financial Well-Being Scale (10 questions, scored via CFPB methodology)
 - Personalized roast/reality check (5 tone modes)
 - Key financial insights, top problems, and positive behaviors
 - Mentioned spending categories (user-stated only, never fabricated)
@@ -103,7 +103,7 @@ The AI analyzes plain-English financial descriptions and returns structured JSON
 The backend was rebuilt to separate AI judgment from deterministic math:
 
 1. **AI does**: extract numbers, judge tone, infer CFPB responses, assign confidence
-2. **Code does**: compute CFPB IRT score, savings rate, DTI, emergency fund months, score bands
+2. **Code does**: compute CFPB score, savings rate, DTI, emergency fund months, score bands
 
 ### Endpoints
 
@@ -185,8 +185,8 @@ AmIBroke/
 │   │   ├── national.ts        # Country-wide defaults (CC APR, student loan rate)
 │   │   ├── states.ts          # Per-state rows (50 states + DC, cited sources)
 │   │   └── index.ts           # getBaselines(state) helper
-│   └── scoring/               # CFPB IRT scoring module
-│       ├── cfpb_irt.ts        # Official CFPB graded-response IRT scorer
+│   └── scoring/               # CFPB scoring module
+│       ├── cfpb_irt.ts        # Official CFPB graded-response scorer
 │       ├── bands.ts           # Score → label/color (Fragile/Surviving/Stable/Thriving)
 │       ├── index.ts           # computeFinalScore() with confidence attenuation
 │       └── __tests__/

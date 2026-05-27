@@ -7,6 +7,8 @@ import {
   ActionPlanStepSchema,
   ActionPlanRequestSchema,
   ActionPlanResponseSchema,
+  DebtItemSchema,
+  ToneSchema,
 } from './schemas';
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -16,3 +18,5 @@ export type FinalAnalysis = z.infer<typeof FinalAnalysisSchema>;
 export type ActionPlanStep = z.infer<typeof ActionPlanStepSchema>;
 export type ActionPlanRequest = z.infer<typeof ActionPlanRequestSchema>;
 export type ActionPlanResponse = z.infer<typeof ActionPlanResponseSchema>;
+export type DebtItem = z.infer<typeof DebtItemSchema>;
+export type Tone = z.infer<typeof ToneSchema>;

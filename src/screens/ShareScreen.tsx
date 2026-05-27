@@ -170,8 +170,8 @@ export default function ShareScreen({ route }: Props) {
 
             <View style={styles.shareCardStats}>
               {[
-                { label: 'Income', value: `$${analysis.monthlyIncome.toLocaleString()}` },
-                { label: 'Expenses', value: `$${analysis.monthlyExpenses.toLocaleString()}` },
+                { label: 'Income', value: `$${analysis.monthlyIncome.value.toLocaleString()}` },
+                { label: 'Expenses', value: `$${analysis.monthlyExpenses.value.toLocaleString()}` },
                 { label: 'Savings Rate', value: `${analysis.savingsRate.toFixed(0)}%` },
               ].map((s) => (
                 <View key={s.label} style={styles.shareCardStat}>

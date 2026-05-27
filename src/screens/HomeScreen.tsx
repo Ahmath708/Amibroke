@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, AnalysisHistoryItem, RoastTone, AiProvider } from '@/types';
+import { RootStackParamList, AnalysisHistoryItem, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
@@ -53,7 +53,7 @@ export default function HomeScreen({ navigation }: Props) {
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
-  const [selectedProvider, setSelectedProvider] = useState<AiProvider>('claude');
+  const [selectedProvider, setSelectedProvider] = useState<'claude' | 'groq'>('claude');
   const inputRef = useRef<TextInput>(null);
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
@@ -104,7 +104,7 @@ export default function HomeScreen({ navigation }: Props) {
       return;
     }
     trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone, provider: selectedProvider });
-    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone, provider: selectedProvider });
+    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone });
   };
 
   const handleVoiceToggle = async () => {

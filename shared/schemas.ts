@@ -37,7 +37,7 @@ const NumberWithConfidence = z.object({
   confidence: z.enum(['low', 'medium', 'high']),
 });
 
-const DebtItem = z.object({
+export const DebtItemSchema = z.object({
   name: z.string().max(40),
   balance: z.number().min(0),
   interestRate: z.number().min(0).max(0.5),
@@ -60,7 +60,7 @@ export const AIRawOutputSchema = z.object({
   monthlyIncome: NumberWithConfidence,
   monthlyExpenses: NumberWithConfidence,
   liquidSavings: NumberWithConfidence,
-  debts: z.array(DebtItem).max(8),
+  debts: z.array(DebtItemSchema).max(8),
   cfpb_responses: z.array(CfpbResponse).length(10),
 
   scoreModifier: z.number().int().min(-10).max(10),

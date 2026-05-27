@@ -1,53 +1,9 @@
-export type RoastTone = 'gentle' | 'savage' | 'therapist' | 'older_sibling' | 'finance_bro';
-export type AiProvider = 'claude' | 'groq';
+import type { FinalAnalysis as _FinalAnalysis, DebtItem as _DebtItem, ActionPlanStep as _ActionStep, Tone as _Tone } from '@shared/types';
 
-export interface FinancialAnalysis {
-  score: number; // 0–100
-  scoreLabel: string; // e.g. "Financially Fragile"
-  scoreColor: string;
-  summary: string;
-  roast: string;
-  monthlyIncome: number;
-  monthlyExpenses: number;
-  monthlySavings: number;
-  debtTotal: number;
-  savingsRate: number; // %
-  spendingBreakdown: SpendingCategory[];
-  debts: DebtItem[];
-  actionPlan: ActionStep[];
-  insights: string[];
-  emergencyFundMonths: number;
-  debtToIncomeRatio: number;
-  topProblems?: string[];
-  positiveBehaviors?: string[];
-  topFix?: { action: string; monthlyImpact: number };
-  emotionalStatus?: { label: string; emoji: string };
-}
-
-export interface SpendingCategory {
-  name: string;
-  amount: number;
-  percentage: number;
-  color: string;
-  status: 'good' | 'warning' | 'danger';
-}
-
-export interface DebtItem {
-  name: string;
-  balance: number;
-  interestRate: number;
-  minimumPayment: number;
-  urgency: 'low' | 'medium' | 'high' | 'critical';
-}
-
-export interface ActionStep {
-  week: number;
-  title: string;
-  description: string;
-  impact: string;
-  category: 'savings' | 'debt' | 'income' | 'mindset';
-  completed: boolean;
-}
+export type RoastTone = _Tone;
+export type FinancialAnalysis = _FinalAnalysis;
+export type DebtItem = _DebtItem;
+export type ActionStep = _ActionStep;
 
 export interface HistorySnapshot {
   id: string;
@@ -122,7 +78,7 @@ export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   Input: undefined;
-  Processing: { userInput: string; tone?: RoastTone; provider?: AiProvider };
+  Processing: { userInput: string; tone?: RoastTone };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;

@@ -22,87 +22,73 @@ type Props = {
 };
 
 const DEFAULT_STEPS: ActionStep[] = [
-  { week: 1, title: 'Emergency Fund Start', description: 'Open a high-yield savings account and automate $25/week transfers.', impact: 'Builds safety net', category: 'savings', completed: false },
-  { week: 2, title: 'Subscription Purge', description: 'Cancel all subscriptions you haven\'t used in the last 30 days. No mercy.', impact: 'Saves $80–200/mo', category: 'savings', completed: false },
-  { week: 3, title: 'Meal Prep Sunday', description: 'Prep 5 weekday lunches each Sunday to cut eating-out spend by 60%.', impact: 'Saves $120–180/mo', category: 'savings', completed: false },
-  { week: 4, title: 'Automate Savings', description: 'Set up a recurring transfer on payday so savings happen before you can spend.', impact: 'Increases savings rate', category: 'savings', completed: false },
-  { week: 5, title: 'Credit Card Minimum+', description: 'Pay minimums on all cards, plus $50 extra on the highest-rate card.', impact: 'Reduces interest paid', category: 'debt', completed: false },
-  { week: 6, title: 'Side Income Session', description: 'Dedicate 4 hours this week to one income-generating activity.', impact: '+$50–200 this week', category: 'income', completed: false },
-  { week: 7, title: 'Negotiate Bills', description: 'Call your internet, phone, and insurance providers and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', completed: false },
-  { week: 8, title: '30-Day Review', description: 'Run a new analysis and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', completed: false },
+  { week: '1', title: 'Emergency Fund Start', description: 'Open a high-yield savings account and automate $25/week transfers.', impact: 'Builds safety net', category: 'savings', confidence: 'medium' },
+  { week: '2', title: 'Subscription Purge', description: 'Cancel all subscriptions you haven\'t used in the last 30 days. No mercy.', impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high' },
+  { week: '3', title: 'Meal Prep Sunday', description: 'Prep 5 weekday lunches each Sunday to cut eating-out spend by 60%.', impact: 'Saves $120–180/mo', category: 'savings', confidence: 'high' },
+  { week: '4', title: 'Automate Savings', description: 'Set up a recurring transfer on payday so savings happen before you can spend.', impact: 'Increases savings rate', category: 'savings', confidence: 'high' },
+  { week: '5', title: 'Credit Card Minimum+', description: 'Pay minimums on all cards, plus $50 extra on the highest-rate card.', impact: 'Reduces interest paid', category: 'debt', confidence: 'medium' },
+  { week: '6', title: 'Side Income Session', description: 'Dedicate 4 hours this week to one income-generating activity.', impact: '+$50–200 this week', category: 'income', confidence: 'medium' },
+  { week: '7', title: 'Negotiate Bills', description: 'Call your internet, phone, and insurance providers and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium' },
+  { week: '8', title: '30-Day Review', description: 'Run a new analysis and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', confidence: 'high' },
 ];
 
 function generatePersonalizedSteps(analysis: any): ActionStep[] {
   const steps: ActionStep[] = [];
-  let week = 1;
+  let weekNum = 1;
 
   if (analysis.emergencyFundMonths < 3) {
     steps.push({
-      week: week++,
+      week: String(weekNum++),
       title: 'Build Emergency Fund',
       description: `You have ${analysis.emergencyFundMonths.toFixed(1)} months of emergency fund. Aim for at least 3 months. Start by setting aside $50/week.`,
       impact: 'Increases financial safety net',
       category: 'savings',
-      completed: false,
+      confidence: 'high',
     });
   }
 
   if (analysis.savingsRate < 0.10) {
     steps.push({
-      week: week++,
+      week: String(weekNum++),
       title: 'Boost Savings Rate',
       description: `Your savings rate is ${(analysis.savingsRate * 100).toFixed(0)}%. Try to get to at least 10% by cutting discretionary spending.`,
       impact: `Could save ~$${Math.round(analysis.monthlyIncome * 0.1 - analysis.monthlySavings)}/mo`,
       category: 'savings',
-      completed: false,
+      confidence: 'medium',
     });
   }
 
   if (analysis.debtTotal > 0) {
-    const highestRateDebt = analysis.debts?.sort((a: any, b: any) => b.interestRate - a.interestRate)[0];
+    const debts = analysis.debts ?? [];
+    const highestRateDebt = debts.length > 0 ? [...debts].sort((a: any, b: any) => b.interestRate - a.interestRate)[0] : null;
     steps.push({
-      week: week++,
+      week: String(weekNum++),
       title: 'Attack Highest-Interest Debt',
       description: highestRateDebt
-        ? `Focus on ${highestRateDebt.name} at ${highestRateDebt.interestRate}% APR. Pay minimums on everything else, then put extra toward this.`
+        ? `Focus on ${highestRateDebt.name} at ${(highestRateDebt.interestRate * 100).toFixed(1)}% APR. Pay minimums on everything else, then put extra toward this.`
         : 'Focus on your highest-interest debt first. Pay minimums on everything else.',
       impact: 'Reduces total interest paid',
       category: 'debt',
-      completed: false,
-    });
-  }
-
-  const discretionaryCats = analysis.spendingBreakdown?.filter((c: any) =>
-    ['Eating Out', 'Entertainment', 'Shopping', 'DoorDash', 'Uber Eats'].includes(c.name),
-  ) || [];
-  if (discretionaryCats.length > 0) {
-    const topDiscretionary = discretionaryCats.sort((a: any, b: any) => b.amount - a.amount)[0];
-    steps.push({
-      week: week++,
-      title: `Cut ${topDiscretionary.name}`,
-      description: `You spend $${topDiscretionary.amount}/mo on ${topDiscretionary.name}. Try cutting it by 50% to save $${Math.round(topDiscretionary.amount * 0.5)}/mo.`,
-      impact: `Saves ~$${Math.round(topDiscretionary.amount * 0.5)}/mo`,
-      category: 'savings',
-      completed: false,
+      confidence: 'high',
     });
   }
 
   steps.push({
-    week: week++,
+    week: String(weekNum++),
     title: 'Automate Your Finances',
     description: 'Set up automatic transfers for savings, bill payments, and debt payments. Remove the friction.',
     impact: 'Prevents missed payments and builds habits',
     category: 'mindset',
-    completed: false,
+    confidence: 'high',
   });
 
   steps.push({
-    week: week++,
+    week: String(weekNum++),
     title: 'Monthly Check-In',
     description: 'Run a new analysis in 30 days and compare your score. Track your progress.',
     impact: 'Accountability and motivation',
     category: 'mindset',
-    completed: false,
+    confidence: 'medium',
   });
 
   return steps;
@@ -113,7 +99,7 @@ export default function ActionPlanScreen({ route }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>>();
   const rawSteps = route.params?.steps;
   const [steps, setSteps] = useState<ActionStep[]>([]);
-  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [checked, setChecked] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const { animatedStyle } = useEntryAnimation();
@@ -137,7 +123,7 @@ export default function ActionPlanScreen({ route }: Props) {
     })();
   }, []);
 
-  const toggle = (week: number) => {
+  const toggle = (week: string) => {
     setChecked((prev) => {
       const next = new Set(prev);
       next.has(week) ? next.delete(week) : next.add(week);
