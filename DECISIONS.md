@@ -57,4 +57,58 @@ Each CFPB question maps to at least one common user-data pattern the AI is likel
 - Plans range 5-6 steps, well within the 4-6 guideline.
 - Voice matches the requested tone.
 
-**Next:** Cycle 2 hypothesis — tighten the relationship between step confidence and the analysis's data confidence levels. Currently all steps are "high" or "medium" regardless of input data quality. A step should be "low" confidence if it's built on low-confidence input numbers.
+### Cycle 2 — 8 fixtures, 100% (confidence anchoring)
+
+**Hypothesis:** Step confidence doesn't reflect input data quality. Vague-fixture plans (all-low-confidence inputs) still get "high" on every step despite the underlying data being uncertain.
+
+**Change made:** Added a new section before "Each step must include":
+> "# Step confidence must reflect input data quality
+> The analysis object has confidence levels on key numbers (monthlyIncome, monthlyExpenses, liquidSavings, debts). Your step confidence must match those:
+> - A step built on data the user stated explicitly (confidence: "high") can be "high" or "medium".
+> - A step built on estimated or inferred data (confidence: "low") must be "low" or at most "medium".
+> - If most of the analysis is low-confidence, the plan should have at most 1-2 "high" steps."
+
+**Result:** 8/8 (100%). Confidence distribution shifted appropriately:
+| Fixture | C1 high | C2 high | C1 low | C2 low |
+|---|---|---|---|---|
+| surviving_rent_burden (all-low) | 6 | 0 | 0 | 3 |
+| prompt_injection (mostly-low) | 6 | 1 | 0 | 2 |
+| student (mostly-low) | 6 | 0 | 0 | 2 |
+| thriving (all-high) | 6 | 4 | 0 | 0 |
+
+Low-confidence inputs now produce low-confidence steps. No regressions on passing fixtures.
+
+**Decision: KEEP.** The model is now calibrated — step confidence reflects data quality.
+
+### Cycle 3 — 8 fixtures, 100% (number anchoring)
+
+**Hypothesis:** Plans are too generic. Steps say "find the leaks" or "audit spending" without anchoring to the user's actual dollar amounts from the analysis.
+
+**Change made:** Added a new section:
+> "# Anchor every step to a specific number
+> Each step's title, description, and impact must reference at least one specific dollar amount or percentage from the analysis. Examples: 'Put $400/mo extra toward the CC' not 'pay down debt'; 'Your $3k CC costs $52/mo in interest' not 'the CC is costing you'."
+
+**Result:** 8/8 (100%). Dollar references per fixture increased dramatically:
+| Fixture | C2 $refs | C3 $refs | Change |
+|---|---|---|---|
+| negative_savings | 12 | 27 | +15 |
+| cc_debt_no_savings | 22 | 27 | +5 |
+| 7k_cc_no_efund | 17 | 26 | +9 |
+| rent_burden | 8 | 29 | +21 |
+| prompt_injection | 6 | 21 | +15 |
+| high_income_50k_cc | 11 | 27 | +16 |
+| student | 13 | 23 | +10 |
+| thriving | 8 | 30 | +22 |
+
+Confidence calibration from cycle 2 was preserved or improved. No regressions.
+
+**Decision: KEEP.** Plans are now measurably more concrete with specific dollar amounts anchored to the user's actual data.
+
+### Action-Plan Summary
+| Cycle | Change | Pass Rate |
+|---|---|---|
+| 1 (baseline) | None | 100% (8/8) |
+| 2 | Confidence anchored to data quality | 100% (8/8) |
+| 3 | Every step references a specific dollar amount | 100% (8/8) |
+
+All three prompts merged into the live `system.txt`/`prompt.ts`. Ready for captions cycles (Section F).

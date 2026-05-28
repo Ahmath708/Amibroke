@@ -1,0 +1,489 @@
+{
+  "cycle": 2,
+  "suite": "action-plan",
+  "timestamp": "2026-05-28T16:09:45.810Z",
+  "promptHash": "f03c2ca",
+  "aggregate": {
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "passRate": 1,
+    "avgResponseTimeMs": 21306.125,
+    "totalApiCalls": 8
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "ap_fragile_negative_savings",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 23332,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Map every dollar leaving your account this month",
+            "description": "Pull your last 3 months of bank and card statements. Categorize every transaction. You're not judging yourself — you're gathering data. The $700 gap has a shape, and you need to see it clearly before you can change it.",
+            "category": "mindset",
+            "impact": "You'll likely find $200–400 in spending that surprises you. Awareness is the prerequisite for every other step in this plan.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 2–3",
+            "title": "Cut or pause $700/month in spending — find the gap",
+            "description": "Using what you found in Week 1, identify which expenses can be reduced or paused. Subscriptions, dining, convenience spending, and discretionary categories are usually where the gap lives. You're not cutting forever — just enough to stop the bleeding.",
+            "category": "savings",
+            "impact": "Breaking even stops the debt from growing. Every month you overspend adds ~$147 in interest on top of the $700. Stopping the spiral is the single highest-leverage move available to you right now.",
+            "confidence": "high"
+          },
+          {
+            "week": "Week 4",
+            "title": "Build a $500 buffer before anything else",
+            "description": "Before aggressively paying down the card, set aside $500 in a separate savings account. This isn't an emergency fund yet — it's a circuit breaker. It keeps one unexpected expense from forcing you back onto the card.",
+            "category": "savings",
+            "impact": "Without any buffer, every surprise resets your progress. Even $500 breaks the cycle where emergencies become new debt.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5–8",
+            "title": "Find one way to bring in extra income this month",
+            "description": "With expenses cut to match income, explore whether any additional income is possible — extra hours, a skill you can offer, selling unused items. Even $200–300/month changes the math significantly when you're starting from zero.",
+            "category": "income",
+            "impact": "An extra $300/month applied to the card reduces payoff time by years and saves thousands in interest. It also shifts the emotional experience from 'surviving' to 'making progress.'",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5–8",
+            "title": "Contact your credit card issuer about your interest rate",
+            "description": "Call the number on the back of your card and ask if they can lower your APR. You don't need to explain everything — just ask. If you've been a customer for a while, there's a real chance they say yes. It costs nothing to ask.",
+            "category": "debt",
+            "impact": "Even a 3–5% rate reduction on $10,000 saves $300–500/year in interest, which is money that goes toward the balance instead of the bank.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9–12",
+            "title": "Review, reflect, and set your 6-month target",
+            "description": "At the 90-day mark, look at where you started versus where you are. Has the debt stopped growing? Do you have a buffer? What felt hard, and what became automatic? Use this moment to set a realistic 6-month goal — not a perfect one, a real one.",
+            "category": "mindset",
+            "impact": "Progress that gets measured gets sustained. Naming what changed — even small things — builds the belief that this is workable. That belief is what carries you through the next 90 days.",
+            "confidence": "high"
+          }
+        ],
+        "overallMessage": "The hardest part of where you are isn't the numbers — it's the feeling that the hole keeps getting deeper no matter what you do. That's real. But the math here is actually workable. The first goal isn't to pay off $10,000. It's simply to stop the bleeding. Once spending matches income, the spiral stops — and everything else becomes possible from there.",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_fragile_cc_debt_no_savings",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 24424,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Stop the bleeding — build a $500 emergency buffer NOW",
+            "description": "Before anything else, get $500 into a high-yield savings account and lock it. Right now you have $250 — one bad day away from charging more to the card. This buffer breaks the emergency → more debt cycle.",
+            "category": "savings",
+            "impact": "Stops the debt spiral from getting worse every time life happens. Without this, every extra payment you make gets wiped by the next surprise expense.",
+            "confidence": "high"
+          },
+          {
+            "week": "Week 2",
+            "title": "Nuke the minimum-only habit — start avalanche payments",
+            "description": "You're paying $250/mo but $175 of that is just interest. Add every spare dollar on top of the minimum. Even $100 extra/mo cuts years off this debt. Set an auto-transfer on payday — don't let yourself spend it first.",
+            "category": "debt",
+            "impact": "Each extra $100/mo saves ~$800-1,200 in interest and shaves 6-12 months off payoff time. The math is brutal if you don't — and beautiful if you do.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Find the leak — audit where $3,200/mo is actually going",
+            "description": "Pull 3 months of statements. Your expenses are estimated, not confirmed — that's a problem. Categorize everything. Subscriptions, food, going out. Find $200-300 in cuts you won't miss.",
+            "category": "mindset",
+            "impact": "Identifying even $200/mo in waste redirected to the CC saves ~$1,500 in interest and gets you debt-free months sooner. You can't fix what you can't see.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Redirect every found dollar to the CC — no exceptions",
+            "description": "Take whatever you cut from the audit and stack it on top of your extra CC payment. If you found $250/mo in cuts, you're now throwing $500+ extra at the card monthly. Automate it so it's not a decision.",
+            "category": "debt",
+            "impact": "At $500/mo extra, the $10k card is gone in roughly 14 months instead of 4+ years. That's thousands in interest you keep in your pocket.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Explore one income boost — even a small one",
+            "description": "FL has no state income tax — you're already ahead. But $4k/mo with $10k in CC debt needs more firepower. One weekend gig, freelance project, or overtime push can add $200-500/mo temporarily to accelerate payoff.",
+            "category": "income",
+            "impact": "An extra $300/mo on top of your current payments could cut 4-6 months off your payoff timeline and save $600-900 in interest.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Review progress, automate the future, stop being broke",
+            "description": "Check your CC balance. If you've been consistent, it should be down $2k+. Now lock in your system: auto-pay CC extra, auto-save 10% of income. Review monthly — 15 minutes, not a crisis session.",
+            "category": "mindset",
+            "impact": "By month 3 you'll have real momentum, a real emergency fund, and a payoff date on the calendar. That's the difference between treading water and actually swimming.",
+            "confidence": "medium"
+          }
+        ],
+        "overallMessage": "$4k/mo, no state income tax, and you're still drowning in a $10k CC? That's not a math problem — it's a habits problem. The next 90 days are simple: stop the spiral, find the leaks, and throw everything at that card. The interest alone is eating $175/mo. Fix this now and you're debt-free in about a year. Keep paying minimums and you're still here in 4 years having this same conversation.",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_fragile_7k_cc_no_efund",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 19768,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Build a $1,000 emergency buffer — before anything else",
+            "description": "Park $1,000 in a separate high-yield savings account this week. Pull it from whatever you can — cut discretionary, sell something, hustle a weekend gig. This is your firewall against the debt cycle.",
+            "category": "savings",
+            "impact": "Stops the next $500 surprise from landing on your 24% card and wiping out months of progress. One buffer changes everything.",
+            "confidence": "high"
+          },
+          {
+            "week": "Week 2",
+            "title": "Lock in the $400 extra CC payment on autopilot",
+            "description": "Set up an automatic payment of $616/mo ($216 minimum + $400 extra) on payday. Don't leave it to willpower — automate it so it's gone before you can spend it.",
+            "category": "debt",
+            "impact": "Card paid off in ~14 months instead of 34+. Saves roughly $2,500 in interest. That $144/mo you're donating to the bank stops.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Audit every recurring charge and plug the leaks",
+            "description": "Pull 3 months of statements. Cancel forgotten subscriptions. Set a hard weekly cap on food, dining, and fun. Your expenses are estimated — the real number might be worse than you think.",
+            "category": "mindset",
+            "impact": "Could free up $100–300/mo you didn't know you were losing. Even half of that accelerates your debt payoff by months.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Explore one income boost — even a small one",
+            "description": "Your income is your biggest asset. One extra shift, a freelance project, or selling unused stuff could add $200–500/mo. Throw every dollar of it at the CC balance.",
+            "category": "income",
+            "impact": "An extra $300/mo on top of your $400 extra payment could have you debt-free in under 10 months instead of 14.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Once CC drops below $4k, start building your real emergency fund",
+            "description": "When the balance hits $4,000, redirect $200/mo from the extra payment into savings. You need 3 months of expenses (~$11,700) as a true safety net. Start building it in parallel.",
+            "category": "savings",
+            "impact": "Moves you from 'one bad month from freefall' to genuinely stable. This is the difference between fragile and resilient.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Review, recalibrate, and lock in the system",
+            "description": "Check your CC balance, savings total, and actual monthly expenses. Tighten anything that slipped. By now you should have a real picture of your spending — update your budget to match reality, not estimates.",
+            "category": "mindset",
+            "impact": "Turns a 90-day sprint into a permanent system. The habits you've built here compound for years — this is where it clicks.",
+            "confidence": "medium"
+          }
+        ],
+        "overallMessage": "Look, you've got solid income and you know your numbers — that's more than most people have. The $7,200 card isn't a disaster, it's a 14-month problem if you treat it like one. First 30 days: build the buffer so life stops resetting you. After that, it's just stacking payments and not letting the leaks drain you. You're closer than you think.",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_surviving_rent_burden",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 20168,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Calculate your true rent-to-income ratio",
+            "description": "Write down your exact monthly take-home pay and your exact rent. Divide rent by income. If it's above 35%, you've confirmed the core problem — and that clarity is powerful. This one number will guide every decision ahead.",
+            "category": "mindset",
+            "impact": "Turns a vague feeling of being squeezed into a concrete number you can actually work with and make decisions around.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 2-3",
+            "title": "Map every dollar of your $4,200 in monthly expenses",
+            "description": "Pull your last two months of bank and card statements. Categorize every expense. Since your income and expenses are estimates right now, getting the real numbers is the most important thing you can do.",
+            "category": "mindset",
+            "impact": "Reveals where money is actually going and whether there are leaks beyond rent — giving you real data to build a plan on.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Week 4",
+            "title": "Build a small but real emergency cushion to $2,500",
+            "description": "You have $1,500 saved. Add $1,000 more before anything else. With rent pressure this high, one unexpected expense could derail everything. Even a modest buffer changes how much stress you carry day to day.",
+            "category": "savings",
+            "impact": "Moves you from less than 2 weeks of coverage to roughly 3 weeks — enough breathing room to handle a small emergency without panic.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Explore one concrete option to reduce housing cost pressure",
+            "description": "This could mean: finding a roommate, researching neighborhoods with lower rents, or asking your employer about remote flexibility. You don't have to act yet — just research one real option fully so it's ready if you need it.",
+            "category": "savings",
+            "impact": "Even a $200–$400/month reduction in housing costs could meaningfully improve your savings rate and reduce financial stress.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Find one way to grow your income, even modestly",
+            "description": "With housing costs likely eating a large share of income, the other lever is earning more. Think about skills you have that could bring in extra income — freelance work, overtime, or a part-time project. Start small.",
+            "category": "income",
+            "impact": "An extra $200–$300/month could double your current savings rate without changing your lifestyle at all.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Review your real numbers and set a 6-month savings goal",
+            "description": "By now you'll have actual income and expense data, a clearer housing picture, and a small emergency fund growing. Use this moment to set a specific savings target for the next 6 months and automate a monthly transfer toward it.",
+            "category": "mindset",
+            "impact": "Turns 90 days of groundwork into a sustainable habit — you'll move from surviving to building with a real plan behind you.",
+            "confidence": "medium"
+          }
+        ],
+        "overallMessage": "Living in New York is genuinely hard, and the fact that you're here, asking these questions, already puts you ahead. Right now, the most important thing isn't a perfect budget — it's getting your real numbers so you can make real decisions. Over the next 90 days, we'll build clarity, a small cushion, and at least one path forward on housing. You've got this.",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_surviving_prompt_injection",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 21163,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Park the $10k in a high-yield savings account — NOW",
+            "description": "Before you touch a single investment app, move that $10k into a high-yield savings account. You have $250 in liquid savings. One car repair, one ER visit, one anything ends you. This IS your first investment — in not going broke.",
+            "category": "savings",
+            "impact": "Instantly transforms your emergency fund from 0.09 months to ~3.5 months of expenses. You go from 'one bad day from disaster' to actually stable.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 2-3",
+            "title": "Get a real number on your monthly expenses",
+            "description": "Pull 3 months of bank statements and actually add it up. Your income and expenses are both estimated — you can't build a real plan on vibes. Know your actual number before you do anything else.",
+            "category": "mindset",
+            "impact": "Turns your financial picture from guesswork into a real baseline. Every decision after this gets smarter and more accurate.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Set a savings target before you invest a single dollar",
+            "description": "Once you know your real monthly expenses, calculate 3 months' worth. That's your floor. Until your savings account hits that number, investing is just gambling with your safety net.",
+            "category": "savings",
+            "impact": "Gives you a concrete, non-negotiable milestone. No more 'should I invest this?' — the answer is no, until the number is hit.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Automate your $700/month surplus toward the savings goal",
+            "description": "Set up an automatic transfer on payday — every single month — into that high-yield savings account. Don't let the money sit in checking where it's one impulse buy away from disappearing.",
+            "category": "savings",
+            "impact": "At $700/month, you'll have a fully-funded 3-month emergency fund locked in within 90 days, even without the $10k head start.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 9-10",
+            "title": "Learn what you're actually investing in before you invest",
+            "description": "Spend 2 weeks reading about diversified low-cost index funds vs. speculative single assets. Understand the difference between building wealth and gambling. No moves until you can explain your strategy out loud.",
+            "category": "mindset",
+            "impact": "Investors who understand what they own make fewer panic decisions. Knowledge is the only edge that actually compounds.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 11-12",
+            "title": "Make your first real investment — with money you can afford to leave alone",
+            "description": "Emergency fund fully stocked? Expenses tracked? Strategy understood? NOW you invest — in a diversified, low-cost index fund, not a hot tip. Start with a fixed monthly amount and automate it.",
+            "category": "income",
+            "impact": "You enter the market as someone with a safety net and a plan, not someone one dip away from panic-selling. That's how wealth actually gets built.",
+            "confidence": "low"
+          }
+        ],
+        "overallMessage": "You have $10k and zero financial cushion — that's not an investment portfolio, that's a fire extinguisher you haven't bought yet. The next 90 days are about building the foundation that makes investing actually work. Do this right and you'll enter month 4 with a real emergency fund AND a real investment strategy. Skip it and you're one bad month away from liquidating everything at a loss.",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_surviving_high_income_50k_cc",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 21523,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Track every dollar for 7 days — no exceptions",
+            "description": "With $15k in and $7.5k supposedly left over, something isn't adding up. Spend one week logging every transaction manually. Find where the money is actually going before throwing it at debt.",
+            "category": "mindset",
+            "impact": "Exposes the structural spending leak that's keeping you in $50k of debt despite a $180k salary. You can't fix what you can't see.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 2-3",
+            "title": "Build a $7,500 emergency buffer — fast",
+            "description": "You have under 1 month of expenses saved. Before going hard on debt, park one month of expenses in a high-yield savings account. This stops emergencies from landing back on the cards.",
+            "category": "savings",
+            "impact": "Breaks the cycle where one unexpected expense undoes months of debt paydown. One month of runway changes everything.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Week 4",
+            "title": "Launch the avalanche: $3,500/mo extra toward Card 1",
+            "description": "Pick the card with the highest balance or longest history and throw $3,500/mo at it on top of minimums. Pay minimums on the other two. Automate it on payday — don't leave it to willpower.",
+            "category": "debt",
+            "impact": "At this rate, Card 1 is gone in roughly 5-6 months, saving hundreds in interest and freeing up $340/mo to snowball into the next card.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Set a hard monthly spending ceiling and stick to it",
+            "description": "Based on your tracking from Week 1, set a firm budget for discretionary categories — dining, entertainment, shopping. Write it down. Review it weekly. High income doesn't mean unlimited spending.",
+            "category": "mindset",
+            "impact": "Prevents lifestyle creep from absorbing the surplus that should be killing your debt. This is the habit that makes the math actually work.",
+            "confidence": "low"
+          },
+          {
+            "week": "Month 2-3",
+            "title": "Snowball the freed-up payments into Card 2",
+            "description": "Once Card 1 is gone, redirect its full payment — minimum plus the $3,500 extra — straight into Card 2. Don't let that money disappear into lifestyle. Keep the momentum.",
+            "category": "debt",
+            "impact": "Card 2 could be gone by month 10-11. You'll have eliminated $34k in debt and saved roughly $5,000+ in interest in under a year.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Review, recalibrate, and plan for Card 3",
+            "description": "At the 90-day mark, check your actual numbers. Is the spending plan holding? Is the avalanche on track? Adjust the monthly attack amount if income or expenses shifted. Map out the Card 3 finish line.",
+            "category": "mindset",
+            "impact": "Keeps you honest and prevents the 'I'm making progress so I can loosen up' trap. Staying locked in through Card 3 means you're debt-free by next year.",
+            "confidence": "medium"
+          }
+        ],
+        "overallMessage": "You've got the income to fix this in 12-18 months — most people would kill for that runway. But the math only works if you find where the money is actually going. The debt didn't happen by accident, and it won't disappear without a real spending plan backing up the payoff strategy. Lock in, stay consistent, and this time next year you're debt-free with $15k/mo and nowhere to put it but wealth-buil",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_surviving_student_no_debt",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 18147,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Open a high-yield savings account and set up auto-transfer",
+            "description": "Open a separate high-yield savings account today — not your checking account. Set up an automatic transfer of $50/month on payday. Out of sight, out of mind, into gains.",
+            "category": "savings",
+            "impact": "Starts the compounding habit immediately. Even $50/month becomes $600 by year-end — more than doubling your current savings.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 2-3",
+            "title": "Map every dollar: build your first real budget",
+            "description": "Track every expense for 2 weeks — food, subscriptions, random purchases. With ~$700/month in estimated expenses, find where $50-75 is leaking. One less takeout run per week is the whole game right now.",
+            "category": "mindset",
+            "impact": "Identifies hidden spending leaks and gives you a real number to work with — not an estimate. Confidence in your plan goes way up.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Build a $500 'no-credit-card' emergency buffer",
+            "description": "Your #1 risk right now is one surprise expense pushing you into credit card debt. Make $500 your first savings milestone. That's your shield. Don't touch it for anything non-emergency.",
+            "category": "savings",
+            "impact": "Breaks the 'one bad week = debt spiral' risk. Getting to $500 means a flat tire or a doctor visit doesn't wreck your financial foundation.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Explore one income boost — even $100-200/month more",
+            "description": "Part-time income is your ceiling right now. Look for one extra shift, a campus gig, or a skill you can monetize (tutoring, freelance, etc.). Even $100/month extra accelerates everything.",
+            "category": "income",
+            "impact": "An extra $100-200/month could get you to a 1-month emergency fund ($700-900) before the semester ends. That's a massive risk reduction.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Set your 12-month savings target and automate it",
+            "description": "By now you know your real numbers. Set a goal: 1 full month of expenses saved (~$700) by the end of the year. Increase your auto-transfer to match. Lock it in and let it run.",
+            "category": "mindset",
+            "impact": "Finishing the year with a real emergency fund and zero debt puts you miles ahead of most people your age. The habit you build now is worth more than the balance.",
+            "confidence": "medium"
+          }
+        ],
+        "overallMessage": "Zero debt as a student is genuinely elite — most people your age are already in the hole. Your only job right now is to protect that advantage and build the savings habit before life gets more expensive. The numbers are small, but the habits you lock in now are the ones that compound for decades. Let's get it.",
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "ap_thriving_high_net_worth",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 21924,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Calculate your true investable surplus above the emergency fund",
+            "description": "You have $80k liquid and ~$7k/mo in expenses. That's 11+ months covered. Anything above 6 months (~$42k) is dead money. Identify exactly how much is sitting idle and ready to be deployed.",
+            "category": "savings",
+            "impact": "Knowing the exact number ($38k+) turns a vague 'I should invest more' into a concrete move you can execute this month.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 2-3",
+            "title": "Open a taxable brokerage account and fund it with your surplus",
+            "description": "Move the excess above your 6-month emergency fund into a taxable brokerage account invested in a diversified, low-cost index fund strategy. Don't let inflation eat your lead.",
+            "category": "savings",
+            "impact": "Historically, broad market index funds have outpaced inflation by 5-7% annually. On $38k, that's a meaningful difference over 10 years vs. cash.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Audit whether you're maxing ALL available tax-advantaged accounts",
+            "description": "401k is covered — but are you maxing an HSA, Roth IRA, or backdoor Roth if eligible? These are free tax shelters you can't get back once the year closes. Check contribution limits now.",
+            "category": "savings",
+            "impact": "Maxing an HSA + Roth IRA adds up to $11k+ in tax-advantaged space annually. That's real money shielded from taxes for decades.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Set up automatic monthly investing from your $5k monthly surplus",
+            "description": "With zero debt and a fat emergency fund, your $5k/mo surplus should be working. Automate a fixed monthly transfer into your brokerage on payday. Decide your split: taxable vs. Roth vs. other goals.",
+            "category": "savings",
+            "impact": "Automating removes the decision fatigue. Consistent monthly investing compounds faster than lump-sum timing attempts — and you'll never miss what you never see.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Define your next big financial goal and reverse-engineer it",
+            "description": "You've won the basics. What's next — a property, early retirement, a business, generational wealth? Pick one. Calculate the number. Build a timeline. Vague goals stay dreams; specific ones become plans.",
+            "category": "mindset",
+            "impact": "Having a defined target changes how you allocate your surplus from 'saving generally' to 'building toward something specific' — which keeps discipline sharp.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Review, rebalance, and stress-test your full financial picture",
+            "description": "After 90 days of deploying capital, review your asset allocation, check that your emergency fund is still intact, and confirm your automated investments are on track. Adjust if your goals shifted.",
+            "category": "mindset",
+            "impact": "A quarterly review keeps a thriving financial life from drifting into complacency. The people who stay wealthy are the ones who keep paying attention.",
+            "confidence": "high"
+          }
+        ],
+        "overallMessage": "Honestly? Your finances are embarrassingly good. Zero debt, 11 months of runway, maxing your 401k — you've already won the game most people are still trying to figure out. The only problem is $38k+ sitting in cash slowly losing to inflation. This 90-day plan is about deploying your lead, not fixing mistakes. Let's make your money actually work as hard as you do.",
+        "_provider": "claude"
+      }
+    }
+  ]
+}
