@@ -112,9 +112,9 @@ The backend was rebuilt to separate AI judgment from deterministic math:
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /analyze` | Main analysis — uses Anthropic tool-use, validates input, computes derived metrics + CFPB score |
-| `POST /action-plan` | 90-day plan generation — separate endpoint, called when user taps "View Plan" |
-| `POST /generate-captions` | Share-card caption generation — 3 distinct TikTok-native captions, temperature 0.8 |
+| `POST /analyze` | Main analysis — uses Anthropic tool-use, validates input, computes derived metrics + CFPB score (3 iteration cycles, 100%) |
+| `POST /action-plan` | 90-day plan generation — separate endpoint (3 iteration cycles: confidence anchoring + number anchoring, 100%) |
+| `POST /generate-captions` | Share-card caption generation — 3 distinct TikTok-native captions, temperature 0.8 (3 iteration cycles: structural uniqueness + min 100-char, 100%) |
 
 All three endpoints have:
 - **Groq fallback** — automatic failover to Llama 3.3 70B when Claude is unavailable
@@ -123,14 +123,11 @@ All three endpoints have:
 
 ### Prompt System
 
-System prompts live in **external files** for easy editing:
-- `supabase/functions/analyze/prompts/system.txt` — financial analysis prompt
-- `supabase/functions/action-plan/prompts/system.txt` — 90-day plan prompt
-- `supabase/functions/generate-captions/prompts/system.txt` — caption generation prompt
+System prompts live in **two synchronized sources** per function:
+- `supabase/functions/*/prompts/system.txt` — canonical text file for easy editing/diffs
+- `supabase/functions/*/prompt.ts` — TypeScript export (runtime source; Supabase CLI bundles `.ts`, not `.txt`)
 
-Each has a corresponding `prompt.ts` that exports the prompt as a TypeScript string (the Supabase CLI bundles `.ts` files; `.txt` files are deployed alongside for reference).
-
-Prompts are cached with Anthropic's `cache_control: { type: 'ephemeral' }`.
+When iterating prompts during eval cycles, edit both files. Content is always verified to match before deploying. Prompts are cached with Anthropic's `cache_control: { type: 'ephemeral' }`.
 
 ### Client Persistence
 
@@ -146,10 +143,10 @@ Both write only on success, return the cached value on subsequent visits, and fa
 |------|---------|
 | `scripts/eval/lib/harness.ts` | Shared eval library — runSuite() with cost prompts, raw-output logging, SUMMARY.md |
 | `scripts/eval/runner.analyze.ts` | Analyze runner — 13 fixtures across 5 groups (vague/partial/detailed/edge/CFPB) |
-| `scripts/eval/runner.action-plan.ts` | Action-plan runner — wired and ready (fixtures built in 528) |
-| `scripts/eval/runner.captions.ts` | Captions runner — 8 fixtures spanning low/mid/high scores and all 5 tones |
-| `scripts/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings, plan consistency |
-| `scripts/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md |
+| `scripts/eval/runner.action-plan.ts` | Action-plan runner — 8 real-analysis fixtures across 3 Fragile + 5 Surviving + 1 Thriving |
+| `scripts/eval/runner.captions.ts` | Captions runner — 6 fixtures spanning low/mid/high scores + 2 savage, 1 of each other tone |
+| `scripts/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings (word-boundary regex), plan consistency |
+| `scripts/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md — 9 cycles across 6 suites |
 | `scripts/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
 | `scripts/manual-test.ts` | Human-review testing with `--input <name>` and `--save` flags |
 
@@ -207,8 +204,8 @@ AmIBroke/
 ├── babel.config.js
 ├── .env.example
 ├── CLAUDE.md                  # AI safety rules
-├── DECISIONS.md               # Architecture decisions + iteration hypotheses log
-├── 527_NEXT_STEPS.md          # Build & iteration plan (Section C analyzed: 100%)
+├── DECISIONS.md               # Architecture decisions + iteration hypotheses log (analyze, action-plan, captions)
+├── 528_NEXT_STEPS.md          # Action-plan + captions iteration plan (✅ complete)
 ├── FRONTEND_TODO.md           # Known frontend gaps
 ├── shared/                    # Shared types & logic (frontend + backend)
 │   ├── types.ts               # TypeScript types (inferred from Zod)
