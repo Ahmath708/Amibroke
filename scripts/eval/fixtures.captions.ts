@@ -1,100 +1,81 @@
 import type { Fixture } from './lib/harness';
 
+// All score/scoreLabel/roast values taken from cycle_3_analyze_2026-05-28T03-36-25-379Z.json
+// (the v1.0 finalized analyze prompt, 13/13 pass, hypothesis 2 KEPT).
+//
+// Fixture → source analysis:
+//   low_savage  → edge_negative_savings (score 15, Fragile, expenses > income)
+//   low_therapist → partial_1 (score 33, Fragile, CC debt + no savings)
+//   mid_gentle  → detailed_3 (score 45, Surviving, $50k CC on $15k/mo income)
+//   mid_finance_bro → detailed_2 (score 51, Surviving, homeowner with CC balance)
+//   high_older_sibling → cfpb_thriving (score 87, Thriving, fully funded)
+//   high_savage → cfpb_thriving (score 87, Thriving, savage tone variant)
+
 export const FIXTURES: Fixture[] = [
-  // Low score, savage — classic broke user
   {
     id: 'low_savage',
     group: 'A-low',
-    label: 'Score 28, savage tone',
+    label: 'Score 15, savage tone — expenses exceed income',
     input: {
-      score: 28,
-      scoreLabel: 'Terrible',
-      roast: 'Your wallet is on life support.',
+      score: 15,
+      scoreLabel: 'Financially Fragile',
+      roast: 'It seems like your credit cards have quietly become a co-signer on your lifestyle — and they\'re charging 21% for the privilege.',
       tone: 'savage',
     },
   },
-  // Mid score, therapist tone
   {
-    id: 'mid_therapist',
+    id: 'low_therapist',
     group: 'A-low',
-    label: 'Score 55, therapist tone',
+    label: 'Score 33, therapist tone — CC debt + no savings',
     input: {
-      score: 55,
-      scoreLabel: 'Fair',
-      roast: 'You are financially fragile, like a House of Cards in a windstorm.',
+      score: 33,
+      scoreLabel: 'Financially Fragile',
+      roast: 'Bestie, "a lot of CC debt" and $250 in savings on $4k/mo is just paying a subscription fee to be broke. You\'re funding Visa\'s quarterly earnings call every single month. 💀',
       tone: 'therapist',
     },
   },
-  // High score, gentle
   {
-    id: 'high_gentle',
-    group: 'A-low',
-    label: 'Score 82, gentle tone',
+    id: 'mid_gentle',
+    group: 'B-mid',
+    label: 'Score 45, gentle tone — high earner, hidden CC debt',
     input: {
-      score: 82,
-      scoreLabel: 'Great',
-      roast: 'Your financial life is actually pretty solid. No, really.',
+      score: 45,
+      scoreLabel: 'Surviving',
+      roast: 'Bro, you\'re making $180k a year and still $50k in the hole on credit cards. That\'s not a money problem, that\'s a lifestyle problem wearing a money problem\'s clothes. We need to talk.',
       tone: 'gentle',
     },
   },
-  // Low score, older sibling
-  {
-    id: 'low_older_sibling',
-    group: 'B-mid',
-    label: 'Score 35, older_sibling tone',
-    input: {
-      score: 35,
-      scoreLabel: 'Poor',
-      roast: 'We need to have a talk about your money management.',
-      tone: 'older_sibling',
-    },
-  },
-  // Mid score, finance bro
   {
     id: 'mid_finance_bro',
     group: 'B-mid',
-    label: 'Score 60, finance_bro tone',
+    label: 'Score 51, finance_bro tone — homeowner with CC balance',
     input: {
-      score: 60,
-      scoreLabel: 'Average',
-      roast: 'Your portfolio is not exactly killing it, my dude.',
+      score: 51,
+      scoreLabel: 'Surviving',
+      roast: 'Bro, you own a home, have a job, and still only save $200/mo? That\'s like having a Ferrari and only putting $5 of gas in it. The CC balance is the villain in your origin story — let\'s kill it.',
       tone: 'finance_bro',
     },
   },
-  // High score, savage
+  {
+    id: 'high_older_sibling',
+    group: 'C-high',
+    label: 'Score 87, older_sibling tone — thriving, maxed 401k',
+    input: {
+      score: 87,
+      scoreLabel: 'Thriving',
+      roast: 'Here\'s the thing — your finances are so healthy it\'s almost unfair. The only thing to "fix" here is making sure that $80k isn\'t just sitting there collecting dust while inflation quietly nibbles at it. 😊',
+      tone: 'older_sibling',
+    },
+  },
   {
     id: 'high_savage',
-    group: 'B-mid',
-    label: 'Score 90, savage tone',
+    group: 'C-high',
+    label: 'Score 87, savage tone — thriving, zero debt',
     input: {
-      score: 90,
-      scoreLabel: 'Excellent',
-      roast: 'Stop flexing and go enjoy your financial freedom.',
+      score: 87,
+      scoreLabel: 'Thriving',
+      roast: 'Here\'s the thing — your finances are so healthy it\'s almost unfair. The only thing to "fix" here is making sure that $80k isn\'t just sitting there collecting dust while inflation quietly nibbles at it. 😊',
       tone: 'savage',
-    },
-  },
-  // Very low score, therapist
-  {
-    id: 'very_low_therapist',
-    group: 'C-edge',
-    label: 'Score 12, therapist tone — edge case',
-    input: {
-      score: 12,
-      scoreLabel: 'Critical',
-      roast: 'Your finances have left the building.',
-      tone: 'therapist',
-    },
-  },
-  // Perfect score, any tone
-  {
-    id: 'perfect_gentle',
-    group: 'C-edge',
-    label: 'Score 100, gentle tone — edge case',
-    input: {
-      score: 100,
-      scoreLabel: 'Perfect',
-      roast: 'You have achieved financial nirvana.',
-      tone: 'gentle',
     },
   },
 ];
