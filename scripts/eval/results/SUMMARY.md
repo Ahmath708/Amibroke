@@ -10,3 +10,4 @@
 | 2026-05-28 | analyze | 2 | b6e27c6 | 92% | 12/13 | hypothesis 1: CFPB confidence broadened — vague change, detailed_2 still failed |
 | 2026-05-28 | analyze | 3 | b6e27c6 | 100% | 13/13 | hypothesis 2: explicit CFPB→data mapping table — detailed_2 now passes |
 | 2026-05-28 | captions | 0 | b6e27c6 | 100% | 1/1 | |
+| 2026-05-28 | action-plan | 1 | 857b297 | 100% | 8/8 | baseline — 2 false positives from 'SOL' substring bug (assertion now fixed) |

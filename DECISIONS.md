@@ -29,3 +29,32 @@ Each CFPB question maps to at least one common user-data pattern the AI is likel
 **Result:** 13/13 (100%). All fixtures pass, including detailed_2 which had failed in both previous cycles. The explicit mapping table gives the AI clear decision criteria instead of relying on abstract reasoning.
 
 **Decision: KEEP.** The more specific mapping improves confidence assignment without regressing any other fixture.
+
+---
+
+## Action-Plan Section (2026-05-28)
+
+### Cycle 1 (Baseline) — 8 fixtures, 100% pass rate
+
+**Change made:** None — baseline run with zero prompt changes.
+
+**Results:** 8/8 (100%).
+- All steps well-formed (week, title, description, impact, category, confidence).
+- Plans correctly reference numbers from the analysis (CC balances, APRs, income, savings).
+- Score-band appropriate: fragile users get survival-mode steps (stop the bleeding, build tiny buffer), thriving user gets optimization (taxable investing, HSA, wealth audit).
+- No forbidden strings detected after fixing the assertion's "SOL" substring bug (changed `.includes()` to word-boundary regex matching).
+
+**Two false positives on initial run:**
+- `ap_fragile_7k_cc_no_efund`: "solid" in overallMessage triggered "SOL" substring match.
+- `ap_surviving_prompt_injection`: "solid" in step description triggered same false positive.
+
+**Assertion bug fix:** `assertActionPlan` was using `body.toLowerCase().includes(s.toLowerCase())` for forbidden string detection, which matched substrings (e.g., "sol" in "solid"). Changed to word-boundary regex `\b${term}\b` matching, consistent with `assertNoForbiddenStrings`. All 8 fixtures now pass cleanly.
+
+**Quality observations (no prompt change — just evaluation):**
+- Steps are genuinely personalized — not generic fill-in-the-blank.
+- The negative-savings fixture (score 15) got appropriately gentle/compassionate language despite being the worst financial situation.
+- The thriving fixture (score 87) got optimization advice instead of survival advice — correct.
+- Plans range 5-6 steps, well within the 4-6 guideline.
+- Voice matches the requested tone.
+
+**Next:** Cycle 2 hypothesis — tighten the relationship between step confidence and the analysis's data confidence levels. Currently all steps are "high" or "medium" regardless of input data quality. A step should be "low" confidence if it's built on low-confidence input numbers.

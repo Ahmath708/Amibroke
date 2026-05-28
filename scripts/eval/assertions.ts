@@ -128,7 +128,8 @@ export function assertActionPlan(response: unknown): AssertionResult {
   }
   const body = JSON.stringify(response);
   for (const s of FORBIDDEN_PLAN) {
-    if (body.toLowerCase().includes(s.toLowerCase())) {
+    const pattern = new RegExp(`\\b${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (pattern.test(body)) {
       return { pass: false, message: `Contains forbidden string: "${s}"` };
     }
   }
