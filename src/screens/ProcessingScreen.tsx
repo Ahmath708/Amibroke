@@ -28,7 +28,7 @@ const STEPS: { label: string; icon: IoniconsName }[] = [
 
 export default function ProcessingScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { userInput, tone } = route.params;
+  const { userInput, tone, userContext } = route.params;
   const { user } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
@@ -58,7 +58,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
     const timeout = setTimeout(() => controller.abort(), 45000);
 
     try {
-      const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal, 2);
+      const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal, 2, userContext as Record<string, unknown> | undefined);
       clearTimeout(timeout);
       trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
 

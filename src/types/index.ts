@@ -78,12 +78,12 @@ export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   Input: undefined;
-  Processing: { userInput: string; tone?: RoastTone };
+  Processing: { userInput: string; tone?: RoastTone; userContext?: Record<string, unknown> };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
   Payment: { product: 'action_plan' | 'deep_dive' };
-  ActionPlan: { steps: ActionStep[] };
+  ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis };
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
   History: undefined;

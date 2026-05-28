@@ -98,6 +98,7 @@ export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>>();
   const rawSteps = route.params?.steps;
+  const analysis = (route.params as any)?.analysis;
   const [steps, setSteps] = useState<ActionStep[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -115,7 +116,7 @@ export default function ActionPlanScreen({ route }: Props) {
 
       const personalized = rawSteps?.length > 0
         ? rawSteps
-        : generatePersonalizedSteps({});
+        : generatePersonalizedSteps(analysis ?? {});
 
       setSteps(personalized.length > 0 ? personalized : DEFAULT_STEPS);
       trackActionPlanViewed(personalized.length > 0 ? personalized.length : DEFAULT_STEPS.length);

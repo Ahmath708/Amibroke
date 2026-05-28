@@ -54,6 +54,16 @@ export default function HomeScreen({ navigation }: Props) {
   const [input, setInput] = useState('');
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
   const [selectedProvider, setSelectedProvider] = useState<'claude' | 'groq'>('claude');
+  const [showContext, setShowContext] = useState(false);
+  const [userContext, setUserContext] = useState({
+    state: 'unknown' as string,
+    ageBracket: 'unknown' as string,
+    incomeBracket: 'unknown' as string,
+    livingSituation: 'unknown' as string,
+    employmentStatus: 'unknown' as string,
+    debtBracket: 'unknown' as string,
+    liquidSavingsBracket: 'unknown' as string,
+  });
   const inputRef = useRef<TextInput>(null);
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
@@ -104,7 +114,8 @@ export default function HomeScreen({ navigation }: Props) {
       return;
     }
     trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone, provider: selectedProvider });
-    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone });
+    const context = Object.values(userContext).some((v) => v !== 'unknown') ? userContext : undefined;
+    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone, userContext: context as any });
   };
 
   const handleVoiceToggle = async () => {
@@ -245,6 +256,46 @@ export default function HomeScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
+          {/* Optional context form */}
+          <TouchableOpacity onPress={() => setShowContext(!showContext)} activeOpacity={0.7}>
+            <Text style={styles.contextToggle}>
+              {showContext ? '− Hide Context' : '+ Add Financial Context (optional)'}
+            </Text>
+          </TouchableOpacity>
+          {showContext && (
+            <View style={styles.contextForm}>
+              {[
+                { key: 'state', label: 'State', options: ['unknown', 'CA', 'NY', 'TX', 'FL', 'IL', 'WA', 'MA', 'CO', 'OR', 'GA', 'NC', 'AZ', 'PA', 'OH', 'MI', 'NJ', 'VA', 'MN', 'MD'] },
+                { key: 'incomeBracket', label: 'Monthly Income', options: ['unknown', 'under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k'] },
+                { key: 'ageBracket', label: 'Age', options: ['unknown', '18-24', '25-29', '30-34', '35-44', '45+'] },
+                { key: 'livingSituation', label: 'Housing', options: ['unknown', 'renting', 'owning', 'with_family', 'dorm', 'other'] },
+                { key: 'employmentStatus', label: 'Employment', options: ['unknown', 'full_time', 'part_time', 'self_employed', 'student', 'between_jobs'] },
+                { key: 'debtBracket', label: 'Total Debt', options: ['unknown', 'none', 'under_5k', '5k_15k', '15k_50k', 'over_50k'] },
+                { key: 'liquidSavingsBracket', label: 'Savings', options: ['unknown', 'none', 'under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k'] },
+              ].map((field) => (
+                <View key={field.key} style={styles.contextField}>
+                  <Text style={styles.contextLabel}>{field.label}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.contextChips}>
+                      {field.options.map((opt) => (
+                        <TouchableOpacity
+                          key={opt}
+                          style={[styles.contextChip, (userContext as any)[field.key] === opt && styles.contextChipActive]}
+                          onPress={() => setUserContext((prev) => ({ ...prev, [field.key]: opt }))}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.contextChipText, (userContext as any)[field.key] === opt && styles.contextChipTextActive]}>
+                            {opt.replace(/_/g, ' ')}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* CTA */}
           <NeonButton
             label="Analyze My Finances"
@@ -365,6 +416,15 @@ const styles = StyleSheet.create({
   providerText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
   providerTextActive: { color: Colors.primary },
   cta: { marginBottom: Spacing.sm },
+  contextToggle: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.tint, textAlign: 'center', marginBottom: Spacing.md },
+  contextForm: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
+  contextField: { marginBottom: Spacing.sm },
+  contextLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+  contextChips: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'wrap' as const },
+  contextChip: { backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderWidth: 1, borderColor: Colors.glassBorder },
+  contextChipActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
+  contextChipText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+  contextChipTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xxl + Spacing.xs },
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },

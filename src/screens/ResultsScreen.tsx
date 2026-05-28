@@ -127,12 +127,12 @@ export default function ResultsScreen({ navigation, route }: Props) {
         <Text style={styles.sectionTitle}>Key Metrics</Text>
         <View style={styles.metricsGroup}>
           {[
-            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome.value), icon: '💵' },
-            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses.value), icon: '💸' },
-            { label: 'Monthly Savings', value: fmt(analysis.monthlySavings), icon: '💰', highlight: analysis.monthlySavings < 0 },
-            { label: 'Total Debt', value: fmt(analysis.debtTotal), icon: '📉', highlight: analysis.debtTotal > 0 },
-            { label: 'Savings Rate', value: `${analysis.savingsRate.toFixed(0)}%`, icon: '📈' },
-            { label: 'Emergency Fund', value: `${analysis.emergencyFundMonths.toFixed(1)} mo`, icon: '🛡️' },
+            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0), icon: '💵' },
+            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0), icon: '💸' },
+            { label: 'Monthly Savings', value: fmt(analysis.monthlySavings ?? 0), icon: '💰', highlight: (analysis.monthlySavings ?? 0) < 0 },
+            { label: 'Total Debt', value: fmt(analysis.debtTotal ?? 0), icon: '📉', highlight: (analysis.debtTotal ?? 0) > 0 },
+            { label: 'Savings Rate', value: analysis.savingsRate != null ? `${Math.round(analysis.savingsRate * 100)}%` : 'N/A', icon: '📈' },
+            { label: 'Emergency Fund', value: analysis.emergencyFundMonths != null ? `${analysis.emergencyFundMonths.toFixed(1)} mo` : 'N/A', icon: '🛡️' },
           ].map((m, i, arr) => (
             <React.Fragment key={m.label}>
               <View style={styles.metricRow}>
@@ -207,8 +207,27 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </>
         )}
 
+        {/* What you mentioned spending */}
+        {analysis.mentionedSpending && analysis.mentionedSpending.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>What You Mentioned Spending</Text>
+            <View style={styles.metricsGroup}>
+              {analysis.mentionedSpending.map((item: any, i: number, arr: any[]) => (
+                <React.Fragment key={item.category}>
+                  <View style={styles.metricRow}>
+                    <Text style={styles.metricIcon}>💳</Text>
+                    <Text style={styles.metricLabel}>{item.category}</Text>
+                    <Text style={styles.metricValue}>{item.amount ? `$${item.amount.toLocaleString()}` : 'mentioned'}</Text>
+                  </View>
+                  {i < arr.length - 1 && <View style={styles.rowSep} />}
+                </React.Fragment>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Insights */}
-        {analysis.insights.length > 0 && (
+        {analysis.insights?.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Key Insights</Text>
             <View style={styles.insightsList}>
@@ -230,7 +249,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               onPress={async () => {
                 const { fetchOrGenerateActionPlan } = await import('@/services/claudeApi');
                 const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
-                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any });
+                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis });
               }}
               style={styles.actionBtn}
             />
@@ -242,10 +261,10 @@ export default function ResultsScreen({ navigation, route }: Props) {
               variant="secondary"
             />
           )}
-          {analysis.debtTotal > 0 && hasAccessTo(purchaseTier, 'deep_dive') && (
+          {(analysis.debtTotal ?? 0) > 0 && hasAccessTo(purchaseTier, 'deep_dive') && (
             <NeonButton
               label="Debt Payoff Calculator"
-              onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts, monthlyIncome: analysis.monthlyIncome.value })}
+              onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts ?? [], monthlyIncome: analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0 })}
               variant="secondary"
               style={styles.actionBtn}
             />

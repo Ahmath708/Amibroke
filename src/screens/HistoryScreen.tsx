@@ -124,6 +124,11 @@ export default function HistoryScreen() {
             <Text style={[styles.subtitle, styles.signInLink]}>Sign in to track your progress →</Text>
           </TouchableOpacity>
         )}
+        {history.length > 0 && (
+          <Text style={styles.versionNote}>
+            {history.some((h) => !h.score_label) ? 'Older analyses shown with limited data' : ''}
+          </Text>
+        )}
 
         {history.length === 0 ? (
           <EmptyState emoji="📋" title="No analyses yet" body="Run your first analysis to start tracking your financial progress over time." />
@@ -257,6 +262,7 @@ const styles = StyleSheet.create({
   },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
   signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginBottom: Spacing.lg, fontStyle: 'italic' },
   chartCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   chartTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginBottom: Spacing.lg, fontWeight: '600' },
   chart: { flexDirection: 'row', height: 120, gap: Spacing.sm, alignItems: 'flex-end' },
