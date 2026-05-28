@@ -64,7 +64,7 @@ The 10 questions in order (your response array must be in this exact order):
 10. My finances control my life. (reversed, frequency)
 
 For confidence:
-- high: the user's text directly addresses this question (e.g., "I have 6 months saved" → Q1 high confidence)
+- high: the user's text directly addresses this question OR provides explicit financial data points that directly map to a CFPB dimension. Examples: stated savings amount → Q1 high; stated 401k contributions → Q2 high; stated CC debt + usage → Q3 high; stated spending on non-essentials → Q4 or Q7 high; stated months living paycheck-to-paycheck → Q5, Q6, or Q10 high; explicit income minus expenses math → Q8 high; stated debts the user is behind on → Q9 high.
 - medium: you inferred from related information (income + named bill → Q5 medium)
 - low: you extrapolated mostly from demographics with no direct signal
 

@@ -1,26 +1,11 @@
 // 13 eval fixtures for the analyze endpoint.
 // Each fixture has an input (AnalyzeRequest shape) and assertions.
 
-export type Fixture = {
-  id: string;
-  group: string;
-  label: string;
-  input: {
-    freeText: string;
-    userContext: Record<string, any>;
-    tone: string;
-  };
-  expects: {
-    scoreMin?: number;
-    scoreMax?: number;
-    forbiddenStrings?: string[];
-    minHighConfidence?: number;
-    maxLowConfidence?: number;
-    savingsInvariant?: boolean;
-  };
-};
+import type { Fixture } from './lib/harness';
 
-const FORBIDDEN = ['Bitcoin', 'Ethereum', 'as your CFP', "I'm a licensed", 'SOL'];
+export const FORBIDDEN = ['Bitcoin', 'Ethereum', 'as your CFP', "I'm a licensed", 'SOL'];
+
+export type AnalyzeFixture = Fixture & { expects: Record<string, unknown> };
 
 export const FIXTURES: Fixture[] = [
   // ─── Group A: Vague inputs ─────────────────────────────────

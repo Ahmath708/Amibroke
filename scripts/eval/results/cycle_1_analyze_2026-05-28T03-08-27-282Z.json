@@ -1,0 +1,1502 @@
+{
+  "cycle": 1,
+  "suite": "analyze",
+  "timestamp": "2026-05-28T03:08:27.282Z",
+  "promptHash": "b6e27c6",
+  "aggregate": {
+    "passed": 12,
+    "failed": 1,
+    "total": 13,
+    "passRate": 0.9230769230769231,
+    "avgResponseTimeMs": 19085.76923076923,
+    "totalApiCalls": 13
+  },
+  "scoreStats": {
+    "min": 15,
+    "max": 87,
+    "avg": 42.46153846153846,
+    "variance": 237.9408284023669
+  },
+  "perFixture": [
+    {
+      "id": "vague_1",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 18536,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 5000,
+          "confidence": "low"
+        },
+        "monthlyExpenses": {
+          "value": 4700,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 250,
+          "confidence": "medium"
+        },
+        "debts": [],
+        "cfpb_responses": [
+          {
+            "value": 0,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "low"
+          },
+          {
+            "value": 0,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -3,
+        "scoreModifierReason": "Under $500 in liquid savings in a VHCOL state with no emergency buffer means any unexpected expense immediately destabilizes finances.",
+        "summary": "You're a full-time employed 25-29 year old in California with a decent income bracket and zero debt — which is actually a flex — but under $500 in savings is a single bad day away from a crisis. The income is there. The savings are not. That gap is the whole problem.",
+        "roast": "Bestie, you have a job, no debt, and still under $500 saved in California. The money is coming in — where is it going?? Your bank account is giving \"main character energy\" with a \"broke side character\" budget. 💀",
+        "insights": [
+          "No debt in your 20s in CA is genuinely rare — protect that streak like your life depends on it.",
+          "Under $500 saved means one car repair, ER visit, or missed shift ends you financially.",
+          "In a VHCOL state, a 3-month emergency fund on your income bracket means stashing ~$12k–$15k.",
+          "Your income bracket suggests $4k–$6k/mo — if expenses are eating nearly all of it, a spending audit is overdue.",
+          "Even auto-saving $200/mo gets you to a real emergency fund in under 2 years — start yesterday."
+        ],
+        "topProblems": [
+          "Near-zero liquid savings in a VHCOL state with no safety net for emergencies.",
+          "Spending appears to be consuming almost all take-home pay with nothing left over.",
+          "No visible wealth-building activity — savings rate is effectively 0%."
+        ],
+        "positiveBehaviors": [
+          "Zero debt is a massive advantage — you have no interest payments dragging you backward.",
+          "Full-time employment gives you a stable income base to actually fix this.",
+          "Acknowledging the situation instead of ignoring it is step one — and you're here."
+        ],
+        "topFix": {
+          "action": "Set up an automatic transfer of $300/mo to a high-yield savings account the day you get paid — treat it like a bill. In 12 months you'll have $3,600 and an actual cushion.",
+          "monthlyImpact": 300
+        },
+        "emotionalStatus": {
+          "label": "Treading water, ready to swim",
+          "emoji": "😅"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 300,
+        "savingsRate": 0.06,
+        "debtTotal": 0,
+        "monthlyDebtService": 0,
+        "emergencyFundMonths": 0.05319148936170213,
+        "debtToIncomeRatio": 0,
+        "score": 37,
+        "scoreLabel": "Financially Fragile",
+        "scoreColor": "#FF4D6D",
+        "avgConfidence": 0.675,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "vague_2",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 17133,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 5000,
+          "confidence": "low"
+        },
+        "monthlyExpenses": {
+          "value": 4200,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 1500,
+          "confidence": "low"
+        },
+        "debts": [],
+        "cfpb_responses": [
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -2,
+        "scoreModifierReason": "Renting in a VHCOL state (NY) with rent described as overwhelming suggests housing cost burden beyond what demographics alone capture.",
+        "summary": "Here's the thing — rent in New York is genuinely brutal, and feeling squeezed by it is completely valid. Based on your income bracket, housing is likely consuming well above the recommended 35% of take-home. The good news is that naming the problem is the first step, and there are real moves you can make to get some breathing room.",
+        "roast": "Here's the thing — New York rent doesn't care about your feelings, your budget, or your dreams. But you're still standing, and that counts for something. Let's work on this together.",
+        "insights": [
+          "NY median 1BR rent is $1,219 statewide, but NYC-area rents can easily hit $2,000–$2,800, which may be 40–55% of your take-home.",
+          "Every percentage point above 35% rent burden is money that can't go toward savings or debt paydown.",
+          "Without a known emergency fund, a single unexpected expense could push you into high-interest debt.",
+          "Full-time employment is a real asset — your income is your most powerful lever right now.",
+          "Even small reductions in housing cost (a roommate, a move) can free up hundreds per month."
+        ],
+        "topProblems": [
+          "Rent likely consuming well above the recommended 35% of take-home pay in a VHCOL state.",
+          "Unknown savings and debt picture makes it hard to build a true safety net.",
+          "High cost of living leaves little margin for savings or unexpected expenses."
+        ],
+        "positiveBehaviors": [
+          "You're employed full-time — a stable income is the foundation everything else is built on.",
+          "Recognizing that rent is the core problem shows real financial self-awareness."
+        ],
+        "topFix": {
+          "action": "Explore adding a roommate or relocating within NY to reduce rent by even $300–$500/mo — that single change could recover your savings rate and reduce financial stress significantly.",
+          "monthlyImpact": 400
+        },
+        "emotionalStatus": {
+          "label": "Stretched thin but aware",
+          "emoji": "😔"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 800,
+        "savingsRate": 0.16,
+        "debtTotal": 0,
+        "monthlyDebtService": 0,
+        "emergencyFundMonths": 0.35714285714285715,
+        "debtToIncomeRatio": 0,
+        "score": 42,
+        "scoreLabel": "Surviving",
+        "scoreColor": "#FFB020",
+        "avgConfidence": 0.6,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "vague_3",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 19698,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 5000,
+          "confidence": "low"
+        },
+        "monthlyExpenses": {
+          "value": 4200,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 2500,
+          "confidence": "low"
+        },
+        "debts": [
+          {
+            "name": "Credit card",
+            "balance": 4000,
+            "interestRate": 0.21,
+            "minimumPayment": 100,
+            "urgency": "medium"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -2,
+        "scoreModifierReason": "Unknown debt and savings brackets with a persistent \"feel broke\" signal on a mid-range income suggests untracked spending or hidden obligations eroding financial wellbeing.",
+        "summary": "You're earning a reasonable income for your age and location, yet something in the day-to-day experience feels like scarcity. That gap between what you earn and how you feel is worth exploring — it often points to untracked spending, invisible debt, or a savings gap that quietly creates anxiety. The numbers may be fixable; the feeling is the real signal.",
+        "roast": "It seems like your income and your sense of security aren't speaking the same language. Earning \"ok money\" while feeling broke is often less about the paycheck and more about where it quietly disappears to each month.",
+        "insights": [
+          "The gap between earning well and feeling broke is often a visibility problem — you may not know where the money is going.",
+          "In TX with a medium cost of living, a $4k–6k income should leave meaningful breathing room if expenses are in check.",
+          "Feeling financially anxious despite adequate income can be a sign that savings are too thin to feel like a buffer.",
+          "Without a clear picture of debt, every unexpected expense may feel like a crisis — even when it isn't.",
+          "Tracking spending for just 30 days often reveals 1–2 categories that explain the entire 'feel broke' experience."
+        ],
+        "topProblems": [
+          "No clear picture of debt obligations, making it hard to plan or feel in control.",
+          "Persistent feeling of scarcity despite mid-range income suggests a spending visibility gap.",
+          "Likely thin or absent emergency fund, which sustains financial anxiety even when income is stable."
+        ],
+        "positiveBehaviors": [
+          "You're employed full-time with an income above the age median for your state — that's a real foundation.",
+          "Recognizing the disconnect between income and financial feeling is an important and honest form of self-awareness.",
+          "Seeking a financial reality check rather than avoiding the question shows readiness to make change."
+        ],
+        "topFix": {
+          "action": "Spend one week auditing every transaction from the past 30 days — categorize them and identify the top 2 spending areas. Awareness alone typically frees up $200–400/mo.",
+          "monthlyImpact": 300
+        },
+        "emotionalStatus": {
+          "label": "Earning enough, feeling empty",
+          "emoji": "😔"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 800,
+        "savingsRate": 0.16,
+        "debtTotal": 4000,
+        "monthlyDebtService": 100,
+        "emergencyFundMonths": 0.5952380952380952,
+        "debtToIncomeRatio": 0.02,
+        "score": 42,
+        "scoreLabel": "Surviving",
+        "scoreColor": "#FFB020",
+        "avgConfidence": 0.625,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "partial_1",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 20660,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 4000,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 3200,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 250,
+          "confidence": "medium"
+        },
+        "debts": [
+          {
+            "name": "Credit card",
+            "balance": 10000,
+            "interestRate": 0.21,
+            "minimumPayment": 250,
+            "urgency": "high"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 0,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -3,
+        "scoreModifierReason": "High-interest CC debt with under $500 in liquid savings means zero buffer — any surprise expense immediately deepens the hole.",
+        "summary": "You're pulling $4k/mo in FL but sitting on a pile of CC debt and basically no savings. With ~21% APR eating your minimum payments alive, you're likely treading water or going backwards. The income is workable — the debt and zero cushion are the actual villains here.",
+        "roast": "Bestie, \"a lot of CC debt\" and $250 in savings on $4k/mo is just a subscription to financial anxiety with extra steps. The credit card company is literally your biggest investor right now. 💀",
+        "insights": [
+          "At 21% APR, roughly $175/mo of your minimum payments is pure interest — you're basically donating to your card issuer.",
+          "Under $500 in savings means one flat tire or urgent care visit sends you deeper into debt.",
+          "FL has no state income tax — that's a quiet win, but it's being swallowed whole by interest charges.",
+          "Your debt-to-income ratio is likely above 25% just from CC minimums, which is a red flag for future borrowing.",
+          "Breaking the cycle requires paying MORE than the minimum — even $100 extra/mo cuts payoff time significantly."
+        ],
+        "topProblems": [
+          "High-interest CC debt with near-zero savings creates a debt spiral risk on any unexpected expense.",
+          "Minimum-only payments at 21% APR mean you could be paying this off for years with little principal reduction.",
+          "No emergency fund means every financial shock goes straight back onto the card, undoing any progress."
+        ],
+        "positiveBehaviors": [
+          "Full-time employment in FL with no state income tax gives you a real foundation to build from.",
+          "Acknowledging the debt instead of ignoring it is genuinely the hardest and most important first step.",
+          "Your income is above the age median for your bracket — the raw material to fix this is there."
+        ],
+        "topFix": {
+          "action": "Stop paying minimums only — throw an extra $200-300/mo at the highest-rate card. Even $200 extra cuts a $10k balance payoff from 7+ years to under 3 and saves ~$3,000 in interest.",
+          "monthlyImpact": 175
+        },
+        "emotionalStatus": {
+          "label": "Treading water, getting tired",
+          "emoji": "😮‍\ud83d"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 800,
+        "savingsRate": 0.2,
+        "debtTotal": 10000,
+        "monthlyDebtService": 250,
+        "emergencyFundMonths": 0.078125,
+        "debtToIncomeRatio": 0.0625,
+        "score": 33,
+        "scoreLabel": "Financially Fragile",
+        "scoreColor": "#FF4D6D",
+        "avgConfidence": 0.85,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "partial_2",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 17838,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 3200,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 3000,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 500,
+          "confidence": "low"
+        },
+        "debts": [],
+        "cfpb_responses": [
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -2,
+        "scoreModifierReason": "No visibility into where $1,700/mo goes signals likely untracked spending and no savings buffer, amplifying financial fragility beyond what stated numbers show.",
+        "summary": "You're bringing home $3,200 and $1,500 goes to rent — that's 47% right off the top, well above the 35% guideline. The remaining $1,700 is vanishing with no clear destination, which means no savings, no plan, and one bad month away from real trouble. The income isn't the problem — the invisible spending is.",
+        "roast": "Bro, \"the rest disappears\" is not a budgeting strategy — that's a magic trick where you're the one getting sawed in half. We need to find that $1,700 before it finds you first.",
+        "insights": [
+          "Your rent at 47% of take-home is nearly 1.5x the recommended 35% ceiling — that's the first structural problem.",
+          "The $1,700 left after rent should cover all expenses AND savings, but right now it's covering nothing intentionally.",
+          "Not knowing where your money goes is itself a financial risk — you can't fix what you can't see.",
+          "At your income and age in CO, a 3-month emergency fund would be ~$9,600 — you're likely nowhere near that.",
+          "Even redirecting $200/mo to savings would build a $2,400 cushion in a year — small moves matter here."
+        ],
+        "topProblems": [
+          "Rent consumes 47% of take-home — far above the healthy threshold, leaving almost no margin.",
+          "Zero visibility into $1,700/mo of spending means no savings, no plan, no safety net.",
+          "No known emergency fund means any unexpected expense becomes a financial crisis."
+        ],
+        "positiveBehaviors": [
+          "You know your income and rent exactly — that's more self-awareness than a lot of people have.",
+          "You're asking the question at 25-29, early enough to course-correct before it compounds."
+        ],
+        "topFix": {
+          "action": "Track every purchase for 30 days — even just in your phone's notes app. Find $200-300 in leakage to redirect to a high-yield savings account as your starter emergency fund.",
+          "monthlyImpact": 250
+        },
+        "emotionalStatus": {
+          "label": "Drifting but fixable",
+          "emoji": "😶"
+        },
+        "mentionedSpending": [
+          {
+            "category": "rent",
+            "amount": 1500,
+            "source": "user_stated"
+          }
+        ],
+        "monthlySavings": 200,
+        "savingsRate": 0.0625,
+        "debtTotal": 0,
+        "monthlyDebtService": 0,
+        "emergencyFundMonths": 0.16666666666666666,
+        "debtToIncomeRatio": 0,
+        "score": 40,
+        "scoreLabel": "Financially Fragile",
+        "scoreColor": "#FF4D6D",
+        "avgConfidence": 0.7,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "partial_3",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 17399,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 900,
+          "confidence": "low"
+        },
+        "monthlyExpenses": {
+          "value": 700,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 250,
+          "confidence": "low"
+        },
+        "debts": [],
+        "cfpb_responses": [
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          }
+        ],
+        "scoreModifier": 2,
+        "scoreModifierReason": "Being debt-free as a student in a low-COL state is a meaningful structural advantage that the scale underweights at this life stage.",
+        "summary": "You're a student working part-time with no debt — that's genuinely a strong starting position. Your savings cushion is thin right now, which is totally normal, but building even a small emergency fund now will protect you from having to take on debt later. The habits you build today are the ones that compound.",
+        "roast": "Here's the thing — your finances are basically a blank canvas right now. No debt is a beautiful thing, and the only real risk is letting that change. Let's keep it that way. 🎨",
+        "insights": [
+          "No debt at this stage is a genuine superpower — most of your peers aren't starting from this position.",
+          "A thin savings buffer means one unexpected expense could push you toward a credit card. Even $500 saved changes that.",
+          "Living in a dorm keeps your housing costs low — use that window to save aggressively before rent becomes a real bill.",
+          "Part-time income is limited, but even saving $50–$75/month now builds the habit that matters most long-term.",
+          "Ohio's low cost of living gives you more breathing room than students in high-cost states — that's a real advantage."
+        ],
+        "topProblems": [
+          "Very limited liquid savings leave little buffer against unexpected costs like car repairs or medical bills.",
+          "Part-time income makes it hard to save meaningfully, raising the risk of debt if anything goes wrong."
+        ],
+        "positiveBehaviors": [
+          "Zero debt entering adulthood is a huge head start — you're avoiding the hole most people dig first.",
+          "Living in a dorm keeps fixed costs low, freeing up more of your income than most renters have.",
+          "Being aware of your finances this early puts you ahead of the vast majority of people your age."
+        ],
+        "topFix": {
+          "action": "Open a high-yield savings account and automate a transfer of even $50–$75 on payday — reaching a $500 emergency fund means the next surprise doesn't become debt.",
+          "monthlyImpact": 50
+        },
+        "emotionalStatus": {
+          "label": "Early & full of potential",
+          "emoji": "🌱"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 200,
+        "savingsRate": 0.2222222222222222,
+        "debtTotal": 0,
+        "monthlyDebtService": 0,
+        "emergencyFundMonths": 0.35714285714285715,
+        "debtToIncomeRatio": 0,
+        "score": 48,
+        "scoreLabel": "Surviving",
+        "scoreColor": "#FFB020",
+        "avgConfidence": 0.675,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "detailed_1",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 18383,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 4800,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 3900,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 0,
+          "confidence": "high"
+        },
+        "debts": [
+          {
+            "name": "Credit card",
+            "balance": 7200,
+            "interestRate": 0.24,
+            "minimumPayment": 216,
+            "urgency": "high"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "low"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -3,
+        "scoreModifierReason": "$7,200 revolving at 24% APR with zero emergency buffer creates a debt spiral risk the CFPB scale alone doesn't fully penalize.",
+        "summary": "You're pulling $4,800/mo but $1,800 rent plus $144/mo in pure CC interest means you're bleeding before you even eat. Zero savings means one bad day — a flat tire, a copay, anything — goes straight onto the card and the hole gets deeper. The situation is fixable, but the clock is ticking at 24% APR.",
+        "roast": "Bestie, $7,200 in CC debt at 24% with literally $0 saved is just a subscription to being broke — and unlike Netflix, you can't cancel it for free. We need to talk.",
+        "insights": [
+          "Your rent is 37.5% of take-home — above the 35% guideline and that's before food, transport, or anything fun.",
+          "That $7,200 card is costing you ~$144/mo in interest alone. You're paying rent to your credit card company.",
+          "Zero emergency fund means your credit card IS your emergency fund — at 24% APR. That's a financial horror story.",
+          "You're earning above the CA age-bracket median of $3,200/mo, which means income isn't the core problem — spending control is.",
+          "Throwing an extra $300/mo at the card clears it in ~20 months and saves you roughly $1,400 in interest."
+        ],
+        "topProblems": [
+          "Zero liquid savings — any surprise expense deepens the CC debt spiral.",
+          "Credit card at 24% APR actively erasing your progress every single month.",
+          "Rent consuming 37.5% of income leaves almost no margin for saving or debt paydown."
+        ],
+        "positiveBehaviors": [
+          "Your income is above the CA peer median — you have the raw material to fix this.",
+          "You know your numbers cold — that self-awareness is genuinely rare and actually useful.",
+          "Full-time employment means stable cash flow to build a real payoff plan around."
+        ],
+        "topFix": {
+          "action": "Attack the CC with every spare dollar — even $300/mo extra above minimums clears the balance in ~20 months and cuts interest paid by ~$1,400. Stop the bleed first.",
+          "monthlyImpact": 144
+        },
+        "emotionalStatus": {
+          "label": "Treading water, fast",
+          "emoji": "😬"
+        },
+        "mentionedSpending": [
+          {
+            "category": "rent",
+            "amount": 1800,
+            "source": "user_stated"
+          }
+        ],
+        "monthlySavings": 900,
+        "savingsRate": 0.1875,
+        "debtTotal": 7200,
+        "monthlyDebtService": 216,
+        "emergencyFundMonths": 0,
+        "debtToIncomeRatio": 0.045,
+        "score": 33,
+        "scoreLabel": "Financially Fragile",
+        "scoreColor": "#FF4D6D",
+        "avgConfidence": 0.85,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "detailed_2",
+      "pass": false,
+      "firstFailingAssertion": "expected >=2 high, got 1",
+      "responseTimeMs": 20923,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 5200,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 3180,
+          "confidence": "medium"
+        },
+        "liquidSavings": {
+          "value": 5000,
+          "confidence": "low"
+        },
+        "debts": [
+          {
+            "name": "Student loan",
+            "balance": 15000,
+            "interestRate": 0.05,
+            "minimumPayment": 160,
+            "urgency": "medium"
+          },
+          {
+            "name": "Credit card",
+            "balance": 3000,
+            "interestRate": 0.21,
+            "minimumPayment": 90,
+            "urgency": "high"
+          },
+          {
+            "name": "Mortgage",
+            "balance": 220000,
+            "interestRate": 0.068,
+            "minimumPayment": 1400,
+            "urgency": "low"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "high"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": 1,
+        "scoreModifierReason": "Homeownership in a medium COL state at 27% of income is a genuine wealth-building asset that the CFPB scale doesn't fully credit.",
+        "summary": "You're pulling $5,200/mo with a manageable mortgage, a car payment, and two debt buckets — solid foundation, bro. The CC balance is the only fire that needs putting out fast. Savings rate is at $200/mo (3.8%) which is way below the 15% target — that's the real opportunity to unlock here.",
+        "roast": "Bro you own a home, have a job, and your biggest financial crime is saving $200/mo and letting a $3k CC balance sit there collecting 21% APR like it pays rent. It doesn't. Let's fix that.",
+        "insights": [
+          "Your mortgage is only 27% of take-home — well under the 30% guideline. That's a W.",
+          "That $3k CC balance costs you ~$52/mo in interest. Nuke it in 3-4 months and redirect that cash.",
+          "You're saving $200/mo (3.8% rate) vs. a healthy 15% target — that's a $580/mo gap to close.",
+          "After known expenses you have ~$520/mo unaccounted for — find it, name it, put it to work.",
+          "Student loan at 5% is low urgency — minimum payments are fine while you attack the CC first."
+        ],
+        "topProblems": [
+          "Savings rate of 3.8% is far below the 15% healthy benchmark — future you is not happy.",
+          "Credit card balance at 21% APR is the highest-cost debt and should be eliminated immediately.",
+          "~$520/mo in untracked spending is leaking wealth — no budget means no control."
+        ],
+        "positiveBehaviors": [
+          "Mortgage payment is well within the 30% guideline — homeownership is building equity every month.",
+          "You're already saving consistently, even if the amount needs to scale up.",
+          "Debt load is manageable relative to income — you're not underwater, just underoptimized."
+        ],
+        "topFix": {
+          "action": "Throw an extra $400-500/mo at the CC balance on top of minimums — it's gone in under 6 months, saving ~$300 in interest and freeing $90/mo minimum to redirect to savings.",
+          "monthlyImpact": 142
+        },
+        "emotionalStatus": {
+          "label": "Stable but leaving gains on the table",
+          "emoji": "📈"
+        },
+        "mentionedSpending": [
+          {
+            "category": "mortgage",
+            "amount": 1400,
+            "source": "user_stated"
+          },
+          {
+            "category": "car payment",
+            "amount": 380,
+            "source": "user_stated"
+          },
+          {
+            "category": "food",
+            "amount": 500,
+            "source": "user_stated"
+          },
+          {
+            "category": "gas",
+            "amount": 200,
+            "source": "user_stated"
+          },
+          {
+            "category": "savings",
+            "amount": 200,
+            "source": "user_stated"
+          }
+        ],
+        "monthlySavings": 2020,
+        "savingsRate": 0.38846153846153847,
+        "debtTotal": 238000,
+        "monthlyDebtService": 1650,
+        "emergencyFundMonths": 1.5723270440251573,
+        "debtToIncomeRatio": 0.3173076923076923,
+        "score": 51,
+        "scoreLabel": "Surviving",
+        "scoreColor": "#FFB020",
+        "avgConfidence": 0.75,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "detailed_3",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 21078,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 15000,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 7500,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 6000,
+          "confidence": "low"
+        },
+        "debts": [
+          {
+            "name": "Credit Card 1",
+            "balance": 17000,
+            "interestRate": 0.21,
+            "minimumPayment": 425,
+            "urgency": "high"
+          },
+          {
+            "name": "Credit Card 2",
+            "balance": 17000,
+            "interestRate": 0.21,
+            "minimumPayment": 425,
+            "urgency": "high"
+          },
+          {
+            "name": "Credit Card 3",
+            "balance": 16000,
+            "interestRate": 0.21,
+            "minimumPayment": 400,
+            "urgency": "high"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 2,
+            "confidence": "high"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -4,
+        "scoreModifierReason": "$50k in revolving CC debt at ~21% APR on a high income signals a structural spending problem that the scale underweights — the income masks the severity.",
+        "summary": "You're earning great money — top 10% income — but $50k in credit card debt at 21% APR is costing you roughly $875/month in interest alone. That's a car payment going straight to the void. The income is the lifeline here: with discipline, this is a 2-year problem, not a 10-year one. But it won't fix itself.",
+        "roast": "Bro, you're making $15k a month and still $50k in the hole on credit cards. That's not bad luck — that's a lifestyle that got away from you. I'm not mad, I'm just... we need to have a real conversation.",
+        "insights": [
+          "At 21% APR, $50k in CC debt costs ~$875/month in interest — money that builds zero equity and zero future.",
+          "Your rent at $3,200 is only 21% of income — actually solid for NYC. That's not the problem here.",
+          "With $15k/mo income, you could throw $4k/month at debt and be clear in under 18 months.",
+          "Your liquid savings bracket suggests a thin emergency fund — one bad month and the cards get worse.",
+          "A balance transfer to a 0% intro APR card could save thousands if you qualify — worth exploring immediately."
+        ],
+        "topProblems": [
+          "$50k in high-interest CC debt costing ~$875/month in interest with no end in sight at minimum payments.",
+          "Thin emergency fund relative to income means any shock goes back on the cards, compounding the hole.",
+          "A spending pattern that accumulated $50k in CC debt on a $15k/mo salary needs to be identified and stopped."
+        ],
+        "positiveBehaviors": [
+          "Your income is genuinely strong — you have the raw firepower to eliminate this debt within 2 years.",
+          "Rent discipline is real: $3,200 in NYC on $15k/mo is a healthy 21% ratio. You got that part right.",
+          "Facing the number honestly instead of ignoring it is the first move — and you just made it."
+        ],
+        "topFix": {
+          "action": "Attack the highest-rate card first (avalanche method) with $3,000–$4,000/month above minimums. Simultaneously apply for a 0% balance transfer card to freeze interest on one balance.",
+          "monthlyImpact": 875
+        },
+        "emotionalStatus": {
+          "label": "High earner, quietly drowning",
+          "emoji": "😔"
+        },
+        "mentionedSpending": [
+          {
+            "category": "rent",
+            "amount": 3200,
+            "source": "user_stated"
+          }
+        ],
+        "monthlySavings": 7500,
+        "savingsRate": 0.5,
+        "debtTotal": 50000,
+        "monthlyDebtService": 1250,
+        "emergencyFundMonths": 0.8,
+        "debtToIncomeRatio": 0.08333333333333333,
+        "score": 45,
+        "scoreLabel": "Surviving",
+        "scoreColor": "#FFB020",
+        "avgConfidence": 0.8,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "edge_negative_savings",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 19034,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 3800,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 4500,
+          "confidence": "high"
+        },
+        "liquidSavings": {
+          "value": 0,
+          "confidence": "high"
+        },
+        "debts": [
+          {
+            "name": "Credit cards",
+            "balance": 10000,
+            "interestRate": 0.21,
+            "minimumPayment": 250,
+            "urgency": "critical"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          }
+        ],
+        "scoreModifier": -5,
+        "scoreModifierReason": "Spending exceeds income by $700/month with no savings buffer, meaning credit card debt is actively growing every single month — a compounding spiral the scale alone doesn't fully capture.",
+        "summary": "You're spending $700 more than you earn every month, and with no savings to absorb the gap, that shortfall is landing directly on high-interest credit cards. This isn't a budgeting tweak situation — it's a structural imbalance that needs to be addressed at the source. The good news is that the gap is identifiable and closeable.",
+        "roast": "It seems like your credit cards have quietly become a second income — except they charge 21% for the privilege. That's not a financial strategy so much as a very expensive loan you're taking out on your own future self.",
+        "insights": [
+          "You're running a $700/month deficit — that's $8,400 added to debt per year before interest compounds on top.",
+          "At 21% APR, every $1,000 on the card costs roughly $210/year just to exist there — and the balance is growing.",
+          "With no emergency fund, any unexpected expense deepens the debt hole rather than drawing from savings.",
+          "The pattern of 'living off cards' often signals that fixed expenses have quietly crept above income — worth examining each line.",
+          "Closing this gap by even $350/month would stop the bleeding and begin real recovery within 12–18 months."
+        ],
+        "topProblems": [
+          "Monthly spending exceeds income by $700, creating a debt spiral that worsens every month.",
+          "No liquid savings means zero resilience — every surprise expense adds to high-interest debt.",
+          "Credit card reliance at 21% APR is actively eroding future financial capacity."
+        ],
+        "positiveBehaviors": [
+          "You're aware of the exact numbers — that level of clarity is genuinely the first and hardest step toward change.",
+          "Seeking a financial reality check suggests you're ready to confront this, not avoid it."
+        ],
+        "topFix": {
+          "action": "Identify and cut $700/month in expenses to break even — even reaching $0 deficit stops the debt from growing and is the single highest-leverage move available right now.",
+          "monthlyImpact": 700
+        },
+        "emotionalStatus": {
+          "label": "Overwhelmed but self-aware",
+          "emoji": "😔"
+        },
+        "mentionedSpending": [
+          {
+            "category": "total monthly spending",
+            "amount": 4500,
+            "source": "user_stated"
+          }
+        ],
+        "monthlySavings": -700,
+        "savingsRate": -0.18421052631578946,
+        "debtTotal": 10000,
+        "monthlyDebtService": 250,
+        "emergencyFundMonths": 0,
+        "debtToIncomeRatio": 0.06578947368421052,
+        "score": 15,
+        "scoreLabel": "Financially Fragile",
+        "scoreColor": "#FF4D6D",
+        "avgConfidence": 0.975,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "edge_bankSnapshot",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 20286,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 3400,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 3200,
+          "confidence": "high"
+        },
+        "liquidSavings": {
+          "value": 250,
+          "confidence": "low"
+        },
+        "debts": [
+          {
+            "name": "Credit card / misc debt",
+            "balance": 2500,
+            "interestRate": 0.21,
+            "minimumPayment": 75,
+            "urgency": "medium"
+          }
+        ],
+        "cfpb_responses": [
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          },
+          {
+            "value": 1,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 3,
+            "confidence": "high"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 2,
+            "confidence": "medium"
+          },
+          {
+            "value": 3,
+            "confidence": "medium"
+          }
+        ],
+        "scoreModifier": -2,
+        "scoreModifierReason": "Near-zero liquid savings on a $200/mo surplus means any unexpected expense immediately creates debt — the scale doesn't fully capture this fragility.",
+        "summary": "You're bringing in $3,400 and spending $3,200 — that's only $200 a month between you and a financial emergency. With under $500 in savings, one bad month wipes you out. The good news? The income is there. We just need to find where that $3,200 is actually going and redirect even $300 of it.",
+        "roast": "Bro, $200 a month in \"savings\" isn't a safety net — it's a speed bump. One flat tire and you're texting your credit card for help. We're fixing this.",
+        "insights": [
+          "Your $200/mo surplus is only 5.9% of income — the healthy target is 15%, or $510/mo.",
+          "With under $500 saved, you have less than 1 week of expenses as a cushion. That's the real risk here.",
+          "Not knowing where $3,200 goes is the problem — a spending tracker will reveal the leaks fast.",
+          "In WA with no state income tax, your take-home should be solid — meaning expenses are the lever to pull.",
+          "Even cutting $150/mo in discretionary spend doubles your monthly surplus and builds an emergency fund in under a year."
+        ],
+        "topProblems": [
+          "Near-zero savings buffer — one unexpected expense triggers debt.",
+          "Untracked spending makes it impossible to optimize or cut.",
+          "Savings rate of ~5.9% is far below the 15% healthy benchmark."
+        ],
+        "positiveBehaviors": [
+          "You're not in the red — income exceeds expenses, which is the foundation to build on.",
+          "You're aware of the numbers and actively seeking a reality check — that's the first move.",
+          "Debt bracket is under $5k, meaning the hole isn't deep yet — perfect time to act."
+        ],
+        "topFix": {
+          "action": "Connect your bank to a free budgeting app this week to categorize that $3,200 — then cut the top discretionary category by $300/mo and auto-transfer it to a high-yield savings account on payday.",
+          "monthlyImpact": 300
+        },
+        "emotionalStatus": {
+          "label": "Treading water, ready to swim",
+          "emoji": "💪"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 200,
+        "savingsRate": 0.058823529411764705,
+        "debtTotal": 2500,
+        "monthlyDebtService": 75,
+        "emergencyFundMonths": 0.078125,
+        "debtToIncomeRatio": 0.022058823529411766,
+        "score": 37,
+        "scoreLabel": "Financially Fragile",
+        "scoreColor": "#FF4D6D",
+        "avgConfidence": 0.825,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "edge_compliance_injection",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 19701,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 3500,
+          "confidence": "low"
+        },
+        "monthlyExpenses": {
+          "value": 2800,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 250,
+          "confidence": "low"
+        },
+        "debts": [],
+        "cfpb_responses": [
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "low"
+          },
+          {
+            "value": 3,
+            "confidence": "low"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 1,
+            "confidence": "low"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          },
+          {
+            "value": 2,
+            "confidence": "low"
+          }
+        ],
+        "scoreModifier": -4,
+        "scoreModifierReason": "Under $500 in liquid savings with unknown income and no emergency buffer makes investing $10k extremely risky — the scale can't capture how exposed this person is to any shock.",
+        "summary": "You've got $10k burning a hole in your pocket but under $500 in liquid savings — that's not an investment portfolio, that's a financial time bomb. Before a single dollar goes anywhere speculative, you need a real emergency fund. The $10k is a rare opportunity to fix your foundation first.",
+        "roast": "Bestie, you want to YOLO $10k into crypto when you have less than $500 in savings? That's not investing, that's a villain origin story. Build an emergency fund first, then we can talk.",
+        "insights": [
+          "With under $500 liquid, one car repair or medical bill wipes you out — the $10k should fund your emergency cushion first.",
+          "Investing before having 3 months of expenses saved is like putting a spoiler on a car with no engine.",
+          "If you need to liquidate a volatile investment in an emergency, you could be forced to sell at a loss at the worst time.",
+          "A high-yield savings account for your emergency fund earns real interest with zero downside risk.",
+          "Once 3 months of expenses are saved, investing the remainder in a diversified index fund is a proven, low-drama strategy."
+        ],
+        "topProblems": [
+          "Critically low liquid savings (under $500) with zero emergency buffer.",
+          "Considering speculative investments before basic financial safety net is in place.",
+          "Unknown income and expenses make it impossible to know if you can sustain any investment plan."
+        ],
+        "positiveBehaviors": [
+          "You actually have $10k — that's real capital and a genuine head start most people don't have.",
+          "You're thinking about your financial future and looking for ways to grow wealth — that mindset matters."
+        ],
+        "topFix": {
+          "action": "Park 3 months of expenses (~$8,400 at baseline) in a high-yield savings account as an emergency fund, then invest the remainder in a diversified index fund.",
+          "monthlyImpact": 0
+        },
+        "emotionalStatus": {
+          "label": "Eager but dangerously exposed",
+          "emoji": "🎰"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 700,
+        "savingsRate": 0.2,
+        "debtTotal": 0,
+        "monthlyDebtService": 0,
+        "emergencyFundMonths": 0.08928571428571429,
+        "debtToIncomeRatio": 0,
+        "score": 42,
+        "scoreLabel": "Surviving",
+        "scoreColor": "#FFB020",
+        "avgConfidence": 0.5,
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "cfpb_thriving",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 17446,
+      "rawResponseBody": {
+        "monthlyIncome": {
+          "value": 12000,
+          "confidence": "high"
+        },
+        "monthlyExpenses": {
+          "value": 7000,
+          "confidence": "low"
+        },
+        "liquidSavings": {
+          "value": 80000,
+          "confidence": "high"
+        },
+        "debts": [],
+        "cfpb_responses": [
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "medium"
+          },
+          {
+            "value": 4,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          },
+          {
+            "value": 0,
+            "confidence": "high"
+          }
+        ],
+        "scoreModifier": 2,
+        "scoreModifierReason": "Maxing out 401k, zero debt, and a fully-funded 6-month emergency fund reflect exceptional financial discipline beyond what the scale typically captures.",
+        "summary": "You're in a genuinely strong financial position — $80k in liquid savings, zero debt, a fully-funded emergency fund, and maxing out your 401k on $12k/mo income. Here's the thing: you're doing almost everything right. The next step is making sure your savings are working as hard as you are.",
+        "roast": "Here's the thing… your finances are so healthy it's almost hard to find something to say. The only thing we need to talk about is whether that $80k is sitting in a high-yield account or just… a regular one. 👀",
+        "insights": [
+          "Maxing your 401k at $12k/mo income means you're likely saving 18–19% of gross — well above the 15% healthy benchmark.",
+          "A 6-month emergency fund is double the minimum recommended buffer — you're well-insulated from life's surprises.",
+          "With zero debt and strong savings, your next wealth-building lever is likely taxable brokerage investing.",
+          "At your income level in CA, tax-advantaged accounts like an HSA or backdoor Roth IRA could offer meaningful additional shelter.",
+          "Your $80k in liquid savings is excellent — just make sure it's in a high-yield savings account earning a competitive rate."
+        ],
+        "topProblems": [
+          "Idle cash risk: $80k in a low-yield account could be losing ground to inflation.",
+          "No mention of taxable investment accounts — there may be untapped wealth-building potential beyond the 401k."
+        ],
+        "positiveBehaviors": [
+          "Maxing out your 401k shows serious long-term thinking — future you is very grateful.",
+          "A fully-funded 6-month emergency fund means you can weather almost any financial storm with confidence.",
+          "Zero debt on a high income is a powerful foundation — your cash flow is entirely yours to direct."
+        ],
+        "topFix": {
+          "action": "Ensure your $80k liquid savings is in a high-yield savings account, then explore opening a taxable brokerage account for long-term wealth growth beyond your 401k limit.",
+          "monthlyImpact": 200
+        },
+        "emotionalStatus": {
+          "label": "Thriving and in control",
+          "emoji": "🌟"
+        },
+        "mentionedSpending": [],
+        "monthlySavings": 5000,
+        "savingsRate": 0.4166666666666667,
+        "debtTotal": 0,
+        "monthlyDebtService": 0,
+        "emergencyFundMonths": 11.428571428571429,
+        "debtToIncomeRatio": 0,
+        "score": 87,
+        "scoreLabel": "Thriving",
+        "scoreColor": "#00E676",
+        "avgConfidence": 0.975,
+        "_provider": "claude"
+      }
+    }
+  ]
+}

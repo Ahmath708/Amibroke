@@ -119,3 +119,16 @@ export const ActionPlanResponseSchema = z.object({
   steps: z.array(ActionPlanStepSchema).min(4).max(6),
   overallMessage: z.string().max(400),
 });
+
+// ─── Caption generation types ─────────────────────────────────────
+
+export const CaptionRequestSchema = z.object({
+  score: z.number().min(0).max(100),
+  scoreLabel: z.string(),
+  roast: z.string(),
+  tone: z.enum(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']),
+});
+
+export const CaptionResponseSchema = z.object({
+  captions: z.array(z.string().min(1).max(150)).length(3),
+});

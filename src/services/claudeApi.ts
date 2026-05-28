@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { FinalAnalysisSchema, ActionPlanResponseSchema } from '@shared/schemas';
-import { FinalAnalysis, ActionPlanStep } from '@shared/types';
+import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
+import { FinalAnalysis, ActionPlanStep, CaptionResponse, ActionPlanResponse } from '@shared/types';
 import { RoastTone, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn } from '@/types';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -179,31 +179,62 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
   }
 }
 
-export async function fetchActionPlan(userId: string, analysisId?: string): Promise<ActionPlanStep[]> {
+export async function fetchOrGenerateActionPlan(
+  analysis: FinalAnalysis,
+  tone: RoastTone,
+  analysisId?: string,
+): Promise<ActionPlanResponse | null> {
   const client = getSupabase();
-  if (!client) return [];
+  if (!client) return null;
 
   try {
+    if (analysisId) {
+      const { data: row } = await (client as any)
+        .from('analyses')
+        .select('action_plan')
+        .eq('id', analysisId)
+        .single();
+
+      const plan = row?.action_plan;
+      if (plan && typeof plan === 'object' && plan.overallMessage && Array.isArray(plan.steps) && plan.steps.length > 0) {
+        const parsed = ActionPlanResponseSchema.safeParse(plan);
+        if (parsed.success) return parsed.data;
+      }
+    }
+
     const { data, error } = await client.functions.invoke('action-plan', {
-      body: { userId, analysisId },
+      body: { analysis, tone },
     });
 
     if (error) {
-      console.error('[claudeApi] fetchActionPlan error:', error);
-      return [];
+      console.error('[claudeApi] fetchOrGenerateActionPlan error:', error);
+      return null;
     }
 
     const parsed = ActionPlanResponseSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn('[claudeApi] fetchActionPlan returned malformed response');
-      return [];
+      console.warn('[claudeApi] fetchOrGenerateActionPlan malformed response');
+      return null;
     }
 
-    return parsed.data.steps;
+    if (analysisId) {
+      await (client as any)
+        .from('analyses')
+        .update({ action_plan: parsed.data })
+        .eq('id', analysisId);
+    }
+
+    return parsed.data;
   } catch (e) {
-    console.error('[claudeApi] fetchActionPlan exception:', e);
-    return [];
+    console.error('[claudeApi] fetchOrGenerateActionPlan exception:', e);
+    return null;
   }
+}
+
+// Thin wrapper for backward compat — callers should use fetchOrGenerateActionPlan
+export async function fetchActionPlan(userId: string, analysisId?: string): Promise<ActionPlanStep[]> {
+  const steps = await fetchOrGenerateActionPlan({} as any, 'savage', analysisId);
+  return steps?.steps ?? [];
 }
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
@@ -353,6 +384,7 @@ export async function shareToFeed(
   scoreLabel: string,
   roast: string,
   summary: string,
+  shareCaptions?: any[],
 ): Promise<string | null> {
   const client = getSupabase();
   if (!client) return null;
@@ -371,6 +403,7 @@ export async function shareToFeed(
         score_label: scoreLabel,
         roast,
         summary,
+        share_captions: shareCaptions || null,
       })
       .select('id')
       .single();
@@ -580,6 +613,64 @@ export async function getAnalysisById(id: string): Promise<FinalAnalysis | null>
     };
   } catch (err) {
     console.warn('Failed to fetch analysis by id:', err);
+    return null;
+  }
+}
+
+// ─── Caption generation ──────────────────────────────────────────
+
+export async function fetchOrGenerateCaptions(
+  analysis: FinalAnalysis,
+  tone: RoastTone,
+  analysisId?: string,
+): Promise<CaptionResponse | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    if (analysisId) {
+      const { data: row } = await (client as any)
+        .from('analyses')
+        .select('share_captions')
+        .eq('id', analysisId)
+        .single();
+
+      if (row?.share_captions) {
+        const parsed = CaptionResponseSchema.safeParse(row.share_captions);
+        if (parsed.success) return parsed.data;
+      }
+    }
+
+    const { data, error } = await client.functions.invoke('generate-captions', {
+      body: {
+        score: analysis.score,
+        scoreLabel: analysis.scoreLabel,
+        roast: analysis.roast,
+        tone,
+      },
+    });
+
+    if (error) {
+      console.warn('[captions] invoke error:', error);
+      return null;
+    }
+
+    const parsed = CaptionResponseSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn('[captions] invalid response shape:', parsed.error.issues);
+      return null;
+    }
+
+    if (analysisId) {
+      await (client as any)
+        .from('analyses')
+        .update({ share_captions: parsed.data })
+        .eq('id', analysisId);
+    }
+
+    return parsed.data;
+  } catch (e) {
+    console.warn('[captions] failed:', e);
     return null;
   }
 }

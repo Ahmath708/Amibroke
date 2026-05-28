@@ -228,9 +228,9 @@ export default function ResultsScreen({ navigation, route }: Props) {
             <NeonButton
               label="View 90-Day Action Plan"
               onPress={async () => {
-                const { fetchActionPlan } = await import('@/services/claudeApi');
-                const steps = analysisId ? await fetchActionPlan(user?.id ?? '', analysisId) : [];
-                navigation.navigate('ActionPlan', { steps: steps as any });
+                const { fetchOrGenerateActionPlan } = await import('@/services/claudeApi');
+                const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
+                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any });
               }}
               style={styles.actionBtn}
             />

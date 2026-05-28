@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { FinalAnalysisSchema } from '../../shared/schemas';
 
 export type AssertionResult = { pass: boolean; message: string };
+const FORBIDDEN_CAPTIONS = ['Bitcoin', 'as your CFP', "I'm a licensed", 'self-harm', 'suicide'];
+const FORBIDDEN_PLAN = ['Bitcoin', 'Ethereum', 'as your CFP', "I'm a licensed", 'SOL'];
 
 export function assertSchema(response: unknown, schema: z.ZodSchema): AssertionResult {
   const result = schema.safeParse(response);
@@ -59,6 +61,78 @@ export function assertNoForbiddenStrings(response: any, forbidden: string[]): As
     }
   }
   return { pass: true, message: 'No forbidden strings found' };
+}
+
+export function assertCaptions(response: unknown): AssertionResult {
+  const obj = response as any;
+  if (!obj || !Array.isArray(obj.captions)) {
+    return { pass: false, message: 'Response does not have a captions array' };
+  }
+  const { captions } = obj;
+  if (captions.length !== 3) {
+    return { pass: false, message: `Expected exactly 3 captions, got ${captions.length}` };
+  }
+  for (let i = 0; i < captions.length; i++) {
+    const c = captions[i];
+    if (typeof c !== 'string') {
+      return { pass: false, message: `captions[${i}] is not a string: ${typeof c}` };
+    }
+    if (c.length === 0) {
+      return { pass: false, message: `captions[${i}] is empty` };
+    }
+    if (c.length > 150) {
+      return { pass: false, message: `captions[${i}] exceeds 150 chars (${c.length})` };
+    }
+  }
+  // Check distinctness
+  const unique = new Set(captions);
+  if (unique.size < captions.length) {
+    return { pass: false, message: `Captions are not distinct: ${captions.join(' | ')}` };
+  }
+  // Check forbidden
+  const body = JSON.stringify(response);
+  for (const s of FORBIDDEN_CAPTIONS) {
+    if (body.toLowerCase().includes(s.toLowerCase())) {
+      return { pass: false, message: `Contains forbidden string: "${s}"` };
+    }
+  }
+  return { pass: true, message: '3 distinct captions, all ≤150 chars, no forbidden strings' };
+}
+
+export function assertActionPlan(response: unknown): AssertionResult {
+  const obj = response as any;
+  if (!obj) return { pass: false, message: 'Response is null/undefined' };
+  if (typeof obj.overallMessage !== 'string' || obj.overallMessage.length === 0) {
+    return { pass: false, message: 'overallMessage is missing or empty' };
+  }
+  if (obj.overallMessage.length > 400) {
+    return { pass: false, message: `overallMessage exceeds 400 chars (${obj.overallMessage.length})` };
+  }
+  if (!Array.isArray(obj.steps) || obj.steps.length === 0) {
+    return { pass: false, message: 'steps is missing or empty' };
+  }
+  for (let i = 0; i < obj.steps.length; i++) {
+    const step = obj.steps[i];
+    if (!step.week || typeof step.week !== 'string' || step.week.length === 0) {
+      return { pass: false, message: `steps[${i}].week is missing or empty` };
+    }
+    if (!step.title || typeof step.title !== 'string' || step.title.length === 0) {
+      return { pass: false, message: `steps[${i}].title is missing or empty` };
+    }
+    if (!step.description || typeof step.description !== 'string' || step.description.length === 0) {
+      return { pass: false, message: `steps[${i}].description is missing or empty` };
+    }
+    if (!step.impact || typeof step.impact !== 'string' || step.impact.length === 0) {
+      return { pass: false, message: `steps[${i}].impact is missing or empty` };
+    }
+  }
+  const body = JSON.stringify(response);
+  for (const s of FORBIDDEN_PLAN) {
+    if (body.toLowerCase().includes(s.toLowerCase())) {
+      return { pass: false, message: `Contains forbidden string: "${s}"` };
+    }
+  }
+  return { pass: true, message: `Plan valid: overallMessage present, ${obj.steps.length} steps, no forbidden strings` };
 }
 
 export function assertConfidenceDistribution(

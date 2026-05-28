@@ -4,9 +4,8 @@ import { getBaselinesForRequest } from './getBaselinesForRequest.ts';
 import type { FinalAnalysis, UserContext } from '../../../shared/types.ts';
 import { deriveMetrics } from '../../../shared/calculations.ts';
 import { computeFinalScore } from '../../../shared/scoring/index.ts';
-const SYSTEM_PROMPT = Deno.readTextFileSync(
-  new URL('./prompts/system.txt', import.meta.url)
-);
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { SYSTEM_PROMPT } from './prompt.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
@@ -18,10 +17,8 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info',
 };
-
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 20;
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+const UPSTREAM_TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 3;
 
 const VALID_STATES = new Set([
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -39,24 +36,6 @@ const VALID_EMPLOYMENT_STATUSES = new Set(['full_time', 'part_time', 'self_emplo
 const VALID_DEBT_BRACKETS = new Set(['none', 'under_5k', '5k_15k', '15k_50k', 'over_50k', 'unknown']);
 const VALID_SAVINGS_BRACKETS = new Set(['none', 'under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k', 'unknown']);
 const VALID_TONES = new Set(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']);
-
-function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
-  const now = Date.now();
-  const entry = rateLimitStore.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
-  }
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return { allowed: false, remaining: 0 };
-  }
-  entry.count++;
-  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - entry.count };
-}
-
-function getClientIP(req: Request): string {
-  return req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-}
 
 const BLOCKED_PATTERNS = [/suicid/i, /kill yourself/i, /kys/i, /die\b/i, /end it all/i];
 
@@ -144,113 +123,171 @@ function validateAiOutput(raw: any): { valid: boolean; error?: string; parsed?: 
   return { valid: true, parsed: raw };
 }
 
-async function callClaude(messages: Array<{ role: string; content: string }>): Promise<any> {
-  const response = await fetch(CLAUDE_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2500,
-      temperature: 0.2,
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-      tools: [submitAnalysisTool],
-      tool_choice: { type: 'tool', name: 'submit_analysis' },
-      messages,
-    }),
-  });
-
-  if (response.status === 429) {
-    const retryAfter = parseInt(response.headers.get('retry-after') || '5');
-    console.warn(`[claude] Rate limited, retrying after ${retryAfter}s`);
-    await new Promise((r) => setTimeout(r, retryAfter * 1000));
-    return callClaude(messages);
-  }
-
-  if (response.status >= 500) {
-    console.warn(`[claude] Server error ${response.status}, retrying...`);
-    await new Promise((r) => setTimeout(r, 2000));
-    return callClaude(messages);
-  }
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => '');
-    console.error(`[claude] API error: ${response.status} — body: ${errorBody}`);
-    let apiMessage = `Claude API error: ${response.status}`;
-    try { const parsed = JSON.parse(errorBody); if (parsed.error?.message) apiMessage = `Claude API error: ${parsed.error.message}`; } catch { /* ignore */ }
-    const error: any = new Error(apiMessage);
-    error.status = response.status;
-    error.rawResponse = errorBody;
-    error.stage = 'claude_api_error';
-    error.detail = apiMessage;
+async function callClaude(messages: Array<{ role: string; content: string }>, attempt = 0): Promise<any> {
+  if (attempt >= MAX_RETRIES) {
+    const error: any = new Error('Claude upstream unavailable after retries');
+    error.stage = 'upstream_unavailable';
+    error.status = 503;
     throw error;
   }
 
-  const data = await response.json();
-  console.log('[claude] API success');
-  return data;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(CLAUDE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2500,
+        temperature: 0.2,
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        tools: [submitAnalysisTool],
+        tool_choice: { type: 'tool', name: 'submit_analysis' },
+        messages,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+      console.warn(`[claude] Rate limited, retrying after ${retryAfter}s (attempt ${attempt + 1})`);
+      await new Promise((r) => setTimeout(r, retryAfter * 1000));
+      return callClaude(messages, attempt + 1);
+    }
+
+    if (response.status >= 500) {
+      console.warn(`[claude] Server error ${response.status}, retrying... (attempt ${attempt + 1})`);
+      await new Promise((r) => setTimeout(r, 2000));
+      return callClaude(messages, attempt + 1);
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      console.error(`[claude] API error: ${response.status} — body: ${errorBody}`);
+      let apiMessage = `Claude API error: ${response.status}`;
+      try { const parsed = JSON.parse(errorBody); if (parsed.error?.message) apiMessage = `Claude API error: ${parsed.error.message}`; } catch { /* ignore */ }
+      const error: any = new Error(apiMessage);
+      error.status = response.status;
+      error.rawResponse = errorBody;
+      error.stage = 'claude_api_error';
+      error.detail = apiMessage;
+      throw error;
+    }
+
+    const data = await response.json();
+    console.log('[claude] API success');
+    return data;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      console.warn(`[claude] Request timed out after ${UPSTREAM_TIMEOUT_MS}ms (attempt ${attempt + 1})`);
+      if (attempt + 1 < MAX_RETRIES) {
+        return callClaude(messages, attempt + 1);
+      }
+      const error: any = new Error('Claude upstream timeout');
+      error.stage = 'upstream_timeout';
+      error.status = 504;
+      throw error;
+    }
+    if (err.stage) throw err;
+    throw err;
+  }
 }
 
-async function callGroq(messages: Array<{ role: string; content: string }>): Promise<any> {
-  const response = await fetch(GROQ_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 2500,
-      temperature: 0.2,
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-    }),
-  });
-
-  if (response.status === 429) {
-    const retryAfter = parseInt(response.headers.get('retry-after') || '5');
-    console.warn(`[groq] Rate limited, retrying after ${retryAfter}s`);
-    await new Promise((r) => setTimeout(r, retryAfter * 1000));
-    return callGroq(messages);
-  }
-
-  if (response.status >= 500) {
-    console.warn(`[groq] Server error ${response.status}, retrying...`);
-    await new Promise((r) => setTimeout(r, 2000));
-    return callGroq(messages);
-  }
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => '');
-    console.error(`[groq] API error: ${response.status} — body: ${errorBody}`);
-    let apiMessage = `Groq API error: ${response.status}`;
-    try { const parsed = JSON.parse(errorBody); if (parsed.error?.message) apiMessage = `Groq API error: ${parsed.error.message}`; } catch { /* ignore */ }
-    const error: any = new Error(apiMessage);
-    error.status = response.status;
-    error.rawResponse = errorBody;
-    error.stage = 'groq_api_error';
-    error.detail = apiMessage;
+async function callGroq(messages: Array<{ role: string; content: string }>, attempt = 0): Promise<any> {
+  if (attempt >= MAX_RETRIES) {
+    const error: any = new Error('Groq upstream unavailable after retries');
+    error.stage = 'upstream_unavailable';
+    error.status = 503;
     throw error;
   }
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
-  console.log('[groq] API success');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
 
-  let parsed: any;
   try {
-    const cleaned = content.replace(/```json|```/g, '').trim();
-    parsed = JSON.parse(cleaned);
-  } catch {
-    const error: any = new Error('Failed to parse Groq response as JSON');
-    error.stage = 'parse_error';
-    error.rawResponse = content;
-    throw error;
-  }
+    const response = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2500,
+        temperature: 0.2,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      }),
+      signal: controller.signal,
+    });
 
-  return parsed;
+    clearTimeout(timeoutId);
+
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+      console.warn(`[groq] Rate limited, retrying after ${retryAfter}s (attempt ${attempt + 1})`);
+      await new Promise((r) => setTimeout(r, retryAfter * 1000));
+      return callGroq(messages, attempt + 1);
+    }
+
+    if (response.status >= 500) {
+      console.warn(`[groq] Server error ${response.status}, retrying... (attempt ${attempt + 1})`);
+      await new Promise((r) => setTimeout(r, 2000));
+      return callGroq(messages, attempt + 1);
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      console.error(`[groq] API error: ${response.status} — body: ${errorBody}`);
+      let apiMessage = `Groq API error: ${response.status}`;
+      try { const parsed = JSON.parse(errorBody); if (parsed.error?.message) apiMessage = `Groq API error: ${parsed.error.message}`; } catch { /* ignore */ }
+      const error: any = new Error(apiMessage);
+      error.status = response.status;
+      error.rawResponse = errorBody;
+      error.stage = 'groq_api_error';
+      error.detail = apiMessage;
+      throw error;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    console.log('[groq] API success');
+
+    let parsed: any;
+    try {
+      const cleaned = content.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      const error: any = new Error('Failed to parse Groq response as JSON');
+      error.stage = 'parse_error';
+      error.rawResponse = content;
+      throw error;
+    }
+
+    return parsed;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      console.warn(`[groq] Request timed out after ${UPSTREAM_TIMEOUT_MS}ms (attempt ${attempt + 1})`);
+      if (attempt + 1 < MAX_RETRIES) {
+        return callGroq(messages, attempt + 1);
+      }
+      const error: any = new Error('Groq upstream timeout');
+      error.stage = 'upstream_timeout';
+      error.status = 504;
+      throw error;
+    }
+    if (err.stage) throw err;
+    throw err;
+  }
 }
 
 function sanitizeAiOutput(raw: any): any {
@@ -301,16 +338,6 @@ serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed', stage: 'request_validation' }, 405);
   }
 
-  const clientIP = getClientIP(req);
-  const rateLimit = checkRateLimit(clientIP);
-
-  if (!rateLimit.allowed) {
-    return jsonResponse({ error: 'Rate limit exceeded', stage: 'rate_limit', remaining: 0 }, 429, {
-      'X-RateLimit-Remaining': '0',
-      'Retry-After': String(RATE_LIMIT_WINDOW_MS / 1000),
-    });
-  }
-
   try {
     const body = await req.json();
     const { provider } = body;
@@ -322,6 +349,8 @@ serve(async (req) => {
     }
 
     const { freeText, userContext, tone } = validation.parsed;
+
+    await enforceRateLimit(req, 'analyze');
 
     if (selectedProvider === 'groq' && !GROQ_API_KEY) {
       return jsonResponse({ error: 'Server misconfiguration: Groq API key not set.', stage: 'config_error' }, 500);
@@ -365,7 +394,6 @@ serve(async (req) => {
     return jsonResponse(
       { ...finalAnalysis, _provider: selectedProvider },
       200,
-      { 'X-RateLimit-Remaining': String(rateLimit.remaining) },
     );
   } catch (error: any) {
     console.error('[analyze] Analysis error:', error);

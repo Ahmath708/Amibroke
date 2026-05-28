@@ -1,6 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated,
+  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,8 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import StatusPill from '@/components/StatusPill';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
+import { fetchOrGenerateCaptions } from '@/services/claudeApi';
+import type { CaptionResponse } from '@shared/types';
 
 type Props = { route: RouteProp<RootStackParamList, 'Share'> };
 
@@ -25,7 +27,37 @@ export default function ShareScreen({ route }: Props) {
   const [format, setFormat] = useState<CardFormat>('tall');
   const [theme, setTheme] = useState<CardTheme>('dark');
   const [exporting, setExporting] = useState(false);
+  const [captionResponse, setCaptionResponse] = useState<CaptionResponse | null>(null);
+  const [captionsLoading, setCaptionsLoading] = useState(true);
+  const [captionsError, setCaptionsError] = useState(false);
   const { animatedStyle } = useEntryAnimation();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setCaptionsLoading(true);
+      setCaptionsError(false);
+      const result = await fetchOrGenerateCaptions(analysis, 'savage');
+      if (!mounted) return;
+      if (result) {
+        setCaptionResponse(result);
+      } else {
+        setCaptionsError(true);
+      }
+      setCaptionsLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const shareText = captionResponse?.captions?.[0]
+    ? captionResponse.captions[0]
+    : `I scored ${analysis.score}/100 on Am I Broke? — "${analysis.roast}" Try it: aibroke.app`;
+
+  const handleCopyCaption = async (text: string) => {
+    try {
+      await Share.share({ message: text });
+    } catch { /* user cancelled */ }
+  };
 
   // Set header with back arrow
   React.useLayoutEffect(() => {
@@ -54,8 +86,6 @@ export default function ShareScreen({ route }: Props) {
 
   const scoreColor = analysis.score < 40 ? Colors.danger : analysis.score < 65 ? Colors.warning : Colors.success;
   const variant = analysis.score < 40 ? 'danger' : analysis.score < 65 ? 'warning' : 'good';
-
-  const shareText = `I scored ${analysis.score}/100 on Am I Broke? — "${analysis.roast}" Try it: aibroke.app`;
 
   const handleShare = async () => {
     await Share.share({ message: shareText });
@@ -216,11 +246,40 @@ export default function ShareScreen({ route }: Props) {
           ))}
         </View>
 
-        {/* Share text */}
-        <Text style={styles.sectionLabel}>Share Message</Text>
-        <View style={styles.shareTextBox}>
-          <Text style={styles.shareTextContent}>{shareText}</Text>
-        </View>
+        {/* Captions */}
+        <Text style={styles.sectionLabel}>Share Caption</Text>
+        {captionsLoading ? (
+          <View style={styles.captionsLoadingBox}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.captionsLoadingText}>Generating captions...</Text>
+          </View>
+        ) : captionsError || !captionResponse ? (
+          <TouchableOpacity style={styles.captionRetryBtn} onPress={() => {
+            setCaptionsLoading(true);
+            setCaptionsError(false);
+            fetchOrGenerateCaptions(analysis, 'savage').then((r) => {
+              if (r) setCaptionResponse(r);
+              else setCaptionsError(true);
+              setCaptionsLoading(false);
+            });
+          }} activeOpacity={0.7}>
+            <Text style={styles.captionRetryText}>Couldn't generate — tap to retry</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.captionList}>
+            {captionResponse.captions.map((text, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.captionItem}
+                onPress={() => handleCopyCaption(text)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.captionItemText}>{text}</Text>
+                <Text style={styles.captionItemCopy}>Tap to share</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity style={styles.nativeShareBtn} onPress={handleShare} activeOpacity={0.8}>
           <Text style={styles.nativeShareText}>📤  Share with Other Apps</Text>
@@ -300,4 +359,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: Colors.glassBorderLight,
   },
   nativeShareText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.primary, fontWeight: '600' },
+  captionsLoadingBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl },
+  captionsLoadingText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textMuted },
+  captionRetryBtn: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
+  captionRetryText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textMuted },
+  captionList: { gap: Spacing.sm, marginBottom: Spacing.xl },
+  captionItem: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
+  captionItemText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
+  captionItemCopy: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.primary, marginTop: Spacing.xs, textAlign: 'right' },
 });

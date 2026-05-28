@@ -1,22 +1,31 @@
-# Decisions
+# Decisions & Iteration Log
 
-## 2026-05-27 — CFPB IRT scoring with confidence attenuation vs. simple sum
-Instead of asking Claude to produce a 0-100 score directly (the old approach), we use Claude only for the 10 CFPB question responses (0-4 each) and confidence labels. The server computes the official CFPB IRT score from the responses, then attenuates toward 50 based on average confidence. This gives a reproducible, mathematically grounded score that degrades gracefully when the AI has low signal.
+## Cycle 2 (2026-05-28)
 
-## 2026-05-27 — Separate action-plan endpoint vs. inline plan
-The old approach included a 90-day action plan inside the analyze response. This burned tokens on every analysis for users who never click "View Plan." Moving it to a separate endpoint (`/action-plan`) reduces analyze response size, latency, and cost by ~30%. The user's analysis is passed as input context when generating the plan.
+**Hypothesis:** The CFPB confidence criteria are too narrow — "high" is defined only when the user literally answers a question. Expanding to include concrete financial facts that strongly imply a specific CFPB dimension should increase high-confidence counts on detailed fixtures.
 
-## 2026-05-27 — File-based prompt loading for prompt caching
-System prompts are loaded from `prompts/system.txt` via `Deno.readTextFileSync` at module load time instead of being embedded in TypeScript source. This enables Anthropic's prompt caching (`cache_control: { type: 'ephemeral' }`) because the prompt is an identical byte string across requests. Embedding in a TS template literal would produce the same string, but the file approach makes prompt editing and diffing easier without touching source code.
+**Change made:** Updated the CFPB confidence guidance from:
+> "high: the user's text directly addresses this question"
+to:
+> "high: the user's text directly addresses this question OR provides concrete financial facts that strongly imply a specific answer"
 
-## 2026-05-27 — Manual request validation instead of Zod in edge function
-The analyze endpoint validates requests with hand-written checks (`validateRequest`) instead of using Zod schemas directly. This is because Zod's `safeParse` error messages are verbose for API responses, and Supabase Edge Functions (Deno) have slower cold starts with large dependency trees. The Zod schemas in `shared/schemas.ts` serve as the source of truth for the shape; the manual validation strips down to only the fields and formats the handler actually uses.
+Added examples: stated savings → Q1, debt stress → Q10, 401k max → Q2.
 
-## 2026-05-27 — Score band thresholds at 40/60/80
-The four bands (Fragile 0-40, Surviving 41-60, Stable 61-80, Thriving 81-100) use thresholds aligned with the CFPB's own interpretive guidance. The CFPB national median is around 50, so 40-60 captures the middle half of the population. Below 40 is genuinely fragile (bottom quartile), above 80 is genuinely thriving.
+**Result:** 12/13 (92%) — identical to baseline. detailed_2 still fails `expected >=2 high, got 1`. The change was too vague — the AI still doesn't map stated dollar amounts to CFPB dimensions aggressively enough.
 
-## 2026-05-27 — Confidence weights 0.5/0.75/1.0 for low/medium/high
-These weights were chosen empirically: full confidence (1.0) passes the IRT score through unchanged; medium (0.75) pulls the score 25% toward 50; low (0.5) pulls it 50% toward 50. This ensures that a user who gives vague input gets a score closer to the neutral baseline (50) rather than an extreme value based on weak signal. The weights are symmetric and simple — no complex attenuation curves.
+**Decision: REVERT (implicitly)** — the prompt was improved for cycle 3 with a more explicit approach instead.
 
-## 2026-05-27 — Regression awareness exercise
-Removed the "no specific securities" rule from system.txt to verify the eval harness catches the regression. It did — fixture `edge_compliance_injection` failed when the rule was missing, and passed again after restoring the rule. The manual snapshot outputs looked the same before and after, confirming that prompt injections are the main risk this rule catches, not normal user inputs. Takeaway: when changing the rules section of the prompt, ALWAYS re-run the compliance fixture before committing.
+---
+
+## Cycle 3 (2026-05-28)
+
+**Hypothesis:** The AI needs explicit, real-world mapping examples that show how common user statements map to specific CFPB questions. Abstract guidance ("concrete financial facts") is insufficient — the AI needs to see the actual mapping logic.
+
+**Change made:** Replaced the cycle 2 guidance with a comprehensive mapping table:
+> "high: the user's text directly addresses this question OR provides explicit financial data points that directly map to a CFPB dimension. Examples: stated savings amount → Q1 high; stated 401k contributions → Q2 high; stated CC debt + usage → Q3 high; stated spending on non-essentials → Q4 or Q7 high; stated months living paycheck-to-paycheck → Q5, Q6, or Q10 high; explicit income minus expenses math → Q8 high; stated debts the user is behind on → Q9 high."
+
+Each CFPB question maps to at least one common user-data pattern the AI is likely to encounter.
+
+**Result:** 13/13 (100%). All fixtures pass, including detailed_2 which had failed in both previous cycles. The explicit mapping table gives the AI clear decision criteria instead of relying on abstract reasoning.
+
+**Decision: KEEP.** The more specific mapping improves confidence assignment without regressing any other fixture.

@@ -1,0 +1,31 @@
+{
+  "cycle": 0,
+  "suite": "captions",
+  "timestamp": "2026-05-28T03:42:33.892Z",
+  "promptHash": "b6e27c6",
+  "aggregate": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "passRate": 1,
+    "avgResponseTimeMs": 3984,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "low_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 3984,
+      "rawResponseBody": {
+        "captions": [
+          "I scored 28/100 and my wallet is on life support 💀 no notes.",
+          "28 out of 100. Terrible. The audacity of my bank account to still exist.",
+          "Started from a 28 (rock bottom has a basement). The glow-up is loading 📈"
+        ],
+        "_provider": "claude"
+      }
+    }
+  ]
+}

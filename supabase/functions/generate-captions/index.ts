@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-import { generatePlanTool } from './tool.ts';
+import { submitCaptionsTool } from './tool.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
+
 import { SYSTEM_PROMPT } from './prompt.ts';
-const ACTION_PLAN_PROMPT = SYSTEM_PROMPT;
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
@@ -16,36 +16,27 @@ const CORS_HEADERS = {
 };
 const UPSTREAM_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
+
 const VALID_TONES = new Set(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']);
 
-function jsonResponse(body: unknown, status = 200, extraHeaders = {}) {
+function validateRequest(body: any): { valid: boolean; error?: string; parsed?: { score: number; scoreLabel: string; roast: string; tone: string } } {
+  if (!body || typeof body !== 'object') return { valid: false, error: 'Request body must be a JSON object' };
+  const { score, scoreLabel, roast, tone } = body;
+  if (typeof score !== 'number' || score < 0 || score > 100) return { valid: false, error: 'score must be a number 0-100' };
+  if (typeof scoreLabel !== 'string') return { valid: false, error: 'scoreLabel is required' };
+  if (typeof roast !== 'string' || roast.length === 0) return { valid: false, error: 'roast is required' };
+  if (!VALID_TONES.has(tone)) return { valid: false, error: `Invalid tone: ${tone}` };
+  return { valid: true, parsed: { score, scoreLabel, roast, tone } };
+}
+
+function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   const headers = { ...CORS_HEADERS, 'Content-Type': 'application/json', ...extraHeaders };
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-function validateRequest(body: any): { valid: boolean; error?: string; parsed?: any } {
-  if (!body || typeof body !== 'object') return { valid: false, error: 'Request body must be a JSON object' };
-  const { analysis, tone, userContext } = body;
-  if (!analysis || typeof analysis !== 'object') return { valid: false, error: 'analysis is required' };
-  if (typeof analysis.score !== 'number') return { valid: false, error: 'analysis.score required' };
-  if (!VALID_TONES.has(tone)) return { valid: false, error: `Invalid tone: ${tone}` };
-  return { valid: true, parsed: { analysis, tone, userContext: userContext || {} } };
-}
-
-function sanitizePlanOutput(raw: any): any {
-  const clone = JSON.parse(JSON.stringify(raw));
-  const truncate = (s: any, max: number) => typeof s === 'string' && s.length > max ? s.slice(0, max) : s;
-  if (clone.overallMessage) clone.overallMessage = truncate(clone.overallMessage, 400);
-  if (Array.isArray(clone.steps)) {
-    clone.steps = clone.steps.map((step: any) => ({
-      ...step,
-      week: truncate(step.week, 20),
-      title: truncate(step.title, 80),
-      description: truncate(step.description, 300),
-      impact: truncate(step.impact, 200),
-    }));
-  }
-  return clone;
+function sanitizeCaptions(raw: any): string[] {
+  const captions = Array.isArray(raw?.captions) ? raw.captions.slice(0, 3) : [];
+  return captions.map((c: any) => typeof c === 'string' && c.length > 150 ? c.slice(0, 150) : String(c ?? ''));
 }
 
 async function callClaude(messages: Array<{ role: string; content: string }>, attempt = 0): Promise<any> {
@@ -69,11 +60,11 @@ async function callClaude(messages: Array<{ role: string; content: string }>, at
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2000,
-        temperature: 0.2,
-        system: [{ type: 'text', text: ACTION_PLAN_PROMPT, cache_control: { type: 'ephemeral' } }],
-        tools: [generatePlanTool],
-        tool_choice: { type: 'tool', name: 'generate_plan' },
+        max_tokens: 1500,
+        temperature: 0.8,
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        tools: [submitCaptionsTool],
+        tool_choice: { type: 'tool', name: 'submit_captions' },
         messages,
       }),
       signal: controller.signal,
@@ -83,13 +74,13 @@ async function callClaude(messages: Array<{ role: string; content: string }>, at
 
     if (response.status === 429) {
       const retryAfter = parseInt(response.headers.get('retry-after') || '5');
-      console.warn('[action-plan] Rate limited, retrying after', retryAfter, 's', `(attempt ${attempt + 1})`);
+      console.warn('[generate-captions] Rate limited, retrying after', retryAfter, 's', `(attempt ${attempt + 1})`);
       await new Promise((r) => setTimeout(r, retryAfter * 1000));
       return callClaude(messages, attempt + 1);
     }
 
     if (response.status >= 500) {
-      console.warn(`[action-plan] Server error ${response.status}, retrying... (attempt ${attempt + 1})`);
+      console.warn(`[generate-captions] Server error ${response.status}, retrying... (attempt ${attempt + 1})`);
       await new Promise((r) => setTimeout(r, 2000));
       return callClaude(messages, attempt + 1);
     }
@@ -109,7 +100,7 @@ async function callClaude(messages: Array<{ role: string; content: string }>, at
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      console.warn(`[action-plan] Request timed out after ${UPSTREAM_TIMEOUT_MS}ms (attempt ${attempt + 1})`);
+      console.warn(`[generate-captions] Request timed out after ${UPSTREAM_TIMEOUT_MS}ms (attempt ${attempt + 1})`);
       if (attempt + 1 < MAX_RETRIES) return callClaude(messages, attempt + 1);
       const error: any = new Error('Claude upstream timeout');
       error.stage = 'upstream_timeout';
@@ -138,9 +129,9 @@ async function callGroq(messages: Array<{ role: string; content: string }>, atte
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 2000,
-        temperature: 0.2,
-        messages: [{ role: 'system', content: ACTION_PLAN_PROMPT }, ...messages],
+        max_tokens: 1500,
+        temperature: 0.8,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       }),
       signal: controller.signal,
     });
@@ -149,13 +140,13 @@ async function callGroq(messages: Array<{ role: string; content: string }>, atte
 
     if (response.status === 429) {
       const retryAfter = parseInt(response.headers.get('retry-after') || '5');
-      console.warn(`[action-plan] Groq rate limited, retrying after ${retryAfter}s (attempt ${attempt + 1})`);
+      console.warn(`[generate-captions] Groq rate limited, retrying after ${retryAfter}s (attempt ${attempt + 1})`);
       await new Promise((r) => setTimeout(r, retryAfter * 1000));
       return callGroq(messages, attempt + 1);
     }
 
     if (response.status >= 500) {
-      console.warn(`[action-plan] Groq server error ${response.status}, retrying... (attempt ${attempt + 1})`);
+      console.warn(`[generate-captions] Groq server error ${response.status}, retrying... (attempt ${attempt + 1})`);
       await new Promise((r) => setTimeout(r, 2000));
       return callGroq(messages, attempt + 1);
     }
@@ -188,7 +179,7 @@ async function callGroq(messages: Array<{ role: string; content: string }>, atte
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      console.warn(`[action-plan] Groq request timed out after ${UPSTREAM_TIMEOUT_MS}ms (attempt ${attempt + 1})`);
+      console.warn(`[generate-captions] Groq request timed out after ${UPSTREAM_TIMEOUT_MS}ms (attempt ${attempt + 1})`);
       if (attempt + 1 < MAX_RETRIES) return callGroq(messages, attempt + 1);
       const error: any = new Error('Groq upstream timeout');
       error.stage = 'upstream_timeout';
@@ -210,14 +201,17 @@ serve(async (req) => {
     const selectedProvider = provider === 'groq' ? 'groq' : 'claude';
 
     const validation = validateRequest(body);
-    if (!validation.valid) return jsonResponse({ error: validation.error, stage: 'parse_error' }, 400);
+    if (!validation.valid) {
+      return jsonResponse({ error: validation.error, stage: 'request_validation' }, 400);
+    }
+    const parsedBody = validation.parsed!;
 
-    await enforceRateLimit(req, 'action-plan');
+    await enforceRateLimit(req, 'generate-captions');
 
     if (selectedProvider === 'groq' && !GROQ_API_KEY) return jsonResponse({ error: 'Groq API key not set', stage: 'config_error' }, 500);
     if (selectedProvider === 'claude' && !ANTHROPIC_API_KEY) return jsonResponse({ error: 'Claude API key not set', stage: 'config_error' }, 500);
 
-    const userMessage = JSON.stringify(validation.parsed);
+    const userMessage = JSON.stringify(parsedBody);
     const messages = [{ role: 'user', content: userMessage }];
 
     let rawOutput: any;
@@ -235,14 +229,21 @@ serve(async (req) => {
       rawOutput = toolUse.input;
     }
 
-    const sanitized = sanitizePlanOutput(rawOutput);
+    const sanitized = sanitizeCaptions(rawOutput);
 
-    return jsonResponse({ ...sanitized, _provider: selectedProvider });
+    if (sanitized.length < 3) {
+      const error: any = new Error(`Expected 3 captions, got ${sanitized.length}`);
+      error.stage = 'validation_error';
+      throw error;
+    }
+
+    const validated = sanitized.map((c: string) => c.length > 150 ? c.slice(0, 150) : c);
+    return jsonResponse({ captions: validated, _provider: selectedProvider });
   } catch (error: any) {
-    console.error('[action-plan] Error:', error);
+    console.error('[generate-captions] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     const stage = error.stage || 'exception';
     const status = error.status || 500;
-    return jsonResponse({ error: `Plan generation failed: ${message}`, stage }, status);
+    return jsonResponse({ error: `Caption generation failed: ${message}`, stage }, status);
   }
 });

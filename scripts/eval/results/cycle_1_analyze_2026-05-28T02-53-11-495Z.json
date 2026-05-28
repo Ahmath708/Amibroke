@@ -1,0 +1,147 @@
+{
+  "cycle": 1,
+  "suite": "analyze",
+  "timestamp": "2026-05-28T02:53:11.495Z",
+  "promptHash": "b6e27c6",
+  "aggregate": {
+    "passed": 0,
+    "failed": 13,
+    "total": 13,
+    "passRate": 0,
+    "avgResponseTimeMs": 389.7692307692308,
+    "totalApiCalls": 13
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "vague_1",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 1271,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "vague_2",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 827,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "vague_3",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 272,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "partial_1",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 264,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "partial_2",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 269,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "partial_3",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 268,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "detailed_1",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 277,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "detailed_2",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 265,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "detailed_3",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 272,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "edge_negative_savings",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 265,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "edge_bankSnapshot",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 277,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "edge_compliance_injection",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 280,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    },
+    {
+      "id": "cfpb_thriving",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 260,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    }
+  ]
+}
