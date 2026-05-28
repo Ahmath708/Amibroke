@@ -8,7 +8,7 @@ This file covered the **action-plan and generate-captions iteration cycles** bui
 
 | Step | What | Result | Decision |
 |---|---|---|---|
-| **0** | Consolidate prompt source-of-truth | Adapted — content already synced; kept `prompt.ts` as runtime (`.txt` files don't bundle on deploy) | Adapted |
+| **0** | Consolidate prompt source-of-truth | Switched all 3 functions to `Deno.readTextFileSync` from `prompts/system.txt`; deleted `prompt.ts` files | Done |
 | **D1** | Build `fixtures.action-plan.ts` from real analyze outputs | 8 fixtures built (3 Fragile, 5 Surviving, 1 Thriving, all 5 tones) | Done |
 | **D2** | Refine `fixtures.captions.ts` with real analyze outputs | 6 fixtures with real score/scoreLabel/roast from cycle_3 analyze | Done |
 | **E1** | action-plan baseline | 8/8 (100%) — assertion bug fix (SOL substring → word-boundary) | Done |

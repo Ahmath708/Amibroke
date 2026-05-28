@@ -1,8 +1,13 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { generatePlanTool } from './tool.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
-import { SYSTEM_PROMPT } from './prompt.ts';
-const ACTION_PLAN_PROMPT = SYSTEM_PROMPT;
+
+const ACTION_PLAN_PROMPT = Deno.readTextFileSync(
+  new URL('./prompts/system.txt', import.meta.url),
+);
+if (!ACTION_PLAN_PROMPT || ACTION_PLAN_PROMPT.length < 100) {
+  throw new Error('system.txt missing or truncated');
+}
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';

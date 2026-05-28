@@ -123,11 +123,9 @@ All three endpoints have:
 
 ### Prompt System
 
-System prompts live in **two synchronized sources** per function:
-- `supabase/functions/*/prompts/system.txt` — canonical text file for easy editing/diffs
-- `supabase/functions/*/prompt.ts` — TypeScript export (runtime source; Supabase CLI bundles `.ts`, not `.txt`)
+Each function loads its system prompt from `prompts/system.txt` via `Deno.readTextFileSync` at module init, which fails fast on missing/truncated files. This means the `.txt` file is the single source of truth — edit it directly and redeploy. No separate `prompt.ts` copy to sync.
 
-When iterating prompts during eval cycles, edit both files. Content is always verified to match before deploying. Prompts are cached with Anthropic's `cache_control: { type: 'ephemeral' }`.
+Prompts are cached with Anthropic's `cache_control: { type: 'ephemeral' }`.
 
 ### Client Persistence
 
@@ -234,19 +232,16 @@ AmIBroke/
 │       │   ├── index.ts       # Handler: validate → call AI → compute → return
 │       │   ├── tool.ts        # submit_analysis tool JSON Schema
 │       │   ├── getBaselinesForRequest.ts
-│       │   ├── prompt.ts      # System prompt as TS string
 │       │   └── prompts/
-│       │       └── system.txt # Source prompt file
+│       │       └── system.txt # System prompt (loaded via Deno.readTextFileSync)
 │       ├── action-plan/       # 90-day plan endpoint
 │       │   ├── index.ts
 │       │   ├── tool.ts
-│       │   ├── prompt.ts
 │       │   └── prompts/
 │       │       └── system.txt
 │       ├── generate-captions/ # Share-card caption generator
 │       │   ├── index.ts       # Temperature 0.8, tool-use, Groq fallback
 │       │   ├── tool.ts        # submit_captions tool JSON Schema
-│       │   ├── prompt.ts      # Caption-specific system prompt
 │       │   └── prompts/
 │       │       └── system.txt
 │       ├── create-payment-intent/
