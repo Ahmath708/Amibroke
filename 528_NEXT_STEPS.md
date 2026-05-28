@@ -20,8 +20,8 @@ This file covered the **action-plan and generate-captions iteration cycles** bui
 
 ## Key Stats
 - **Counter used:** 34/40 calls (6 remaining — no reset needed)
-- **Branch:** `feature/action-plan` (2b4beea..ac64238)
-- **Deployments:** `action-plan` deployed 3 times, `generate-captions` deployed 2 times
+- **Branch:** `feature/action-plan` (2b4beea..dafa755)
+- **Deployments:** `action-plan` deployed 4 times, `generate-captions` deployed 3 times, `analyze` deployed 1 time
 - **All decisions documented** in `DECISIONS.md`
 - **All results saved** in `scripts/eval/results/`
 
