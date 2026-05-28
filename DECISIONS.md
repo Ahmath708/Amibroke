@@ -111,4 +111,61 @@ Confidence calibration from cycle 2 was preserved or improved. No regressions.
 | 2 | Confidence anchored to data quality | 100% (8/8) |
 | 3 | Every step references a specific dollar amount | 100% (8/8) |
 
-All three prompts merged into the live `system.txt`/`prompt.ts`. Ready for captions cycles (Section F).
+---
+
+## Captions Section (2026-05-28)
+
+### Cycle 1 (Baseline) — 6 fixtures, 100% pass rate
+
+**Change made:** None — baseline run with zero prompt changes.
+
+**Results:** 6/6 (100%).
+- All 3 captions present, distinct, ≤150 chars, no forbidden strings.
+- Most fixtures have the 3-angle pattern (self-deprecating / shock / hopeful comeback).
+- Quality observation: many captions share the same opening pattern ("Scored X/100—..." and "X/100 and...") reducing perceived distinctness.
+- High-score captions tend to be shorter (78-97 chars for high_savage) vs low-score (115-124 chars).
+- Counter: 22/40 after cycle 1.
+
+### Cycle 2 — 6 fixtures, 100% (structural uniqueness)
+
+**Hypothesis:** Captions too often share the same opening pattern ("Scored X/100" / "X/100 and..." / "X today"). Each caption should feel like an independent screenshot post.
+
+**Change made:**
+> Changed "Each caption should take a different angle: self-deprecating / shock / hopeful comeback"
+> to "Each caption must take a different angle: one self-deprecating, one shock-stat, one hopeful comeback. The 3 captions must also be structurally distinct — no two may start with the same opening pattern. Each must read like an independent screenshot someone would actually share."
+
+**Result:** 6/6 (100%). Captions are more structurally distinct:
+- low_savage #3 drops the "/100" suffix pattern vs C1
+- high_older_sibling #2 gained a specific stat ("87% of people wish they had...") instead of generic "almost unfairly healthy"
+- No two captions share a first-15-char prefix across all 6 fixtures
+
+**Decision: KEEP.** Captions feel more like independent shareable posts rather than triplets from the same template.
+
+### Cycle 3 — 6 fixtures, 100% (min length governor)
+
+**Hypothesis:** High-score captions were too short (78-97 chars) — they don't feel substantive enough to share standalone. A minimum length forces richer content.
+
+**Change made:**
+> Changed "Each ≤150 characters" to "Each between 100 and 150 characters"
+
+**Result:** 6/6 (100%). Length distribution tightened dramatically:
+| Metric | C1 | C2 | C3 |
+|---|---|---|---|
+| Range | 78-124 | 84-150 | 99-134 |
+| Under 100 | 3/18 | 2/18 | 1/18 |
+| Over 140 | 0/18 | 3/18 | 0/18 |
+
+Only 1 caption at 99 chars (mid_gentle #3 — 1 short of target). The constraint eliminated both the too-short (78-84) and near-cap (150) captions, producing a tighter, more consistent length band.
+
+**Quality improvement:** High-score captions now carry more specific detail (e.g., high_older_sibling #1 "even I didn't expect to be this person" vs C1's generic "Older me would NOT believe this"; high_savage #2 references "average American saves less than 5%" stat).
+
+**Decision: KEEP.** The 100-150 char constraint produces more consistently substantive captions without hitting the cap.
+
+### Captions Summary
+| Cycle | Change | Pass Rate |
+|---|---|---|
+| 1 (baseline) | None | 100% (6/6) |
+| 2 | Structural uniqueness enforced | 100% (6/6) |
+| 3 | Min 100-char length constraint | 100% (6/6) |
+
+All three prompts merged into the live `system.txt`/`prompt.ts`. Counter at 34/40 — 6 calls remaining.

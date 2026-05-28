@@ -1,0 +1,101 @@
+{
+  "cycle": 1,
+  "suite": "captions",
+  "timestamp": "2026-05-28T16:21:31.873Z",
+  "promptHash": "977669e",
+  "aggregate": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "passRate": 1,
+    "avgResponseTimeMs": 4378,
+    "totalApiCalls": 6
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "low_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4954,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 15/100 — Financially Fragile. My credit cards aren't just in my wallet, they're basically my roommates. 💳😭",
+          "15 out of 100. My credit card is co-signing my lifestyle at 21% interest and honestly? It has more faith in me than I do. 💀",
+          "Started from a 15/100 Financially Fragile. The only way out is up — and this time I'm not putting it on the card. 📈🔥"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "low_therapist",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4271,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 33/100: Financially Fragile. Turns out 'I'll pay it off next month' was less a plan and more a lifestyle. 😅",
+          "33/100 and $250 in savings while CC debt runs the show. I am Visa's favorite customer and I am not okay. 💳💀",
+          "33 today, but awareness is the first deposit. Rebuilding looks messy at the start — and that's still progress. 🌱"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "mid_gentle",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4243,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 45/100. Turns out earning more doesn't automatically mean keeping more. Lesson learned the humbling way. 😅",
+          "45/100 and $50k in credit card debt on a $180k salary. The math isn't mathing, and I finally had to face it. 😬",
+          "My score said 'Surviving' and honestly? That's the push I needed to stop surviving and start actually thriving. 💪"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "mid_finance_bro",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4697,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 51/100 💀 Got a house, got a job, and still out here putting $5 of gas in a Ferrari. The math ain't mathing bro.",
+          "51/100 and my credit card balance is literally the villain in my origin story. No notes. All facts. 😭📊",
+          "51 today. But the CC debt's getting slayed, the savings rate's going up, and the glow-up arc starts NOW. 📈🔥"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "high_older_sibling",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 3914,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 87/100 on my financial health check 👀 Older me would NOT believe this.",
+          "87/100 — apparently my finances are 'almost unfairly healthy.' I'll take it. 💪",
+          "From stressing about every swipe to an 87. The glow-up is real and it's documented. 🌱"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "high_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4189,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 87/100 on my finances and somehow I'm still the problem 💅 at least the app said so.",
+          "87/100. Thriving. Meanwhile inflation is out here quietly nibbling my $80k like a little rat 🐀💀",
+          "Started budgeting as a joke. Ended up with an 87. The villain arc is officially a glow-up. 📈"
+        ],
+        "_provider": "claude"
+      }
+    }
+  ]
+}

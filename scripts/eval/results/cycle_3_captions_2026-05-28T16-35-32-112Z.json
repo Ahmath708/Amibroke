@@ -1,0 +1,101 @@
+{
+  "cycle": 3,
+  "suite": "captions",
+  "timestamp": "2026-05-28T16:35:32.112Z",
+  "promptHash": "977669e",
+  "aggregate": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "passRate": 1,
+    "avgResponseTimeMs": 4589,
+    "totalApiCalls": 6
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "low_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 5283,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 15/100 — Financially Fragile. My credit cards are literally co-signing my lifestyle at 21% interest 💳🔥",
+          "15/100. The average credit card APR is 21%… and apparently I let mine move in rent-free. This is embarrassing.",
+          "From letting debt run my life to knowing better — 15/100 is the rock bottom that finally made me pay attention 👀"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "low_therapist",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4616,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 33/100 — Financially Fragile. Turns out 'I'll figure it out' is not a budget strategy. But awareness is step one. 🛋️",
+          "Most people with $4k/mo income don't realize CC interest is quietly eating hundreds a month. I didn't either. My score: 33/100. 😬",
+          "33/100 and finally ready to stop funding Visa's earnings call with my paycheck. Healing era starts now. 💪✨"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "mid_gentle",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 3918,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 45/100 — 'Surviving' is generous when you're earning six figures and still losing the credit card game 😅",
+          "Making $180k/year and carrying $50k in credit card debt is more common than you think. The income isn't the fix. The habits are. 💡",
+          "45/100 today, but knowing your score is literally step one. The comeback is already in progress. 🌱"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "mid_finance_bro",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4620,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 51/100 — Surviving. Got the house, got the job, saving $200/mo like I'm filling a Ferrari with $5 of gas 💀📉",
+          "51% of Americans with a mortgage carry CC debt. I am VERY much that statistic and my scorecard just called me out 😭🔥",
+          "CC balance was the villain. 51/100 is the wake-up call. The glow-up arc starts now — watch this space 💪📈"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "high_older_sibling",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4578,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 87/100 on my finances and honestly? Even I didn't expect to be this person 😅 older me is shook.",
+          "87/100 — only 13% away from perfect, but inflation is out here quietly nibbling at idle cash like a sneaky little gremlin 👀",
+          "Turns out years of saying 'no' to stuff actually adds up. 87/100 and Thriving. Future me says thank you 🙌"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "high_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4519,
+      "rawResponseBody": {
+        "captions": [
+          "87/100. I'm thriving financially and somehow that's still not enough to stop me from stress-checking my bank app at 2am. 💅",
+          "The average American saves less than 5% of their income. I scored 87/100 and inflation is STILL out here personally victimizing me. 😤",
+          "From budgeting on vibes to an 87 — turns out 'Thriving' hits different when you actually did the work. The glow-up is real. 🔥"
+        ],
+        "_provider": "claude"
+      }
+    }
+  ]
+}

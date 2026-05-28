@@ -1,0 +1,101 @@
+{
+  "cycle": 2,
+  "suite": "captions",
+  "timestamp": "2026-05-28T16:28:28.330Z",
+  "promptHash": "977669e",
+  "aggregate": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "passRate": 1,
+    "avgResponseTimeMs": 4880.5,
+    "totalApiCalls": 6
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "low_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 5637,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 15/100 on my finances. My credit cards are literally co-signing my lifestyle at 21% interest 💀 Financially Fragile era.",
+          "15/100. 1 in 3 people carrying credit card debt pay 20%+ in interest — and I'm their mascot apparently. 👀",
+          "From letting credit cards run my life to knowing my actual score. 15 is ugly, but at least I looked. Glow-up incoming. 📈"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "low_therapist",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4945,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 33/100 — 'Financially Fragile' is just a gentle way of saying I've been paying a monthly subscription fee to stay broke. Therapy starts now. 💸",
+          "The average person carries CC debt. I carry CC debt, $250 in savings, and the audacity to call it a financial plan. 33/100 hits different. 😬",
+          "33/100 and finally ready to stop funding Visa's earnings call with my paycheck. Fragile doesn't have to be forever. 🌱"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "mid_gentle",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4477,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 45/100 — 'Surviving' is generous when you're earning six figures and still losing to your credit card bill 😅",
+          "Making $180k a year with $50k in credit card debt is somehow a thing that exists. And apparently it's a lifestyle problem, not a math problem. 👀",
+          "45/100 today. But knowing the real problem is the first step to actually fixing it. Glow-up era loading... 💛"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "mid_finance_bro",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4999,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 51/100 (Surviving) 😬 Got the house, got the job, saving $200/mo like I'm filling a Ferrari with $5 of gas. The math ain't mathing.",
+          "51/100 and my CC balance is literally the villain in my origin story. Most homeowners with a steady income are still leaving thousands on the table ev",
+          "From Ferrari-with-no-gas to actually fixing the credit card problem. 51 is not the end of the story — it's just the plot twist before the glow-up. 💪"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "high_older_sibling",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 5128,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 87/100 on my financial health check 👀 Apparently my only problem is being *too* good with money. Older me would not believe this era.",
+          "87% of people wish they had an emergency fund this solid. The real threat now? Letting $80k sit idle while inflation quietly steals the vibe 💸",
+          "From 'I'll figure it out later' to Thriving at 87/100 — the glow-up is real and the spreadsheets did NOT lie 🌱"
+        ],
+        "_provider": "claude"
+      }
+    },
+    {
+      "id": "high_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4097,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 87/100 on my finances and I'm still the most stressed person in the room 😭💸",
+          "87/100. Only 13 points from perfect — but inflation is out here eating my $80k like a free buffet 🍽️📉",
+          "Turns out I'm Thriving. Never thought fixing my money habits would slap this hard. 87/100 and it's just the beginning 🔥"
+        ],
+        "_provider": "claude"
+      }
+    }
+  ]
+}
