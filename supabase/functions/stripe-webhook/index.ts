@@ -1,7 +1,12 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
+if (!STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY not set');
+
 const STRIPE_WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+if (!STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET not set');
+
 const PRICE_ACTION_PLAN = Deno.env.get('STRIPE_PRICE_ID_ACTION_PLAN')!;
 const PRICE_DEEP_DIVE = Deno.env.get('STRIPE_PRICE_ID_DEEP_DIVE')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -107,7 +112,7 @@ serve(async (req) => {
             }).eq('stripe_customer_id', stripeCustomerId);
           } else {
             const customerResp = await fetch(`https://api.stripe.com/v1/customers/${stripeCustomerId}`, {
-              headers: { 'Authorization': `Bearer ${Deno.env.get('STRIPE_SECRET_KEY')}` },
+              headers: { 'Authorization': `Bearer ${STRIPE_SECRET_KEY}` },
             });
             if (customerResp.ok) {
               const customer = await customerResp.json();

@@ -3,10 +3,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { CORS_HEADERS, jsonResponse, handleOptions } from '../_shared/cors.ts';
 import { stripeFetch } from '../_shared/stripe.ts';
 
+const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
+if (!STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY not set');
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const PRICE_ACTION_PLAN = Deno.env.get('STRIPE_PRICE_ID_ACTION_PLAN')!;
-const PRICE_DEEP_DIVE = Deno.env.get('STRIPE_PRICE_ID_DEEP_DIVE')!;
+const PRICE_ACTION_PLAN = Deno.env.get('STRIPE_PRICE_ID_ACTION_PLAN');
+const PRICE_DEEP_DIVE = Deno.env.get('STRIPE_PRICE_ID_DEEP_DIVE');
+if (!PRICE_ACTION_PLAN) throw new Error('STRIPE_PRICE_ID_ACTION_PLAN not set');
+if (!PRICE_DEEP_DIVE) throw new Error('STRIPE_PRICE_ID_DEEP_DIVE not set');
 
 serve(async (req) => {
   const opt = handleOptions(req);
@@ -41,7 +46,7 @@ serve(async (req) => {
       const customer = await stripeFetch('/customers', {
         method: 'POST',
         body: new URLSearchParams({
-          metadata: JSON.stringify({ user_id: user.id }),
+          'metadata[user_id]': user.id,
         }),
       });
       custId = customer.id;

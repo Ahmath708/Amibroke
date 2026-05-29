@@ -1,5 +1,6 @@
 // End-to-end mock tests for 528_BACKEND_FINAL
-// Requires: supabase start, supabase functions serve, stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
+// Requires: supabase start, supabase functions serve (with .env.stripe.local)
+//           stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
 // Run with: npx tsx scripts/eval/test-backend-final.ts
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
@@ -13,6 +14,13 @@ async function main() {
   const results: TestResult[] = [];
   const supabaseUrl = SUPABASE_URL;
 
+  let userAToken = '';
+  let userBToken = '';
+  let userIdA = '';
+  let userIdB = '';
+  let analysisId = '';
+  let communityPostId = '';
+
   async function test(name: string, fn: () => Promise<boolean>, note?: string) {
     try {
       const pass = await fn();
@@ -24,89 +32,178 @@ async function main() {
     }
   }
 
+  async function signUp(email: string, password: string): Promise<{ token: string; id: string } | null> {
+    const res = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return { token: body.access_token, id: body.user?.id || body.id };
+  }
+
+  async function supabaseQuery(method: string, path: string, token: string, body?: any): Promise<Response> {
+    const headers: Record<string, string> = {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+    };
+    return fetch(`${supabaseUrl}/rest/v1/${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  }
+
+  async function supabaseRpc(fn: string, token: string, params: Record<string, any>): Promise<any> {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(params),
+    });
+    return res.ok ? res.json() : null;
+  }
+
   console.log('Starting 528_BACKEND_FINAL E2E tests...\n');
 
-  // Auth tests (Step 1)
-  console.log('\n--- Auth Tests (Step 1) ---');
+  // ─── Step 1: Auth Tests ─────────────────────────────────────────
+  console.log('--- Auth Tests (Step 1) ---');
 
-  await test('A1: Create two users with same email prefix (collision safe)',
-    async () => {
-      const res1 = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-        body: JSON.stringify({ email: 'test1@gmail.com', password: 'password123' }),
-      });
-      const res2 = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-        body: JSON.stringify({ email: 'test1@yahoo.com', password: 'password123' }),
-      });
-      return res1.ok && res2.ok;
+  await test('A1: Create two users with same email prefix (collision safe)', async () => {
+    const u1 = await signUp('test1@gmail.com', 'password123');
+    const u2 = await signUp('test1@yahoo.com', 'password123');
+    if (!u1 || !u2) return false;
+    userAToken = u1.token;
+    userBToken = u2.token;
+    userIdA = u1.id;
+    userIdB = u2.id;
+    return true;
+  });
+
+  await test('A2: Both profiles have username = NULL after signup', async () => {
+    const res = await supabaseQuery('GET', 'profiles?select=username', userAToken);
+    if (!res.ok) return false;
+    const profiles = await res.json();
+    return profiles.every((p: any) => p.username === null);
+  }, 'username is nullable - trigger inserts NULL');
+
+  await test('A3: User without username cannot insert community post (RLS)', async () => {
+    const res = await supabaseQuery('POST', 'community_posts', userAToken, {
+      user_id: userIdA, display_name: 'anon', score: 50,
+      score_label: 'Test', roast: 'test', summary: 'test',
     });
+    return !res.ok;
+  }, 'RLS blocks post when username IS NULL');
 
-  await test('A2: Both profiles should have username = NULL after signup',
-    async () => {
-      // Query profiles via the API
-      const res = await fetch(`${supabaseUrl}/rest/v1/profiles?select=username`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-      });
-      if (!res.ok) return false;
-      const profiles = await res.json();
-      return profiles.every((p: any) => p.username === null);
-    }, 'username is nullable after signup trigger fix');
+  await test('A4: Set username then community post succeeds', async () => {
+    const rpcResult = await supabaseRpc('set_username', userAToken, { p_username: 'jasontest' });
+    if (!rpcResult?.ok) return false;
 
-  await test('A3: User without username cannot insert community post (RLS gate)',
-    async () => {
-      const res = await fetch(`${supabaseUrl}/rest/v1/community_posts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ user_id: '00000000-0000-0000-0000-000000000001', display_name: 'anon',
-          score: 50, score_label: 'Test', roast: 'test', summary: 'test' }),
-      });
-      return !res.ok; // Should be rejected
+    const postRes = await supabaseQuery('POST', 'community_posts', userAToken, {
+      user_id: userIdA, display_name: 'jasontest', score: 65,
+      score_label: 'Surviving', roast: 'test roast', summary: 'test summary',
     });
+    if (!postRes.ok) return false;
+    const posts = await postRes.json();
+    communityPostId = Array.isArray(posts) ? posts[0]?.id : '';
+    return !!communityPostId;
+  }, 'set_username RPC works, then post succeeds');
 
-  // Stripe tests (Steps 4-7) - basic sanity
-  console.log('\n--- Stripe Tests (Steps 4-7) ---');
-
-  await test('S6: Webhook returns 200 with received:true for unhandled events',
-    async () => {
-      const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'payment_method.attached', data: { object: {} } }),
-      });
-      const body = await res.json();
-      return res.ok && body.received === true;
-    });
-
-  await test('S7: Invalid Stripe-Signature header returns 400',
-    async () => {
-      const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Stripe-Signature': 'invalid' },
-        body: JSON.stringify({ type: 'customer.subscription.created', data: { object: {} } }),
-      });
-      return res.status === 400;
-    });
-
-  // Community tests (Step 2)
+  // ─── Step 2: Community Tests ─────────────────────────────────────
   console.log('\n--- Community Tests (Step 2) ---');
 
-  await test('C4: Emoji whitelist check — invalid emoji rejected',
-    async () => {
-      const res = await fetch(`${supabaseUrl}/rest/v1/post_reactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ post_id: '00000000-0000-0000-0000-000000000001',
-          user_id: '00000000-0000-0000-0000-000000000001', emoji: '👀' }),
-      });
-      return !res.ok; // Should be rejected by CHECK constraint
+  await test('C1: Share analysis to feed creates community_posts row', async () => {
+    const analysisRes = await supabaseQuery('POST', 'analyses', userAToken, {
+      user_id: userIdA, input_text: 'test', score: 65, score_label: 'Surviving',
+      score_color: '#FFB020', summary: 'test summary', roast: 'test roast',
+      monthly_income: 5000, monthly_expenses: 3000, monthly_savings: 2000,
+      debt_total: 0, savings_rate: 0.4, emergency_fund_months: 3,
+      debt_to_income_ratio: 0, insights: [], debts: [],
+    });
+    if (!analysisRes.ok) return false;
+    const aData = await analysisRes.json();
+    analysisId = Array.isArray(aData) ? aData[0]?.id : aData?.id;
+
+    const shareRes = await supabaseQuery('POST', 'community_posts', userAToken, {
+      user_id: userIdA, analysis_id: analysisId, display_name: 'jasontest',
+      score: 65, score_label: 'Surviving', roast: 'test roast', summary: 'test summary',
+    });
+    return shareRes.ok;
+  });
+
+  await test('C2: Same analysis cannot be shared twice (UNIQUE)', async () => {
+    const res = await supabaseQuery('POST', 'community_posts', userAToken, {
+      user_id: userIdA, analysis_id: analysisId, display_name: 'jasontest',
+      score: 65, score_label: 'Surviving', roast: 'test', summary: 'test',
+    });
+    return !res.ok;
+  }, 'unique_post_per_analysis constraint enforced');
+
+  await test('C3: Insert valid emoji reaction succeeds', async () => {
+    const res = await supabaseQuery('POST', 'post_reactions', userAToken, {
+      post_id: communityPostId, user_id: userIdA, emoji: '🔥',
+    });
+    return res.ok;
+  });
+
+  await test('C4: Invalid emoji reaction rejected by CHECK constraint', async () => {
+    const res = await supabaseQuery('POST', 'post_reactions', userAToken, {
+      post_id: communityPostId, user_id: userIdA, emoji: '👀',
+    });
+    return !res.ok;
+  });
+
+  await test('C5: Reaction count trigger — insert two, count=2, delete one, count=1', async () => {
+    await supabaseQuery('POST', 'post_reactions', userBToken, {
+      post_id: communityPostId, user_id: userIdB, emoji: '🔥',
     });
 
-  // Summary
+    const res1 = await supabaseQuery('GET', `community_posts?id=eq.${communityPostId}&select=reactions`, userAToken);
+    if (!res1.ok) return false;
+    const post1 = await res1.json();
+    const countAfterTwo = post1[0]?.reactions?.['🔥'] ?? 0;
+    if (countAfterTwo !== 2) return false;
+
+    await supabaseQuery('DELETE', `post_reactions?post_id=eq.${communityPostId}&user_id=eq.${userIdB}&emoji=eq.🔥`, userBToken);
+
+    const res2 = await supabaseQuery('GET', `community_posts?id=eq.${communityPostId}&select=reactions`, userAToken);
+    if (!res2.ok) return false;
+    const post2 = await res2.json();
+    const countAfterDelete = post2[0]?.reactions?.['🔥'] ?? 0;
+    return countAfterDelete === 1;
+  }, 'trigger maintains accurate count via COUNT(*)');
+
+  // ─── Stripe Tests (Steps 4-7) ────────────────────────────────────
+  console.log('\n--- Stripe Tests (Steps 4-7) ---');
+
+  await test('S1: create-checkout-session with valid JWT returns URL', async () => {
+    const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userAToken}` },
+      body: JSON.stringify({ plan: 'action_plan' }),
+    });
+    const data = await res.json();
+    return res.ok && typeof data.url === 'string' && data.url.includes('checkout.stripe.com');
+  });
+
+  await test('S6: Webhook returns 200 with received:true for unhandled events', async () => {
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'payment_method.attached', data: { object: {} } }),
+    });
+    const body = await res.json();
+    return res.ok && body.received === true;
+  });
+
+  await test('S7: Invalid Stripe-Signature header returns 400', async () => {
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': 't=1234567890,v1=invalid' },
+      body: JSON.stringify({ type: 'customer.subscription.created', data: { object: {} } }),
+    });
+    return res.status === 400;
+  });
+
+  // ─── Summary ─────────────────────────────────────────────────────
   console.log('\n--- Summary ---');
   console.log('| Test | Pass/Fail | Note |');
   console.log('|------|-----------|------|');
