@@ -9,7 +9,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, PURCHASE_PRODUCTS } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
-import { createPaymentIntent, confirmPurchase } from '@/services/stripe';
+import { getSupabase } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 import { trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
@@ -39,25 +39,24 @@ export default function PaymentScreen({ navigation, route }: Props) {
     await trackPurchaseInitiated(product, info!.price);
 
     try {
-      const paymentIntent = await createPaymentIntent(user.id, product);
+      const client = getSupabase();
+      if (!client) throw new Error('Backend not configured');
 
-      if (!paymentIntent) {
-        await trackPurchaseFailed(product, 'payment_intent_failed');
-        Alert.alert('Payment Error', 'Could not initialize payment. Please try again.');
+      const { data, error } = await client.functions.invoke('create-checkout-session', {
+        body: { plan: product },
+      });
+
+      if (error || !data?.url) {
+        await trackPurchaseFailed(product, 'checkout_session_failed');
+        Alert.alert('Payment Error', 'Could not start checkout. Please try again.');
         setProcessing(false);
         return;
       }
 
-      const confirmed = await confirmPurchase(paymentIntent.paymentIntentId, product);
-
-      if (confirmed) {
-        await trackPurchaseCompleted(product, info!.price);
-        Alert.alert('Purchase Complete!', `You now have access to the ${info!.label}.`);
-        navigation.navigate('Home');
-      } else {
-        await trackPurchaseFailed(product, 'payment_not_succeeded');
-        Alert.alert('Payment Failed', 'Your payment could not be processed. Please try again.');
-      }
+      await trackPurchaseCompleted(product, info!.price);
+      Alert.alert('Checkout Started', 'Complete your subscription via the browser.', [
+        { text: 'OK', onPress: () => navigation.navigate('Home') },
+      ]);
     } catch (e) {
       await trackPurchaseFailed(product, 'exception');
       Alert.alert('Error', 'Something went wrong. Please try again.');
@@ -162,7 +161,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
 
         <Text style={styles.secureNote}>🔒 Secured by Stripe · SSL encrypted</Text>
         <Text style={styles.legal}>
-          One-time purchase. No recurring charges. Instant access after payment.
+          Subscription billed monthly. Cancel anytime. 7-day free trial.
         </Text>
       </ScrollView>
     </Animated.View>

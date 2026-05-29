@@ -4,6 +4,7 @@ dist/
 *.log
 .env
 .env.local
+.env.stripe.local
 .DS_Store
 *.tsbuildinfo
 .api-call-count.json

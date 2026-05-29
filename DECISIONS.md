@@ -1,5 +1,27 @@
 # Decisions & Iteration Log
 
+## Subscription Product Spec (2026-05-29)
+
+Decided via Step 3 of 528_BACKEND_FINAL:
+
+**Plans:**
+- `action_plan`: $4.99/month — 90-day step-by-step plan, weekly goals, debt payoff timeline, prioritized fix list
+- `deep_dive`: $9.99/month — everything in action_plan + scenario simulator, avalanche vs snowball, downloadable PDF report
+
+**Trial:** 7-day free trial, no payment method required up front (`payment_method_collection: 'if_required'`). Trial auto-converts to paid at end.
+
+**Cancellation:** Users keep access until `current_period_end` (standard Stripe default — no immediate revocation).
+
+**Failed payments:** Stripe Smart Retries handle dunning. Status moves to `past_due`. Subscription is canceled after Stripe exhausts retries (~3 weeks). No custom grace period.
+
+**Upgrades:** Users can upgrade from `action_plan` to `deep_dive` mid-cycle. Prorated credit applied to the new plan via Stripe's `proration_behavior: 'create_prorations'`.
+
+**Refunds:** No refunds on subscription charges. Users can cancel anytime — they keep access until period end. This avoids webhook complexity for refund-triggered entitlement revocation.
+
+**Plan changes:** Proration behavior set to `create_prorations` with `proration_behavior: 'always_invoice'`.
+
+## Decisions & Iteration Log
+
 ## Cycle 2 (2026-05-28)
 
 **Hypothesis:** The CFPB confidence criteria are too narrow — "high" is defined only when the user literally answers a question. Expanding to include concrete financial facts that strongly imply a specific CFPB dimension should increase high-confidence counts on detailed fixtures.

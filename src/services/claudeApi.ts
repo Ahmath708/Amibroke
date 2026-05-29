@@ -425,11 +425,6 @@ export async function addReaction(postId: string, userId: string, emoji: string)
     if (error?.code === '23505') return false;
     if (error) throw error;
 
-    const emojiKey = emoji === '🔥' ? 'fire' : emoji === '😭' ? 'cry' : 'skull';
-    const { error: updateError } = await (client as any)
-      .rpc('increment_reaction', { post_id: postId, reaction_key: emojiKey });
-    if (updateError) console.warn('Failed to update reaction count:', updateError);
-
     return true;
   } catch (error) {
     console.warn('Failed to add reaction:', error);
@@ -448,11 +443,6 @@ export async function removeReaction(postId: string, userId: string, emoji: stri
       .eq('user_id', userId)
       .eq('emoji', emoji);
     if (error) throw error;
-
-    const emojiKey = emoji === '🔥' ? 'fire' : emoji === '😭' ? 'cry' : 'skull';
-    const { error: updateError } = await (client as any)
-      .rpc('decrement_reaction', { post_id: postId, reaction_key: emojiKey });
-    if (updateError) console.warn('Failed to update reaction count:', updateError);
 
     return true;
   } catch (error) {
