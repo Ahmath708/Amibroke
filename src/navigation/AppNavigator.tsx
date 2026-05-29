@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
 import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
+import UsernameSetupScreen from '@/screens/UsernameSetupScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
 import AffiliateScreen from '@/screens/AffiliateScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
@@ -116,22 +117,39 @@ const sharedHeader = {
 } as const;
 
 export default function AppNavigator() {
-  const { loading } = useAuth();
+  const { loading, user, supabase } = useAuth();
+  const [usernameChecked, setUsernameChecked] = useState(false);
+  const [needsUsername, setNeedsUsername] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (!user) {
+      setUsernameChecked(true);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle();
+      setNeedsUsername(!data?.username);
+      setUsernameChecked(true);
+    })().catch(() => setUsernameChecked(true));
+  }, [user]);
+
+  if (loading || !usernameChecked) {
     return <SplashScreen />;
   }
 
   return (
     <View style={{ flex: 1 }}>
       <Stack.Navigator
-        initialRouteName="MainTabs"
+        initialRouteName={needsUsername ? 'UsernameSetup' : 'MainTabs'}
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}
       >
         {/* Auth screens */}
         <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'slide_from_right' }} />
+
+        {/* Username setup (blocking step before tabs) */}
+        <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'fade' }} />
 
         {/* Main tabs */}
         <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />

@@ -84,7 +84,7 @@ export default function ShareScreen({ route }: Props) {
     });
   }, [navigation]);
 
-  const scoreColor = analysis.score < 40 ? Colors.danger : analysis.score < 65 ? Colors.warning : Colors.success;
+  const scoreColor = analysis.scoreColor ?? (analysis.score < 40 ? Colors.danger : analysis.score < 65 ? Colors.warning : Colors.success);
   const variant = analysis.score < 40 ? 'danger' : analysis.score < 65 ? 'warning' : 'good';
 
   const handleShare = async () => {

@@ -19,6 +19,9 @@ export interface AnalysisHistoryItem {
   score_label: string;
   summary: string;
   created_at: string;
+  emotional_status?: { label: string; emoji: string } | null;
+  has_action_plan?: boolean;
+  has_captions?: boolean;
 }
 
 export interface CommunityPost {
@@ -77,13 +80,14 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Home: undefined;
+  UsernameSetup: undefined;
   Input: undefined;
   Processing: { userInput: string; tone?: RoastTone; userContext?: Record<string, unknown> };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
   Payment: { product: 'action_plan' | 'deep_dive' };
-  ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis };
+  ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string };
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
   History: undefined;

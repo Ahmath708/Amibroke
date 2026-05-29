@@ -11,7 +11,7 @@ import { getSubscriptions, saveSubscription, deleteSubscription } from '@/servic
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
-import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { getSubscription, hasAccessTo } from '@/services/subscriptions';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -34,7 +34,7 @@ export default function SubscriptionAuditScreen() {
 
   useEffect(() => {
     (async () => {
-      const tier = await getPurchaseTier();
+      const { tier } = await getSubscription(user?.id ?? '');
       if (hasAccessTo(tier, 'action_plan')) {
         setAuthorized(true);
       } else {

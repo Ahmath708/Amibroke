@@ -54,13 +54,14 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 
 ---
 
-## 📱 Screens (23 total)
+## 📱 Screens (24 total)
 
 | Screen | Route | Description |
 |--------|-------|-------------|
 | Splash | `Splash` | Animated intro |
 | Onboarding | `Onboarding` | 3-slide intro |
 | Login/Signup | `Login` | Apple/Google/email auth + terms agreement |
+| Username Setup | `UsernameSetup` | Post-signup username picker (3–24 chars, a-z/0-9/_) |
 | Home | `Home` | Financial input, suggestions, tone selector |
 | AI Processing | `Processing` | Animated analysis with 30s timeout |
 | Results | `Results` | Score ring, roast, spending breakdown, insights |
@@ -137,7 +138,7 @@ All three AI endpoints have:
 
 ### Prompt System
 
-Each function imports its system prompt from `prompt.ts` via ES module import. This is required because Supabase Edge Function deployments only bundle `.ts` assets — `.txt` files are not included in the deploy bundle. Edit `prompt.ts` and redeploy.
+Each function reads its system prompt from `prompts/system.txt` via `Deno.readTextFileSync()` at module init. Prompts include `cache_control: { type: 'ephemeral' }` on the Anthropic system block for ~90% input-token reuse. The `system.txt` file is the single source of truth — edit it and redeploy. (The `.txt` extension works because Supabase Edge Function deployments bundle all assets in the function directory.)
 
 ### Client Persistence
 
@@ -273,16 +274,16 @@ AmIBroke/
 │       │   └── client.ts      # Shared Claude client (no cache_control)
 │       ├── analyze/           # Main analysis endpoint
 │       │   ├── index.ts       # Handler: validate → call AI → compute → return
-│       │   ├── prompt.ts      # System prompt (imported, single source of truth)
+│       │   ├── prompts/system.txt  # System prompt (single source of truth)
 │       │   ├── tool.ts        # submit_analysis tool JSON Schema
 │       │   └── getBaselinesForRequest.ts
 │       ├── action-plan/       # 90-day plan endpoint
 │       │   ├── index.ts
-│       │   ├── prompt.ts
+│       │   ├── prompts/system.txt
 │       │   └── tool.ts
 │       ├── generate-captions/ # Share-card caption generator
 │       │   ├── index.ts       # Temperature 0.8, tool-use, Groq fallback
-│       │   ├── prompt.ts
+│       │   ├── prompts/system.txt
 │       │   └── tool.ts        # submit_captions tool JSON Schema
 │       ├── create-checkout-session/  # Stripe subscription checkout (JWT-auth)
 │       │   └── index.ts
@@ -312,11 +313,14 @@ AmIBroke/
 │   │   └── REVIEW.md          # Manual review ratings
 │   └── test_anthropic.ts      # DEPRECATED
 ├── src/
+│   ├── __fixtures__/          # Sample data for dev preview
+│   │   └── sampleAnalysis.ts  # SAMPLE_ANALYSIS, SAMPLE_ACTION_PLAN, SAMPLE_CAPTIONS
 │   ├── components/            # Reusable UI primitives
 │   │   ├── GlassCard.tsx
 │   │   ├── NeonButton.tsx
 │   │   ├── ScoreRing.tsx
 │   │   ├── StatusPill.tsx
+│   │   ├── ConfidenceBadge.tsx # Per-field confidence indicator (low/medium/high)
 │   │   ├── LoadingState.tsx
 │   │   ├── EmptyState.tsx
 │   │   ├── ErrorState.tsx
@@ -326,16 +330,21 @@ AmIBroke/
 │   │   └── TypingPlaceholder.tsx
 │   ├── navigation/
 │   │   └── AppNavigator.tsx   # Stack + Bottom Tab navigator
-│   ├── screens/               # 23 screens
+│   ├── screens/               # 24 screens
+│   │   └── UsernameSetupScreen.tsx  # Post-signup username picker
 │   ├── context/
 │   │   └── AuthContext.tsx    # Supabase auth state
-│   ├── hooks/                 # 7 custom hooks
+│   ├── hooks/                 # 8 custom hooks
+│   │   └── useSubscription.ts # Stripe subscription state + foreground polling
 │   ├── services/              # API + business logic
+│   │   ├── subscriptions.ts   # Server-side subscription entitlement (user_subscriptions)
+│   │   ├── claudeApi.ts       # Claude AI integration + dev mock guards
 │   ├── lib/
 │   │   └── validations.ts     # Zod schemas
 │   ├── config/
 │   │   ├── features.ts        # Feature flags
-│   │   └── scoring.ts         # Score weights + bands
+│   │   ├── scoring.ts         # Score weights + bands
+│   │   └── ai.ts              # DEV-ONLY AI mock flag (USE_AI_MOCKS)
 │   ├── theme/
 │   │   └── colors.ts          # iOS HIG design tokens
 │   └── types/

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
-import { FinalAnalysis, ActionPlanStep, CaptionResponse, ActionPlanResponse } from '@shared/types';
+import { FinalAnalysis, ActionPlanStep, CaptionResponse, ActionPlanResponse, UserContext } from '@shared/types';
 import { RoastTone, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn } from '@/types';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -41,13 +41,29 @@ function cleanUserInput(input: string): string {
     .trim();
 }
 
+const DEFAULT_USER_CONTEXT: UserContext = {
+  state: 'unknown',
+  ageBracket: 'unknown',
+  incomeBracket: 'unknown',
+  livingSituation: 'unknown',
+  employmentStatus: 'unknown',
+  debtBracket: 'none',
+  liquidSavingsBracket: 'under_500',
+};
+
 export async function analyzeFinancialSituation(
   userInput: string,
   tone: RoastTone = 'savage',
   signal?: AbortSignal,
   retries = 2,
-  userContext?: Record<string, unknown>,
+  userContext?: Partial<UserContext>,
 ): Promise<FinalAnalysis> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { SAMPLE_ANALYSIS } = require('../__fixtures__/sampleAnalysis');
+    await new Promise((r) => setTimeout(r, 600));
+    return SAMPLE_ANALYSIS;
+  }
   console.log('[analyze] Starting analysis', { userInputLength: userInput.length, tone });
   const cleaned = cleanUserInput(userInput);
   console.log('[analyze] Cleaned input:', cleaned.substring(0, 100) + (cleaned.length > 100 ? '...' : ''));
@@ -66,7 +82,7 @@ export async function analyzeFinancialSituation(
         body: {
           freeText: cleaned,
           tone,
-          userContext: userContext ?? {},
+          userContext: { ...DEFAULT_USER_CONTEXT, ...(userContext ?? {}) },
         },
         signal,
       });
@@ -184,6 +200,12 @@ export async function fetchOrGenerateActionPlan(
   tone: RoastTone,
   analysisId?: string,
 ): Promise<ActionPlanResponse | null> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { SAMPLE_ACTION_PLAN } = require('../__fixtures__/sampleAnalysis');
+    await new Promise((r) => setTimeout(r, 600));
+    return SAMPLE_ACTION_PLAN;
+  }
   const client = getSupabase();
   if (!client) return null;
 
@@ -231,23 +253,26 @@ export async function fetchOrGenerateActionPlan(
   }
 }
 
-// Thin wrapper for backward compat — callers should use fetchOrGenerateActionPlan
-export async function fetchActionPlan(userId: string, analysisId?: string): Promise<ActionPlanStep[]> {
-  const steps = await fetchOrGenerateActionPlan({} as any, 'savage', analysisId);
-  return steps?.steps ?? [];
-}
-
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
   const client = getSupabase();
   if (!client) return [];
   try {
     const { data, error } = await (client as any)
       .from('analyses')
-      .select('id, score, score_label, summary, created_at')
+      .select('id, score, score_label, summary, created_at, emotional_status, action_plan, share_captions')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      score: row.score,
+      score_label: row.score_label,
+      summary: row.summary,
+      created_at: row.created_at,
+      emotional_status: row.emotional_status,
+      has_action_plan: !!(row.action_plan && (Array.isArray(row.action_plan) ? row.action_plan.length > 0 : true)),
+      has_captions: !!row.share_captions,
+    }));
   } catch (error) {
     console.warn('Failed to fetch history:', error);
     return [];
@@ -614,6 +639,12 @@ export async function fetchOrGenerateCaptions(
   tone: RoastTone,
   analysisId?: string,
 ): Promise<CaptionResponse | null> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { SAMPLE_CAPTIONS } = require('../__fixtures__/sampleAnalysis');
+    await new Promise((r) => setTimeout(r, 600));
+    return SAMPLE_CAPTIONS;
+  }
   const client = getSupabase();
   if (!client) return null;
 

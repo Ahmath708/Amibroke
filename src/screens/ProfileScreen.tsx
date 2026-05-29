@@ -15,7 +15,7 @@ import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile, getAnalysisHistory, uploadAvatar } from '@/services/claudeApi';
-import { getPurchaseTier, isPremium } from '@/services/purchases';
+import { getSubscription, isSubscriptionPremium } from '@/services/subscriptions';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -53,8 +53,11 @@ export default function ProfileScreen({ navigation }: Props) {
   const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
-    getPurchaseTier().then(setPurchaseTier);
-  }, []);
+    (async () => {
+      const { tier } = await getSubscription(user?.id ?? '');
+      setPurchaseTier(tier);
+    })();
+  }, [user]);
 
   const fetchData = useCallback(async () => {
     if (!user) {
@@ -216,14 +219,14 @@ export default function ProfileScreen({ navigation }: Props) {
             {user && (
               <StatusPill
                 label={purchaseTier === 'deep_dive' ? 'Deep Dive' : purchaseTier === 'action_plan' ? 'Action Plan' : 'Free Plan'}
-                variant={isPremium(purchaseTier) ? 'good' : 'muted'}
+                variant={isSubscriptionPremium(purchaseTier) ? 'good' : 'muted'}
               />
             )}
           </View>
         </View>
 
         {/* Upgrade CTA — separate from avatar card */}
-        {user && !isPremium(purchaseTier) && (
+        {user && !isSubscriptionPremium(purchaseTier) && (
           <TouchableOpacity
             onPress={() => navigation.navigate('Paywall')}
             style={styles.upgradeCta}

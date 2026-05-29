@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Animated, Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, PURCHASE_PRODUCTS } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
-import { getSupabase } from '@/services/claudeApi';
+import { createCheckoutSession } from '@/services/subscriptions';
 import { useAuth } from '@/context/AuthContext';
 import { trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
@@ -39,14 +39,8 @@ export default function PaymentScreen({ navigation, route }: Props) {
     await trackPurchaseInitiated(product, info!.price);
 
     try {
-      const client = getSupabase();
-      if (!client) throw new Error('Backend not configured');
-
-      const { data, error } = await client.functions.invoke('create-checkout-session', {
-        body: { plan: product },
-      });
-
-      if (error || !data?.url) {
+      const url = await createCheckoutSession(product);
+      if (!url) {
         await trackPurchaseFailed(product, 'checkout_session_failed');
         Alert.alert('Payment Error', 'Could not start checkout. Please try again.');
         setProcessing(false);
@@ -54,9 +48,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
       }
 
       await trackPurchaseCompleted(product, info!.price);
-      Alert.alert('Checkout Started', 'Complete your subscription via the browser.', [
-        { text: 'OK', onPress: () => navigation.navigate('Home') },
-      ]);
+      await Linking.openURL(url);
     } catch (e) {
       await trackPurchaseFailed(product, 'exception');
       Alert.alert('Error', 'Something went wrong. Please try again.');

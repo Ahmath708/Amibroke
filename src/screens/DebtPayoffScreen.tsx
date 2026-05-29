@@ -11,9 +11,10 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
-import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { getSubscription, hasAccessTo } from '@/services/subscriptions';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
+import { useAuth } from '@/context/AuthContext';
 
 type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
 
@@ -39,6 +40,7 @@ export default function DebtPayoffScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
   const debts = route.params?.debts?.length > 0 ? route.params.debts : DEFAULT_DEBTS;
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
@@ -47,7 +49,7 @@ export default function DebtPayoffScreen({ route }: Props) {
 
   useEffect(() => {
     (async () => {
-      const tier = await getPurchaseTier();
+      const { tier } = await getSubscription(user?.id ?? '');
       if (hasAccessTo(tier, 'deep_dive')) {
         setAuthorized(true);
       } else {

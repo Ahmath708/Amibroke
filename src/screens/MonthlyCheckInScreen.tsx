@@ -12,7 +12,7 @@ import GlassCard from '@/components/GlassCard';
 import { getCheckIns, saveCheckIn } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
-import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { getSubscription, hasAccessTo } from '@/services/subscriptions';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -47,7 +47,7 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
 
   useEffect(() => {
     (async () => {
-      const tier = await getPurchaseTier();
+      const { tier } = await getSubscription(user?.id ?? '');
       if (hasAccessTo(tier, 'action_plan')) {
         setAuthorized(true);
       } else {
@@ -55,7 +55,7 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!user || !authorized) {

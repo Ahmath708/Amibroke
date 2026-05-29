@@ -199,6 +199,9 @@ export default function HistoryScreen() {
                       <View style={styles.historyInfo}>
                         <View style={styles.historyMeta}>
                           <Text style={styles.historyDate}>{fmtDate(h.created_at)}</Text>
+                          {h.emotional_status?.emoji && (
+                            <Text style={styles.historyEmoji}>{h.emotional_status.emoji}</Text>
+                          )}
                           {deltaText ? (
                             <Text style={[styles.historyDelta, { color: deltaColor }]}>
                               {deltaText}
@@ -208,6 +211,12 @@ export default function HistoryScreen() {
                         <Text style={styles.historySummary} numberOfLines={2}>
                           {h.summary}
                         </Text>
+                        {(h.has_action_plan || h.has_captions) && (
+                          <View style={styles.historyBadges}>
+                            {h.has_action_plan && <Text style={styles.historyBadge}>📋 Plan</Text>}
+                            {h.has_captions && <Text style={styles.historyBadge}>📸 Captions</Text>}
+                          </View>
+                        )}
                       </View>
                       <Text style={styles.chevron}>{isLoading ? '⏳' : '›'}</Text>
                     </TouchableOpacity>
@@ -303,4 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
   },
   checkinEmojiText: { fontSize: Typography.title2.fontSize },
+  historyEmoji: { fontSize: Typography.subhead.fontSize, marginLeft: 2 },
+  historyBadges: { flexDirection: 'row', gap: 6, marginTop: 3 },
+  historyBadge: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
 });

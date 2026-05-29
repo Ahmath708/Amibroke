@@ -11,6 +11,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import ScoreRing from '@/components/ScoreRing';
 import StatusPill from '@/components/StatusPill';
+import ConfidenceBadge, { confidenceLevel } from '@/components/ConfidenceBadge';
 import NeonButton from '@/components/NeonButton';
 import Disclaimer from '@/components/Disclaimer';
 import { GlassSection } from '@/components/iOS/GlassSection';
@@ -18,7 +19,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 
 import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis, shareToFeed } from '@/services/claudeApi';
-import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import { getSubscription, hasAccessTo } from '@/services/subscriptions';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
 
 type Props = {
@@ -48,7 +49,10 @@ export default function ResultsScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
-    getPurchaseTier().then(setPurchaseTier);
+    (async () => {
+      const { tier } = await getSubscription(user?.id ?? '');
+      setPurchaseTier(tier);
+    })();
   }, []);
 
   useEffect(() => {
@@ -127,31 +131,37 @@ export default function ResultsScreen({ navigation, route }: Props) {
         <Text style={styles.sectionTitle}>Key Metrics</Text>
         <View style={styles.metricsGroup}>
           {[
-            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0), icon: '💵' },
-            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0), icon: '💸' },
+            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0), icon: '💵', confidence: analysis.monthlyIncome?.confidence },
+            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0), icon: '💸', confidence: analysis.monthlyExpenses?.confidence },
+            { label: 'Liquid Savings', value: fmt(analysis.liquidSavings?.value ?? analysis.liquidSavings ?? 0), icon: '🏦', confidence: analysis.liquidSavings?.confidence },
             { label: 'Monthly Savings', value: fmt(analysis.monthlySavings ?? 0), icon: '💰', highlight: (analysis.monthlySavings ?? 0) < 0 },
             { label: 'Total Debt', value: fmt(analysis.debtTotal ?? 0), icon: '📉', highlight: (analysis.debtTotal ?? 0) > 0 },
             { label: 'Savings Rate', value: analysis.savingsRate != null ? `${Math.round(analysis.savingsRate * 100)}%` : 'N/A', icon: '📈' },
             { label: 'Emergency Fund', value: analysis.emergencyFundMonths != null ? `${analysis.emergencyFundMonths.toFixed(1)} mo` : 'N/A', icon: '🛡️' },
+            { label: 'Debt-to-Income', value: analysis.debtToIncomeRatio != null ? `${(analysis.debtToIncomeRatio * 100).toFixed(0)}%` : 'N/A', icon: '⚖️' },
+            { label: 'Monthly Debt Service', value: fmt(analysis.monthlyDebtService ?? 0), icon: '💳' },
           ].map((m, i, arr) => (
             <React.Fragment key={m.label}>
               <View style={styles.metricRow}>
                 <Text style={styles.metricIcon}>{m.icon}</Text>
                 <Text style={styles.metricLabel}>{m.label}</Text>
                 <Text style={[styles.metricValue, m.highlight && { color: Colors.danger }]}>{m.value}</Text>
+                {'confidence' in m && m.confidence && (
+                  <View style={styles.confBadgeWrap}>
+                    <ConfidenceBadge level={m.confidence as any} />
+                  </View>
+                )}
               </View>
               {i < arr.length - 1 && <View style={styles.rowSep} />}
             </React.Fragment>
           ))}
         </View>
 
-        {/* Cfpb insight */}
+        {/* Overall data confidence */}
         {analysis.avgConfidence > 0 && (
           <GlassCard style={styles.emotionCard}>
             <Text style={styles.emotionLabel}>Data Confidence</Text>
-            <Text style={styles.emotionText}>
-              {analysis.avgConfidence >= 0.8 ? 'High' : analysis.avgConfidence >= 0.5 ? 'Medium' : 'Low'}
-            </Text>
+            <ConfidenceBadge level={confidenceLevel(analysis.avgConfidence)} size="md" />
           </GlassCard>
         )}
 
@@ -163,6 +173,14 @@ export default function ResultsScreen({ navigation, route }: Props) {
               <Text style={styles.emotionLabel}>Emotional Status</Text>
               <Text style={styles.emotionText}>{analysis.emotionalStatus.label}</Text>
             </View>
+          </GlassCard>
+        )}
+
+        {/* Score modifier reason */}
+        {analysis.scoreModifierReason && (
+          <GlassCard style={styles.modifierCard}>
+            <Text style={styles.modifierLabel}>Score Adjustment</Text>
+            <Text style={styles.modifierText}>{analysis.scoreModifierReason}</Text>
           </GlassCard>
         )}
 
@@ -205,6 +223,33 @@ export default function ResultsScreen({ navigation, route }: Props) {
               ))}
             </View>
           </>
+        )}
+
+        {/* Debts summary */}
+        {analysis.debts && analysis.debts.length > 0 && (
+          <GlassCard style={styles.debtsCard}>
+            <View style={styles.debtsHeader}>
+              <Text style={styles.debtsTitle}>📋 {analysis.debts.length} {analysis.debts.length === 1 ? 'Debt' : 'Debts'}</Text>
+              <Text style={styles.debtsTotal}>{fmt(analysis.debtTotal ?? 0)} total</Text>
+            </View>
+            {analysis.debts.slice(0, 3).map((d: any) => (
+              <View key={d.name} style={styles.debtMiniRow}>
+                <Text style={styles.debtMiniName}>{d.name}</Text>
+                <Text style={[styles.debtMiniUrgency, { color: d.urgency === 'critical' ? Colors.danger : d.urgency === 'high' ? Colors.warning : Colors.textSecondary }]}>{d.urgency}</Text>
+              </View>
+            ))}
+            {analysis.debts.length > 3 && (
+              <Text style={styles.debtsMore}>+{analysis.debts.length - 3} more</Text>
+            )}
+            {(analysis.debtTotal ?? 0) > 0 && hasAccessTo(purchaseTier, 'deep_dive') && (
+              <NeonButton
+                label="Full Debt Payoff Plan"
+                onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts ?? [], monthlyIncome: analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0 })}
+                variant="secondary"
+                style={styles.debtsCta}
+              />
+            )}
+          </GlassCard>
         )}
 
         {/* What you mentioned spending */}
@@ -316,7 +361,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               onPress={async () => {
                 const { fetchOrGenerateActionPlan } = await import('@/services/claudeApi');
                 const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
-                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis });
+                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage });
               }}
               style={styles.actionBtn}
             />
@@ -435,6 +480,19 @@ scoreNum: {
   emotionLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   emotionText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginTop: 2 },
   topFixCard: { padding: Spacing.lg, marginBottom: Spacing.md, borderLeftWidth: 3, borderLeftColor: Colors.tertiarySolid },
+  modifierCard: { padding: Spacing.md, marginBottom: Spacing.md },
+  modifierLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
+  modifierText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, fontStyle: 'italic', lineHeight: 18 },
+  debtsCard: { padding: Spacing.lg, marginBottom: Spacing.md },
+  debtsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+  debtsTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  debtsTotal: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  debtMiniRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.xs },
+  debtMiniName: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, flex: 1 },
+  debtMiniUrgency: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, textTransform: 'capitalize' },
+  debtsMore: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: Spacing.xs },
+  debtsCta: { marginTop: Spacing.sm },
+  confBadgeWrap: { marginLeft: 6 },
   topFixLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.tertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
   topFixAction: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, lineHeight: 22, marginBottom: Spacing.xs },
   topFixImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.success },

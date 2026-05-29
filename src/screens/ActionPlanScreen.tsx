@@ -11,7 +11,9 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
-import { getPurchaseTier, hasAccessTo } from '@/services/purchases';
+import ConfidenceBadge from '@/components/ConfidenceBadge';
+import { useAuth } from '@/context/AuthContext';
+import { getSubscription, hasAccessTo } from '@/services/subscriptions';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -31,6 +33,17 @@ const DEFAULT_STEPS: ActionStep[] = [
   { week: '7', title: 'Negotiate Bills', description: 'Call your internet, phone, and insurance providers and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium' },
   { week: '8', title: '30-Day Review', description: 'Run a new analysis and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', confidence: 'high' },
 ];
+
+const CATEGORY_CONFIG: Record<string, { bg: string; color: string }> = {
+  savings: { bg: 'rgba(52,199,89,0.15)', color: '#34C759' },
+  debt: { bg: 'rgba(255,69,58,0.15)', color: '#FF453A' },
+  income: { bg: 'rgba(0,122,255,0.15)', color: '#007AFF' },
+  mindset: { bg: 'rgba(175,82,222,0.15)', color: '#AF52DE' },
+};
+
+function catBg(cat: string): string {
+  return CATEGORY_CONFIG[cat]?.bg ?? 'rgba(255,255,255,0.07)';
+}
 
 function generatePersonalizedSteps(analysis: any): ActionStep[] {
   const steps: ActionStep[] = [];
@@ -96,9 +109,11 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
 
 export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>>();
   const rawSteps = route.params?.steps;
   const analysis = (route.params as any)?.analysis;
+  const overallMessage = route.params?.overallMessage;
   const [steps, setSteps] = useState<ActionStep[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -107,7 +122,7 @@ export default function ActionPlanScreen({ route }: Props) {
 
   useEffect(() => {
     (async () => {
-      const tier = await getPurchaseTier();
+      const { tier } = await getSubscription(user?.id ?? '');
       if (hasAccessTo(tier, 'action_plan')) {
         setAuthorized(true);
       } else {
@@ -156,6 +171,14 @@ export default function ActionPlanScreen({ route }: Props) {
           <Text style={styles.progressSub}>Keep going — consistency beats intensity every time.</Text>
         </GlassCard>
 
+        {/* Overall message */}
+        {overallMessage && (
+          <GlassCard style={styles.overallMessageCard}>
+            <Text style={styles.overallLabel}>The Big Picture</Text>
+            <Text style={styles.overallText}>{overallMessage}</Text>
+          </GlassCard>
+        )}
+
         {/* Steps — iOS grouped list by week */}
         <Text style={styles.sectionLabel}>Weekly Actions</Text>
         <View style={styles.stepGroup}>
@@ -182,6 +205,14 @@ export default function ActionPlanScreen({ route }: Props) {
                     {!done && (
                       <>
                         <Text style={styles.stepDesc}>{step.description}</Text>
+                        <View style={styles.badgeRow}>
+                          {step.category && (
+                            <View style={[styles.catBadge, { backgroundColor: catBg(step.category) }]}>
+                              <Text style={styles.catText}>{step.category}</Text>
+                            </View>
+                          )}
+                          {step.confidence && <ConfidenceBadge level={step.confidence} />}
+                        </View>
                         <View style={styles.impactRow}>
                           <Text style={styles.impactLabel}>Impact:</Text>
                           <Text style={styles.impactValue}>{step.impact}</Text>
@@ -246,4 +277,10 @@ const styles = StyleSheet.create({
   impactLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   impactValue: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.success, fontWeight: '500' },
   disclaimer: { marginTop: Spacing.xl },
+  overallMessageCard: { padding: Spacing.lg, marginBottom: Spacing.md },
+  overallLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
+  overallText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19, fontStyle: 'italic' },
+  badgeRow: { flexDirection: 'row', gap: 6, marginTop: Spacing.xs },
+  catBadge: { borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
+  catText: { fontFamily: Typography.fonts.bodySemi, fontSize: 10, fontWeight: '600', letterSpacing: 0.2, color: Colors.textPrimary },
 });

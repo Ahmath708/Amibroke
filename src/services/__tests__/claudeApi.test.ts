@@ -1,34 +1,70 @@
+jest.mock('@/config/ai', () => ({ USE_AI_MOCKS: false }));
+
 import * as claudeApi from '@/services/claudeApi';
 
-describe('fetchActionPlan', () => {
+const mockAnalysis = { score: 65, scoreLabel: 'Surviving', summary: 'test' } as any;
+const mockTone = 'savage' as const;
+
+function makeSteps(count: number) {
+  const cats = ['savings', 'debt', 'income', 'mindset'] as const;
+  return Array.from({ length: count }, (_, i) => ({
+    week: String(i + 1),
+    title: `Step ${i + 1}`,
+    description: 'desc',
+    category: cats[i % 4],
+    impact: 'High',
+    confidence: 'high' as const,
+  }));
+}
+
+describe('fetchOrGenerateActionPlan', () => {
   const mockInvoke = jest.fn();
-  let fetchActionPlan: (userId: string, analysisId?: string) => Promise<any>;
+  const mockFrom = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    claudeApi.__setSupabaseForTests({ functions: { invoke: mockInvoke } } as any);
-    fetchActionPlan = claudeApi.fetchActionPlan;
+    mockFrom.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { action_plan: null }, error: null }),
+      update: jest.fn().mockReturnThis(),
+    });
+    claudeApi.__setSupabaseForTests({
+      functions: { invoke: mockInvoke },
+      from: mockFrom,
+    } as any);
   });
 
-  it('returns the saved action plan for a user', async () => {
-    const actionPlan = [
-      { week: 1, title: 'Test step', description: 'Do the thing.', impact: 'Saves money', category: 'savings', completed: false },
-    ];
+  it('returns saved plan from DB when available', async () => {
+    const savedPlan = { overallMessage: 'You can do this', steps: makeSteps(4) };
+    mockFrom.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { action_plan: savedPlan }, error: null }),
+      update: jest.fn().mockReturnThis(),
+    });
 
-    mockInvoke.mockResolvedValue({ data: { actionPlan }, error: null });
+    const result = await claudeApi.fetchOrGenerateActionPlan(mockAnalysis, mockTone, 'analysis-1');
 
-    const result = await fetchActionPlan('user-1');
-
-    expect(mockInvoke).toHaveBeenCalledWith('action-plan', { body: { userId: 'user-1', analysisId: undefined } });
-    expect(result).toEqual(actionPlan);
+    expect(result).toEqual(savedPlan);
+    expect(mockInvoke).not.toHaveBeenCalled();
   });
 
-  it('returns empty array when the action plan endpoint errors', async () => {
-    mockInvoke.mockResolvedValue({ data: null, error: { message: 'Not found' } });
+  it('calls edge function when no saved plan exists', async () => {
+    const apiPlan = { overallMessage: 'Generated plan', steps: makeSteps(4) };
+    mockInvoke.mockResolvedValue({ data: apiPlan, error: null });
 
-    const result = await fetchActionPlan('user-2', 'analysis-1');
+    const result = await claudeApi.fetchOrGenerateActionPlan(mockAnalysis, mockTone, 'analysis-1');
 
-    expect(result).toEqual([]);
-    expect(mockInvoke).toHaveBeenCalledWith('action-plan', { body: { userId: 'user-2', analysisId: 'analysis-1' } });
+    expect(mockInvoke).toHaveBeenCalledWith('action-plan', { body: { analysis: mockAnalysis, tone: mockTone } });
+    expect(result).toEqual(apiPlan);
+  });
+
+  it('returns null when the edge function errors', async () => {
+    mockInvoke.mockResolvedValue({ data: null, error: { message: 'API error' } });
+
+    const result = await claudeApi.fetchOrGenerateActionPlan(mockAnalysis, mockTone);
+
+    expect(result).toBeNull();
   });
 });
