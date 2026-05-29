@@ -75,9 +75,9 @@ export default function ResultsScreen({ navigation, route }: Props) {
     }
   };
 
-  const scoreColor =
+  const scoreColor = analysis.scoreColor ?? (
     analysis.score < 40 ? Colors.danger :
-    analysis.score < 65 ? Colors.warning : Colors.success;
+    analysis.score < 65 ? Colors.warning : Colors.success);
 
   const scoreVariant =
     analysis.score < 40 ? 'danger' :

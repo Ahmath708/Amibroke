@@ -92,7 +92,7 @@ export default function PaywallScreen({ navigation }: Props) {
           <LinearGradient colors={['rgba(189,0,255,0.2)', 'rgba(0,224,255,0.08)']} style={styles.previewCard}>
             <Text style={styles.previewIcon}>🗓️</Text>
             <View style={styles.previewContent}>
-              <Text style={styles.previewTitle}>Your 90-Day Action  plan  </Text>
+              <Text style={styles.previewTitle}>Your 90-Day Action Plan</Text>
               <Text style={styles.previewDesc}>Week-by-week roadmap with specific dollar targets</Text>
             </View>
             <View style={styles.previewLock}>
