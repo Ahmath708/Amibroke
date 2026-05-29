@@ -1,3 +1,12 @@
+-- Ensure the trigger helper function exists before the trigger references it.
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- user_subscriptions table: one row per user, maintained by the Stripe webhook.
 -- This is the live entitlement source. No INSERT/UPDATE/DELETE RLS policies
 -- exist for clients — only the webhook (service role) writes here by design.
