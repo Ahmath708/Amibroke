@@ -20,6 +20,8 @@ async function main() {
   let userIdB = '';
   let analysisId = '';
   let communityPostId = '';
+  let stripeCustomerId = '';
+  let stripeSubscriptionId = '';
 
   async function test(name: string, fn: () => Promise<boolean>, note?: string) {
     try {
@@ -188,6 +190,87 @@ async function main() {
     const data = await res.json();
     return res.ok && typeof data.url === 'string' && data.url.includes('checkout.stripe.com');
   });
+
+  await test('S3: create-checkout-session without JWT returns 401', async () => {
+    const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: 'action_plan' }),
+    });
+    return res.status === 401;
+  });
+
+  await test('S4: Webhook customer.subscription.created creates subscription record', async () => {
+    const subRes = await supabaseQuery('GET', 'user_subscriptions?select=stripe_customer_id', userAToken);
+    if (!subRes.ok) return false;
+    const subs = await subRes.json();
+    const custId = subs[0]?.stripe_customer_id;
+    if (!custId) return false;
+    stripeCustomerId = custId;
+
+    stripeSubscriptionId = 'sub_e2e_test_' + ts;
+    const now = Math.floor(Date.now() / 1000);
+    const payload = JSON.stringify({
+      type: 'customer.subscription.created',
+      data: {
+        object: {
+          id: stripeSubscriptionId, customer: custId, status: 'active',
+          current_period_end: now + 2592000, cancel_at_period_end: false,
+          trial_end: null,
+          items: { data: [{ price: { id: STRIPE_PRICE_ACTION_PLAN } }] },
+        },
+      },
+    });
+    const sig = await signStripePayload(payload, 'whsec_gjVwms7QBW2swHRxwwAF3VynkyHV4oyP');
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': sig },
+      body: payload,
+    });
+    if (!res.ok) return false;
+
+    const checkRes = await supabaseQuery('GET', `user_subscriptions?select=stripe_subscription_id,plan,status`, userAToken);
+    if (!checkRes.ok) return false;
+    const check = await checkRes.json();
+    return check[0]?.stripe_subscription_id === stripeSubscriptionId
+      && check[0]?.plan === 'action_plan'
+      && check[0]?.status === 'active';
+  }, 'webhook handler creates record using stripe_customer_id lookup');
+
+  await test('S2: create-portal-session with valid JWT returns URL', async () => {
+    const res = await fetch(`${supabaseUrl}/functions/v1/create-portal-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userAToken}` },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    return res.ok && typeof data.url === 'string' && data.url.includes('stripe.com');
+  }, 'portal session URL created from existing stripe_customer_id');
+
+  await test('S5: Webhook customer.subscription.deleted sets status to canceled', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = JSON.stringify({
+      type: 'customer.subscription.deleted',
+      data: {
+        object: {
+          id: stripeSubscriptionId, customer: stripeCustomerId,
+          canceled_at: now,
+        },
+      },
+    });
+    const sig = await signStripePayload(payload, 'whsec_gjVwms7QBW2swHRxwwAF3VynkyHV4oyP');
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': sig },
+      body: payload,
+    });
+    if (!res.ok) return false;
+
+    const checkRes = await supabaseQuery('GET', `user_subscriptions?select=status`, userAToken);
+    if (!checkRes.ok) return false;
+    const check = await checkRes.json();
+    return check[0]?.status === 'canceled';
+  }, 'webhook updates status to canceled via stripe_subscription_id');
 
   async function signStripePayload(payload: string, secret: string): Promise<string> {
     const ts = Math.floor(Date.now() / 1000);

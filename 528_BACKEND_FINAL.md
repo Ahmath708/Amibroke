@@ -34,9 +34,9 @@
 | analyze | /functions/v1/analyze | ✅ |
 | action-plan | /functions/v1/action-plan | ✅ |
 | generate-captions | /functions/v1/generate-captions | ✅ |
-| create-payment-intent | /functions/v1/create-payment-intent | ✅ |
-| confirm-purchase | /functions/v1/confirm-purchase | ✅ |
-| verify-purchase | /functions/v1/verify-purchase | ✅ |
+| create-checkout-session | /functions/v1/create-checkout-session | ✅ |
+| create-portal-session | /functions/v1/create-portal-session | ✅ |
+| stripe-webhook | /functions/v1/stripe-webhook | ✅ |
 
 ## Eval Results
 | Suite | Cycles | Pass Rate |

@@ -23,20 +23,27 @@ cp .env.example .env
 npm install -g supabase
 supabase login
 
+# Link your project
+supabase link --project-ref <your-ref>
+
 # Set the API keys as secrets (required for analysis)
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-supabase secrets set GROQ_API_KEY=gsk-...   # Optional fallback
+supabase secrets set GROQ_API_KEY=gsk-...
+supabase secrets set STRIPE_SECRET_KEY=sk_test_...
+supabase secrets set STRIPE_PRICE_ID_ACTION_PLAN=price_...
+supabase secrets set STRIPE_PRICE_ID_DEEP_DIVE=price_...
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Deploy all edge functions
 supabase functions deploy analyze
 supabase functions deploy action-plan
 supabase functions deploy generate-captions
-supabase functions deploy create-payment-intent
-supabase functions deploy confirm-purchase
-supabase functions deploy verify-purchase
+supabase functions deploy create-checkout-session
+supabase functions deploy create-portal-session
+supabase functions deploy stripe-webhook --no-verify-jwt
 
 # Apply database migrations
-supabase migration up
+supabase db push
 ```
 
 ### 4. Start the app
@@ -60,7 +67,7 @@ Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
 | 90-Day Action Plan | `ActionPlan` | Checkable weekly goals |
 | Debt Payoff | `DebtPayoff` | Avalanche/snowball calculator |
 | Share Card | `Share` | Shareable result card + 3 AI-generated captions (tap-to-copy) |
-| Paywall | `Paywall` | Premium upsell ($4.99/$9.99) |
+| Paywall | `Paywall` | Premium upsell ($4.99/$9.99/month) |
 | Payment | `Payment` | Stripe checkout |
 | History | `History` (tab) | Past analyses + score chart + check-ins |
 | Community | `Community` (tab) | Anonymized roast feed with reactions |
@@ -115,8 +122,11 @@ The backend was rebuilt to separate AI judgment from deterministic math:
 | `POST /analyze` | Main analysis — uses Anthropic tool-use, validates input, computes derived metrics + CFPB score (3 iteration cycles, 100%) |
 | `POST /action-plan` | 90-day plan generation — separate endpoint (3 iteration cycles: confidence anchoring + number anchoring, 100%) |
 | `POST /generate-captions` | Share-card caption generation — 3 distinct TikTok-native captions, temperature 0.8 (3 iteration cycles: structural uniqueness + min 100-char, 100%) |
+| `POST /create-checkout-session` | Stripe subscription checkout — creates customer, returns Stripe Checkout URL |
+| `POST /create-portal-session` | Stripe Customer Portal — manage/cancel subscriptions, update payment methods |
+| `POST /stripe-webhook` | Inbound Stripe webhook — HMAC-signed, handles 5 subscription events (no JWT) |
 
-All three endpoints have:
+All three AI endpoints have:
 - **Groq fallback** — automatic failover to Llama 3.3 70B when Claude is unavailable
 - **Rate limiting** — Postgres-backed fixed-window limiter (30 req/hour/IP, env-tunable)
 - **Upstream safety** — 30s fetch timeout via AbortController, max 3 retries, clear error stages
@@ -148,6 +158,7 @@ Both write only on success, return the cached value on subsequent visits, and fa
 | `scripts/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings (word-boundary regex), plan consistency |
 | `scripts/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md — 9 cycles across 6 suites |
 | `scripts/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
+| `scripts/eval/test-backend-final.ts` | 16 E2E tests — auth hardening, community feed, Stripe subscriptions against production Supabase |
 | `scripts/manual-test.ts` | Human-review testing with `--input <name>` and `--save` flags |
 
 All edge functions return structured errors with failure stage (`parse_error`, `rate_limited`, `upstream_timeout`, `upstream_unavailable`, `claude_api_error`, `groq_api_error`, `validation_error`, `tool_use_missing`) so the client can display specific error messages.
@@ -164,6 +175,21 @@ Postgres-backed fixed-window rate limiter shared across all three endpoints:
 
 ---
 
+## 🛡️ Auth Hardening
+
+Three fixes from the production audit:
+1. **Collision-safe signup** — `profiles.username` is now nullable, auto-set to `NULL` on signup. Two users with the same email prefix no longer crash.
+2. **Username gate** — Community posting requires a non-null username (RLS-enforced). Users must call `set_username` RPC before posting.
+3. **set_username RPC** — Validates length (3–24), charset (a-z, 0-9, underscore), uniqueness. Returns JSON envelope with error codes: `not_authenticated`, `invalid_length`, `invalid_charset`, `taken`.
+
+## 👥 Community Feed Hardening
+
+1. **1:1 posts per analysis** — UNIQUE constraint prevents duplicate sharing.
+2. **Emoji whitelist** — Only 🔥 😭 💀 💯 😂 are accepted server-side (CHECK constraint).
+3. **Trigger-based reaction counts** — `post_reactions` INSERT/DELETE triggers recompute `community_posts.reactions` via COUNT(*). Manual increment/decrement RPCs removed — counts can never drift.
+
+---
+
 ## 📦 Tech Stack
 
 - **Expo** ~54.0.0
@@ -173,7 +199,8 @@ Postgres-backed fixed-window rate limiter shared across all three endpoints:
 - **React Navigation** v7 (Native Stack + Bottom Tabs)
 - **Supabase** — Auth, Edge Functions, Database (Postgres)
 - **Anthropic Claude** — AI analysis
-- **Stripe** — Payments
+- **Groq (Llama)** — AI fallback
+- **Stripe** — Subscriptions (Checkout, Customer Portal, Webhooks)
 - **PostHog** — Analytics
 - **expo-linear-gradient** — gradients
 - **expo-blur** — glassmorphism
@@ -186,10 +213,16 @@ Postgres-backed fixed-window rate limiter shared across all three endpoints:
 
 ## 💰 Monetization
 
-- **Action Plan** — $4.99 one-time (90-day roadmap, weekly goals, debt strategy)
-- **Deep Dive** — $9.99 one-time (scenario simulator, avalanche vs snowball, PDF report)
+Monthly subscriptions via Stripe (test mode):
+- **Action Plan** — $4.99/month (90-day roadmap, weekly goals, debt strategy)
+- **Deep Dive** — $9.99/month (scenario simulator, avalanche vs snowball, PDF report)
+- **7-day free trial** — No payment method required up front
+- **Stripe Customer Portal** — Cancel, switch plans, update payment methods
+- **Smart Retries** — Stripe auto-retries failed payments (~3 weeks)
 - **Affiliate Recommendations** — Financial products
 - **Creator Referral System** — Earn per signup
+
+The `user_subscriptions` table is the live entitlement source, written only by the Stripe webhook (service role, no client access). One-time purchases were migrated to recurring subscriptions in May 2026.
 
 ---
 
@@ -203,12 +236,14 @@ AmIBroke/
 ├── tsconfig.json
 ├── babel.config.js
 ├── .env.example
+├── .env.stripe.local          # Stripe test keys (gitignored)
 ├── .github/workflows/ci.yml   # CI/CD pipeline (typecheck → test → deploy)
 ├── .githooks/pre-commit       # TypeScript check hook (npx tsc --noEmit)
 ├── CONTRIBUTING.md            # Eval methodology, fixture conventions, CI/CD
 ├── CLAUDE.md                  # AI safety rules
-├── DECISIONS.md               # Architecture decisions + iteration hypotheses log (analyze, action-plan, captions)
+├── DECISIONS.md               # Architecture decisions + subscription product spec
 ├── 528_NEXT_STEPS.md          # Action-plan + captions iteration plan (✅ complete)
+├── 528_BACKEND_FINAL.md       # Backend final: hardening, subscriptions, deploy (✅ complete)
 ├── FRONTEND_TODO.md           # Known frontend gaps
 ├── shared/                    # Shared types & logic (frontend + backend)
 │   ├── types.ts               # TypeScript types (inferred from Zod)
@@ -228,9 +263,11 @@ AmIBroke/
 │           └── cfpb.test.ts
 ├── supabase/
 │   ├── config.toml
-│   ├── migrations/            # 9 SQL migrations (00001–00009)
+│   ├── migrations/            # 12 SQL migrations (00001–00012)
 │   └── functions/
 │       ├── _shared/           # Shared edge function utilities
+│       │   ├── cors.ts        # CORS headers + OPTIONS handler
+│       │   ├── stripe.ts      # Stripe API fetch helper
 │       │   ├── rateLimit.ts   # Postgres-backed rate limiter (IO via supabase-js)
 │       │   ├── rateLimitLogic.ts  # Pure logic: bucket key, limit resolution, bypass
 │       │   └── client.ts      # Shared Claude client (no cache_control)
@@ -247,9 +284,12 @@ AmIBroke/
 │       │   ├── index.ts       # Temperature 0.8, tool-use, Groq fallback
 │       │   ├── prompt.ts
 │       │   └── tool.ts        # submit_captions tool JSON Schema
-│       ├── create-payment-intent/
-│       ├── confirm-purchase/
-│       └── verify-purchase/
+│       ├── create-checkout-session/  # Stripe subscription checkout (JWT-auth)
+│       │   └── index.ts
+│       ├── create-portal-session/     # Stripe Customer Portal (JWT-auth)
+│       │   └── index.ts
+│       └── stripe-webhook/           # Inbound Stripe webhook (HMAC-signed, no JWT)
+│           └── index.ts
 ├── scripts/                   # Testing infrastructure
 │   ├── lib/
 │   │   └── call-counter.ts    # 40-call session hard cap
@@ -262,7 +302,8 @@ AmIBroke/
 │   │   ├── fixtures.analyze.ts    # 13 analyze test cases (5 groups)
 │   │   ├── fixtures.captions.ts   # 8 caption test cases (all tones + scores)
 │   │   ├── assertions.ts      # assertAnalyze, assertCaptions, assertActionPlan
-│   │   └── results/           # Raw output per run (JSON) + SUMMARY.md
+│   │   ├── results/           # Raw output per run (JSON) + SUMMARY.md
+│   │   └── test-backend-final.ts  # 16 E2E tests: auth, community, Stripe subscriptions
 │   ├── deploy-all.sh          # Deploy all 6 functions + migrations
 │   ├── manual-test.ts         # Human-review test tool
 │   ├── test-snapshots/
@@ -270,35 +311,35 @@ AmIBroke/
 │   │   ├── outputs/           # Saved AI responses (committed)
 │   │   └── REVIEW.md          # Manual review ratings
 │   └── test_anthropic.ts      # DEPRECATED
-└── src/
-    ├── components/            # Reusable UI primitives
-    │   ├── GlassCard.tsx
-    │   ├── NeonButton.tsx
-    │   ├── ScoreRing.tsx
-    │   ├── StatusPill.tsx
-    │   ├── LoadingState.tsx
-    │   ├── EmptyState.tsx
-    │   ├── ErrorState.tsx
-    │   ├── ErrorBoundary.tsx
-    │   ├── Disclaimer.tsx
-    │   ├── Toast.tsx
-    │   └── TypingPlaceholder.tsx
-    ├── navigation/
-    │   └── AppNavigator.tsx   # Stack + Bottom Tab navigator
-    ├── screens/               # 23 screens
-    ├── context/
-    │   └── AuthContext.tsx    # Supabase auth state
-    ├── hooks/                 # 7 custom hooks
-    ├── services/              # API + business logic
-    ├── lib/
-    │   └── validations.ts     # Zod schemas
-    ├── config/
-    │   ├── features.ts        # Feature flags
-    │   └── scoring.ts         # Score weights + bands
-    ├── theme/
-    │   └── colors.ts          # iOS HIG design tokens
-    └── types/
-        └── index.ts           # TypeScript interfaces
+├── src/
+│   ├── components/            # Reusable UI primitives
+│   │   ├── GlassCard.tsx
+│   │   ├── NeonButton.tsx
+│   │   ├── ScoreRing.tsx
+│   │   ├── StatusPill.tsx
+│   │   ├── LoadingState.tsx
+│   │   ├── EmptyState.tsx
+│   │   ├── ErrorState.tsx
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── Disclaimer.tsx
+│   │   ├── Toast.tsx
+│   │   └── TypingPlaceholder.tsx
+│   ├── navigation/
+│   │   └── AppNavigator.tsx   # Stack + Bottom Tab navigator
+│   ├── screens/               # 23 screens
+│   ├── context/
+│   │   └── AuthContext.tsx    # Supabase auth state
+│   ├── hooks/                 # 7 custom hooks
+│   ├── services/              # API + business logic
+│   ├── lib/
+│   │   └── validations.ts     # Zod schemas
+│   ├── config/
+│   │   ├── features.ts        # Feature flags
+│   │   └── scoring.ts         # Score weights + bands
+│   ├── theme/
+│   │   └── colors.ts          # iOS HIG design tokens
+│   └── types/
+│       └── index.ts           # TypeScript interfaces
 ```
 
 ---
@@ -319,4 +360,7 @@ AmIBroke/
 - `RATE_LIMIT_MAX` — Max requests per window (default: 30)
 - `RATE_LIMIT_WINDOW_SECONDS` — Window duration (default: 3600)
 - `RATE_LIMIT_ENABLED` — Set `false` to bypass rate limiter locally
-- `STRIPE_SECRET_KEY` — Stripe secret key
+- `STRIPE_SECRET_KEY` — Stripe secret key (test `sk_test_...` or live `sk_live_...`)
+- `STRIPE_PRICE_ID_ACTION_PLAN` — Price ID for Action Plan subscription
+- `STRIPE_PRICE_ID_DEEP_DIVE` — Price ID for Deep Dive subscription
+- `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret (`whsec_...`)

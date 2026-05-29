@@ -69,23 +69,3 @@ CREATE POLICY "Authenticated users can insert reactions"
 CREATE POLICY "Users can delete own reactions"
   ON post_reactions FOR DELETE
   USING (auth.uid() = user_id);
-
-ALTER TABLE post_reactions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Anyone can view reactions"
-  ON post_reactions FOR SELECT
-  USING (true);
-
-CREATE POLICY "Authenticated users can insert reactions"
-  ON post_reactions FOR INSERT
-  WITH CHECK (
-    auth.uid() = user_id
-    AND EXISTS (
-      SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND username IS NOT NULL
-    )
-  );
-
-CREATE POLICY "Users can delete own reactions"
-  ON post_reactions FOR DELETE
-  USING (auth.uid() = user_id);
