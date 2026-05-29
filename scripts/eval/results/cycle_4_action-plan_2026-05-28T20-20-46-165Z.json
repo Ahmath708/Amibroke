@@ -1,0 +1,27 @@
+{
+  "cycle": 4,
+  "suite": "action-plan",
+  "timestamp": "2026-05-28T20:20:46.165Z",
+  "promptHash": "4290ed4",
+  "aggregate": {
+    "passed": 0,
+    "failed": 1,
+    "total": 1,
+    "passRate": 0,
+    "avgResponseTimeMs": 1348,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "ap_fragile_negative_savings",
+      "pass": false,
+      "firstFailingAssertion": "HTTP 500: {\"code\":\"WORKER_ERROR\",\"message\":\"Function exited due to an error (please check logs)\"}",
+      "responseTimeMs": 1348,
+      "rawResponseBody": {
+        "code": "WORKER_ERROR",
+        "message": "Function exited due to an error (please check logs)"
+      }
+    }
+  ]
+}

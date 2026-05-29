@@ -1,12 +1,10 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { generatePlanTool } from './tool.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { ACTION_PLAN_PROMPT } from './prompt.ts';
 
-const ACTION_PLAN_PROMPT = Deno.readTextFileSync(
-  new URL('./prompts/system.txt', import.meta.url),
-);
 if (!ACTION_PLAN_PROMPT || ACTION_PLAN_PROMPT.length < 100) {
-  throw new Error('system.txt missing or truncated');
+  throw new Error('prompt.ts missing or truncated');
 }
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
@@ -76,7 +74,7 @@ async function callClaude(messages: Array<{ role: string; content: string }>, at
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
         temperature: 0.2,
-        system: [{ type: 'text', text: ACTION_PLAN_PROMPT, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: ACTION_PLAN_PROMPT }],
         tools: [generatePlanTool],
         tool_choice: { type: 'tool', name: 'generate_plan' },
         messages,
@@ -175,7 +173,21 @@ async function callGroq(messages: Array<{ role: string; content: string }>, atte
       throw error;
     }
 
-    const data = await response.json();
+    const rawText = await response.text();
+    if (!rawText) {
+      throw new Error('Empty response from Groq API');
+    }
+    let data: any;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr: any) {
+      console.error('[action-plan] Groq response parse error:', parseErr.message);
+      console.error('[action-plan] Raw response (first 500 chars):', rawText.slice(0, 500));
+      const err: any = new Error(`Groq response parse error: ${parseErr.message}`);
+      err.stage = 'groq_parse_error';
+      err.rawResponse = rawText.slice(0, 1000);
+      throw err;
+    }
     const content = data.choices?.[0]?.message?.content || '';
 
     let parsed: any;
@@ -248,6 +260,7 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : 'Unknown error';
     const stage = error.stage || 'exception';
     const status = error.status || 500;
-    return jsonResponse({ error: `Plan generation failed: ${message}`, stage }, status);
+    const rawResponse = error.rawResponse?.slice(0, 500) || null;
+    return jsonResponse({ error: `Plan generation failed: ${message}`, stage, rawResponse }, status);
   }
 });

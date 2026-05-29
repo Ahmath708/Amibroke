@@ -1,0 +1,31 @@
+{
+  "cycle": 4,
+  "suite": "captions",
+  "timestamp": "2026-05-29T01:30:47.064Z",
+  "promptHash": "4290ed4",
+  "aggregate": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "passRate": 1,
+    "avgResponseTimeMs": 4582,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "edge_perfect_score_gentle",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 4582,
+      "rawResponseBody": {
+        "captions": [
+          "Scored 100/100 on my financial health check 😭 apparently 'boring' finances are the goal and I finally made it.",
+          "Only 1 in 100 people score a perfect 100 on their financial wellness — turns out being 'boring' with money pays off 🤑",
+          "From skipping lattes to skipping financial stress entirely. A 100/100 score and my wallet has never been more unbothered ✨"
+        ],
+        "_provider": "claude"
+      }
+    }
+  ]
+}

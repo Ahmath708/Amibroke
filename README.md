@@ -120,12 +120,14 @@ All three endpoints have:
 - **Groq fallback** — automatic failover to Llama 3.3 70B when Claude is unavailable
 - **Rate limiting** — Postgres-backed fixed-window limiter (30 req/hour/IP, env-tunable)
 - **Upstream safety** — 30s fetch timeout via AbortController, max 3 retries, clear error stages
+- **CI/CD** — GitHub Actions workflow (`.github/workflows/ci.yml`) runs typecheck → test → deploy on main
+- **Deploy script** — `scripts/deploy-all.sh` deploys all 6 functions + runs migrations
+- **Pre-commit hook** — `.githooks/pre-commit` runs `npx tsc --noEmit`
+- **Staging** — Separate Supabase project (`zgrfgzjnhkellqgqfque`) for pre-production testing
 
 ### Prompt System
 
-Each function loads its system prompt from `prompts/system.txt` via `Deno.readTextFileSync` at module init, which fails fast on missing/truncated files. This means the `.txt` file is the single source of truth — edit it directly and redeploy. No separate `prompt.ts` copy to sync.
-
-Prompts are cached with Anthropic's `cache_control: { type: 'ephemeral' }`.
+Each function imports its system prompt from `prompt.ts` via ES module import. This is required because Supabase Edge Function deployments only bundle `.ts` assets — `.txt` files are not included in the deploy bundle. Edit `prompt.ts` and redeploy.
 
 ### Client Persistence
 
@@ -141,8 +143,8 @@ Both write only on success, return the cached value on subsequent visits, and fa
 |------|---------|
 | `scripts/eval/lib/harness.ts` | Shared eval library — runSuite() with cost prompts, raw-output logging, SUMMARY.md |
 | `scripts/eval/runner.analyze.ts` | Analyze runner — 13 fixtures across 5 groups (vague/partial/detailed/edge/CFPB) |
-| `scripts/eval/runner.action-plan.ts` | Action-plan runner — 8 real-analysis fixtures across 3 Fragile + 5 Surviving + 1 Thriving |
-| `scripts/eval/runner.captions.ts` | Captions runner — 6 fixtures spanning low/mid/high scores + 2 savage, 1 of each other tone |
+| `scripts/eval/runner.action-plan.ts` | Action-plan runner — 11 fixtures (8 original + 3 edge: score 0, score 100, multi-debt) |
+| `scripts/eval/runner.captions.ts` | Captions runner — 8 fixtures (6 original + 2 edge: score 0, score 100) |
 | `scripts/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings (word-boundary regex), plan consistency |
 | `scripts/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md — 9 cycles across 6 suites |
 | `scripts/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
@@ -201,6 +203,9 @@ AmIBroke/
 ├── tsconfig.json
 ├── babel.config.js
 ├── .env.example
+├── .github/workflows/ci.yml   # CI/CD pipeline (typecheck → test → deploy)
+├── .githooks/pre-commit       # TypeScript check hook (npx tsc --noEmit)
+├── CONTRIBUTING.md            # Eval methodology, fixture conventions, CI/CD
 ├── CLAUDE.md                  # AI safety rules
 ├── DECISIONS.md               # Architecture decisions + iteration hypotheses log (analyze, action-plan, captions)
 ├── 528_NEXT_STEPS.md          # Action-plan + captions iteration plan (✅ complete)
@@ -227,23 +232,21 @@ AmIBroke/
 │   └── functions/
 │       ├── _shared/           # Shared edge function utilities
 │       │   ├── rateLimit.ts   # Postgres-backed rate limiter (IO via supabase-js)
-│       │   └── rateLimitLogic.ts  # Pure logic: bucket key, limit resolution, bypass
+│       │   ├── rateLimitLogic.ts  # Pure logic: bucket key, limit resolution, bypass
+│       │   └── client.ts      # Shared Claude client (no cache_control)
 │       ├── analyze/           # Main analysis endpoint
 │       │   ├── index.ts       # Handler: validate → call AI → compute → return
+│       │   ├── prompt.ts      # System prompt (imported, single source of truth)
 │       │   ├── tool.ts        # submit_analysis tool JSON Schema
-│       │   ├── getBaselinesForRequest.ts
-│       │   └── prompts/
-│       │       └── system.txt # System prompt (loaded via Deno.readTextFileSync)
+│       │   └── getBaselinesForRequest.ts
 │       ├── action-plan/       # 90-day plan endpoint
 │       │   ├── index.ts
-│       │   ├── tool.ts
-│       │   └── prompts/
-│       │       └── system.txt
+│       │   ├── prompt.ts
+│       │   └── tool.ts
 │       ├── generate-captions/ # Share-card caption generator
 │       │   ├── index.ts       # Temperature 0.8, tool-use, Groq fallback
-│       │   ├── tool.ts        # submit_captions tool JSON Schema
-│       │   └── prompts/
-│       │       └── system.txt
+│       │   ├── prompt.ts
+│       │   └── tool.ts        # submit_captions tool JSON Schema
 │       ├── create-payment-intent/
 │       ├── confirm-purchase/
 │       └── verify-purchase/
@@ -260,6 +263,7 @@ AmIBroke/
 │   │   ├── fixtures.captions.ts   # 8 caption test cases (all tones + scores)
 │   │   ├── assertions.ts      # assertAnalyze, assertCaptions, assertActionPlan
 │   │   └── results/           # Raw output per run (JSON) + SUMMARY.md
+│   ├── deploy-all.sh          # Deploy all 6 functions + migrations
 │   ├── manual-test.ts         # Human-review test tool
 │   ├── test-snapshots/
 │   │   ├── inputs/            # 5 starter input fixtures (JSON)

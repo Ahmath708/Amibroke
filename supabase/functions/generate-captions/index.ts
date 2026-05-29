@@ -1,12 +1,11 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { submitCaptionsTool } from './tool.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { CAPTIONS_PROMPT } from './prompt.ts';
 
-const SYSTEM_PROMPT = Deno.readTextFileSync(
-  new URL('./prompts/system.txt', import.meta.url),
-);
+const SYSTEM_PROMPT = CAPTIONS_PROMPT;
 if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 100) {
-  throw new Error('system.txt missing or truncated');
+  throw new Error('prompt.ts missing or truncated');
 }
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
@@ -67,7 +66,7 @@ async function callClaude(messages: Array<{ role: string; content: string }>, at
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         temperature: 0.8,
-        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: SYSTEM_PROMPT }],
         tools: [submitCaptionsTool],
         tool_choice: { type: 'tool', name: 'submit_captions' },
         messages,

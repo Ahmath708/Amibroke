@@ -226,6 +226,73 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </>
         )}
 
+        {/* Recommended Budget */}
+        <Text style={styles.sectionTitle}>Recommended Budget</Text>
+        <View style={styles.metricsGroup}>
+          {(() => {
+            const income = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
+            const expenses = analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0;
+            const savings = analysis.monthlySavings ?? 0;
+            const needsPct = income > 0 ? (expenses / income) * 100 : 0;
+            const wantsPct = income > 0 ? Math.max(0, ((income - expenses - savings) / income) * 100) : 0;
+            const savingsPct = income > 0 ? (savings / income) * 100 : 0;
+            const recNeeds = income * 0.5;
+            const recWants = income * 0.3;
+            const recSavings = income * 0.2;
+            return (
+              <>
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricIcon}>🏠</Text>
+                  <Text style={styles.metricLabel}>Needs</Text>
+                  <Text style={styles.metricValue}>{needsPct.toFixed(0)}%</Text>
+                </View>
+                {income > 0 && (
+                  <View style={styles.budgetDetail}>
+                    <Text style={styles.budgetDetailText}>
+                      Current: ${expenses.toLocaleString()}/mo
+                    </Text>
+                    <Text style={styles.budgetDetailText}>
+                      Target: ${recNeeds.toLocaleString()}/mo (50%)
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.rowSep} />
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricIcon}>🎮</Text>
+                  <Text style={styles.metricLabel}>Wants</Text>
+                  <Text style={styles.metricValue}>{wantsPct.toFixed(0)}%</Text>
+                </View>
+                {income > 0 && (
+                  <View style={styles.budgetDetail}>
+                    <Text style={styles.budgetDetailText}>
+                      Current: ${Math.max(0, income - expenses - savings).toLocaleString()}/mo
+                    </Text>
+                    <Text style={styles.budgetDetailText}>
+                      Target: ${recWants.toLocaleString()}/mo (30%)
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.rowSep} />
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricIcon}>💰</Text>
+                  <Text style={styles.metricLabel}>Savings / Debt</Text>
+                  <Text style={[styles.metricValue, savingsPct < 20 && { color: Colors.danger }]}>{savingsPct.toFixed(0)}%</Text>
+                </View>
+                {income > 0 && (
+                  <View style={styles.budgetDetail}>
+                    <Text style={styles.budgetDetailText}>
+                      Current: ${savings.toLocaleString()}/mo
+                    </Text>
+                    <Text style={styles.budgetDetailText}>
+                      Target: ${recSavings.toLocaleString()}/mo (20%)
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
+          })()}
+        </View>
+
         {/* Insights */}
         {analysis.insights?.length > 0 && (
           <>
@@ -377,4 +444,6 @@ scoreNum: {
   problemText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
   actionsGroup: { gap: Spacing.sm, marginTop: Spacing.xs },
   actionBtn: {},
+  budgetDetail: { paddingLeft: Spacing.xl + Spacing.sm, paddingBottom: Spacing.xs },
+  budgetDetailText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, lineHeight: 16 },
 });

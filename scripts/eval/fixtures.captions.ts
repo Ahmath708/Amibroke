@@ -78,4 +78,28 @@ export const FIXTURES: Fixture[] = [
       tone: 'savage',
     },
   },
+
+  // ─── Group D: Edge Cases ─────────────────────────────────────
+  {
+    id: 'edge_score_zero_savage',
+    group: 'D-edge',
+    label: 'Score 0, savage tone — extreme crisis',
+    input: {
+      score: 0,
+      scoreLabel: 'Financially Fragile',
+      roast: 'This is Ground Zero. No income, no savings, and a payday loan charging 35%. You\'re not in a hole — you\'re at the bottom of the Mariana Trench.',
+      tone: 'savage',
+    },
+  },
+  {
+    id: 'edge_perfect_score_gentle',
+    group: 'D-edge',
+    label: 'Score 100, gentle tone — perfect, wealthy',
+    input: {
+      score: 100,
+      scoreLabel: 'Thriving',
+      roast: 'Honestly? Your finances are boring. And that\'s the highest compliment I can give.',
+      tone: 'gentle',
+    },
+  },
 ];

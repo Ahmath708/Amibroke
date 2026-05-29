@@ -1,0 +1,31 @@
+{
+  "cycle": 4,
+  "suite": "captions",
+  "timestamp": "2026-05-29T01:30:32.228Z",
+  "promptHash": "4290ed4",
+  "aggregate": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "passRate": 1,
+    "avgResponseTimeMs": 5180,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "edge_score_zero_savage",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 5180,
+      "rawResponseBody": {
+        "captions": [
+          "I scored 0/100. No savings, no income, a 35% payday loan. I'm not in a hole — I'm in the Mariana Trench 🌊💀",
+          "0 out of 100. Payday loans at 35% APR trap 12M Americans yearly. I was one of them. The score doesn't lie 😬",
+          "Ground Zero hits different when it's your finances. Scored 0/100 and decided that's the last time I ever see that number 🔥"
+        ],
+        "_provider": "claude"
+      }
+    }
+  ]
+}

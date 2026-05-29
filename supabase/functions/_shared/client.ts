@@ -31,7 +31,7 @@ async function claudeFetch(messages: Array<{ role: string; content: string }>, s
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       temperature: 0.2,
-      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt }],
       tools,
       tool_choice: { type: 'tool', name: tools[0]?.name || '' },
       messages,

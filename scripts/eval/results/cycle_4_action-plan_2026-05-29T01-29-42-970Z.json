@@ -1,0 +1,77 @@
+{
+  "cycle": 4,
+  "suite": "action-plan",
+  "timestamp": "2026-05-29T01:29:42.970Z",
+  "promptHash": "4290ed4",
+  "aggregate": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "passRate": 1,
+    "avgResponseTimeMs": 25782,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "ap_edge_perfect_score",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 25782,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Audit how much cash is sitting idle above your $150k emergency fund",
+            "description": "You've got $200k liquid and only need ~$60k-90k for a true 3-6 month emergency fund. That means $110k-$140k is sitting in cash, likely earning 4-5% when it could be compounding at 7-10%+ in diversified investments. Map it out now.",
+            "category": "savings",
+            "impact": "Identifying $110k+ in underdeployed cash is the single highest-leverage move you can make. Even a 3% improvement in returns on that sum = $3,300+/year in extra compounding.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 2-3",
+            "title": "Define your target asset allocation and deploy excess cash",
+            "description": "With $15k/mo in savings and $110k+ to deploy, build a clear allocation: e.g. 80% diversified index funds, 10% bonds, 10% alternatives. Start moving the idle cash in tranches over 3-4 months to avoid timing risk.",
+            "category": "savings",
+            "impact": "Deploying $110k into a diversified portfolio at a historical 8% average return adds ~$8,800/year in expected gains vs. cash. Over 10 years, that gap compounds to $160k+.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Max every tax-advantaged account before investing a single taxable dollar",
+            "description": "At $25k/mo income, tax drag is your biggest silent enemy. Confirm you're maxing your 401(k) ($23,000 limit), IRA ($7,000), and HSA ($4,150 if eligible) before routing money to taxable brokerage accounts.",
+            "category": "income",
+            "impact": "Maxing all three shelters up to $34,150/year from taxes. At your income bracket, that's potentially $10k-$14k in annual tax savings — money that compounds instead of going to the IRS.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Automate your $15k/mo savings into a tiered investment system",
+            "description": "Set up automatic transfers on payday: first fill tax-advantaged accounts, then route the remainder to your taxable brokerage. No manual decisions, no timing temptation. Automation is how $15k/mo becomes generational wealth.",
+            "category": "mindset",
+            "impact": "At $15k/mo invested with a 8% average annual return, you're looking at ~$2.7M in 10 years and ~$8.5M in 20 years. Automation ensures you never miss a month.",
+            "confidence": "high"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Explore whether a taxable brokerage or real estate fits your growth goals",
+            "description": "Once tax-advantaged accounts are maxed, your $15k/mo surplus needs a home. A low-cost diversified index fund strategy in a taxable brokerage is the default. Real estate is worth modeling if you want cash flow and leverage — but run the numbers first.",
+            "category": "income",
+            "impact": "Choosing the right vehicle for your surplus $8k-$10k/mo (after maxing tax-advantaged accounts) could add $500k-$1M+ in net worth over the next decade depending on allocation.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Do a full 90-day review: returns, allocation drift, and next-level goals",
+            "description": "Check if your portfolio has drifted from your target allocation. Rebalance if any asset class is off by more than 5%. Set your next milestone — whether that's $500k invested, a specific FIRE number, or a real estate down payment.",
+            "category": "mindset",
+            "impact": "Annual rebalancing has been shown to improve risk-adjusted returns by 0.5-1.5%/year. At your portfolio size, that's $1,000-$3,000/year in recovered performance — and growing.",
+            "confidence": "high"
+          }
+        ],
+        "overallMessage": "Bro. Zero debt. 60% savings rate. $200k liquid. You're not fixing problems — you're optimizing a machine that's already printing wealth. The only thing holding you back right now is $110k+ sitting in cash when it should be compounding. The next 90 days are about deploying capital intelligently, sheltering income from taxes, and automating the system so your money works as hard as you do. Let's go.",
+        "_provider": "claude"
+      }
+    }
+  ]
+}

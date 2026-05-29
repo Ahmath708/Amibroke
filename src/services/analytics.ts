@@ -1,6 +1,40 @@
 import { PostHog } from 'posthog-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const OPT_OUT_KEY = 'analytics_opt_out';
 
 let posthog: PostHog | null = null;
+let optOut = false;
+
+async function loadOptOut() {
+  try {
+    const val = await AsyncStorage.getItem(OPT_OUT_KEY);
+    optOut = val === 'true';
+  } catch {
+    optOut = false;
+  }
+}
+
+async function setOptOut(optedOut: boolean) {
+  optOut = optedOut;
+  try {
+    await AsyncStorage.setItem(OPT_OUT_KEY, optedOut ? 'true' : 'false');
+  } catch {
+    // silently fail
+  }
+}
+
+export function isAnalyticsOptedOut(): boolean {
+  return optOut;
+}
+
+export async function optOutAnalytics() {
+  await setOptOut(true);
+}
+
+export async function optInAnalytics() {
+  await setOptOut(false);
+}
 
 export function getPostHog(): PostHog | null {
   return posthog;
@@ -8,6 +42,7 @@ export function getPostHog(): PostHog | null {
 
 export async function initAnalytics(apiKey?: string, host?: string): Promise<PostHog | null> {
   if (posthog) return posthog;
+  await loadOptOut();
 
   const key = apiKey || process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
   if (!key) {
@@ -29,7 +64,7 @@ export async function initAnalytics(apiKey?: string, host?: string): Promise<Pos
 }
 
 export async function identifyUser(userId: string, properties?: Record<string, string | number | boolean | null>) {
-  if (!posthog) return;
+  if (!posthog || optOut) return;
   try {
     posthog.identify(userId, properties);
   } catch (e) {
@@ -38,7 +73,7 @@ export async function identifyUser(userId: string, properties?: Record<string, s
 }
 
 export async function trackEvent(event: string, properties?: Record<string, string | number | boolean | null>) {
-  if (!posthog) return;
+  if (!posthog || optOut) return;
   try {
     posthog.capture(event, properties);
   } catch (e) {

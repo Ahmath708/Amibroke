@@ -1,0 +1,77 @@
+{
+  "cycle": 4,
+  "suite": "action-plan",
+  "timestamp": "2026-05-29T01:29:06.674Z",
+  "promptHash": "4290ed4",
+  "aggregate": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "passRate": 1,
+    "avgResponseTimeMs": 27651,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "ap_edge_score_zero",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 27651,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Reach out to a nonprofit credit counselor about the $2,000 payday loan",
+            "description": "Contact a nonprofit credit counseling agency (look for NFCC-member organizations) to explore hardship programs or payday loan relief options. At 35% APR, this $2,000 loan grows by roughly $58 every month you can't pay it.",
+            "category": "debt",
+            "impact": "A nonprofit counselor may be able to negotiate a payment pause, reduced rate, or hardship plan — stopping the $58/mo interest bleed before it compounds further.",
+            "confidence": "low"
+          },
+          {
+            "week": "Week 1",
+            "title": "Apply for emergency assistance to cover the $500/mo in expenses",
+            "description": "Contact local social services, 211 (dial 2-1-1), food banks, and community organizations. With $0 income and $500/mo in expenses, outside support isn't optional right now — it's the bridge.",
+            "category": "mindset",
+            "impact": "Covering basic expenses through assistance programs frees any future income to go toward the payday loan rather than just survival.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 2-4",
+            "title": "Identify any income source — even $200-$400/mo changes everything",
+            "description": "Explore gig work, day labor, selling unused items, or temporary work agencies. Even $200-$400/mo in income begins to shift the math from 'compounding crisis' to 'manageable problem.'",
+            "category": "income",
+            "impact": "At $400/mo income, you could cover the $200 minimum payment and $200 toward expenses — stopping the debt from growing and stabilizing your situation.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Explore payday loan alternatives to escape the 35% APR trap",
+            "description": "Ask your credit counselor about credit union payday alternative loans (PALs), which cap interest around 28%. Refinancing the $2,000 at even 20% lower APR saves roughly $350 over the repayment period.",
+            "category": "debt",
+            "impact": "Replacing a 35% APR loan with a lower-rate alternative could save $350+ and reduce the monthly payment burden while income is being rebuilt.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Once income starts, direct every extra dollar above $500 to the payday loan",
+            "description": "As soon as any income arrives, cover your $500/mo in expenses first, then put everything remaining toward the $2,000 balance. At $700/mo income, that's $200/mo toward the loan — paid off in about 11 months.",
+            "category": "debt",
+            "impact": "Eliminating the $2,000 payday loan removes $200/mo in minimum payments and ends the 35% APR drain — freeing cash flow for the first time.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "Review your situation and build even a $500 emergency buffer",
+            "description": "By week 12, take stock: Is income stable? Is the loan balance shrinking? Even saving $500 — one month of expenses — breaks the cycle of needing high-interest loans when something goes wrong.",
+            "category": "savings",
+            "impact": "A $500 buffer means the next unexpected $200 expense doesn't send you back to a payday lender. It's a small number with an outsized psychological and financial impact.",
+            "confidence": "low"
+          }
+        ],
+        "overallMessage": "This is a genuinely hard place to be, and it makes sense that it feels overwhelming. The numbers here — $0 income, $500/mo in expenses, a $2,000 loan at 35% — don't leave much room for traditional financial advice. The first 30 days aren't about budgeting. They're about stabilizing: finding support, stopping the loan from growing, and locating any income at all. Every step here is marked low-confi",
+        "_provider": "claude"
+      }
+    }
+  ]
+}

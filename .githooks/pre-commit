@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run TypeScript type checking before commit
+npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript compilation failed. Fix errors before committing."
+  exit 1
+fi

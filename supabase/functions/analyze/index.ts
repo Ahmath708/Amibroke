@@ -5,12 +5,11 @@ import type { FinalAnalysis, UserContext } from '../../../shared/types.ts';
 import { deriveMetrics } from '../../../shared/calculations.ts';
 import { computeFinalScore } from '../../../shared/scoring/index.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { ANALYZE_PROMPT } from './prompt.ts';
 
-const SYSTEM_PROMPT = Deno.readTextFileSync(
-  new URL('./prompts/system.txt', import.meta.url),
-);
+const SYSTEM_PROMPT = ANALYZE_PROMPT;
 if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 100) {
-  throw new Error('system.txt missing or truncated');
+  throw new Error('prompt.ts missing or truncated');
 }
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
@@ -152,7 +151,7 @@ async function callClaude(messages: Array<{ role: string; content: string }>, at
         model: 'claude-sonnet-4-6',
         max_tokens: 2500,
         temperature: 0.2,
-        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: SYSTEM_PROMPT }],
         tools: [submitAnalysisTool],
         tool_choice: { type: 'tool', name: 'submit_analysis' },
         messages,

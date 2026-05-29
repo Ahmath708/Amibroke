@@ -1,0 +1,77 @@
+{
+  "cycle": 4,
+  "suite": "action-plan",
+  "timestamp": "2026-05-29T01:30:16.789Z",
+  "promptHash": "4290ed4",
+  "aggregate": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "passRate": 1,
+    "avgResponseTimeMs": 24107,
+    "totalApiCalls": 1
+  },
+  "scoreStats": null,
+  "perFixture": [
+    {
+      "id": "ap_edge_multi_debt",
+      "pass": true,
+      "firstFailingAssertion": null,
+      "responseTimeMs": 24107,
+      "rawResponseBody": {
+        "steps": [
+          {
+            "week": "Week 1",
+            "title": "Stop the bleeding: build a $1,500 emergency wall ASAP",
+            "description": "You have $1,200 saved — that's 9 days of expenses. Add $300 this week to hit $1,500. Park it somewhere you won't touch it. This is your firewall so one bad day doesn't send you straight to the 22% card.",
+            "category": "savings",
+            "impact": "Breaks the emergency → credit card debt spiral. Without this buffer, every surprise resets your progress on the $4,500 CC balance.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 2-4",
+            "title": "Avalanche the $4,500 CC — throw every spare dollar at it",
+            "description": "Pay the $135 minimum plus every extra dollar you can find. Even $265 extra/mo means you're putting $400/mo total at a 22% APR balance. That card is costing you roughly $82/mo in interest right now — kill it fast.",
+            "category": "debt",
+            "impact": "At $400/mo total, the CC is gone in about 12 months and saves you ~$500 in interest. At $500/mo, you're done in under 10 months.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 3-4",
+            "title": "Audit your $3,800/mo in expenses — find $200 to redirect",
+            "description": "Your expense number is estimated, not confirmed. Pull 3 months of statements and find the leaks. Subscriptions, food delivery, random charges. Finding $200/mo in cuts accelerates the CC payoff significantly.",
+            "category": "mindset",
+            "impact": "An extra $200/mo toward the CC cuts payoff time by 2-3 months and saves another $150+ in interest. The math is simple — find the leaks.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Lock in a $0 interest deal on the $2,800 medical bill",
+            "description": "Medical debt at 0% interest is the least urgent — but call the billing office now and negotiate a lower lump sum or confirm your $50/mo plan in writing. Many providers will settle for 40-60 cents on the dollar.",
+            "category": "debt",
+            "impact": "Potentially wipe out $1,000+ of the $2,800 balance with a negotiated settlement, freeing up $50/mo minimum payment once resolved.",
+            "confidence": "low"
+          },
+          {
+            "week": "Weeks 5-8",
+            "title": "Once CC is under $2,000, start stacking your emergency fund",
+            "description": "When the CC balance drops below $2,000, split your extra payments: half to the CC, half to savings. Target 1 full month of expenses (~$3,800) in your emergency fund before the CC is fully gone.",
+            "category": "savings",
+            "impact": "Reaching $3,800 in savings means you're no longer one car repair away from adding to your $57,300 debt pile.",
+            "confidence": "medium"
+          },
+          {
+            "week": "Weeks 9-12",
+            "title": "CC is dead — redirect $400+/mo to the car loan at 6.9%",
+            "description": "Once the CC is gone, you free up $135/mo minimum plus whatever extra you were throwing at it. Stack that onto the $320 car payment. Putting $500+/mo at the $15,000 car loan at 6.9% cuts years off the payoff.",
+            "category": "debt",
+            "impact": "Redirecting $455/mo total to the car loan saves ~$1,800 in interest and pays it off roughly 2 years early — then that $320/mo becomes yours.",
+            "confidence": "medium"
+          }
+        ],
+        "overallMessage": "You've got $57,300 in debt and $1,200 in savings. That's the whole situation. The good news: you have $400/mo in positive cash flow and you know exactly what you owe. The CC at 22% is the only fire right now — everything else can wait. Kill it, build a buffer, then work down the stack. This is fixable. It just requires 90 days of not blinking.",
+        "_provider": "claude"
+      }
+    }
+  ]
+}

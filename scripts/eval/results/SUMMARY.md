@@ -14,3 +14,9 @@
 | 2026-05-28 | captions | 1 | 977669e | 100% | 6/6 | baseline — structural overlap observed |
 | 2026-05-28 | captions | 2 | 977669e | 100% | 6/6 | hypothesis: structural uniqueness — no two captions share opening pattern |
 | 2026-05-28 | captions | 3 | 977669e | 100% | 6/6 | hypothesis: min 100-char length — range tightened from 84-150 to 99-134 |
+| 2026-05-28 | action-plan | 4 | 4290ed4 | 0% | 0/1 | |
+| 2026-05-29 | action-plan | 4 | 4290ed4 | 100% | 1/1 | |
+| 2026-05-29 | action-plan | 4 | 4290ed4 | 100% | 1/1 | |
+| 2026-05-29 | action-plan | 4 | 4290ed4 | 100% | 1/1 | |
+| 2026-05-29 | captions | 4 | 4290ed4 | 100% | 1/1 | |
+| 2026-05-29 | captions | 4 | 4290ed4 | 100% | 1/1 | |
