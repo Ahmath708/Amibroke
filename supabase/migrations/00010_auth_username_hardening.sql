@@ -20,6 +20,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP POLICY IF EXISTS "Users can insert own community posts" ON community_posts;
+DROP POLICY IF EXISTS "Users post to community" ON community_posts;
 CREATE POLICY "Users can insert own community posts (username required)"
   ON community_posts FOR INSERT
   WITH CHECK (

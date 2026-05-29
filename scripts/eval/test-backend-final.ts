@@ -3,8 +3,8 @@
 //           stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
 // Run with: npx tsx scripts/eval/test-backend-final.ts
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjQ4Mzg3Mjc5Njd9.ogSzGXaRruLrzYbT7DBnzJ8GgI8nPwY1hMhY0oY0oY0';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zefhsplmgxefmpdqbbvv.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZmhzcGxtZ3hlZm1wZHFiYnZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzc5NzksImV4cCI6MjA5NDg1Mzk3OX0.IYVIlo7Na7-L-rHBenSxW3uf_sM88AHg_eQewIxpdRs';
 const STRIPE_PRICE_ACTION_PLAN = process.env.STRIPE_PRICE_ID_ACTION_PLAN || '';
 const STRIPE_PRICE_DEEP_DIVE = process.env.STRIPE_PRICE_ID_DEEP_DIVE || '';
 
@@ -64,12 +64,14 @@ async function main() {
 
   console.log('Starting 528_BACKEND_FINAL E2E tests...\n');
 
+  const ts = Date.now();
+
   // ─── Step 1: Auth Tests ─────────────────────────────────────────
   console.log('--- Auth Tests (Step 1) ---');
 
   await test('A1: Create two users with same email prefix (collision safe)', async () => {
-    const u1 = await signUp('test1@gmail.com', 'password123');
-    const u2 = await signUp('test1@yahoo.com', 'password123');
+    const u1 = await signUp(`test1_${ts}@gmail.com`, 'password123');
+    const u2 = await signUp(`test1_${ts}@yahoo.com`, 'password123');
     if (!u1 || !u2) return false;
     userAToken = u1.token;
     userBToken = u2.token;
@@ -79,10 +81,10 @@ async function main() {
   });
 
   await test('A2: Both profiles have username = NULL after signup', async () => {
-    const res = await supabaseQuery('GET', 'profiles?select=username', userAToken);
+    const res = await supabaseQuery('GET', `profiles?id=eq.${userIdA}&select=username`, userAToken);
     if (!res.ok) return false;
     const profiles = await res.json();
-    return profiles.every((p: any) => p.username === null);
+    return profiles.length > 0 && profiles[0].username === null;
   }, 'username is nullable - trigger inserts NULL');
 
   await test('A3: User without username cannot insert community post (RLS)', async () => {
@@ -94,11 +96,12 @@ async function main() {
   }, 'RLS blocks post when username IS NULL');
 
   await test('A4: Set username then community post succeeds', async () => {
-    const rpcResult = await supabaseRpc('set_username', userAToken, { p_username: 'jasontest' });
+    const username = 'jasontest' + ts;
+    const rpcResult = await supabaseRpc('set_username', userAToken, { p_username: username });
     if (!rpcResult?.ok) return false;
 
     const postRes = await supabaseQuery('POST', 'community_posts', userAToken, {
-      user_id: userIdA, display_name: 'jasontest', score: 65,
+      user_id: userIdA, display_name: username, score: 65,
       score_label: 'Surviving', roast: 'test roast', summary: 'test summary',
     });
     if (!postRes.ok) return false;
@@ -122,8 +125,9 @@ async function main() {
     const aData = await analysisRes.json();
     analysisId = Array.isArray(aData) ? aData[0]?.id : aData?.id;
 
+    const usernameA = 'jasontest' + ts;
     const shareRes = await supabaseQuery('POST', 'community_posts', userAToken, {
-      user_id: userIdA, analysis_id: analysisId, display_name: 'jasontest',
+      user_id: userIdA, analysis_id: analysisId, display_name: usernameA,
       score: 65, score_label: 'Surviving', roast: 'test roast', summary: 'test summary',
     });
     return shareRes.ok;
@@ -152,6 +156,7 @@ async function main() {
   });
 
   await test('C5: Reaction count trigger — insert two, count=2, delete one, count=1', async () => {
+    await supabaseRpc('set_username', userBToken, { p_username: 'testuserB' + ts });
     await supabaseQuery('POST', 'post_reactions', userBToken, {
       post_id: communityPostId, user_id: userIdB, emoji: '🔥',
     });
@@ -184,11 +189,23 @@ async function main() {
     return res.ok && typeof data.url === 'string' && data.url.includes('checkout.stripe.com');
   });
 
+  async function signStripePayload(payload: string, secret: string): Promise<string> {
+    const ts = Math.floor(Date.now() / 1000);
+    const toSign = `${ts}.${payload}`;
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(toSign));
+    const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `t=${ts},v1=${hex}`;
+  }
+
   await test('S6: Webhook returns 200 with received:true for unhandled events', async () => {
+    const payload = JSON.stringify({ type: 'payment_method.attached', data: { object: {} } });
+    const sigHeader = await signStripePayload(payload, 'whsec_gjVwms7QBW2swHRxwwAF3VynkyHV4oyP');
     const res = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'payment_method.attached', data: { object: {} } }),
+      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': sigHeader },
+      body: payload,
     });
     const body = await res.json();
     return res.ok && body.received === true;
