@@ -1,1 +1,150 @@
-When you are about to run a script that calls the Anthropic API, the Groq API, or any other paid external API, first tell the human how many calls the script will make and the estimated cost. Wait for human confirmation before executing. Do not run paid scripts silently.
+# CLAUDE.md — Am I Broke?
+
+Guidance for Claude Code working in this repository. Read this first.
+
+## ⚠️ Critical rules (do not skip)
+
+1. **Paid API cost confirmation.** Before running any script that calls the Anthropic API, the
+   Groq API, or any other paid external API, first tell the human how many calls the script will
+   make and the estimated cost. Wait for human confirmation before executing. **Never run paid
+   scripts silently.** (Notable paid scripts: `scripts/test_anthropic.ts`, `scripts/eval/*`,
+   `scripts/manual-test.ts`.)
+2. **AI mocks are ON in dev by default** (`src/config/ai.ts` → `USE_AI_MOCKS = __DEV__ && true`)
+   so the frontend never burns API credits during QA. Mocks never ship to prod (`__DEV__` is
+   false in release). Only flip mocks off deliberately, and mind rule #1 when you do.
+3. **The Supabase project is coworker-owned (free tier).** Project ref `zefhsplmgxefmpdqbbvv`.
+   `supabase db push` works from the CLI, but the hosted DB can lag the migration files — a
+   PGRST204 "column not found" at runtime means a migration wasn't applied remotely. Editing
+   Auth/dashboard settings needs an elevated org role the dev may not have. A separate
+   **AmIBroke-staging** project (`zgrfgzjnhkellqgqfque`) exists.
+4. **Branching:** active work happens on the `dev` branch; `master` is left stable. Branch before
+   committing; don't commit/push unless asked.
+
+## What this app is
+
+"Am I Broke?" — a Gen Z personal-finance app (Expo + TypeScript, iOS-first, heading to the App
+Store). The user describes their finances in plain English; the app returns an AI-powered roast,
+a 0–100 financial health score, a spending breakdown, and (paid) a 90-day action plan, debt
+payoff strategy, and scenario simulator. Handles **sensitive financial data** — treat security
+and correctness as first-class.
+
+## Tech stack
+
+- **App:** Expo SDK 54, React Native 0.81.5, React 19.1.0, TypeScript 5.9 (`strict`), New
+  Architecture enabled. Metro bundler. Entry: `App.tsx` → `src/navigation/AppNavigator.tsx`.
+- **Navigation:** React Navigation v7 — native-stack + bottom-tabs (+ legacy stack).
+- **State:** React Context (`AuthContext`) + hooks. No Redux/MobX. Local persistence via
+  `@react-native-async-storage/async-storage`.
+- **Backend:** Supabase — Postgres (SQL migrations + RLS) and **Deno edge functions**. LLM work
+  (Anthropic Claude + Groq) lives server-side in edge functions, keyed by Supabase secrets.
+- **Payments:** RevenueCat In-App Purchase (`react-native-purchases`). See `REVENUECAT_SETUP.md`.
+- **Auth:** Supabase Auth, Google OAuth via PKCE (`expo-auth-session`); deep-link scheme
+  `amibroke://`.
+- **Analytics:** PostHog (`posthog-react-native`), forced onto AsyncStorage.
+- **Validation:** Zod (shared schemas). **Animation:** Reanimated v4. **Voice:** `expo-audio`.
+
+## Repository structure
+
+```
+App.tsx                  App root: fonts, providers (Auth), RevenueCat init, navigation
+src/
+  navigation/            AppNavigator — all routes; RootStackParamList lives in src/types
+  screens/               ~25 screens (Home, Results, Paywall, ActionPlan, DebtPayoff, etc.)
+  components/             Reusable UI (NeonButton, GlassCard, ScoreRing, ScreenBackground, …)
+  context/AuthContext    Supabase client, session, OAuth (PKCE), RevenueCat identity sync
+  hooks/                 useAnalysis, useSubscription, useVoiceInput, useShare, useDebtStrategy…
+  services/              Data/IO layer (see below)
+  config/                ai.ts (mocks flag), features.ts (flags), scoring.ts (weights/bands)
+  theme/colors.ts        Design tokens: Colors, Typography, Spacing, Radius
+  types/index.ts         App-wide types incl. RootStackParamList & PURCHASE_PRODUCTS
+  __fixtures__/          Sample data for dev mocks
+shared/                  Framework-agnostic financial logic shared by app + edge functions
+  scoring/               CFPB / IRT scoring (cfpb_irt, bands, index)
+  baselines/             National & per-state spending baselines
+  schemas.ts             Zod schemas (FinalAnalysisSchema, etc.)
+  calculations.ts        Pure financial math
+supabase/
+  migrations/            00001–00014, applied via `supabase db push`
+  functions/             Deno edge functions (see below)
+scripts/                 deploy-all.sh, eval/, manual-test.ts, test_anthropic.ts (PAID — rule #1)
+```
+
+### `src/services/` (the IO layer)
+- `claudeApi.ts` — main client→edge-function calls (analyze, action plan, captions) + analyses CRUD
+- `subscriptions.ts` — tier/entitlement logic; reads RevenueCat (DB `user_subscriptions` as mirror)
+- `purchases.ts` — RevenueCat SDK wrapper (configure/login/offerings/purchase/restore/manage). **Guarded:** no key → app runs as free tier
+- `analytics.ts` — PostHog init + event helpers
+- `scoring.ts` / `moderation.ts` / `gdpr.ts` / `affiliate.ts` / `creator.ts` / `offlineCache.ts`
+
+### `supabase/functions/` (Deno)
+- `analyze` — generate the financial analysis (Claude/Groq)
+- `action-plan` — generate the 90-day plan (paid feature)
+- `generate-captions` — shareable caption generation
+- `revenuecat-webhook` — sync IAP entitlement events → `user_subscriptions`
+- `_shared/` — CORS, rate-limit, JSON helpers (`cors.ts`)
+
+## Conventions
+
+- **Path aliases:** `@/*` → `src/*`, `@shared/*` → `shared/*` (configured in `tsconfig.json`,
+  `babel.config.js` module-resolver, and `metro.config.js`). Use them; avoid deep `../../`.
+- **`shared/` is cross-runtime** — keep it framework-agnostic (no RN/Deno-specific imports) since
+  both the app and edge functions consume it. Uses `.ts` import extensions
+  (`allowImportingTsExtensions`).
+- **Theme:** import tokens from `@/theme/colors` (`Colors`, `Typography`, `Spacing`, `Radius`);
+  don't hardcode colors/spacing.
+- **File references in chat:** use clickable markdown links, e.g. `[file.ts:42](src/file.ts#L42)`.
+- **`tsconfig` excludes** `supabase/` and `scripts/` (they're Deno/Node, not RN) — typecheck the
+  app with `npx tsc --noEmit`.
+
+## Testing
+
+- Runner: **jest** (`jest-expo` preset). `npm test`. `npm run test:purchases` for the IAP unit test.
+- Tests live in `src/**/__tests__/` and `shared/*.test.ts`. Mock native modules in unit tests
+  (see `src/services/__tests__/purchases.test.ts` mocking `react-native-purchases`).
+- Always run `npx tsc --noEmit` after changes — it's the fastest correctness signal here, and IAP
+  / native flows can't be exercised in this environment without a device build.
+
+## Common commands
+
+```bash
+npx expo run:ios --device "iPhone SE (3rd generation)"   # build+run on a specific simulator
+npx expo start                                            # Metro (press shift+i to switch sims)
+npx tsc --noEmit                                          # typecheck the app
+npm test                                                  # jest
+npx supabase db push                                      # apply migrations to the linked DB
+npx supabase functions deploy <name>                      # deploy an edge function
+```
+
+## Environment
+
+Client vars are `EXPO_PUBLIC_*` in `.env` (see `.env.example`): Supabase URL/anon key, PostHog
+key/host, `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, feature flags. **Server secrets** (Anthropic, Groq,
+RevenueCat webhook auth, service role) are set via `supabase secrets set` and are never bundled
+client-side.
+
+## Gotchas
+
+- **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
+  timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
+- **RevenueCat is not testable** without a paid Apple Developer Program membership; the dev account
+  is free-tier only. Local IAP testing is possible via an Xcode StoreKit Configuration file (no
+  paid account needed) but the webhook→DB mirror still needs sandbox. See `REVENUECAT_SETUP.md`.
+- The `README.md` still references the old Stripe billing — **billing is RevenueCat now**; trust
+  this file and `REVENUECAT_SETUP.md` over the README on payments.
+
+## Skills (in `.claude/skills/`)
+
+Project-scoped skills curated for this stack — invoke when relevant:
+- **react-patterns**, **react-performance** — React hooks/state/perf (web-oriented; principles
+  transfer to React Native)
+- **react-testing** — jest/RTL component + hook testing, network mocking
+- **postgres-patterns**, **database-migrations** — Postgres schema/indexing/RLS and safe migrations
+- **api-design**, **error-handling** — REST patterns and typed TS error handling for edge functions
+- **security-scan** — audit `.claude/` config for misconfigurations (distinct from the built-in
+  `/security-review` code review)
+- **git-workflow** — branching/commit conventions
+- **cost-aware-llm-pipeline** — model routing, budget tracking, prompt caching (fits rule #1)
+- **ios-icon-gen** — generate Xcode app-icon imagesets for the App Store build
+
+Built-in skills also available (don't duplicate): `/deep-research`, `/security-review`,
+`/code-review`, `/verify`, `/simplify`, `/run`.
