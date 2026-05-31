@@ -22,7 +22,6 @@ import ActionPlanScreen from '@/screens/ActionPlanScreen';
 import DebtPayoffScreen from '@/screens/DebtPayoffScreen';
 import ShareScreen from '@/screens/ShareScreen';
 import PaywallScreen from '@/screens/PaywallScreen';
-import PaymentScreen from '@/screens/PaymentScreen';
 import HistoryScreen from '@/screens/HistoryScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import CommunityFeedScreen from '@/screens/CommunityFeedScreen';
@@ -171,7 +170,6 @@ export default function AppNavigator() {
         {/* Modal sheets */}
         <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
         <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="Payment" component={PaymentScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Upgrade' }} />
         <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
       </Stack.Navigator>
     </View>

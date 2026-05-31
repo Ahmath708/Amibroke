@@ -21,6 +21,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/theme/colors';
 import { initAnalytics } from './src/services/analytics';
+import { configurePurchases } from './src/services/purchases';
 
 // Keep the splash screen visible while fonts load
 SplashScreen.preventAutoHideAsync();
@@ -50,6 +51,9 @@ export default function App() {
 
     bootstrap();
     initAnalytics().catch(() => {});
+    // Configure RevenueCat anonymously at startup; AuthContext calls logIn once
+    // the user is known so purchases map to the Supabase user id.
+    configurePurchases();
   }, []);
 
   if (!fontsLoaded) {

@@ -55,6 +55,10 @@ export async function initAnalytics(apiKey?: string, host?: string): Promise<Pos
       host: host || process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
       flushAt: 10,
       flushInterval: 30,
+      // Force AsyncStorage. Otherwise PostHog auto-detects and prefers
+      // expo-file-system, whose legacy read/writeAsStringAsync APIs are
+      // deprecated in SDK 54 and spam the logs on launch.
+      customStorage: AsyncStorage,
     });
     return posthog;
   } catch (e) {

@@ -38,9 +38,9 @@ export default function PrivacyPolicyScreen() {
       <Text style={styles.heading}>2. How We Use Your Information</Text>
       <Text style={styles.paragraph}>
         Your data is used solely to: generate your financial health score and analysis, improve our
-        AI prompts and product features (using anonymized aggregate data), process payments through
-        Stripe (we never see your full payment details), and send occasional product updates if you
-        have an account.
+        AI prompts and product features (using anonymized aggregate data), process subscription
+        payments through Apple's App Store (we never see your payment details), and send occasional
+        product updates if you have an account.
       </Text>
 
       <Text style={styles.heading}>3. Data Sharing</Text>
@@ -70,9 +70,9 @@ export default function PrivacyPolicyScreen() {
 
       <Text style={styles.heading}>6. Third-Party Services</Text>
       <Text style={styles.paragraph}>
-        We use the following third-party services: Anthropic (Claude API) for AI analysis, Stripe for
-        payment processing, and Supabase for database and authentication. Each service has its own
-        privacy policy governing data handling.
+        We use the following third-party services: Anthropic (Claude API) for AI analysis, Apple's
+        App Store and RevenueCat for subscription payment processing, and Supabase for database and
+        authentication. Each service has its own privacy policy governing data handling.
       </Text>
 
       <Text style={styles.heading}>7. Your Rights</Text>

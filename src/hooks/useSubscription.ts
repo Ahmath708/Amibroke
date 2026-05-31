@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSubscription, SubscriptionTier, SubscriptionRecord, hasAccessTo, isSubscriptionPremium } from '@/services/subscriptions';
+import { addCustomerInfoListener } from '@/services/purchases';
 
 interface UseSubscriptionResult {
   tier: SubscriptionTier;
@@ -33,6 +34,14 @@ export function useSubscription(): UseSubscriptionResult {
 
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  // Re-resolve the tier whenever RevenueCat reports an entitlement change
+  // (purchase, renewal, restore, expiration).
+  useEffect(() => {
+    return addCustomerInfoListener(() => {
+      refresh();
+    });
   }, [refresh]);
 
   return {

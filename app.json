@@ -4,6 +4,7 @@
     "slug": "am-i-broke",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
+    "scheme": "amibroke",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -45,7 +46,8 @@
             "newArchEnabled": true
           }
         }
-      ]
+      ],
+      "expo-audio"
     ]
   }
 }

@@ -1,16 +1,20 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert,
 } from 'react-native';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { PurchasesOffering } from 'react-native-purchases';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, PURCHASE_PRODUCTS } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
-import { trackPaywallViewed } from '@/services/analytics';
+import { trackPaywallViewed, trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
+import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
+import { getCurrentOffering, packageForTier, purchasePackage, restorePurchases, tierFromCustomerInfo } from '@/services/purchases';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Paywall'> };
 
@@ -35,15 +39,72 @@ const COMPARE = [
 export default function PaywallScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<'action_plan' | 'deep_dive'>('deep_dive');
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const { animatedStyle } = useEntryAnimation();
+  const { user } = useAuth();
+  const { refresh } = useSubscription();
 
   useEffect(() => {
     trackPaywallViewed(selected);
   }, [selected]);
 
+  useEffect(() => {
+    getCurrentOffering().then(setOffering);
+  }, []);
+
   const product = PURCHASE_PRODUCTS[selected];
   const actionPlan = PURCHASE_PRODUCTS.action_plan!;
   const deepDive = PURCHASE_PRODUCTS.deep_dive!;
+
+  // Prefer RevenueCat's localized, store-accurate price; fall back to static
+  // copy before RevenueCat is configured.
+  const priceLabel = (tier: 'action_plan' | 'deep_dive', fallback: number): string => {
+    const pkg = packageForTier(offering, tier);
+    return pkg ? pkg.product.priceString : `$${fallback.toFixed(2)}`;
+  };
+
+  const handleSubscribe = async () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to start your subscription.');
+      navigation.navigate('Login');
+      return;
+    }
+    const pkg = packageForTier(offering, selected);
+    if (!pkg) {
+      Alert.alert('Unavailable', 'Subscriptions aren’t available right now. Please try again later.');
+      return;
+    }
+    setProcessing(true);
+    await trackPurchaseInitiated(selected, product!.price);
+    const result = await purchasePackage(pkg);
+    setProcessing(false);
+
+    if (result.cancelled) return;
+    if (result.error || !result.customerInfo) {
+      await trackPurchaseFailed(selected, result.error ?? 'purchase_failed');
+      Alert.alert('Purchase Error', result.error ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    await trackPurchaseCompleted(selected, product!.price);
+    await refresh();
+    navigation.goBack();
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    const info = await restorePurchases();
+    setRestoring(false);
+    const tier = tierFromCustomerInfo(info);
+    if (tier === 'free') {
+      Alert.alert('No Purchases Found', 'We couldn’t find an active subscription to restore.');
+      return;
+    }
+    await refresh();
+    Alert.alert('Restored', 'Your subscription has been restored.');
+    navigation.goBack();
+  };
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -130,8 +191,8 @@ export default function PaywallScreen({ navigation }: Props) {
             activeOpacity={0.8}
           >
             <Text style={styles.planName}>{actionPlan.label}</Text>
-            <Text style={styles.planPrice}>${actionPlan.price.toFixed(2)}</Text>
-            <Text style={styles.planDesc}>One-time</Text>
+            <Text style={styles.planPrice}>{priceLabel('action_plan', actionPlan.price)}</Text>
+            <Text style={styles.planDesc}>per month</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -143,8 +204,8 @@ export default function PaywallScreen({ navigation }: Props) {
               <Text style={styles.planBadgeText}>BEST VALUE</Text>
             </View>
             <Text style={styles.planName}>{deepDive.label}</Text>
-            <Text style={styles.planPrice}>${deepDive.price.toFixed(2)}</Text>
-            <Text style={styles.planDesc}>One-time</Text>
+            <Text style={styles.planPrice}>{priceLabel('deep_dive', deepDive.price)}</Text>
+            <Text style={styles.planDesc}>per month</Text>
           </TouchableOpacity>
         </View>
 
@@ -178,14 +239,21 @@ export default function PaywallScreen({ navigation }: Props) {
 
         {product && (
           <NeonButton
-            label={`Get ${product.label} — $${product.price}`}
-            onPress={() => navigation.navigate('Payment', { product: selected })}
+            label={processing ? '' : `Start 7-Day Free Trial`}
+            onPress={handleSubscribe}
+            loading={processing}
             style={styles.cta}
           />
         )}
 
+        <TouchableOpacity onPress={handleRestore} disabled={restoring} style={styles.restoreBtn}>
+          <Text style={styles.restoreText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
+        </TouchableOpacity>
+
         <Text style={styles.legal}>
-          One-time purchase. No recurring charges. Instant access after payment.
+          {product!.label} is {priceLabel(selected, product!.price)}/month after a 7-day free
+          trial. Auto-renews monthly; cancel anytime in your App Store settings. Payment is
+          charged to your Apple ID.
         </Text>
       </ScrollView>
     </Animated.View>
@@ -271,6 +339,8 @@ const styles = StyleSheet.create({
   compareCheck: { flex: 1, textAlign: 'center', fontSize: Typography.subhead.fontSize, fontWeight: '600' },
   checkYes: { color: Colors.success },
   checkNo: { color: Colors.textMuted },
-  cta: { marginBottom: Spacing.md },
+  cta: { marginBottom: Spacing.sm },
+  restoreBtn: { alignItems: 'center', paddingVertical: Spacing.sm, marginBottom: Spacing.sm },
+  restoreText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },
   legal: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textAlign: 'center', lineHeight: 16 },
 });

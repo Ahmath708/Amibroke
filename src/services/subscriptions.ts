@@ -1,15 +1,20 @@
 import { getSupabase } from './claudeApi';
-import type { PostgrestError } from '@supabase/supabase-js';
+import { getCustomerInfo, tierFromCustomerInfo, isPurchasesConfigured } from './purchases';
 
 export interface SubscriptionRecord {
   user_id: string;
-  stripe_customer_id: string;
+  // Legacy Stripe columns, retained (nullable) for historical rows.
+  stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   plan: 'action_plan' | 'deep_dive' | null;
   status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   trial_end: string | null;
+  // RevenueCat / store columns (added in migration 00014).
+  store?: 'app_store' | 'play_store' | null;
+  product_id?: string | null;
+  rc_entitlement?: 'action_plan' | 'deep_dive' | null;
 }
 
 export type SubscriptionTier = 'free' | 'action_plan' | 'deep_dive';
@@ -21,55 +26,43 @@ function tierFromRecord(sub: SubscriptionRecord | null): SubscriptionTier {
   return sub.plan ?? 'free';
 }
 
+/**
+ * Resolve the user's tier and (for UI) their renewal record.
+ *
+ * RevenueCat's on-device customerInfo is the source of truth for entitlement.
+ * The user_subscriptions row (kept in sync by the revenuecat-webhook) provides
+ * record details like renewal date/status, and is the fallback tier source
+ * before RevenueCat is configured.
+ */
 export async function getSubscription(userId: string): Promise<{ tier: SubscriptionTier; record: SubscriptionRecord | null }> {
-  const client = getSupabase();
-  if (!client) return { tier: 'free', record: null };
-  try {
-    const { data, error } = await (client as any)
-      .from('user_subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (error) throw error;
-    return { tier: tierFromRecord(data), record: data };
-  } catch (e) {
-    console.warn('[subscriptions] fetch failed:', e);
-    return { tier: 'free', record: null };
-  }
-}
+  // No signed-in user → no subscription to verify. Bail before querying so we
+  // don't send an empty string as a UUID (Postgres 22P02) for signed-out users.
+  if (!userId) return { tier: 'free', record: null };
 
-export async function createCheckoutSession(plan: 'action_plan' | 'deep_dive'): Promise<string | null> {
-  const client = getSupabase();
-  if (!client) return null;
-  try {
-    const { data, error } = await client.functions.invoke('create-checkout-session', {
-      body: { plan },
-    });
-    if (error || !data?.url) {
-      console.warn('[subscriptions] createCheckoutSession error:', error, data);
-      return null;
-    }
-    return data.url as string;
-  } catch (e) {
-    console.warn('[subscriptions] createCheckoutSession exception:', e);
-    return null;
+  // Entitlement from RevenueCat (if configured).
+  let rcTier: SubscriptionTier | null = null;
+  if (isPurchasesConfigured()) {
+    rcTier = tierFromCustomerInfo(await getCustomerInfo());
   }
-}
 
-export async function createPortalSession(): Promise<string | null> {
+  // DB mirror: record details + fallback tier.
+  let record: SubscriptionRecord | null = null;
   const client = getSupabase();
-  if (!client) return null;
-  try {
-    const { data, error } = await client.functions.invoke('create-portal-session');
-    if (error || !data?.url) {
-      console.warn('[subscriptions] createPortalSession error:', error, data);
-      return null;
+  if (client) {
+    try {
+      const { data, error } = await (client as any)
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) throw error;
+      record = data;
+    } catch (e) {
+      console.warn('[subscriptions] fetch failed:', e);
     }
-    return data.url as string;
-  } catch (e) {
-    console.warn('[subscriptions] createPortalSession exception:', e);
-    return null;
   }
+
+  return { tier: rcTier ?? tierFromRecord(record), record };
 }
 
 export function isActive(status: string | null | undefined): boolean {

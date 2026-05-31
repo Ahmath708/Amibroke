@@ -86,7 +86,6 @@ export type RootStackParamList = {
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
-  Payment: { product: 'action_plan' | 'deep_dive' };
   ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string };
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;

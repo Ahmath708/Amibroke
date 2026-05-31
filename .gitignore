@@ -8,3 +8,4 @@ dist/
 .DS_Store
 *.tsbuildinfo
 .api-call-count.json
+ios/

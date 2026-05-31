@@ -1,6 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Platform, Alert } from 'react-native';
-import { Audio } from 'expo-av';
+import { Platform } from 'react-native';
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 
 interface UseVoiceInputResult {
   listening: boolean;
@@ -15,7 +20,8 @@ export function useVoiceInput(): UseVoiceInputResult {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recordingActiveRef = useRef(false);
   const permissionRef = useRef(false);
 
   const isWeb = Platform.OS === 'web';
@@ -27,7 +33,7 @@ export function useVoiceInput(): UseVoiceInputResult {
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
-      const { granted } = await Audio.requestPermissionsAsync();
+      const { granted } = await requestRecordingPermissionsAsync();
       permissionRef.current = granted;
       if (!granted) {
         setError('Microphone permission denied. Please enable it in settings.');
@@ -83,23 +89,20 @@ export function useVoiceInput(): UseVoiceInputResult {
 
     try {
       setListening(true);
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.SPEECH_RECOGNITION,
-      );
-      await recording.startAsync();
-      recordingRef.current = recording;
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      recordingActiveRef.current = true;
     } catch (e) {
       setError('Failed to start recording. Please try again.');
       setListening(false);
       console.error('[voice] start error:', e);
     }
-  }, [isWeb, requestPermission]);
+  }, [isWeb, requestPermission, audioRecorder]);
 
   const stopListening = useCallback(async () => {
     if (isWeb) {
@@ -117,23 +120,23 @@ export function useVoiceInput(): UseVoiceInputResult {
     }
 
     try {
-      if (recordingRef.current) {
-        await recordingRef.current.stopAndUnloadAsync();
-        recordingRef.current = null;
+      if (recordingActiveRef.current) {
+        await audioRecorder.stop();
+        recordingActiveRef.current = false;
       }
     } catch {
       // ignore
     }
     setListening(false);
-  }, [isWeb]);
+  }, [isWeb, audioRecorder]);
 
   useEffect(() => {
     return () => {
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      if (recordingActiveRef.current) {
+        audioRecorder.stop().catch(() => {});
       }
     };
-  }, []);
+  }, [audioRecorder]);
 
   return {
     listening,

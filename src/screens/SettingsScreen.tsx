@@ -13,6 +13,9 @@ import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useAuth, setPendingRedirect } from '@/context/AuthContext';
 import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/gdpr';
+import { useSubscription } from '@/hooks/useSubscription';
+import { manageSubscriptions } from '@/services/purchases';
+import { PURCHASE_PRODUCTS } from '@/types';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'> };
 
@@ -24,6 +27,7 @@ type SettingRow =
 export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { signOut, user } = useAuth();
+  const { tier, premium } = useSubscription();
   const [toggles, setToggles] = useState({
     notifications: true,
     weeklyReminder: false,
@@ -106,12 +110,14 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const accountRows: SettingRow[] = [
     { type: 'nav', label: 'Profile', icon: '👤', detail: '@yourusername', onPress: () => (navigation.navigate as any)('Home', { screen: 'Profile' }) },
-    { type: 'nav', label: 'Subscription', icon: '💳', detail: 'Free Plan', onPress: () => {
-      if (user) {
-        navigation.navigate('Paywall');
-      } else {
+    { type: 'nav', label: 'Subscription', icon: '💳', detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
+      if (!user) {
         setPendingRedirect('Paywall');
         navigation.navigate('Login');
+      } else if (premium) {
+        manageSubscriptions();
+      } else {
+        navigation.navigate('Paywall');
       }
     }},
     ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: '📈' as const, onPress: () => navigation.navigate('CreatorDashboard') }] : []),

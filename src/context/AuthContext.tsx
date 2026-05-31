@@ -3,8 +3,10 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import { loginPurchases, logoutPurchases } from '@/services/purchases';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -13,7 +15,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const redirectTo = Platform.OS === 'web'
   ? 'https://zefhsplmgxefmpdqbbvv.supabase.co/auth/v1/callback'
-  : makeRedirectUri();
+  : makeRedirectUri({ scheme: 'amibroke', path: 'auth/callback' });
 
 const supabaseStorage = Platform.OS === 'web'
   ? undefined
@@ -60,7 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       auth: {
         flowType: 'pkce',
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        // Only the web build can read the session from window.location.
+        // On native we exchange the code manually after the browser returns.
+        detectSessionInUrl: Platform.OS === 'web',
         storage: supabaseStorage,
       },
     });
@@ -68,13 +72,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = supabaseRef.current;
 
   useEffect(() => {
+    // Keep the RevenueCat app-user-id in sync with the Supabase session so
+    // purchases (and the webhook → user_subscriptions) map to the right user.
+    const syncPurchasesIdentity = (u: User | null) => {
+      if (u) loginPurchases(u.id).catch(() => {});
+      else logoutPurchases().catch(() => {});
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      syncPurchasesIdentity(session?.user ?? null);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      syncPurchasesIdentity(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
@@ -138,7 +151,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return { error: error.message };
       if (data?.url) {
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        if (result.type !== 'success') return { error: 'Authentication was cancelled' };
+        if (result.type !== 'success' || !result.url) {
+          return { error: 'Authentication was cancelled' };
+        }
+        // PKCE: the browser returns ?code=...; exchange it (using the stored
+        // code_verifier) for a session. Without this the sign-in silently no-ops.
+        const { params, errorCode } = QueryParams.getQueryParams(result.url);
+        if (errorCode) return { error: errorCode };
+        const { code } = params;
+        if (!code) return { error: 'No authorization code returned from provider.' };
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) return { error: exchangeError.message };
       }
       return {};
     } catch (e) {
