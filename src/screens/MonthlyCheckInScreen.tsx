@@ -20,6 +20,8 @@ import {
   getAnalysisHistory, getAnalysisById,
 } from '@/services/claudeApi';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import { nextReminderDate } from '@/utils/checkinSchedule';
+import { getCheckinReminderEnabled, scheduleCheckinReminder } from '@/services/notifications';
 import {
   goalCandidatesFromAnalysis, computeGoalCurrent, goalProgress, formatGoalValue,
   TRACKABLE_METRICS, SUGGESTED_METRICS, metricGoalId, CheckinBase,
@@ -135,6 +137,14 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     if (user) await saveCheckinConfig(user.id, next);
     setSaving(false);
     setConfig(next);
+    // If reminders are on, (re)anchor the schedule to the (possibly new) config.
+    if (await getCheckinReminderEnabled()) {
+      await scheduleCheckinReminder(nextReminderDate(
+        next.firstAnalyzeAt ? new Date(next.firstAnalyzeAt) : null,
+        lastCheckIn ? new Date(lastCheckIn.created_at) : null,
+        new Date(),
+      ));
+    }
     seedCheckin(next, lastCheckIn);
     setMode('checkin');
   };
@@ -201,6 +211,10 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     });
     setSaving(false);
     if (ok === null) { Alert.alert('Error', 'Failed to save your check-in.'); return; }
+    // Move the reminder to next month's anchor now that this period is done.
+    if (await getCheckinReminderEnabled()) {
+      await scheduleCheckinReminder(nextReminderDate(firstAnalyzeAt ? new Date(firstAnalyzeAt) : null, new Date(), new Date()));
+    }
     setMode('saved');
   };
 

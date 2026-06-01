@@ -50,6 +50,7 @@
       ],
       "expo-audio",
       "expo-apple-authentication",
+      "expo-notifications",
       "./plugins/withStoreKitConfig"
     ]
   }

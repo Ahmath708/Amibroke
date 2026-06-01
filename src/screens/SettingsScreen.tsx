@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Switch,
   TouchableOpacity, Alert, Linking, ActivityIndicator, Animated,
@@ -16,6 +16,12 @@ import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/
 import { useSubscription } from '@/hooks/useSubscription';
 import { manageSubscriptions } from '@/services/purchases';
 import { PURCHASE_PRODUCTS } from '@/types';
+import { getCheckinConfig, getCheckIns } from '@/services/claudeApi';
+import { nextReminderDate } from '@/utils/checkinSchedule';
+import {
+  requestNotificationPermission, scheduleCheckinReminder, cancelCheckinReminders,
+  getCheckinReminderEnabled, setCheckinReminderEnabledFlag,
+} from '@/services/notifications';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'> };
 
@@ -30,7 +36,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const { tier, premium } = useSubscription();
   const [toggles, setToggles] = useState({
     notifications: true,
-    weeklyReminder: false,
+    monthlyReminder: false,
     communityVisible: true,
     haptics: true,
     faceID: false,
@@ -38,8 +44,39 @@ export default function SettingsScreen({ navigation }: Props) {
   const [gdprLoading, setGdprLoading] = useState<string | null>(null);
   const { animatedStyle } = useEntryAnimation();
 
+  // Reflect the persisted monthly-reminder state on mount.
+  useEffect(() => {
+    getCheckinReminderEnabled().then((on) => setToggles((p) => ({ ...p, monthlyReminder: on })));
+  }, []);
+
   const toggle = (key: string) =>
     setToggles((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+
+  // Monthly check-in reminder: request permission, schedule at the next anchor, persist.
+  const onToggleReminder = async (next: boolean) => {
+    if (next) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert('Notifications are off', 'Enable notifications for Am I Broke? in iOS Settings to get check-in reminders.');
+        return; // leave the toggle off
+      }
+      setToggles((p) => ({ ...p, monthlyReminder: true }));
+      await setCheckinReminderEnabledFlag(true);
+      if (user) {
+        const [cfg, checkins] = await Promise.all([getCheckinConfig(user.id), getCheckIns(user.id)]);
+        const date = nextReminderDate(
+          cfg.firstAnalyzeAt ? new Date(cfg.firstAnalyzeAt) : null,
+          checkins[0] ? new Date(checkins[0].created_at) : null,
+          new Date(),
+        );
+        await scheduleCheckinReminder(date);
+      }
+    } else {
+      setToggles((p) => ({ ...p, monthlyReminder: false }));
+      await setCheckinReminderEnabledFlag(false);
+      await cancelCheckinReminders();
+    }
+  };
 
   const handleExportData = async () => {
     if (!user) {
@@ -132,7 +169,7 @@ export default function SettingsScreen({ navigation }: Props) {
       title: 'Notifications',
       rows: [
         { type: 'toggle', label: 'Push Notifications', key: 'notifications', icon: '🔔' },
-        { type: 'toggle', label: 'Weekly Reminder', key: 'weeklyReminder', icon: '📅', detail: 'Every Sunday at 9am' },
+        { type: 'toggle', label: 'Monthly Check-In Reminder', key: 'monthlyReminder', icon: '📅', detail: 'On your check-in date each month' },
       ],
     },
     {
@@ -218,7 +255,7 @@ export default function SettingsScreen({ navigation }: Props) {
                         {row.type === 'toggle' && (
                           <Switch
                             value={toggles[row.key as keyof typeof toggles]}
-                            onValueChange={() => toggle(row.key)}
+                            onValueChange={(v) => (row.key === 'monthlyReminder' ? onToggleReminder(v) : toggle(row.key))}
                             trackColor={{ false: Colors.backgroundSecondary, true: Colors.primarySolid }}
                             thumbColor="#fff"
                             ios_backgroundColor={Colors.backgroundSecondary}

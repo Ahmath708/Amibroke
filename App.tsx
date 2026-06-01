@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, StatusBar, LogBox } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
@@ -32,6 +33,22 @@ if (__DEV__) LogBox.ignoreAllLogs();
 // Keep the splash screen visible while fonts load
 SplashScreen.preventAutoHideAsync();
 
+// Route taps on a local notification (e.g. the monthly check-in reminder) to the
+// screen named in its data payload. Queues the target if the navigator isn't ready
+// yet (cold start from a tapped notification).
+const navigationRef = createNavigationContainerRef<any>();
+let pendingNavScreen: string | null = null;
+
+function routeFromNotification(resp: Notifications.NotificationResponse | null) {
+  const screen = (resp?.notification?.request?.content?.data as any)?.screen;
+  if (!screen) return;
+  if (navigationRef.isReady()) {
+    try { navigationRef.navigate(screen as never); } catch { /* route not available in current gate */ }
+  } else {
+    pendingNavScreen = screen;
+  }
+}
+
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -60,6 +77,11 @@ export default function App() {
     // Configure RevenueCat anonymously at startup; AuthContext calls logIn once
     // the user is known so purchases map to the Supabase user id.
     configurePurchases();
+
+    // Handle taps on local notifications (running + cold start).
+    const sub = Notifications.addNotificationResponseReceivedListener(routeFromNotification);
+    Notifications.getLastNotificationResponseAsync().then(routeFromNotification).catch(() => {});
+    return () => sub.remove();
   }, []);
 
   if (!fontsLoaded) {
@@ -76,6 +98,13 @@ export default function App() {
       <AuthProvider>
       <ErrorBoundary>
       <NavigationContainer
+        ref={navigationRef}
+        onReady={() => {
+          if (pendingNavScreen) {
+            try { navigationRef.navigate(pendingNavScreen as never); } catch { /* gate */ }
+            pendingNavScreen = null;
+          }
+        }}
         theme={{
           dark: true,
           colors: {
