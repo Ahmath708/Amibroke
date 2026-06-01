@@ -9,3 +9,5 @@ dist/
 *.tsbuildinfo
 .api-call-count.json
 ios/
+# Demo/marketing screenshots (kept local, not source)
+demo/
