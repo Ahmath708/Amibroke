@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, Animated,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -202,7 +203,7 @@ export default function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
           <View style={styles.avatarInfo}>
             {isEditingName ? (
-              <TextInput
+              <AppTextInput
                 style={styles.nameInput}
                 value={userName}
                 onChangeText={setUserName}

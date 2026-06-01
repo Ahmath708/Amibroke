@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, FlatList, Pressable,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
@@ -99,7 +100,7 @@ export default function StateSelect({ value, onChange }: Props) {
         <View style={styles.sheet}>
           <View style={styles.searchRow}>
             <Ionicons name="search" size={18} color={Colors.textMuted} />
-            <TextInput
+            <AppTextInput
               style={styles.searchInput}
               placeholder="Search state or code…"
               placeholderTextColor={Colors.textMuted}

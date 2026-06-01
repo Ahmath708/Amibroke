@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -76,7 +77,7 @@ export default function UsernameSetupScreen({ navigation }: Props) {
           </Text>
 
           <View style={styles.fieldWrap}>
-            <TextInput
+            <AppTextInput
               style={[styles.input, error ? styles.inputError : null]}
               placeholder="username"
               placeholderTextColor={Colors.textMuted}

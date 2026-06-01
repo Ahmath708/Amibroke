@@ -1,26 +1,36 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Alert, Animated,
 } from 'react-native';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
+import AppTextInput from '@/components/AppTextInput';
+import GoogleLogo from '@/components/GoogleLogo';
+import TypingPlaceholder from '@/components/TypingPlaceholder';
 import { useAuth } from '@/context/AuthContext';
 import { useLegal } from '@/context/LegalContext';
-import ScreenBackground from '@/components/ScreenBackground';
+import AuthBackground from '@/components/AuthBackground';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
   route: RouteProp<RootStackParamList, 'Login'>;
 };
+
+const HIT = { top: 10, bottom: 10, left: 10, right: 10 };
+const TAGLINES = [
+  'Get roasted. Get a plan.',
+  'Your money, judged in 60 seconds.',
+  "Find out if you're actually broke.",
+];
 
 export default function LoginScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
@@ -36,19 +46,26 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [termsAgreed, setTermsAgreed] = useState(false);
   const { animatedStyle } = useEntryAnimation();
 
+  const dismiss = () => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('Landing'));
+
+  const requireTerms = () => {
+    if (termsAgreed) return true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('One more thing', 'Please agree to the Terms of Service and Privacy Policy first.');
+    return false;
+  };
+
   const handleAuth = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password.trim()) {
       Alert.alert('Missing fields', 'Please enter your email and password.');
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
       Alert.alert('Invalid email', 'Please enter a valid email address (e.g., name@example.com).');
       return;
     }
-
     if (mode === 'signup' && !/^[a-z0-9_]{3,24}$/.test(username.trim().toLowerCase())) {
       Alert.alert('Invalid username', 'Username must be 3–24 characters: lowercase letters, numbers, or underscores.');
       return;
@@ -67,52 +84,44 @@ export default function LoginScreen({ navigation, route }: Props) {
   };
 
   const handleApple = async () => {
+    if (!requireTerms()) return;
     setSocialLoading('apple');
     const { error } = await signInWithApple();
     setSocialLoading(null);
-    if (error) {
-      Alert.alert('Apple Sign-In', error);
-      return;
-    }
-    // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
+    if (error) Alert.alert('Apple Sign-In', error);
   };
 
   const handleGoogle = async () => {
+    if (!requireTerms()) return;
     setSocialLoading('google');
     const { error } = await signInWithGoogle();
     setSocialLoading(null);
-    if (error) {
-      Alert.alert('Google Sign-In', error);
-      return;
-    }
-    // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
+    if (error) Alert.alert('Google Sign-In', error);
   };
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <ScreenBackground variant="login" />
-      {/* Drag handle for modal */}
-      <View style={[styles.dragHandle, { marginTop: insets.top > 0 ? 8 : 16 }]}>
-        <View style={styles.handle} />
+      <AuthBackground />
+
+      {/* Top bar — back chevron dismisses to Landing */}
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
+        <TouchableOpacity onPress={dismiss} hitSlop={HIT} style={styles.backBtn} accessibilityLabel="Back">
+          <Ionicons name="chevron-back" size={28} color={Colors.tint} />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + Spacing.xxl }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.lg }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          {/* Header */}
+          {/* Header — app mock logo + wordmark + rotating tagline */}
           <View style={styles.header}>
-            <View style={styles.logoMini}>
-              <Text style={styles.logoEmoji}>💸</Text>
-            </View>
-            <Text style={styles.title}>
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {mode === 'login' ? 'Sign in to your account' : 'Create your free account'}
-            </Text>
+            <View style={styles.logoMini}><Text style={styles.logoEmoji}>💸</Text></View>
+            <Text style={styles.wordmark}>Am I Broke?</Text>
+            <TypingPlaceholder placeholders={TAGLINES} style={styles.tagline} textStyle={styles.taglineText} />
           </View>
 
           {/* Segmented control */}
@@ -125,35 +134,33 @@ export default function LoginScreen({ navigation, route }: Props) {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.segmentText, mode === m && styles.segmentTextActive]}>
-                  {m === 'login' ? 'Log In' : 'Sign Up'}
+                  {m === 'login' ? 'Sign In' : 'Sign Up'}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Social buttons — Apple is iOS-only (native Sign in with Apple) */}
+          {/* Social — official logos, matching pills, stacked (Apple is iOS-only) */}
           {Platform.OS === 'ios' && (
             <TouchableOpacity
-              style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
+              style={[styles.oauthBtn, !termsAgreed && styles.oauthDim]}
               onPress={handleApple}
-              disabled={!termsAgreed || socialLoading !== null}
-              activeOpacity={0.75}
+              activeOpacity={0.85}
             >
-              <Text style={[styles.socialIcon, !termsAgreed && styles.socialIconDisabled]}>🍎</Text>
-              <Text style={[styles.socialLabel, !termsAgreed && styles.socialLabelDisabled]}>
-                {!termsAgreed ? 'Agree to terms first' : socialLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}
+              <Ionicons name="logo-apple" size={22} color="#000000" />
+              <Text style={styles.oauthLabel}>
+                {socialLoading === 'apple' ? 'Signing in…' : `${mode === 'login' ? 'Sign In' : 'Sign Up'} with Apple`}
               </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
+            style={[styles.oauthBtn, !termsAgreed && styles.oauthDim]}
             onPress={handleGoogle}
-            disabled={!termsAgreed || socialLoading !== null}
-            activeOpacity={0.75}
+            activeOpacity={0.85}
           >
-            <Text style={[styles.socialIcon, !termsAgreed && styles.socialIconDisabled]}>G</Text>
-            <Text style={[styles.socialLabel, !termsAgreed && styles.socialLabelDisabled]}>
-              {!termsAgreed ? 'Agree to terms first' : socialLoading === 'google' ? 'Signing in...' : 'Continue with Google'}
+            <GoogleLogo size={18} />
+            <Text style={styles.oauthLabel}>
+              {socialLoading === 'google' ? 'Signing in…' : `${mode === 'login' ? 'Sign In' : 'Sign Up'} with Google`}
             </Text>
           </TouchableOpacity>
 
@@ -164,16 +171,16 @@ export default function LoginScreen({ navigation, route }: Props) {
             <View style={styles.divLine} />
           </View>
 
-          {/* Form — iOS inset grouped style */}
-          <View style={styles.formGroup}>
+          {/* Form */}
+          <BlurView intensity={24} tint="dark" style={styles.formGroup}>
             {mode === 'signup' && (
               <>
                 <View style={styles.formCell}>
                   <Text style={styles.formLabel}>Username</Text>
-                  <TextInput
+                  <AppTextInput
                     style={styles.formInput}
                     placeholder="yourname"
-                    placeholderTextColor={Colors.textMuted}
+                    placeholderTextColor={Colors.textSecondary}
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
@@ -187,10 +194,10 @@ export default function LoginScreen({ navigation, route }: Props) {
             )}
             <View style={styles.formCell}>
               <Text style={styles.formLabel}>Email</Text>
-              <TextInput
+              <AppTextInput
                 style={styles.formInput}
                 placeholder="you@example.com"
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor={Colors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -202,26 +209,22 @@ export default function LoginScreen({ navigation, route }: Props) {
             <View style={styles.formCell}>
               <Text style={styles.formLabel}>Password</Text>
               <View style={styles.passwordRow}>
-                <TextInput
+                <AppTextInput
                   style={[styles.formInput, styles.passwordInput]}
                   placeholder="••••••••"
-                  placeholderTextColor={Colors.textMuted}
+                  placeholderTextColor={Colors.textSecondary}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   returnKeyType="done"
                   onSubmitEditing={handleAuth}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword((s) => !s)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity onPress={() => setShowPassword((s) => !s)} hitSlop={HIT} activeOpacity={0.7}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </BlurView>
 
           {mode === 'login' && (
             <TouchableOpacity style={styles.forgotRow}>
@@ -243,27 +246,18 @@ export default function LoginScreen({ navigation, route }: Props) {
             </View>
             <Text style={styles.termsText}>
               I agree to the{' '}
-              <Text style={styles.legalLink} onPress={() => showLegal('terms')}>
-                Terms of Service
-              </Text>
+              <Text style={styles.legalLink} onPress={() => showLegal('terms')}>Terms of Service</Text>
               {' '}and{' '}
-              <Text style={styles.legalLink} onPress={() => showLegal('privacy')}>
-                Privacy Policy
-              </Text>
+              <Text style={styles.legalLink} onPress={() => showLegal('privacy')}>Privacy Policy</Text>
             </Text>
           </TouchableOpacity>
 
           <NeonButton
-            label={mode === 'login' ? 'Sign In' : 'Create Account'}
+            label={mode === 'login' ? 'Sign In' : 'Sign Up'}
             onPress={handleAuth}
             loading={loading}
             disabled={!termsAgreed}
-            style={styles.ctaBtn}
           />
-
-          <TouchableOpacity onPress={() => navigation.replace('Landing')} style={styles.skipRow}>
-            <Text style={styles.skipText}>Back</Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </Animated.View>
@@ -271,62 +265,45 @@ export default function LoginScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  dragHandle: { alignItems: 'center', paddingBottom: Spacing.sm },
-  handle: { width: 36, height: 5, borderRadius: Radius.pill, backgroundColor: Colors.separator },
-  scroll: { paddingHorizontal: Spacing.xl },
-  header: { alignItems: 'center', marginBottom: Spacing.xxl, marginTop: Spacing.sm },
+  container: { flex: 1, backgroundColor: Colors.background },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingBottom: Spacing.xs },
+  backBtn: { padding: Spacing.xs },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xs },
+  header: { alignItems: 'center', marginBottom: Spacing.md },
   logoMini: {
     width: 64, height: 64, borderRadius: Radius.xxl,
-    backgroundColor: Colors.primaryContainer,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.lg,
-    shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4, shadowRadius: 20, elevation: 8,
+    backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
+    marginBottom: Spacing.sm,
+    shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.45, shadowRadius: 16, elevation: 8,
   },
-  logoEmoji: { fontSize: Typography.title1.fontSize },
-  title: {
+  logoEmoji: { fontSize: 36 },
+  wordmark: {
     fontFamily: Typography.fonts.heading,
     fontSize: Typography.title1.fontSize, fontWeight: '700',
-    color: Colors.textPrimary, letterSpacing: -0.5, marginBottom: Spacing.xs,
+    color: Colors.textPrimary, letterSpacing: -0.5, textAlign: 'center',
   },
-  subtitle: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.subhead.fontSize, color: Colors.textSecondary,
-  },
+  tagline: { marginTop: Spacing.xs, justifyContent: 'center' },
+  taglineText: { fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.md,
-    padding: Spacing.xs,
-    marginBottom: Spacing.xl,
+    flexDirection: 'row', backgroundColor: Colors.backgroundSecondary,
+    borderRadius: Radius.md, padding: Spacing.xs, marginBottom: Spacing.md,
   },
-  segment: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm },
-  segmentActive: { backgroundColor: Colors.groupedRow },
+  segment: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm, borderWidth: 1, borderColor: 'transparent' },
+  segmentActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
   segmentText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
   segmentTextActive: { color: Colors.textPrimary, fontFamily: Typography.fonts.bodyMed },
-  socialBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.groupedRow,
-    borderRadius: Radius.lg, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
-    marginBottom: Spacing.sm,
+  oauthBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    height: 48, borderRadius: Radius.lg, backgroundColor: '#FFFFFF', marginBottom: Spacing.sm,
   },
-  socialIcon: { fontSize: Typography.headline.fontSize, color: Colors.textPrimary, width: 22, textAlign: 'center' },
-  socialLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  socialBtnDisabled: { opacity: 0.4 },
-  socialIconDisabled: { opacity: 0.5 },
-  socialLabelDisabled: { opacity: 0.5 },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginVertical: Spacing.lg },
+  oauthLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: '#1F1F1F', fontWeight: '600' },
+  oauthDim: { opacity: 0.45 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xs, marginBottom: Spacing.md },
   divLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator },
   divText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
   formGroup: {
-    backgroundColor: Colors.groupedRow,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.glassBorder,
-    marginBottom: Spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, marginBottom: Spacing.md,
   },
   formCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
   formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, width: 80 },
@@ -334,31 +311,12 @@ const styles = StyleSheet.create({
   passwordRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   passwordInput: { marginRight: Spacing.sm },
   cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
-  forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.xl },
+  forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.sm },
   forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
-  termsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    marginBottom: Spacing.lg, paddingHorizontal: Spacing.xs,
-  },
-  checkbox: {
-    width: 22, height: 22, borderRadius: Radius.xs,
-    borderWidth: 2, borderColor: Colors.glassBorder,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  checkboxActive: {
-    backgroundColor: Colors.primary, borderColor: Colors.primary,
-  },
-  checkmark: {
-    fontSize: 14, color: Colors.background, fontWeight: '700',
-  },
-  termsText: {
-    flex: 1,
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.caption1.fontSize, color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  ctaBtn: { marginBottom: Spacing.md },
-  skipRow: { alignItems: 'center', paddingVertical: Spacing.md, marginBottom: Spacing.md },
-  skipText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
+  termsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md, paddingHorizontal: Spacing.xs },
+  checkbox: { width: 22, height: 22, borderRadius: Radius.xs, borderWidth: 2, borderColor: Colors.glassBorderLight, alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  checkmark: { fontSize: 14, color: Colors.background, fontWeight: '700' },
+  termsText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 18 },
   legalLink: { color: Colors.tint, textDecorationLine: 'underline' },
 });

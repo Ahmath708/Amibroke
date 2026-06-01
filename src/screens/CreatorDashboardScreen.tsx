@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Share, Animated,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -154,7 +155,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
           {/* Inputs */}
           {batchInputs.map((input, i) => (
             <View key={i} style={styles.batchInputRow}>
-              <TextInput
+              <AppTextInput
                 style={styles.batchInput}
                 placeholder={`Situation ${i + 1}: "I make $3k but spend $3.5k..."`}
                 placeholderTextColor={Colors.textMuted}

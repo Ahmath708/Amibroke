@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Animated,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackActions, useNavigation } from '@react-navigation/native';
@@ -189,14 +190,14 @@ export default function SubscriptionAuditScreen() {
         {/* Add subscription */}
         {showAdd ? (
           <View style={styles.addCard}>
-            <TextInput
+            <AppTextInput
               style={styles.addInput}
               placeholder="Subscription name"
               placeholderTextColor={Colors.textMuted}
               value={newName}
               onChangeText={setNewName}
             />
-            <TextInput
+            <AppTextInput
               style={styles.addInput}
               placeholder="Monthly amount"
               placeholderTextColor={Colors.textMuted}

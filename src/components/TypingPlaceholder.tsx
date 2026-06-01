@@ -63,7 +63,7 @@ export default function TypingPlaceholder({
     <View style={[styles.container, style]}>
       <Text style={[styles.text, textStyle]}>
         {displayText}
-        <Text style={[styles.cursor, textStyle, { opacity: isPaused ? 0.3 : 1 }]}>|</Text>
+        <Text style={[styles.cursor, textStyle, { color: Colors.primary, opacity: isPaused ? 0.3 : 1 }]}>|</Text>
       </Text>
     </View>
   );

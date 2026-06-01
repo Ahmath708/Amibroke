@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Animated,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -280,7 +281,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                       {on && (g.unit === 'currency' || g.unit === 'percent' || g.unit === 'months') ? (
                         <View style={styles.targetWrap}>
                           <Text style={styles.targetLabel}>Goal</Text>
-                          <TextInput
+                          <AppTextInput
                             style={styles.targetInput}
                             placeholder={targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g) || '—'}
                             placeholderTextColor={Colors.textMuted}
@@ -352,7 +353,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             {mood !== null && <Text style={styles.moodLabel}>{MOOD_LABELS[mood]}</Text>}
 
             <GlassCard variant="inset" style={styles.noteCard}>
-              <TextInput
+              <AppTextInput
                 style={styles.noteInput}
                 placeholder={'Optional note — anything unusual this month?'}
                 placeholderTextColor={Colors.textMuted}
@@ -407,7 +408,7 @@ function BaseInput({ label, value, onChange, first }: { label: string; value: st
         <Text style={styles.formLabel}>{label}</Text>
         <View style={styles.formInputRow}>
           <Text style={styles.formPrefix}>$</Text>
-          <TextInput
+          <AppTextInput
             style={styles.formInput}
             placeholder="0"
             placeholderTextColor={Colors.textMuted}

@@ -4,6 +4,7 @@ import {
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
   Animated,
 } from 'react-native';
+import AppTextInput from '@/components/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -204,7 +205,7 @@ export default function HomeScreen({ navigation }: Props) {
           <GlassCard variant="inset" style={styles.inputCard}>
             <View style={styles.inputFieldWrap}>
               <Animated.View style={{ opacity: inputOpacity, transform: [{ translateY: inputTranslateY }] }}>
-                <TextInput
+                <AppTextInput
                   ref={inputRef}
                   style={styles.textInput}
                   placeholder=""
