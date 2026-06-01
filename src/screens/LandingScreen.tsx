@@ -97,9 +97,7 @@ export default function LandingScreen({ navigation }: Props) {
 
         {/* Social Proof */}
         <Animated.View style={[styles.socialProof, { opacity: fadeAnim }]}>
-          <Text style={styles.socialProofText}>
-            <Text style={styles.socialProofNum}>47,283</Text> people found out if they're broke
-          </Text>
+          <Text style={styles.socialProofText}>Free · Brutally honest · 60 seconds</Text>
         </Animated.View>
 
         {/* CTA Buttons */}
@@ -173,9 +171,10 @@ const styles = StyleSheet.create({
   },
   socialProof: { alignItems: 'center', marginBottom: Spacing.xl },
   socialProofText: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.caption1.fontSize,
-    color: Colors.textMuted,
+    fontFamily: Typography.fonts.bodyMed,
+    fontSize: Typography.footnote.fontSize,
+    color: Colors.textSecondary,
+    letterSpacing: 0.3,
   },
   socialProofNum: {
     fontFamily: Typography.fonts.headingSemi,

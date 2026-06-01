@@ -109,7 +109,7 @@ export default function LoginScreen({ navigation, route }: Props) {
               {mode === 'login' ? 'Welcome back' : 'Create account'}
             </Text>
             <Text style={styles.subtitle}>
-              {mode === 'login' ? 'Sign in to your account' : 'Join 100k+ financially aware Gen Z'}
+              {mode === 'login' ? 'Sign in to your account' : 'Create your free account'}
             </Text>
           </View>
 
