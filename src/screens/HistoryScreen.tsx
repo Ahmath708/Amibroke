@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated,
 } from 'react-native';
@@ -16,6 +16,8 @@ import EmptyState from '@/components/EmptyState';
 import { getAnalysisHistory, getCheckIns, getAnalysisById } from '@/services/claudeApi';
 import { AnalysisHistoryItem, CheckIn } from '@/types';
 import ScreenBackground from '@/components/ScreenBackground';
+import HistoryChart from '@/components/HistoryChart';
+import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
 const MAX_SCORE = 100;
@@ -30,6 +32,9 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rowLoading, setRowLoading] = useState<string | null>(null);
+  const [granularity, setGranularity] = useState<Granularity>('week');
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [now] = useState<Date>(() => new Date());
   const { animatedStyle } = useEntryAnimation();
 
   const fetchHistory = useCallback(async () => {
@@ -57,6 +62,16 @@ export default function HistoryScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
+  // Open the chart on the period containing the most recent analysis (once),
+  // so the default view always lands on data regardless of the device clock.
+  const anchorInited = useRef(false);
+  useEffect(() => {
+    if (!anchorInited.current && history.length > 0) {
+      anchorInited.current = true;
+      setAnchor(new Date(history[0].created_at));
+    }
+  }, [history]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchHistory();
@@ -77,7 +92,13 @@ export default function HistoryScreen() {
     }
   };
 
-  const barData = [...history].reverse();
+  // Deltas are computed against the full chronological history (descending), so a
+  // row's "vs previous" stays correct even when the list is filtered to a period.
+  const deltaById = new Map<string, number>();
+  history.forEach((h, i) => {
+    if (i < history.length - 1) deltaById.set(h.id, h.score - history[i + 1].score);
+  });
+  const periodItems = itemsInPeriod(granularity, anchor, history);
 
   const fmtDate = (iso: string) => {
     const d = new Date(iso);
@@ -134,54 +155,29 @@ export default function HistoryScreen() {
           <EmptyState emoji="📋" title="No analyses yet" body="Run your first analysis to start tracking your financial progress over time." />
         ) : (
           <>
-            {/* Chart card */}
-            {barData.length > 1 && (
-              <GlassCard style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Score Over Time</Text>
-                <View style={styles.chart}>
-                  {barData.map((item: AnalysisHistoryItem) => {
-                    const barH = (item.score / MAX_SCORE) * 100;
-                    const color = item.score < 40 ? Colors.danger : item.score < 65 ? Colors.warning : Colors.success;
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={styles.barCol}
-                        onPress={() => handleRowPress(item.id)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.barNum, { color }]}>{item.score}</Text>
-                        <View style={styles.barTrack}>
-                          <LinearGradient
-                            colors={[color, color + '66']}
-                            style={[styles.barFill, { height: `${barH}%` }]}
-                          />
-                        </View>
-                        <Text style={styles.barDate}>{fmtDate(item.created_at)}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </GlassCard>
-            )}
+            {/* Filterable chart */}
+            <HistoryChart
+              items={history}
+              granularity={granularity}
+              anchor={anchor}
+              now={now}
+              onChange={(g, a) => { setGranularity(g); setAnchor(a); }}
+              onOpenAnalysis={handleRowPress}
+            />
 
-            {/* List */}
-            <Text style={styles.sectionLabel}>All Analyses</Text>
+            {/* List — scoped to the chart's current period */}
+            <Text style={styles.sectionLabel}>Analyses</Text>
+            {periodItems.length === 0 ? (
+              <Text style={styles.periodEmpty}>No analyses in this period.</Text>
+            ) : (
             <View style={styles.historyGroup}>
-              {history.map((h, i) => {
+              {periodItems.map((h, i) => {
                 const color = h.score < 40 ? Colors.danger : h.score < 65 ? Colors.warning : Colors.success;
                 let deltaText = '';
                 let deltaColor = Colors.textMuted;
-                if (i < history.length - 1) {
-                  const prev = history[i + 1].score;
-                  const diff = h.score - prev;
-                  if (diff > 0) {
-                    deltaText = `+${diff}`;
-                    deltaColor = Colors.success;
-                  } else if (diff < 0) {
-                    deltaText = `${diff}`;
-                    deltaColor = Colors.danger;
-                  }
-                }
+                const diff = deltaById.get(h.id);
+                if (diff !== undefined && diff > 0) { deltaText = `+${diff}`; deltaColor = Colors.success; }
+                else if (diff !== undefined && diff < 0) { deltaText = `${diff}`; deltaColor = Colors.danger; }
                 const isLoading = rowLoading === h.id;
 
                 return (
@@ -224,6 +220,7 @@ export default function HistoryScreen() {
                 );
               })}
             </View>
+            )}
 
             {/* Check-ins list */}
             {checkIns.length > 0 && (
@@ -272,6 +269,7 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
   signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginBottom: Spacing.lg, fontStyle: 'italic' },
+  periodEmpty: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, paddingVertical: Spacing.lg, textAlign: 'center' },
   chartCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   chartTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginBottom: Spacing.lg, fontWeight: '600' },
   chart: { flexDirection: 'row', height: 120, gap: Spacing.sm, alignItems: 'flex-end' },
