@@ -128,6 +128,19 @@ export default function AppNavigator() {
     return <SplashScreen />;
   }
 
+  // Legal screens are reachable from both the auth flow (Login consent links) and
+  // the signed-in app (Settings). Declaring them INSIDE each group — rather than as
+  // root-level siblings of the conditional groups — keeps every navigation to them
+  // intra-group (normal native push/pop). Reaching them via cross-group navigate()
+  // confused react-native-screens' native stack, breaking the back button on the
+  // second legal screen opened in a session.
+  const legalScreens = (
+    <>
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ ...sharedHeader, headerShown: true, title: 'Privacy Policy', animation: 'slide_from_right' }} />
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ ...sharedHeader, headerShown: true, title: 'Terms of Service', animation: 'slide_from_right' }} />
+    </>
+  );
+
   return (
     <View style={{ flex: 1 }}>
       <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
@@ -136,6 +149,7 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
             <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom' }} />
+            {legalScreens}
           </>
         ) : needsUsername ? (
           /* ─── First-run gate: pick a username (mainly OAuth users) ─── */
@@ -160,11 +174,9 @@ export default function AppNavigator() {
             <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
+            {legalScreens}
           </>
         )}
-        {/* Shared — reachable from both the auth screens (legal links) and the app */}
-        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ ...sharedHeader, headerShown: true, title: 'Privacy Policy', animation: 'slide_from_right' }} />
-        <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ ...sharedHeader, headerShown: true, title: 'Terms of Service', animation: 'slide_from_right' }} />
       </Stack.Navigator>
     </View>
   );
