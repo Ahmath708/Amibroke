@@ -565,6 +565,8 @@ export async function saveCheckIn(userId: string, data: {
   debt?: number;
   metrics?: Record<string, number>;
 }): Promise<string | null> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) return 'mock-checkin-id';
   const client = getSupabase();
   if (!client) return null;
   try {

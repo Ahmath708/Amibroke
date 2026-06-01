@@ -153,6 +153,6 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
   HelpFAQ: undefined;
-  MonthlyCheckIn: undefined;
+  MonthlyCheckIn: { setup?: boolean } | undefined;
   CreatorDashboard: undefined;
 };

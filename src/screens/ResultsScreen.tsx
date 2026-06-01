@@ -421,6 +421,15 @@ export default function ResultsScreen({ navigation, route }: Props) {
               style={styles.actionBtn}
             />
           )}
+          {user && (
+            <NeonButton
+              label="Track these numbers monthly"
+              onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })}
+              variant="secondary"
+              style={styles.actionBtn}
+              icon="📅"
+            />
+          )}
         </View>
 
         <Disclaimer style={{ marginTop: Spacing.xl }} />

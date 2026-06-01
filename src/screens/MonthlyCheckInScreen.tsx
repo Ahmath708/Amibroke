@@ -4,106 +4,222 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { StackActions, useNavigation } from '@react-navigation/native';
-import { RootStackParamList, CheckIn } from '@/types';
+import { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { RootStackParamList, CheckinConfig, TrackedGoal, CheckIn, EMPTY_CHECKIN_CONFIG, MetricKey } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
-import { getCheckIns, saveCheckIn } from '@/services/claudeApi';
-import { useAuth } from '@/context/AuthContext';
-import LoadingState from '@/components/LoadingState';
-import { getSubscription, hasAccessTo } from '@/services/subscriptions';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
+import LoadingState from '@/components/LoadingState';
+import EmptyState from '@/components/EmptyState';
+import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
+import {
+  getCheckinConfig, saveCheckinConfig, getCheckIns, saveCheckIn,
+  getAnalysisHistory, getAnalysisById,
+} from '@/services/claudeApi';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import {
+  goalCandidatesFromAnalysis, computeGoalCurrent, goalProgress, formatGoalValue,
+  TRACKABLE_METRICS, SUGGESTED_METRICS, metricGoalId, CheckinBase,
+} from '@/utils/checkinGoals';
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'MonthlyCheckIn'> };
+type Nav = NativeStackNavigationProp<RootStackParamList, 'MonthlyCheckIn'>;
+type Props = { navigation: Nav; route: RouteProp<RootStackParamList, 'MonthlyCheckIn'> };
 
-const QUESTIONS = [
-  { id: 'income', label: 'Monthly Income', placeholder: '3200', prefix: '$', keyboardType: 'numeric' as const },
-  { id: 'expenses', label: 'Total Expenses', placeholder: '2800', prefix: '$', keyboardType: 'numeric' as const },
-  { id: 'savings', label: 'Amount Saved', placeholder: '400', prefix: '$', keyboardType: 'numeric' as const },
-  { id: 'debt', label: 'Total Debt Balance', placeholder: '8500', prefix: '$', keyboardType: 'numeric' as const },
-];
+type Mode = 'loading' | 'no-analysis' | 'setup' | 'checkin' | 'saved';
 
 const MOODS = ['😭', '😟', '😐', '🙂', '🤑'];
+const MOOD_LABELS = ['Financially Stressed', 'Worried', 'Getting By', 'Feeling Good', 'On Fire 🔥'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const num = (s: string) => {
+  const n = parseFloat((s || '').replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : n;
+};
+// Targets display in human units (percent shown as 20, stored as 0.20).
+const targetToDisplay = (g: TrackedGoal) => (g.target == null ? '' : g.unit === 'percent' ? `${Math.round(g.target * 100)}` : `${g.target}`);
+const displayToTarget = (unit: TrackedGoal['unit'], s: string): number | null => {
+  if (!s.trim()) return null;
+  const n = num(s);
+  return unit === 'percent' ? n / 100 : n;
+};
 
-export default function MonthlyCheckInScreen({ navigation }: Props) {
+export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const nav = useNavigation();
   const { user } = useAuth();
-
-  // All hooks must be at top, no conditional hook calls
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [mood, setMood] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
-  const [note, setNote] = useState('');
-  const [step, setStep] = useState<'form' | 'mood' | 'note'>('form');
-  const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null);
-  const [loadingLast, setLoadingLast] = useState(true);
+  const { hasAccess } = useSubscription();
   const { animatedStyle } = useEntryAnimation();
+
+  const [mode, setMode] = useState<Mode>('loading');
+  const [config, setConfig] = useState<CheckinConfig>(EMPTY_CHECKIN_CONFIG);
+  const [firstAnalyzeAt, setFirstAnalyzeAt] = useState<string | null>(null);
+  const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null);
+  const [candidates, setCandidates] = useState<TrackedGoal[]>([]);
+
+  // setup state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [targetInputs, setTargetInputs] = useState<Record<string, string>>({});
+
+  // check-in state — base figures + per-debt balances, then mood/note
+  const [base, setBase] = useState<Record<string, string>>({});
+  const [debtInputs, setDebtInputs] = useState<Record<string, string>>({});
+  const [mood, setMood] = useState<number | null>(null);
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const { tier } = await getSubscription(user?.id ?? '');
-      if (hasAccessTo(tier, 'action_plan')) {
-        setAuthorized(true);
-      } else {
-        nav.dispatch(StackActions.replace('Paywall'));
+      if (!user) { setMode('no-analysis'); return; }
+      const [cfg, checkins, history] = await Promise.all([
+        getCheckinConfig(user.id), getCheckIns(user.id), getAnalysisHistory(user.id),
+      ]);
+      setConfig(cfg);
+      setLastCheckIn(checkins[0] ?? null);
+
+      // Candidates come from the latest analysis; anchor from the earliest.
+      let anchor = cfg.firstAnalyzeAt;
+      if (history.length > 0) {
+        if (!anchor) anchor = history[history.length - 1].created_at;
+        const latest = await getAnalysisById(history[0].id);
+        if (latest) setCandidates(goalCandidatesFromAnalysis(latest, { analysisId: history[0].id }));
       }
-      setLoading(false);
+      setFirstAnalyzeAt(anchor);
+
+      if (history.length === 0 && cfg.goals.length === 0) { setMode('no-analysis'); return; }
+
+      const wantSetup = !!route.params?.setup || cfg.goals.length === 0;
+      if (wantSetup) {
+        const sel = new Set<string>(cfg.goals.map((g) => g.id));
+        if (cfg.goals.length === 0) SUGGESTED_METRICS.forEach((k) => sel.add(metricGoalId(k)));
+        setSelectedIds(sel);
+        setMode('setup');
+      } else {
+        seedCheckin(cfg, checkins[0] ?? null);
+        setMode('checkin');
+      }
     })();
   }, [user]);
 
-  useEffect(() => {
-    if (!user || !authorized) {
-      setLoadingLast(false);
-      return;
-    }
-    getCheckIns(user.id).then((data) => {
-      if (data.length > 0) setLastCheckIn(data[0]);
-    }).catch(() => {
-      console.warn('Failed to load last check-in');
-    }).finally(() => {
-      setLoadingLast(false);
-    });
-  }, [user, authorized]);
+  // ─── setup ───
+  const candidatePool = candidates.filter((c) => c.kind === 'debt' || TRACKABLE_METRICS.includes(c.key as MetricKey));
+  // Merge existing pinned goals that aren't in the candidate pool (e.g. a debt gone from the latest analysis).
+  const pool: TrackedGoal[] = [...candidatePool];
+  config.goals.forEach((g) => { if (!pool.some((p) => p.id === g.id)) pool.push(g); });
 
-  const setAnswer = (id: string, val: string) =>
-    setAnswers((prev) => ({ ...prev, [id]: val }));
+  const toggleGoal = (id: string) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
-  const handleSubmit = async () => {
-    if (!user) return;
-    const income = parseFloat(answers.income || '0');
-    const expenses = parseFloat(answers.expenses || '0');
-    const savings = parseFloat(answers.savings || '0');
-    const debt = parseFloat(answers.debt || '0');
-
-    try {
-      await saveCheckIn(user.id, {
-        mood: mood ?? 2,
-        notes: note || undefined,
-        income: income || undefined,
-        expenses: expenses || undefined,
-        savings: savings || undefined,
-        debt: debt || undefined,
+  const saveSetup = async () => {
+    const goals: TrackedGoal[] = pool
+      .filter((g) => selectedIds.has(g.id))
+      .map((g) => {
+        const existing = config.goals.find((e) => e.id === g.id);
+        const ti = targetInputs[g.id];
+        const target = ti !== undefined ? displayToTarget(g.unit, ti) : (existing ? existing.target : g.target);
+        // Preserve an existing baseline; only (re)seed from candidate when newly pinned.
+        return existing ? { ...existing, target } : { ...g, target };
       });
-    } catch {
-      Alert.alert('Error', 'Failed to save check-in data.');
-      return;
-    }
+    if (goals.length === 0) { Alert.alert('Pick at least one', 'Choose at least one thing to track.'); return; }
+    const anchorDate = firstAnalyzeAt ? new Date(firstAnalyzeAt) : new Date();
+    const next: CheckinConfig = {
+      firstAnalyzeAt: firstAnalyzeAt ?? new Date().toISOString(),
+      anchorDay: anchorDate.getDate(),
+      goals,
+    };
+    setSaving(true);
+    if (user) await saveCheckinConfig(user.id, next);
+    setSaving(false);
+    setConfig(next);
+    seedCheckin(next, lastCheckIn);
+    setMode('checkin');
+  };
 
-    const situationText = `Monthly check-in: income $${income}, expenses $${expenses}, saved $${savings}, total debt $${debt}. Mood: ${mood !== null ? MOODS[mood] : 'not set'}. Note: ${note || 'none'}`;
+  // ─── check-in ───
+  function seedCheckin(cfg: CheckinConfig, last: CheckIn | null) {
+    const b: Record<string, string> = {};
+    const d: Record<string, string> = {};
+    const lastVal = (id: string, fallback?: number) => {
+      const v = last?.metrics?.[id];
+      return v != null ? `${v}` : fallback != null ? `${fallback}` : '';
+    };
+    cfg.goals.forEach((g) => {
+      if (g.kind === 'debt') { d[g.key] = lastVal(g.id, g.baseline); return; }
+      switch (g.key as MetricKey) {
+        case 'liquidSavings': b.savings = last?.savings != null ? `${last.savings}` : `${g.baseline}`; break;
+        case 'debtTotal': b.totalDebt = last?.debt != null ? `${last.debt}` : `${g.baseline}`; break;
+        case 'monthlyIncome': b.income = last?.income != null ? `${last.income}` : `${g.baseline}`; break;
+        case 'monthlyExpenses': b.expenses = last?.expenses != null ? `${last.expenses}` : `${g.baseline}`; break;
+        // derived metrics need their base inputs collected too
+        case 'monthlySavings': case 'savingsRate':
+          if (last?.income != null) b.income = `${last.income}`;
+          if (last?.expenses != null) b.expenses = `${last.expenses}`;
+          break;
+        case 'emergencyFundMonths':
+          if (last?.savings != null) b.savings = `${last.savings}`;
+          if (last?.expenses != null) b.expenses = `${last.expenses}`;
+          break;
+      }
+    });
+    setBase(b); setDebtInputs(d); setMood(null); setNote('');
+  }
+
+  // Which base fields are needed by the pinned goals.
+  const needs = (() => {
+    const keys = config.goals.filter((g) => g.kind === 'metric').map((g) => g.key as MetricKey);
+    return {
+      income: keys.some((k) => ['monthlyIncome', 'monthlySavings', 'savingsRate'].includes(k)),
+      expenses: keys.some((k) => ['monthlyExpenses', 'monthlySavings', 'savingsRate', 'emergencyFundMonths'].includes(k)),
+      savings: keys.some((k) => ['liquidSavings', 'emergencyFundMonths'].includes(k)),
+      totalDebt: keys.includes('debtTotal'),
+    };
+  })();
+
+  const currentBase = (): CheckinBase => ({
+    income: num(base.income), expenses: num(base.expenses), savings: num(base.savings), totalDebt: num(base.totalDebt),
+    debts: Object.fromEntries(Object.entries(debtInputs).map(([k, v]) => [k, num(v)])),
+  });
+
+  const submitCheckin = async () => {
+    if (!user) return;
+    const b = currentBase();
+    const metrics: Record<string, number> = {};
+    config.goals.forEach((g) => { metrics[g.id] = computeGoalCurrent(g, b); });
+    setSaving(true);
+    const ok = await saveCheckIn(user.id, {
+      mood: mood ?? 2,
+      notes: note || undefined,
+      income: needs.income ? b.income : undefined,
+      expenses: needs.expenses ? b.expenses : undefined,
+      savings: needs.savings ? b.savings : undefined,
+      debt: needs.totalDebt ? b.totalDebt : undefined,
+      metrics,
+    });
+    setSaving(false);
+    if (ok === null) { Alert.alert('Error', 'Failed to save your check-in.'); return; }
+    setMode('saved');
+  };
+
+  const runReScore = () => {
+    const b = currentBase();
+    const movement = config.goals
+      .map((g) => `${g.label}: ${formatGoalValue(g.unit, g.baseline)} → ${formatGoalValue(g.unit, computeGoalCurrent(g, b))}`)
+      .join('; ');
+    const situationText =
+      `Monthly check-in update. Income $${b.income}/mo, expenses $${b.expenses}/mo, savings $${b.savings}, total debt $${b.totalDebt}. ` +
+      `Tracked goals — ${movement}. Mood: ${mood !== null ? MOODS[mood] : 'n/a'}. Note: ${note || 'none'}.`;
     navigation.replace('Processing', { userInput: situationText });
   };
 
-  if (loading) return <LoadingState style={{ flex: 1 }} />;
-  if (!authorized) return null;
+  // ─── render ───
+  if (mode === 'loading') return <LoadingState style={{ flex: 1 }} />;
 
   const now = new Date();
-  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const monthLabel = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -113,193 +229,227 @@ export default function MonthlyCheckInScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Progress steps */}
-        <View style={styles.stepRow}>
-          {(['form', 'mood', 'note'] as const).map((s, i) => (
-            <React.Fragment key={s}>
-              <View style={[
-                styles.stepDot,
-                step === s && styles.stepDotActive,
-                (step === 'mood' && i === 0) || (step === 'note' && i < 2) ? styles.stepDotDone : null,
-              ]} />
-              {i < 2 && <View style={styles.stepLine} />}
-            </React.Fragment>
-          ))}
-        </View>
+        {mode === 'no-analysis' && (
+          <View style={{ paddingTop: Spacing.xxl }}>
+            <EmptyState
+              emoji="📈"
+              title="Start with an analysis"
+              body="Run your first analysis, then pick the numbers you want to track here every month."
+            />
+            <NeonButton label="Analyze my finances" onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })} style={{ marginTop: Spacing.lg }} />
+          </View>
+        )}
 
-        {step === 'form' && (
+        {mode === 'setup' && (
           <>
-            <Text style={styles.stepTitle}>{monthLabel} Numbers</Text>
-            <Text style={styles.stepSubtitle}>Quick snapshot — takes 30 seconds.</Text>
-
-            <Text style={styles.sectionLabel}>This Month's Figures</Text>
+            <Text style={styles.title}>What do you want to track?</Text>
+            <Text style={styles.subtitle}>
+              Pick the metrics and debts you'll check in on each month. We'll remember the baseline and show your progress.
+            </Text>
+            <Text style={styles.sectionLabel}>Track Monthly</Text>
             <View style={styles.formGroup}>
-              {QUESTIONS.map((q, i) => (
-                <React.Fragment key={q.id}>
-                  {i > 0 && <View style={styles.cellSep} />}
-                  <View style={styles.formCell}>
-                    <Text style={styles.formLabel}>{q.label}</Text>
-                    <View style={styles.formInputRow}>
-                      <Text style={styles.formPrefix}>{q.prefix}</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder={q.placeholder}
-                        placeholderTextColor={Colors.textMuted}
-                        value={answers[q.id] || ''}
-                        onChangeText={(v) => setAnswer(q.id, v)}
-                        keyboardType={q.keyboardType}
-                        returnKeyType="next"
+              {pool.map((g, i) => {
+                const on = selectedIds.has(g.id);
+                return (
+                  <React.Fragment key={g.id}>
+                    {i > 0 && <View style={styles.cellSep} />}
+                    <TouchableOpacity style={styles.pickRow} onPress={() => toggleGoal(g.id)} activeOpacity={0.7}>
+                      <Ionicons
+                        name={on ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={24}
+                        color={on ? Colors.primary : Colors.textMuted}
                       />
-                    </View>
-                  </View>
-                </React.Fragment>
-              ))}
+                      <View style={styles.pickInfo}>
+                        <Text style={styles.pickLabel}>{g.label}</Text>
+                        <Text style={styles.pickBaseline}>Now: {formatGoalValue(g.unit, g.baseline)}</Text>
+                      </View>
+                      {on && (g.unit === 'currency' || g.unit === 'percent' || g.unit === 'months') ? (
+                        <View style={styles.targetWrap}>
+                          <Text style={styles.targetLabel}>Goal</Text>
+                          <TextInput
+                            style={styles.targetInput}
+                            placeholder={targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g) || '—'}
+                            placeholderTextColor={Colors.textMuted}
+                            keyboardType="numeric"
+                            value={targetInputs[g.id] ?? targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g)}
+                            onChangeText={(v) => setTargetInputs((p) => ({ ...p, [g.id]: v }))}
+                          />
+                          <Text style={styles.targetUnit}>{g.unit === 'percent' ? '%' : g.unit === 'months' ? 'mo' : '$'}</Text>
+                        </View>
+                      ) : null}
+                    </TouchableOpacity>
+                  </React.Fragment>
+                );
+              })}
             </View>
-
-            {/* Quick comparison vs last month */}
-            {!loadingLast && lastCheckIn && (
-              <GlassCard style={styles.lastMonthCard}>
-                <Text style={styles.lastMonthTitle}>vs. Last Check-In</Text>
-                <View style={styles.lastMonthRow}>
-                  {[
-                    { label: 'Income', last: lastCheckIn.income ? `$${lastCheckIn.income}` : '—', current: answers.income ? `$${answers.income}` : '—' },
-                    { label: 'Saved', last: lastCheckIn.savings ? `$${lastCheckIn.savings}` : '—', current: answers.savings ? `$${answers.savings}` : '—' },
-                  ].map((item) => (
-                    <View key={item.label} style={styles.lastMonthItem}>
-                      <Text style={styles.lastMonthLabel}>{item.label}</Text>
-                      <Text style={styles.lastMonthValue}>{item.last}</Text>
-                      <Text style={[styles.lastMonthChange, { color: Colors.textMuted }]}>→ {item.current}</Text>
-                    </View>
-                  ))}
-                </View>
-              </GlassCard>
-            )}
-
-            <NeonButton label="Continue →" onPress={() => setStep('mood')} />
+            <NeonButton label={saving ? 'Saving…' : 'Start tracking →'} onPress={saveSetup} loading={saving} />
           </>
         )}
 
-        {step === 'mood' && (
+        {mode === 'checkin' && (
           <>
-            <Text style={styles.stepTitle}>How are you feeling?</Text>
-            <Text style={styles.stepSubtitle}>About your finances this month, honestly.</Text>
+            <Text style={styles.title}>{monthLabel} Check-In</Text>
+            <Text style={styles.subtitle}>Update your numbers — we'll show how you're tracking against your goals.</Text>
 
+            <Text style={styles.sectionLabel}>This Month's Figures</Text>
+            <View style={styles.formGroup}>
+              {needs.income && <BaseInput label="Monthly Income" value={base.income} onChange={(v) => setBase((p) => ({ ...p, income: v }))} first />}
+              {needs.expenses && <BaseInput label="Monthly Expenses" value={base.expenses} onChange={(v) => setBase((p) => ({ ...p, expenses: v }))} first={!needs.income} />}
+              {needs.savings && <BaseInput label="Savings Balance" value={base.savings} onChange={(v) => setBase((p) => ({ ...p, savings: v }))} first={!needs.income && !needs.expenses} />}
+              {needs.totalDebt && <BaseInput label="Total Debt" value={base.totalDebt} onChange={(v) => setBase((p) => ({ ...p, totalDebt: v }))} first={!needs.income && !needs.expenses && !needs.savings} />}
+              {config.goals.filter((g) => g.kind === 'debt').map((g, i) => (
+                <BaseInput key={g.id} label={g.label} value={debtInputs[g.key] ?? ''} onChange={(v) => setDebtInputs((p) => ({ ...p, [g.key]: v }))} first={!needs.income && !needs.expenses && !needs.savings && !needs.totalDebt && i === 0} />
+              ))}
+            </View>
+
+            {/* Live progress vs baseline */}
+            <Text style={styles.sectionLabel}>Your Progress</Text>
+            <View style={styles.formGroup}>
+              {config.goals.map((g, i) => {
+                const current = computeGoalCurrent(g, currentBase());
+                const p = goalProgress(g, current);
+                // Arrow = actual value direction; colour = whether that's an improvement.
+                const arrow = p.delta === 0 ? '→' : p.delta > 0 ? '↑' : '↓';
+                const color = p.delta === 0 ? Colors.textMuted : p.improved ? Colors.success : Colors.danger;
+                return (
+                  <React.Fragment key={g.id}>
+                    {i > 0 && <View style={styles.cellSep} />}
+                    <View style={styles.progRow}>
+                      <Text style={styles.progLabel}>{g.label}</Text>
+                      <View style={styles.progValues}>
+                        <Text style={styles.progBaseline}>{formatGoalValue(g.unit, g.baseline)}</Text>
+                        <Text style={[styles.progArrow, { color }]}>{arrow}</Text>
+                        <Text style={[styles.progCurrent, { color }]}>{formatGoalValue(g.unit, current)}</Text>
+                      </View>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+            </View>
+
+            <Text style={styles.sectionLabel}>How are you feeling?</Text>
             <View style={styles.moodRow}>
               {MOODS.map((m, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.moodBtn, mood === i && styles.moodBtnActive]}
-                  onPress={() => setMood(i)}
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity key={i} style={[styles.moodBtn, mood === i && styles.moodBtnActive]} onPress={() => setMood(i)} activeOpacity={0.7}>
                   <Text style={styles.moodEmoji}>{m}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-
-            {mood !== null && (
-              <GlassCard style={styles.moodLabel}>
-                <Text style={styles.moodLabelText}>
-                  {['Financially Stressed', 'Worried', 'Getting By', 'Feeling Good', 'On Fire 🔥'][mood]}
-                </Text>
-              </GlassCard>
-            )}
-
-            <View style={styles.navButtons}>
-              <NeonButton label="← Back" onPress={() => setStep('form')} variant="tinted" style={styles.backBtn} />
-              <NeonButton label="Continue →" onPress={() => setStep('note')} style={styles.nextBtn} disabled={mood === null} />
-            </View>
-          </>
-        )}
-
-        {step === 'note' && (
-          <>
-            <Text style={styles.stepTitle}>Any notes?</Text>
-            <Text style={styles.stepSubtitle}>Anything unusual this month? Big expense, income change?</Text>
+            {mood !== null && <Text style={styles.moodLabel}>{MOOD_LABELS[mood]}</Text>}
 
             <GlassCard variant="inset" style={styles.noteCard}>
               <TextInput
                 style={styles.noteInput}
-                placeholder={"e.g. \"Had a medical bill this month, also got a $500 bonus at work.\""}
+                placeholder={'Optional note — anything unusual this month?'}
                 placeholderTextColor={Colors.textMuted}
-                multiline
-                value={note}
-                onChangeText={setNote}
-                textAlignVertical="top"
+                multiline value={note} onChangeText={setNote} textAlignVertical="top"
               />
             </GlassCard>
 
-            <View style={styles.navButtons}>
-              <NeonButton label="← Back" onPress={() => setStep('mood')} variant="tinted" style={styles.backBtn} />
-              <NeonButton label="Run Analysis 🚀" onPress={handleSubmit} style={styles.nextBtn} />
-            </View>
-
-            <Text style={styles.skipNote}>
-              No notes? That's fine — just tap Run Analysis.
-            </Text>
+            <NeonButton label={saving ? 'Saving…' : 'Save check-in'} onPress={submitCheckin} loading={saving} />
+            <TouchableOpacity onPress={() => { setSelectedIds(new Set(config.goals.map((g) => g.id))); setMode('setup'); }} style={styles.editLink}>
+              <Text style={styles.editLinkText}>Edit what I track</Text>
+            </TouchableOpacity>
           </>
+        )}
+
+        {mode === 'saved' && (
+          <View style={{ paddingTop: Spacing.xl }}>
+            <Text style={styles.savedEmoji}>✅</Text>
+            <Text style={styles.title}>Check-in saved</Text>
+            <Text style={styles.subtitle}>Your progress is logged and your trend is updated.</Text>
+
+            {hasAccess('action_plan') ? (
+              <>
+                <NeonButton label="Get your AI re-score 🚀" onPress={runReScore} />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editLink}>
+                  <Text style={styles.editLinkText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <GlassCard style={styles.upsell}>
+                  <Text style={styles.upsellTitle}>💎 Want your new score?</Text>
+                  <Text style={styles.upsellBody}>Upgrade to get a fresh AI analysis that interprets your progress and updates your score.</Text>
+                </GlassCard>
+                <NeonButton label="See plans" onPress={() => navigation.navigate('Paywall')} />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editLink}>
+                  <Text style={styles.editLinkText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         )}
       </ScrollView>
     </Animated.View>
   );
 }
 
+function BaseInput({ label, value, onChange, first }: { label: string; value: string; onChange: (v: string) => void; first?: boolean }) {
+  return (
+    <>
+      {!first && <View style={styles.cellSep} />}
+      <View style={styles.formCell}>
+        <Text style={styles.formLabel}>{label}</Text>
+        <View style={styles.formInputRow}>
+          <Text style={styles.formPrefix}>$</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="0"
+            placeholderTextColor={Colors.textMuted}
+            value={value}
+            onChangeText={onChange}
+            keyboardType="numeric"
+            returnKeyType="done"
+          />
+        </View>
+      </View>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
-  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xxl + Spacing.xs },
-  stepDot: {
-    width: 10, height: 10, borderRadius: Radius.xs,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1.5, borderColor: Colors.separator,
-  },
-  stepDotActive: { backgroundColor: Colors.primary, borderColor: Colors.primary, width: 24, borderRadius: 5 },
-  stepDotDone: { backgroundColor: Colors.success, borderColor: Colors.success },
-  stepLine: { flex: 1, height: 1, backgroundColor: Colors.separator, maxWidth: 40 },
-  stepTitle: {
-    fontFamily: Typography.fonts.heading,
-    fontSize: 26, fontWeight: '700',
-    color: Colors.textPrimary, marginBottom: 6,
-  },
-  stepSubtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl + Spacing.xs, lineHeight: 22 },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
-  formGroup: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: Spacing.lg,
-  },
+  title: { fontFamily: Typography.fonts.heading, fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 6 },
+  subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl, lineHeight: 22 },
+  sectionLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm, marginTop: Spacing.md },
+  formGroup: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: Spacing.lg },
   cellSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
-  formCell: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: 13, minHeight: 50,
-  },
+  formCell: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 13, minHeight: 50 },
   formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   formInputRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   formPrefix: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
   formInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minWidth: 80, textAlign: 'right' },
-  lastMonthCard: { padding: Spacing.md, marginBottom: Spacing.xxl },
-  lastMonthTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.md, fontWeight: '500' },
-  lastMonthRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  lastMonthItem: { alignItems: 'center', gap: 3 },
-  lastMonthLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
-  lastMonthValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700', color: Colors.textPrimary },
-  lastMonthChange: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.xl, paddingHorizontal: Spacing.sm },
-  moodBtn: {
-    width: 58, height: 58, borderRadius: 29,
-    backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'transparent',
-  },
+  // setup picker
+  pickRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: 12, minHeight: 56 },
+  pickInfo: { flex: 1 },
+  pickLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  pickBaseline: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: 1 },
+  targetWrap: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  targetLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
+  targetInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, minWidth: 38, textAlign: 'right' },
+  targetUnit: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+  // progress
+  progRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 12 },
+  progLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, flex: 1 },
+  progValues: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  progBaseline: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
+  progArrow: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, fontWeight: '700' },
+  progCurrent: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, fontWeight: '700' },
+  // mood
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs },
+  moodBtn: { width: 54, height: 54, borderRadius: 27, backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
   moodBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
-  moodEmoji: { fontSize: Typography.title1.fontSize },
-  moodLabel: { padding: Spacing.md, marginBottom: Spacing.xxl + Spacing.xs, alignItems: 'center' },
-  moodLabelText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '500' },
-  navButtons: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
-  backBtn: { flex: 1 },
-  nextBtn: { flex: 2 },
-  noteCard: { padding: Spacing.md, marginBottom: Spacing.xl },
-  noteInput: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minHeight: 100, lineHeight: 23 },
-  skipNote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center' },
+  moodEmoji: { fontSize: Typography.title2.fontSize },
+  moodLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, textAlign: 'center', marginBottom: Spacing.md },
+  noteCard: { padding: Spacing.md, marginTop: Spacing.md, marginBottom: Spacing.lg },
+  noteInput: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minHeight: 70, lineHeight: 22 },
+  editLink: { alignItems: 'center', paddingVertical: Spacing.md },
+  editLinkText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },
+  // saved
+  savedEmoji: { fontSize: 44, textAlign: 'center', marginBottom: Spacing.sm },
+  upsell: { padding: Spacing.lg, marginBottom: Spacing.lg },
+  upsellTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.primary, marginBottom: Spacing.xs },
+  upsellBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19 },
 });

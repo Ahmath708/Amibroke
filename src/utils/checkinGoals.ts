@@ -32,6 +32,42 @@ export const METRIC_META: Record<MetricKey, MetricMeta> = {
 /** Default metrics suggested for tracking (most actionable first). */
 export const SUGGESTED_METRICS: MetricKey[] = ['debtTotal', 'liquidSavings', 'emergencyFundMonths', 'savingsRate'];
 
+/**
+ * Metrics a check-in can actually update from simple base inputs (income, expenses,
+ * savings, total debt). Excludes debt-to-income, which needs monthly debt service
+ * the check-in doesn't collect.
+ */
+export const TRACKABLE_METRICS: MetricKey[] = [
+  'liquidSavings', 'debtTotal', 'monthlyIncome', 'monthlyExpenses',
+  'monthlySavings', 'savingsRate', 'emergencyFundMonths',
+];
+
+/** Base figures a user types during a check-in; pinned goals are computed from these. */
+export interface CheckinBase {
+  income: number;
+  expenses: number;
+  savings: number;
+  totalDebt: number;
+  debts?: Record<string, number>; // specific debt balances, keyed by debt name
+}
+
+/** Compute a pinned goal's current value from the check-in base inputs. */
+export function computeGoalCurrent(goal: TrackedGoal, base: CheckinBase): number {
+  if (goal.kind === 'debt') {
+    return base.debts?.[goal.key] ?? goal.baseline;
+  }
+  switch (goal.key as MetricKey) {
+    case 'liquidSavings': return base.savings;
+    case 'debtTotal': return base.totalDebt;
+    case 'monthlyIncome': return base.income;
+    case 'monthlyExpenses': return base.expenses;
+    case 'monthlySavings': return base.income - base.expenses;
+    case 'savingsRate': return base.income > 0 ? (base.income - base.expenses) / base.income : 0;
+    case 'emergencyFundMonths': return base.expenses > 0 ? base.savings / base.expenses : 0;
+    default: return goal.baseline; // e.g. debtToIncomeRatio — not computable here
+  }
+}
+
 export const metricGoalId = (key: MetricKey) => `m:${key}`;
 export const debtGoalId = (name: string) => `d:${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
 

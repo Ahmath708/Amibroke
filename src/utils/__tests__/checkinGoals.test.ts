@@ -1,6 +1,6 @@
 import {
   goalCandidatesFromAnalysis, goalProgress, formatGoalValue,
-  metricGoalId, debtGoalId, METRIC_META,
+  metricGoalId, debtGoalId, METRIC_META, computeGoalCurrent, CheckinBase,
 } from '../checkinGoals';
 import { SAMPLE_ANALYSIS } from '@/__fixtures__/sampleAnalysis';
 import type { TrackedGoal } from '@/types';
@@ -55,6 +55,32 @@ describe('goalProgress', () => {
   it('returns null pctToTarget when there is no target', () => {
     const noTarget: TrackedGoal = { ...savings, target: null };
     expect(goalProgress(noTarget, 1800).pctToTarget).toBeNull();
+  });
+});
+
+describe('computeGoalCurrent', () => {
+  const base: CheckinBase = { income: 5000, expenses: 3800, savings: 2000, totalDebt: 9000, debts: { 'Capital One Credit Card': 1500 } };
+  const goal = (key: string, kind: 'metric' | 'debt' = 'metric'): TrackedGoal =>
+    ({ id: 'x', kind, key, label: key, unit: 'currency', direction: 'up', baseline: 999, baselineDate: '' });
+
+  it('reads direct metrics from base', () => {
+    expect(computeGoalCurrent(goal('liquidSavings'), base)).toBe(2000);
+    expect(computeGoalCurrent(goal('debtTotal'), base)).toBe(9000);
+    expect(computeGoalCurrent(goal('monthlyIncome'), base)).toBe(5000);
+  });
+  it('derives computed metrics', () => {
+    expect(computeGoalCurrent(goal('monthlySavings'), base)).toBe(1200);
+    expect(computeGoalCurrent(goal('savingsRate'), base)).toBeCloseTo(0.24, 5);
+    expect(computeGoalCurrent(goal('emergencyFundMonths'), base)).toBeCloseTo(2000 / 3800, 5);
+  });
+  it('reads a specific debt by name, falling back to baseline', () => {
+    expect(computeGoalCurrent(goal('Capital One Credit Card', 'debt'), base)).toBe(1500);
+    expect(computeGoalCurrent(goal('Unknown Loan', 'debt'), base)).toBe(999); // baseline fallback
+  });
+  it('avoids divide-by-zero', () => {
+    const broke: CheckinBase = { income: 0, expenses: 0, savings: 0, totalDebt: 0 };
+    expect(computeGoalCurrent(goal('savingsRate'), broke)).toBe(0);
+    expect(computeGoalCurrent(goal('emergencyFundMonths'), broke)).toBe(0);
   });
 });
 
