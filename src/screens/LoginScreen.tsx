@@ -11,7 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
-import { useAuth, consumePendingRedirect } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Login'> };
@@ -48,14 +48,7 @@ export default function LoginScreen({ navigation }: Props) {
       Alert.alert('Authentication failed', error);
       return;
     }
-    const redirect = consumePendingRedirect();
-    if (redirect) {
-      navigation.replace(redirect.to as any, redirect.params);
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.replace('MainTabs');
-    }
+    // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
   };
 
   const handleApple = async () => {
@@ -66,14 +59,7 @@ export default function LoginScreen({ navigation }: Props) {
       Alert.alert('Apple Sign-In', error);
       return;
     }
-    const redirect = consumePendingRedirect();
-    if (redirect) {
-      navigation.replace(redirect.to as any, redirect.params);
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.replace('MainTabs');
-    }
+    // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
   };
 
   const handleGoogle = async () => {
@@ -84,14 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
       Alert.alert('Google Sign-In', error);
       return;
     }
-    const redirect = consumePendingRedirect();
-    if (redirect) {
-      navigation.replace(redirect.to as any, redirect.params);
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.replace('MainTabs');
-    }
+    // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
   };
 
   return (

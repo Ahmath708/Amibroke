@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RootStackParamList } from '@/types';
+import { RootStackParamList, MainTabsParamList } from '@/types';
 import { Colors, Spacing, Typography } from '@/theme/colors';
 import { useAuth } from '@/context/AuthContext';
 
@@ -38,7 +38,7 @@ import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabsParamList>();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 const TAB_ICONS: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
@@ -117,60 +117,47 @@ const sharedHeader = {
 } as const;
 
 export default function AppNavigator() {
-  const { loading, user, supabase } = useAuth();
-  const [usernameChecked, setUsernameChecked] = useState(false);
-  const [needsUsername, setNeedsUsername] = useState(false);
+  const { loading, user, needsUsername } = useAuth();
 
-  useEffect(() => {
-    if (!user) {
-      setUsernameChecked(true);
-      return;
-    }
-    (async () => {
-      const { data } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle();
-      setNeedsUsername(!data?.username);
-      setUsernameChecked(true);
-    })().catch(() => setUsernameChecked(true));
-  }, [user]);
-
-  if (loading || !usernameChecked) {
+  // Splash while the session restores, or while a signed-in user's username
+  // status is still resolving (needsUsername === null = unknown).
+  if (loading || (user && needsUsername === null)) {
     return <SplashScreen />;
   }
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack.Navigator
-        initialRouteName={needsUsername ? 'UsernameSetup' : 'MainTabs'}
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}
-      >
-        {/* Auth screens */}
-        <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'slide_from_right' }} />
-
-        {/* Username setup (blocking step before tabs) */}
-        <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'fade' }} />
-
-        {/* Main tabs */}
-        <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
-
-        {/* Push screens */}
-        <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
-        <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
-        <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
-        <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
-        <Stack.Screen name="Settings" component={SettingsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Settings', animation: 'slide_from_right' }} />
+      <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+        {!user ? (
+          /* ─── Not signed in: AUTH STACK ─── */
+          <>
+            <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom' }} />
+          </>
+        ) : needsUsername ? (
+          /* ─── First-run gate: pick a username (mainly OAuth users) ─── */
+          <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'fade' }} />
+        ) : (
+          /* ─── Signed in: APP STACK ─── */
+          <>
+            <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
+            <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
+            <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
+            <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Settings', animation: 'slide_from_right' }} />
+            <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
+            <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
+            <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
+            <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
+            <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
+            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
+          </>
+        )}
+        {/* Shared — reachable from both the auth screens (legal links) and the app */}
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ ...sharedHeader, headerShown: true, title: 'Privacy Policy', animation: 'slide_from_right' }} />
         <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ ...sharedHeader, headerShown: true, title: 'Terms of Service', animation: 'slide_from_right' }} />
-        <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
-        <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
-        <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
-        <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
-
-        {/* Modal sheets */}
-        <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
-        <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
       </Stack.Navigator>
     </View>
   );

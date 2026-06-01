@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, AnalysisHistoryItem, RoastTone } from '@/types';
+import { AnalysisHistoryItem, RoastTone, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
@@ -24,7 +24,7 @@ import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 const MAX_INPUT_CHARS = 4000;
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
+type Props = { navigation: TabScreenNav<'Home'> };
 
 const CHIPS = [
   'I spend more than I earn 😬',

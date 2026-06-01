@@ -59,7 +59,7 @@ export default function OnboardingScreen({ navigation }: Props) {
       <ScreenBackground variant="onboarding" />
       {/* Skip */}
       <TouchableOpacity
-        onPress={() => navigation.replace('Home')}
+        onPress={() => navigation.replace('MainTabs', { screen: 'Home' })}
         style={[styles.skipBtn, { top: insets.top + 12 }]}
       >
         <Text style={styles.skipText}>Skip</Text>

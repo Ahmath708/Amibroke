@@ -416,7 +416,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
           ) : (
             <NeonButton
               label="✓ Shared to Community Feed"
-              onPress={() => navigation.navigate('CommunityFeed')}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })}
               variant="tinted"
               style={styles.actionBtn}
             />

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, CommunityPost } from '@/types';
+import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
@@ -33,7 +33,7 @@ type TabType = 'trending' | 'recent' | 'lowest';
 export default function CommunityFeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<TabScreenNav<'Community'>>();
   const [tab, setTab] = useState<TabType>('recent');
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);

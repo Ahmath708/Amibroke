@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList } from '@/types';
+import { TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
@@ -19,7 +19,7 @@ import { getSubscription, isSubscriptionPremium } from '@/services/subscriptions
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'> };
+type Props = { navigation: TabScreenNav<'Profile'> };
 
 const BASE_MENU_ITEMS = [
   { icon: '💳', label: 'Subscription', detail: 'Free Plan', nav: 'Paywall' as const },

@@ -17,7 +17,7 @@ const USERNAME_REGEX = /^[a-z0-9_]+$/;
 
 export default function UsernameSetupScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { supabase, user } = useAuth();
+  const { supabase, user, refreshNeedsUsername } = useAuth();
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -52,7 +52,8 @@ export default function UsernameSetupScreen({ navigation }: Props) {
     const result = data as { ok: boolean; username?: string; error?: string } | null;
     if (result?.ok) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      navigation.replace('MainTabs');
+      // Username set → re-resolve the gate; AppNavigator swaps to the app stack.
+      refreshNeedsUsername();
     } else if (result?.error === 'taken') {
       setError('That username is taken \u2014 try another.');
     } else if (result?.error === 'invalid_length' || result?.error === 'invalid_charset') {
@@ -106,13 +107,6 @@ export default function UsernameSetupScreen({ navigation }: Props) {
             style={styles.cta}
           />
 
-          <TouchableOpacity
-            onPress={() => navigation.replace('MainTabs')}
-            activeOpacity={0.7}
-            style={styles.skipBtn}
-          >
-            <Text style={styles.skipText}>Skip for now</Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </View>

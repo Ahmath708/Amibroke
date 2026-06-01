@@ -1,3 +1,6 @@
+import type { NavigatorScreenParams, CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { FinalAnalysis as _FinalAnalysis, DebtItem as _DebtItem, ActionPlanStep as _ActionStep, Tone as _Tone } from '@shared/types';
 
 export type RoastTone = _Tone;
@@ -74,14 +77,29 @@ export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: num
   deep_dive: { label: 'Deep Dive', price: 9.99, description: 'Everything in Action Plan plus scenario simulator, debt comparison, and PDF report' },
 };
 
-export type RootStackParamList = {
-  Splash: undefined;
-  Landing: undefined;
-  Onboarding: undefined;
-  Login: undefined;
+// Bottom-tab routes (live inside MainTabs).
+export type MainTabsParamList = {
   Home: undefined;
+  History: undefined;
+  Community: undefined;
+  Profile: undefined;
+};
+
+// Navigation prop for a bottom-tab screen that can also push root-stack screens.
+export type TabScreenNav<T extends keyof MainTabsParamList> = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabsParamList, T>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
+
+// Root native-stack routes. Tabs are reached via MainTabs → { screen: '<Tab>' }.
+export type RootStackParamList = {
+  // Auth + first-run gates
+  Landing: undefined;
+  Login: undefined;
+  Onboarding: undefined;
   UsernameSetup: undefined;
-  Input: undefined;
+  // App
+  MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Processing: { userInput: string; tone?: RoastTone; userContext?: Record<string, unknown> };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
@@ -89,15 +107,11 @@ export type RootStackParamList = {
   ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string };
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
-  History: undefined;
   SubscriptionAudit: undefined;
-  CommunityFeed: undefined;
-  Profile: undefined;
   Settings: undefined;
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
   HelpFAQ: undefined;
   MonthlyCheckIn: undefined;
   CreatorDashboard: undefined;
-  MainTabs: undefined;
 };

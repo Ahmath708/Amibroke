@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { SupabaseClient, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -33,6 +33,8 @@ type AuthContextType = {
   signInWithApple: () => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  needsUsername: boolean | null;
+  refreshNeedsUsername: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -40,9 +42,24 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // null = not yet resolved; true/false once the profile username is known.
+  const [needsUsername, setNeedsUsername] = useState<boolean | null>(null);
   // Single shared, session-aware client (see services/supabaseClient.ts) so every
   // service rides the same authenticated session and RLS passes.
   const supabase = getSupabaseClient() as SupabaseClient;
+
+  // Whether the signed-in user still needs to pick a username (first-run gate).
+  const checkUsername = useCallback(async (u: User | null) => {
+    if (!u) { setNeedsUsername(false); return; }
+    try {
+      const { data } = await supabase.from('profiles').select('username').eq('id', u.id).maybeSingle();
+      setNeedsUsername(!(data as { username?: string } | null)?.username);
+    } catch {
+      setNeedsUsername(false);
+    }
+  }, [supabase]);
+
+  const refreshNeedsUsername = useCallback(() => checkUsername(user), [checkUsername, user]);
 
   useEffect(() => {
     // Keep the RevenueCat app-user-id in sync with the Supabase session so
@@ -53,18 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      syncPurchasesIdentity(session?.user ?? null);
-      setLoading(false);
+      const u = session?.user ?? null;
+      setUser(u);
+      syncPurchasesIdentity(u);
+      checkUsername(u).finally(() => setLoading(false));
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      syncPurchasesIdentity(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      syncPurchasesIdentity(u);
+      checkUsername(u);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkUsername]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -184,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, supabase, signIn, signUp, signInWithApple, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, supabase, signIn, signUp, signInWithApple, signInWithGoogle, signOut, needsUsername, refreshNeedsUsername }}>
       {children}
     </AuthContext.Provider>
   );
