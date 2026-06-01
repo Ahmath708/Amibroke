@@ -20,17 +20,22 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 serve(async (req) => {
   const opt = handleOptions(req);
   if (opt) return opt;
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+  if (req.method !== 'POST') return jsonResponse({ error: { code: 'method_not_allowed', message: 'Method not allowed.' } }, 405);
 
-  // Authenticate the webhook caller.
-  if (WEBHOOK_AUTH && req.headers.get('Authorization') !== WEBHOOK_AUTH) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
+  // Authenticate the webhook caller. Fail CLOSED: if the shared secret isn't
+  // configured, reject everything rather than running an open billing webhook.
+  if (!WEBHOOK_AUTH) {
+    console.error('REVENUECAT_WEBHOOK_AUTH is not set — refusing all webhook requests.');
+    return jsonResponse({ error: { code: 'not_configured', message: 'Webhook not configured.' } }, 503);
+  }
+  if (req.headers.get('Authorization') !== WEBHOOK_AUTH) {
+    return jsonResponse({ error: { code: 'unauthorized', message: 'Unauthorized.' } }, 401);
   }
 
   try {
     const body = await req.json();
     const event = body?.event;
-    if (!event?.type) return jsonResponse({ error: 'No event' }, 400);
+    if (!event?.type) return jsonResponse({ error: { code: 'no_event', message: 'No event in payload.' } }, 400);
 
     const userId: string = event.app_user_id;
     // Skip anonymous RevenueCat ids ($RCAnonymousID:...) — not a Supabase user.
@@ -94,12 +99,12 @@ serve(async (req) => {
 
     if (error) {
       console.error('revenuecat-webhook upsert error:', error.message);
-      return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ error: { code: 'upsert_failed', message: 'Failed to record subscription event.' } }, 500);
     }
 
     return jsonResponse({ received: true });
   } catch (error) {
     console.error('revenuecat-webhook error:', error);
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+    return jsonResponse({ error: { code: 'internal_error', message: 'Internal error.' } }, 500);
   }
 });

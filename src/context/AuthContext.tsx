@@ -1,35 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { SupabaseClient, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { loginPurchases, logoutPurchases } from '@/services/purchases';
-
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { getSupabaseClient } from '@/services/supabaseClient';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const redirectTo = Platform.OS === 'web'
   ? 'https://zefhsplmgxefmpdqbbvv.supabase.co/auth/v1/callback'
   : makeRedirectUri({ scheme: 'amibroke', path: 'auth/callback' });
-
-const supabaseStorage = Platform.OS === 'web'
-  ? undefined
-  : {
-      getItem: async (key: string) => {
-        try { return await AsyncStorage.getItem(key); } catch { return null; }
-      },
-      setItem: async (key: string, value: string) => {
-        try { await AsyncStorage.setItem(key, value); } catch {}
-      },
-      removeItem: async (key: string) => {
-        try { await AsyncStorage.removeItem(key); } catch {}
-      },
-    };
 
 let pendingRedirect: { to: string; params?: any } | null = null;
 export function setPendingRedirect(to: string, params?: any) { pendingRedirect = { to, params }; }
@@ -56,20 +40,9 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabaseRef = React.useRef<SupabaseClient | null>(null);
-  if (!supabaseRef.current) {
-    supabaseRef.current = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        flowType: 'pkce',
-        autoRefreshToken: true,
-        // Only the web build can read the session from window.location.
-        // On native we exchange the code manually after the browser returns.
-        detectSessionInUrl: Platform.OS === 'web',
-        storage: supabaseStorage,
-      },
-    });
-  }
-  const supabase = supabaseRef.current;
+  // Single shared, session-aware client (see services/supabaseClient.ts) so every
+  // service rides the same authenticated session and RLS passes.
+  const supabase = getSupabaseClient() as SupabaseClient;
 
   useEffect(() => {
     // Keep the RevenueCat app-user-id in sync with the Supabase session so
@@ -169,7 +142,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithApple = () => signInWithOAuthProvider('apple');
+  // iOS uses NATIVE Sign in with Apple (required by App Store Guideline 4.8 when
+  // other social logins are offered). Web/Android fall back to the web-OAuth flow.
+  const signInWithApple = async (): Promise<{ error?: string }> => {
+    if (Platform.OS !== 'ios') return signInWithOAuthProvider('apple');
+    try {
+      if (!(await AppleAuthentication.isAvailableAsync())) {
+        return signInWithOAuthProvider('apple');
+      }
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) {
+        return { error: 'Apple did not return an identity token.' };
+      }
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+      });
+      if (error) return { error: error.message };
+      return {};
+    } catch (e: any) {
+      // User tapped cancel on the native sheet.
+      if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') {
+        return { error: 'Sign in was cancelled' };
+      }
+      return { error: e instanceof Error ? e.message : 'Apple sign-in failed' };
+    }
+  };
   const signInWithGoogle = () => signInWithOAuthProvider('google');
 
   const signOut = async () => {

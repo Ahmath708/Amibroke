@@ -26,7 +26,6 @@ const BASE_MENU_ITEMS = [
   { icon: '📋', label: '90-Day Action Plan', detail: '3/8 complete', nav: 'ActionPlan' as const, params: { steps: [] } },
   { icon: '🔮', label: 'Scenario Simulator', nav: 'ScenarioSimulator' as const },
   { icon: '🔍', label: 'Subscription Audit', nav: 'SubscriptionAudit' as const },
-  { icon: '🛍️', label: 'Affiliate Picks', nav: 'Affiliate' as const },
   { icon: '⚙️', label: 'Settings', nav: 'Settings' as const, detail: undefined },
 ];
 

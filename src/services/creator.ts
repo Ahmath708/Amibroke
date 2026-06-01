@@ -1,14 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getSupabase() {
-  if (supabaseUrl && supabaseAnonKey) {
-    return createClient(supabaseUrl, supabaseAnonKey);
-  }
-  return null;
-}
+import { getSupabaseClient as getSupabase } from './supabaseClient';
 
 export interface CreatorSubmission {
   id: string;

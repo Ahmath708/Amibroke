@@ -32,7 +32,6 @@ import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
 import UsernameSetupScreen from '@/screens/UsernameSetupScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
-import AffiliateScreen from '@/screens/AffiliateScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
@@ -164,7 +163,6 @@ export default function AppNavigator() {
         <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
         <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
         <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
-        <Stack.Screen name="Affiliate" component={AffiliateScreen} options={{ ...sharedHeader, headerShown: true, title: 'Recommendations', animation: 'slide_from_right' }} />
         <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
 
         {/* Modal sheets */}

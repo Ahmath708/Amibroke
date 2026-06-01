@@ -1,0 +1,74 @@
+{
+  "identifier" : "FEF545B7-B2B4-4304-8170-33723B21B9B1",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "DD770779-321D-44D1-8D7C-355CA32FAE18",
+      "localizations" : [],
+      "name" : "AmIBroke Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "B07C761A-200C-47A1-AB60-F80206E392CB",
+          "introductoryOffer" : {
+            "internalID" : "31753768-3CEE-4FB0-81BF-0E0641F29B37",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Full 90-day step-by-step plan with weekly goals",
+              "displayName" : "90-Day Action Plan",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.aibroke.app.action_plan.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Action Plan",
+          "subscriptionGroupID" : "DD770779-321D-44D1-8D7C-355CA32FAE18",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "25C0BEAC-E342-4751-9A74-A34C3076900E",
+          "introductoryOffer" : {
+            "internalID" : "A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Everything in Action Plan plus scenario simulator, debt comparison, and PDF report",
+              "displayName" : "Deep Dive",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.aibroke.app.deep_dive.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Deep Dive",
+          "subscriptionGroupID" : "DD770779-321D-44D1-8D7C-355CA32FAE18",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

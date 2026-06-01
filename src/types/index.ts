@@ -97,7 +97,6 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
   HelpFAQ: undefined;
-  Affiliate: undefined;
   MonthlyCheckIn: undefined;
   CreatorDashboard: undefined;
   MainTabs: undefined;

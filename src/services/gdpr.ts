@@ -1,19 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getSupabase() {
-  if (supabaseUrl && supabaseAnonKey) {
-    return createClient(supabaseUrl, supabaseAnonKey);
-  }
-  return null;
-}
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { getSupabaseClient as getSupabase } from './supabaseClient';
 
 export interface UserDataExport {
   profile: Record<string, unknown> | null;
   analyses: Record<string, unknown>[];
   subscriptions: Record<string, unknown>[];
+  userSubscriptions: Record<string, unknown>[];
   checkIns: Record<string, unknown>[];
   communityPosts: Record<string, unknown>[];
   referrals: Record<string, unknown>[];
@@ -30,6 +24,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       profileResult,
       analysesResult,
       subscriptionsResult,
+      userSubscriptionsResult,
       checkInsResult,
       postsResult,
       referralsResult,
@@ -38,6 +33,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       client.from('profiles').select('*').eq('id', userId).single(),
       client.from('analyses').select('*').eq('user_id', userId),
       client.from('subscriptions').select('*').eq('user_id', userId),
+      client.from('user_subscriptions').select('*').eq('user_id', userId),
       client.from('check_ins').select('*').eq('user_id', userId),
       client.from('community_posts').select('*').eq('user_id', userId),
       client.from('referrals').select('*').eq('referrer_id', userId),
@@ -48,6 +44,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       profile: profileResult.data,
       analyses: analysesResult.data || [],
       subscriptions: subscriptionsResult.data || [],
+      userSubscriptions: userSubscriptionsResult.data || [],
       checkIns: checkInsResult.data || [],
       communityPosts: postsResult.data || [],
       referrals: referralsResult.data || [],
@@ -64,19 +61,37 @@ export async function downloadUserData(userId: string): Promise<boolean> {
   const data = await exportUserData(userId);
   if (!data) return false;
 
+  const json = JSON.stringify(data, null, 2);
+  const filename = `am-i-broke-data-export-${new Date().toISOString().split('T')[0]}.json`;
+
+  // Web: trigger a browser download via the DOM.
+  if (Platform.OS === 'web') {
+    try {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Native (iOS/Android): write to a file and open the share sheet.
   try {
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `am-i-broke-data-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const uri = FileSystem.documentDirectory + filename;
+    await FileSystem.writeAsStringAsync(uri, json);
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri, { mimeType: 'application/json', UTI: 'public.json' });
+    }
     return true;
-  } catch {
+  } catch (e) {
+    console.error('[gdpr] downloadUserData error:', e);
     return false;
   }
 }
@@ -86,21 +101,23 @@ export async function deleteUserData(userId: string): Promise<{ success: boolean
   if (!client) return { success: false, error: 'Backend not configured' };
 
   try {
-    const tables = [
-      'post_reactions',
-      'community_posts',
-      'check_ins',
-      'subscriptions',
-      'analyses',
-      'referrals',
-      'payments',
+    // [table, owning column] — referrals is keyed by referrer_id, not user_id.
+    const deletions: Array<[string, string]> = [
+      ['post_reactions', 'user_id'],
+      ['community_posts', 'user_id'],
+      ['check_ins', 'user_id'],
+      ['subscriptions', 'user_id'],
+      ['user_subscriptions', 'user_id'],
+      ['analyses', 'user_id'],
+      ['referrals', 'referrer_id'],
+      ['payments', 'user_id'],
     ];
 
-    for (const table of tables) {
+    for (const [table, column] of deletions) {
       const { error } = await client
         .from(table)
         .delete()
-        .eq('user_id', userId);
+        .eq(column, userId);
 
       if (error) {
         console.error(`[gdpr] delete from ${table} error:`, error);

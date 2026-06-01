@@ -19,6 +19,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aibroke.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Used for voice input to describe your financial situation."
       }
@@ -47,7 +48,9 @@
           }
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-apple-authentication",
+      "./plugins/withStoreKitConfig"
     ]
   }
 }

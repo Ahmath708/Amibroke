@@ -7,7 +7,7 @@ export type ScreenVariant =
   | 'home' | 'results' | 'profile' | 'settings'
   | 'history' | 'community' | 'paywall' | 'processing'
   | 'onboarding' | 'login' | 'splash' | 'share'
-  | 'subscriptions' | 'scenarios' | 'affiliate' | 'debt'
+  | 'subscriptions' | 'scenarios' | 'debt'
   | 'actionPlan' | 'creator' | 'checkin' | 'info';
 
 const THEMES: Record<ScreenVariant, { gradient: [string, string]; accent: string; orbs: { colors: [string, string]; top?: number; bottom?: number; left?: number; right?: number; size: number }[] }> = {
@@ -121,14 +121,6 @@ const THEMES: Record<ScreenVariant, { gradient: [string, string]; accent: string
     orbs: [
       { colors: ['#00e0ff', '#39FF14'], top: -90, left: -30, size: 280 },
       { colors: ['#0080ff', '#0040aa'], bottom: -70, right: -50, size: 260 },
-    ],
-  },
-  affiliate: {
-    gradient: ['#1a0026', '#1a0010'],
-    accent: Colors.warning,
-    orbs: [
-      { colors: ['#bd00ff', '#7c00cc'], top: -80, left: -40, size: 280 },
-      { colors: ['#ffd700', '#ff8c00'], bottom: -60, right: -50, size: 260 },
     ],
   },
   debt: {

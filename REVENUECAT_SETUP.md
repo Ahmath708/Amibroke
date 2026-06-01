@@ -44,8 +44,49 @@ guarded on the API key).
 
 ## 5. Rebuild & test
 - `npx expo run:ios` (react-native-purchases is a native module — needs a fresh build).
-- For local UI testing without App Store Connect, use an Xcode **StoreKit configuration file**.
-- For real validation, use **sandbox testers** on a physical device.
+- For real validation, use **sandbox testers** on a physical device (requires the paid program).
+
+## 5a. Free testing via RevenueCat Test Store (EASIEST — no $99, no App Store Connect)
+
+RevenueCat's **Test Store** tests the full purchase/entitlement flow without any Apple/Google
+setup. (Requires `react-native-purchases` ≥ 9.5.4 — we're on 10.2.0.) This is the recommended
+pre-enrollment path; it does **not** use the `.storekit` file (5b is for real-StoreKit testing later).
+
+1. RevenueCat dashboard → **Apps & providers → New → Test Store** → copy the **`test_…`** key.
+2. Under **Product Catalog → Products**, create **Test Products** and attach them to entitlements
+   `action_plan` / `deep_dive`; add them as packages `action_plan` / `deep_dive` in the **current
+   Offering** (same identifiers the code expects).
+3. Put the `test_…` key in `.env` as `EXPO_PUBLIC_REVENUECAT_IOS_KEY`. (The app refuses a `test_`
+   key in production builds and warns in dev — see `purchases.ts`. **Swap to the `appl_` key before
+   any release/TestFlight build.**)
+4. `npx expo run:ios` (still needs a native build for `react-native-purchases`). Tapping a plan
+   shows RevenueCat's **simulate purchase** modal (success/fail/cancel) instead of the Apple sheet;
+   a simulated success grants the entitlement, flips `useSubscription` to premium, and appears in
+   the RevenueCat dashboard.
+
+**Still blocked until the paid program:** the `revenuecat-webhook` → `user_subscriptions` mirror
+(Test Store events behave like purchases but real webhook delivery needs a real store), sandbox
+testers, TestFlight, release.
+
+## 5b. Free local StoreKit testing (alternative — real StoreKit, no $99)
+
+The repo ships a StoreKit config at **`storekit/AmIBroke.products.storekit`** (two
+auto-renewable subs with 7-day trials, product IDs `com.aibroke.app.action_plan.monthly` /
+`com.aibroke.app.deep_dive.monthly`). This lets you exercise subscribe / cancel / restore and
+entitlement-gating on the **simulator** without a paid Apple account.
+
+1. `npx expo prebuild --clean` then `npx expo run:ios` (the config plugin
+   `plugins/withStoreKitConfig.js` auto-wires the `.storekit` file into the Xcode scheme on
+   prebuild; it's defensive and never breaks prebuild).
+2. **If purchases show no products**, the auto-wire didn't take — set it manually in Xcode:
+   **Edit Scheme → Run → Options → StoreKit Configuration → `AmIBroke.products.storekit`**.
+3. You still need `EXPO_PUBLIC_REVENUECAT_IOS_KEY` set and the RevenueCat dashboard objects
+   (steps 3–6 above) created, since RevenueCat validates the local receipt and serves offerings.
+4. Simulate renewals / cancellations / refunds via Xcode **Debug → StoreKit → Manage Transactions**.
+
+**Blocked on the paid program (won't work via local StoreKit):** the `revenuecat-webhook` →
+`user_subscriptions` DB mirror (real webhook events only fire from sandbox/production), real
+sandbox testers, TestFlight, and release.
 
 ## Notes
 - The old custom-card `PaymentScreen` was removed (Apple forbids custom card entry for digital

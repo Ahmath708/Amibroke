@@ -137,18 +137,20 @@ export default function LoginScreen({ navigation }: Props) {
             ))}
           </View>
 
-          {/* Social buttons */}
-          <TouchableOpacity
-            style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
-            onPress={handleApple}
-            disabled={!termsAgreed || socialLoading !== null}
-            activeOpacity={0.75}
-          >
-            <Text style={[styles.socialIcon, !termsAgreed && styles.socialIconDisabled]}>🍎</Text>
-            <Text style={[styles.socialLabel, !termsAgreed && styles.socialLabelDisabled]}>
-              {!termsAgreed ? 'Agree to terms first' : socialLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}
-            </Text>
-          </TouchableOpacity>
+          {/* Social buttons — Apple is iOS-only (native Sign in with Apple) */}
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
+              onPress={handleApple}
+              disabled={!termsAgreed || socialLoading !== null}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.socialIcon, !termsAgreed && styles.socialIconDisabled]}>🍎</Text>
+              <Text style={[styles.socialLabel, !termsAgreed && styles.socialLabelDisabled]}>
+                {!termsAgreed ? 'Agree to terms first' : socialLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.socialBtn, !termsAgreed && styles.socialBtnDisabled]}
             onPress={handleGoogle}

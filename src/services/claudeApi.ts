@@ -1,22 +1,18 @@
-import { createClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from './supabaseClient';
 import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
 import { FinalAnalysis, ActionPlanStep, CaptionResponse, ActionPlanResponse, UserContext } from '@shared/types';
 import { RoastTone, AnalysisHistoryItem, CommunityPost, Subscription, CheckIn } from '@/types';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+// Tests can inject a mock client; otherwise use the shared authenticated client.
+let testClient: SupabaseClient | null = null;
 
-let supabase: ReturnType<typeof createClient> | null = null;
-
-export function __setSupabaseForTests(client: ReturnType<typeof createClient> | null) {
-  supabase = client;
+export function __setSupabaseForTests(client: SupabaseClient | null) {
+  testClient = client;
 }
 
 export function getSupabase() {
-  if (!supabase && supabaseUrl && supabaseAnonKey) {
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-  }
-  return supabase;
+  return testClient ?? getSupabaseClient();
 }
 
 export function isFinancialAnalysis(x: unknown): x is FinalAnalysis {
@@ -69,7 +65,7 @@ export async function analyzeFinancialSituation(
   console.log('[analyze] Cleaned input:', cleaned.substring(0, 100) + (cleaned.length > 100 ? '...' : ''));
   const client = getSupabase();
   if (!client) {
-    console.error('[analyze] FATAL: supabase client not available. EXPO_PUBLIC_SUPABASE_URL set?', !!supabaseUrl, 'EXPO_PUBLIC_SUPABASE_ANON_KEY set?', !!supabaseAnonKey);
+    console.error('[analyze] FATAL: supabase client not available. EXPO_PUBLIC_SUPABASE_URL set?', !!process.env.EXPO_PUBLIC_SUPABASE_URL, 'EXPO_PUBLIC_SUPABASE_ANON_KEY set?', !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
     throw new Error('Backend not configured. Check that EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY are set in your .env file.');
   }
 
@@ -195,7 +191,24 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
   }
 }
 
-export async function fetchOrGenerateActionPlan(
+// Dedupe concurrent action-plan requests for the same analysis so repeated taps
+// (or two screens opening at once) don't both call the paid LLM and double-write.
+const actionPlanInFlight = new Map<string, Promise<ActionPlanResponse | null>>();
+
+export function fetchOrGenerateActionPlan(
+  analysis: FinalAnalysis,
+  tone: RoastTone,
+  analysisId?: string,
+): Promise<ActionPlanResponse | null> {
+  if (!analysisId) return runActionPlan(analysis, tone, analysisId);
+  const existing = actionPlanInFlight.get(analysisId);
+  if (existing) return existing;
+  const p = runActionPlan(analysis, tone, analysisId).finally(() => actionPlanInFlight.delete(analysisId));
+  actionPlanInFlight.set(analysisId, p);
+  return p;
+}
+
+async function runActionPlan(
   analysis: FinalAnalysis,
   tone: RoastTone,
   analysisId?: string,

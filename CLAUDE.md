@@ -74,7 +74,7 @@ scripts/                 deploy-all.sh, eval/, manual-test.ts, test_anthropic.ts
 - `subscriptions.ts` — tier/entitlement logic; reads RevenueCat (DB `user_subscriptions` as mirror)
 - `purchases.ts` — RevenueCat SDK wrapper (configure/login/offerings/purchase/restore/manage). **Guarded:** no key → app runs as free tier
 - `analytics.ts` — PostHog init + event helpers
-- `scoring.ts` / `moderation.ts` / `gdpr.ts` / `affiliate.ts` / `creator.ts` / `offlineCache.ts`
+- `scoring.ts` / `moderation.ts` / `gdpr.ts` / `creator.ts` / `offlineCache.ts`
 
 ### `supabase/functions/` (Deno)
 - `analyze` — generate the financial analysis (Claude/Groq)
@@ -129,8 +129,17 @@ client-side.
 - **RevenueCat is not testable** without a paid Apple Developer Program membership; the dev account
   is free-tier only. Local IAP testing is possible via an Xcode StoreKit Configuration file (no
   paid account needed) but the webhook→DB mirror still needs sandbox. See `REVENUECAT_SETUP.md`.
-- The `README.md` still references the old Stripe billing — **billing is RevenueCat now**; trust
-  this file and `REVENUECAT_SETUP.md` over the README on payments.
+
+## Parked / removed features
+
+- **Affiliate feature was unmounted (2026-05-31).** The "Affiliate Picks" screen, its
+  `services/affiliate.ts` service, and the nav route were removed — too early-stage for affiliates,
+  and the server-side `affiliate_clicks` insert had no backing table. The idea is kept for later;
+  recover the implementation from git history if/when it's revived. The Terms of Service still
+  carries a forward-looking affiliate-disclosure clause, which is fine. Don't re-add affiliate
+  wiring without also creating the `affiliate_clicks` table (with RLS).
+- **ScenarioSimulator** is an intentional "Coming Soon" stub (being rebuilt on the new scoring
+  engine) — wired into nav but not implemented.
 
 ## Skills (in `.claude/skills/`)
 

@@ -1,19 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+import { getSupabaseClient as getSupabase } from './supabaseClient';
 
 const CACHE_KEY = '@ambroke_offline_cache';
 const CACHE_EXPIRY_KEY = '@ambroke_cache_expiry';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-function getSupabase() {
-  if (supabaseUrl && supabaseAnonKey) {
-    return createClient(supabaseUrl, supabaseAnonKey);
-  }
-  return null;
-}
 
 export interface OfflineCache {
   analyses: any[];

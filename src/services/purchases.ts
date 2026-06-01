@@ -38,6 +38,15 @@ export function configurePurchases(appUserID?: string): void {
     console.warn('[purchases] RevenueCat key not set — IAP disabled, treating as free tier.');
     return;
   }
+  // RevenueCat Test Store keys (test_…) must never ship. Allow them in dev for
+  // free local testing, but refuse to configure in a production build.
+  if (key.startsWith('test_')) {
+    if (!__DEV__) {
+      console.warn('[purchases] Test Store key in a production build — refusing. Use the appl_ key for release.');
+      return;
+    }
+    console.warn('[purchases] Using RevenueCat Test Store key (test_…) — swap to the appl_ key before release.');
+  }
   try {
     Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.INFO : LOG_LEVEL.WARN);
     Purchases.configure({ apiKey: key, appUserID });

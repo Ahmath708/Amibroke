@@ -16,6 +16,7 @@ import NeonButton from '@/components/NeonButton';
 import Disclaimer from '@/components/Disclaimer';
 import { GlassSection } from '@/components/iOS/GlassSection';
 import ScreenBackground from '@/components/ScreenBackground';
+import Toast from '@/components/Toast';
 
 import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis, shareToFeed } from '@/services/claudeApi';
@@ -38,6 +39,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const fadeIn = useRef(new Animated.Value(0)).current;
   const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
   const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
 
@@ -57,7 +59,14 @@ export default function ResultsScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (user) {
-      saveAnalysis(user.id, userInput, analysis).then(setAnalysisId).catch(() => console.warn('Failed to save analysis'));
+      saveAnalysis(user.id, userInput, analysis)
+        .then((id) => {
+          setAnalysisId(id);
+          // saveAnalysis returns null on failure — surface it, since a missing
+          // id silently disables sharing and the action plan.
+          if (!id) setSaveFailed(true);
+        })
+        .catch(() => setSaveFailed(true));
     }
   }, [user, userInput, analysis]);
 
@@ -416,6 +425,13 @@ export default function ResultsScreen({ navigation, route }: Props) {
 
         <Disclaimer style={{ marginTop: Spacing.xl }} />
       </Animated.ScrollView>
+      <Toast
+        visible={saveFailed}
+        emoji="⚠️"
+        message="Couldn't save this analysis — sharing and your plan may be unavailable."
+        duration={3500}
+        onHide={() => setSaveFailed(false)}
+      />
     </View>
   );
 }
