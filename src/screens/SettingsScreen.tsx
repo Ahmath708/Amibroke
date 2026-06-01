@@ -12,6 +12,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useAuth, setPendingRedirect } from '@/context/AuthContext';
+import { useLegal } from '@/context/LegalContext';
 import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/gdpr';
 import { useSubscription } from '@/hooks/useSubscription';
 import { manageSubscriptions } from '@/services/purchases';
@@ -34,6 +35,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { signOut, user } = useAuth();
   const { tier, premium } = useSubscription();
+  const { showLegal } = useLegal();
   const [toggles, setToggles] = useState({
     notifications: true,
     monthlyReminder: false,
@@ -191,8 +193,8 @@ export default function SettingsScreen({ navigation }: Props) {
       title: 'Support',
       rows: [
         { type: 'nav', label: 'Help & FAQ', icon: '❓', onPress: () => navigation.navigate('HelpFAQ') },
-        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => navigation.navigate('PrivacyPolicy') },
-        { type: 'nav', label: 'Terms of Service', icon: '📄', onPress: () => navigation.navigate('TermsOfService') },
+        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => showLegal('privacy') },
+        { type: 'nav', label: 'Terms of Service', icon: '📄', onPress: () => showLegal('terms') },
         { type: 'nav', label: 'Rate Am I Broke?', icon: '⭐', onPress: () => Linking.openURL('https://apps.apple.com/app/am-i-broke/id123456789') },
       ],
     },
@@ -201,7 +203,7 @@ export default function SettingsScreen({ navigation }: Props) {
       rows: [
         { type: 'action', label: 'Export My Data', icon: '📥', detail: 'Download all your data as JSON', onPress: handleExportData },
         { type: 'action', label: 'Anonymize Account', icon: '👤', detail: 'Remove personal info', onPress: handleAnonymize },
-        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => navigation.navigate('PrivacyPolicy') },
+        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => showLegal('privacy') },
       ],
     },
     {

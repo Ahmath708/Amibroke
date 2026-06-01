@@ -14,6 +14,7 @@ import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import { useAuth } from '@/context/AuthContext';
+import { useLegal } from '@/context/LegalContext';
 import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = {
@@ -24,6 +25,7 @@ type Props = {
 export default function LoginScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { signIn, signUp, signInWithApple, signInWithGoogle } = useAuth();
+  const { showLegal } = useLegal();
   const [mode, setMode] = useState<'login' | 'signup'>(route.params?.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -241,11 +243,11 @@ export default function LoginScreen({ navigation, route }: Props) {
             </View>
             <Text style={styles.termsText}>
               I agree to the{' '}
-              <Text style={styles.legalLink} onPress={() => navigation.navigate('TermsOfService')}>
+              <Text style={styles.legalLink} onPress={() => showLegal('terms')}>
                 Terms of Service
               </Text>
               {' '}and{' '}
-              <Text style={styles.legalLink} onPress={() => navigation.navigate('PrivacyPolicy')}>
+              <Text style={styles.legalLink} onPress={() => showLegal('privacy')}>
                 Privacy Policy
               </Text>
             </Text>

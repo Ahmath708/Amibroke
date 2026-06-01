@@ -26,8 +26,6 @@ import HistoryScreen from '@/screens/HistoryScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import CommunityFeedScreen from '@/screens/CommunityFeedScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
-import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
-import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
 import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
 import UsernameSetupScreen from '@/screens/UsernameSetupScreen';
@@ -128,18 +126,10 @@ export default function AppNavigator() {
     return <SplashScreen />;
   }
 
-  // Legal screens are reachable from both the auth flow (Login consent links) and
-  // the signed-in app (Settings). Declaring them INSIDE each group — rather than as
-  // root-level siblings of the conditional groups — keeps every navigation to them
-  // intra-group (normal native push/pop). Reaching them via cross-group navigate()
-  // confused react-native-screens' native stack, breaking the back button on the
-  // second legal screen opened in a session.
-  const legalScreens = (
-    <>
-      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ ...sharedHeader, headerShown: true, title: 'Privacy Policy', animation: 'slide_from_right' }} />
-      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ ...sharedHeader, headerShown: true, title: 'Terms of Service', animation: 'slide_from_right' }} />
-    </>
-  );
+  // Legal pages (Privacy/Terms) are NOT navigator screens — they're shown as a
+  // self-contained Modal via LegalContext/LegalSheet (see useLegal). Pushing them as
+  // native-stack cards from the auth flow tripped a react-native-screens (New Arch)
+  // defect where the 2nd legal screen opened in a session had a dead back button.
 
   return (
     <View style={{ flex: 1 }}>
@@ -149,7 +139,6 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
             <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom' }} />
-            {legalScreens}
           </>
         ) : needsUsername ? (
           /* ─── First-run gate: pick a username (mainly OAuth users) ─── */
@@ -174,7 +163,6 @@ export default function AppNavigator() {
             <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
-            {legalScreens}
           </>
         )}
       </Stack.Navigator>

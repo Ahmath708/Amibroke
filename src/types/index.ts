@@ -150,8 +150,6 @@ export type RootStackParamList = {
   SubscriptionAudit: undefined;
   FinancialContext: undefined;
   Settings: undefined;
-  PrivacyPolicy: undefined;
-  TermsOfService: undefined;
   HelpFAQ: undefined;
   MonthlyCheckIn: { setup?: boolean } | undefined;
   CreatorDashboard: undefined;

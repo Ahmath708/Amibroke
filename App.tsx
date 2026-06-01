@@ -19,6 +19,7 @@ import {
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
+import { LegalProvider } from './src/context/LegalContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/theme/colors';
 import { initAnalytics } from './src/services/analytics';
@@ -97,6 +98,7 @@ export default function App() {
       />
       <AuthProvider>
       <ErrorBoundary>
+      <LegalProvider>
       <NavigationContainer
         ref={navigationRef}
         onReady={() => {
@@ -125,6 +127,7 @@ export default function App() {
       >
         <AppNavigator />
       </NavigationContainer>
+      </LegalProvider>
       </ErrorBoundary>
       </AuthProvider>
     </SafeAreaProvider>
