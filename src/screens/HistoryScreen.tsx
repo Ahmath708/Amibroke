@@ -17,6 +17,7 @@ import { getAnalysisHistory, getCheckIns, getAnalysisById } from '@/services/cla
 import { AnalysisHistoryItem, CheckIn } from '@/types';
 import ScreenBackground from '@/components/ScreenBackground';
 import HistoryChart from '@/components/HistoryChart';
+import CheckinTrend from '@/components/CheckinTrend';
 import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
@@ -222,6 +223,9 @@ export default function HistoryScreen() {
             </View>
             )}
 
+            {/* Progress trend across check-ins (self-hides until there's data) */}
+            <CheckinTrend />
+
             {/* Check-ins list */}
             {checkIns.length > 0 && (
               <>
@@ -251,6 +255,10 @@ export default function HistoryScreen() {
                 </View>
               </>
             )}
+
+            <TouchableOpacity onPress={() => navigation.navigate('MonthlyCheckIn')} style={styles.newCheckinBtn} activeOpacity={0.8}>
+              <Text style={styles.newCheckinText}>+ New check-in</Text>
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -270,6 +278,12 @@ const styles = StyleSheet.create({
   signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginBottom: Spacing.lg, fontStyle: 'italic' },
   periodEmpty: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, paddingVertical: Spacing.lg, textAlign: 'center' },
+  newCheckinBtn: {
+    marginTop: Spacing.lg, alignItems: 'center', paddingVertical: Spacing.md,
+    borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.primary,
+    backgroundColor: Colors.primaryContainer,
+  },
+  newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.primary },
   chartCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   chartTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginBottom: Spacing.lg, fontWeight: '600' },
   chart: { flexDirection: 'row', height: 120, gap: Spacing.sm, alignItems: 'flex-end' },

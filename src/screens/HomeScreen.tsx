@@ -22,6 +22,7 @@ import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { trackFunnelStep } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
+import CheckinCard from '@/components/CheckinCard';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
@@ -320,6 +321,9 @@ export default function HomeScreen({ navigation }: Props) {
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
           </TouchableOpacity>
+
+          {/* Monthly check-in nudge (only for users who track goals) */}
+          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.xl }} />
 
           {/* Recent scores */}
           {!scoresLoading && recentScores.length > 0 && (
