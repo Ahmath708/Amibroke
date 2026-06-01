@@ -69,6 +69,9 @@ export async function loginPurchases(userId: string): Promise<void> {
 export async function logoutPurchases(): Promise<void> {
   if (!configured) return;
   try {
+    // logOut() errors if the current RevenueCat user is already anonymous
+    // (e.g. on a signed-out launch) — nothing to log out in that case.
+    if (await Purchases.isAnonymous()) return;
     await Purchases.logOut();
   } catch (e) {
     console.warn('[purchases] logOut failed:', e);

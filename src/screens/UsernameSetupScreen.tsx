@@ -17,7 +17,7 @@ const USERNAME_REGEX = /^[a-z0-9_]+$/;
 
 export default function UsernameSetupScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { supabase, user, refreshNeedsUsername } = useAuth();
+  const { supabase, user, refreshProfile } = useAuth();
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +53,7 @@ export default function UsernameSetupScreen({ navigation }: Props) {
     if (result?.ok) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       // Username set → re-resolve the gate; AppNavigator swaps to the app stack.
-      refreshNeedsUsername();
+      refreshProfile();
     } else if (result?.error === 'taken') {
       setError('That username is taken \u2014 try another.');
     } else if (result?.error === 'invalid_length' || result?.error === 'invalid_charset') {

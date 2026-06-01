@@ -1,167 +1,60 @@
-﻿import React, { useRef, useState } from 'react';
-import {
-  View, Text, StyleSheet, Dimensions, FlatList,
-  TouchableOpacity, Animated, ViewToken,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '@/types';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import NeonButton from '@/components/NeonButton';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
+import FinancialContextForm, { ContextValues, profileUpdateFromValues } from '@/components/FinancialContextForm';
+import { useAuth } from '@/context/AuthContext';
 
-const { width } = Dimensions.get('window');
-
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Onboarding'> };
-
-const SLIDES = [
-  {
-    emoji: '💬',
-    title: 'Describe your finances\nin plain English',
-    body: 'No spreadsheets. No jargon. Just tell us what\'s going on like you\'re texting a friend.',
-    gradient: ['#1a0026', '#19101c'] as [string, string],
-  },
-  {
-    emoji: '🔥',
-    title: 'Get an AI-powered\nfinancial roast',
-    body: 'Claude scores your financial health 0–100 and tells you exactly where you\'re bleeding money.',
-    gradient: ['#001a26', '#19101c'] as [string, string],
-  },
-  {
-    emoji: '🎯',
-    title: 'A 90-day plan to\nstop being broke',
-    body: 'Personalized weekly actions, debt payoff strategies, and subscription audits. No fluff.',
-    gradient: ['#1a0010', '#19101c'] as [string, string],
-  },
-];
-
-export default function OnboardingScreen({ navigation }: Props) {
+export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const flatRef = useRef<FlatList>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const { user, supabase, refreshProfile } = useAuth();
+  const [saving, setSaving] = useState(false);
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    if (viewableItems.length > 0) setActiveIndex(viewableItems[0].index ?? 0);
-  }).current;
-
-  const goNext = () => {
-    if (activeIndex < SLIDES.length - 1) {
-      flatRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
-    } else {
-      navigation.replace('Login');
+  const finish = async (values: ContextValues, withContext: boolean) => {
+    setSaving(true);
+    const update: Record<string, unknown> = { onboarded: true };
+    if (withContext) Object.assign(update, profileUpdateFromValues(values));
+    try {
+      if (user) await supabase.from('profiles').update(update).eq('id', user.id);
+    } catch (e) {
+      console.warn('[onboarding] save failed:', e);
     }
+    // Re-resolve gates → AppNavigator advances into the app.
+    refreshProfile();
   };
 
   return (
-    <LinearGradient colors={['#19101c', '#1a0a30']} style={styles.container}>
+    <View style={styles.container}>
       <ScreenBackground variant="onboarding" />
-      {/* Skip */}
-      <TouchableOpacity
-        onPress={() => navigation.replace('MainTabs', { screen: 'Home' })}
-        style={[styles.skipBtn, { top: insets.top + 12 }]}
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xxl, paddingBottom: insets.bottom + Spacing.xxl }]}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
-
-      {/* Slides */}
-      <Animated.FlatList
-        ref={flatRef}
-        data={SLIDES}
-        keyExtractor={(_, i) => String(i)}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width }]}>
-            <LinearGradient colors={item.gradient} style={styles.emojiCard}>
-              <Text style={styles.slideEmoji}>{item.emoji}</Text>
-            </LinearGradient>
-            <Text style={styles.slideTitle}>{item.title}</Text>
-            <Text style={styles.slideBody}>{item.body}</Text>
-          </View>
-        )}
-      />
-
-      {/* Dots */}
-      <View style={styles.dotsRow}>
-        {SLIDES.map((_, i) => {
-          const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
-          const dotWidth = scrollX.interpolate({ inputRange, outputRange: [6, 22, 6], extrapolate: 'clamp' });
-          const opacity = scrollX.interpolate({ inputRange, outputRange: [0.35, 1, 0.35], extrapolate: 'clamp' });
-          return (
-            <Animated.View
-              key={i}
-              style={[styles.dot, { width: dotWidth, opacity, backgroundColor: Colors.primary }]}
-            />
-          );
-        })}
-      </View>
-
-      {/* CTA */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
-        <NeonButton
-          label={activeIndex < SLIDES.length - 1 ? 'Continue' : 'Get Started'}
-          onPress={goNext}
+        <Text style={styles.title}>Tell us a bit about you</Text>
+        <Text style={styles.subtitle}>
+          Optional — it helps us tailor your score and plan. You can skip and add this later.
+        </Text>
+        <FinancialContextForm
+          submitLabel="Save & Continue"
+          submitting={saving}
+          onSubmit={(v) => finish(v, true)}
+          onSkip={() => finish({}, false)}
         />
-      </View>
-    </LinearGradient>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  skipBtn: {
-    position: 'absolute',
-    right: Spacing.xl,
-    zIndex: 10,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+  scroll: { paddingHorizontal: Spacing.xl },
+  title: {
+    fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700',
+    color: Colors.textPrimary, marginBottom: Spacing.xs, letterSpacing: -0.5,
   },
-  skipText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  slide: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.section + Spacing.xxl,
+  subtitle: {
+    fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize,
+    color: Colors.textSecondary, lineHeight: 21, marginBottom: Spacing.xxl,
   },
-  emojiCard: {
-    width: 140,
-    height: 140,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.section + Spacing.md,
-    shadowColor: Colors.primarySolid,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  slideEmoji: { fontSize: 56 },
-  slideTitle: {
-    fontFamily: Typography.fonts.heading,
-    fontSize: Typography.title1.fontSize,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    lineHeight: 34,
-    letterSpacing: -0.5,
-    marginBottom: Spacing.lg,
-  },
-  slideBody: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.callout.fontSize,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    maxWidth: 300,
-  },
-  dotsRow: { flexDirection: 'row', gap: Spacing.xs, justifyContent: 'center', marginBottom: Spacing.xxl },
-  dot: { height: 6, borderRadius: Radius.pill },
-  footer: { paddingHorizontal: Spacing.xl },
 });

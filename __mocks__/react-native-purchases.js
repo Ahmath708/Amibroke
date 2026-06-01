@@ -10,6 +10,7 @@ module.exports = {
     configure: noop,
     logIn: async () => ({}),
     logOut: async () => ({}),
+    isAnonymous: async () => true,
     getOfferings: async () => ({ current: null }),
     purchasePackage: async () => ({}),
     restorePurchases: async () => ({}),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
@@ -16,6 +16,8 @@ import GlassCard from '@/components/GlassCard';
 import TypingPlaceholder from '@/components/TypingPlaceholder';
 import { getAnalysisHistory } from '@/services/claudeApi';
 import { useAuth } from '@/context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { ContextValues, CTX_COLUMNS, valuesFromProfile } from '@/components/FinancialContextForm';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { trackFunnelStep } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -54,20 +56,12 @@ const PLACEHOLDERS = [
 
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, supabase } = useAuth();
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
-  const [showContext, setShowContext] = useState(false);
-  const [userContext, setUserContext] = useState({
-    state: 'unknown' as string,
-    ageBracket: 'unknown' as string,
-    incomeBracket: 'unknown' as string,
-    livingSituation: 'unknown' as string,
-    employmentStatus: 'unknown' as string,
-    debtBracket: 'unknown' as string,
-    liquidSavingsBracket: 'unknown' as string,
-  });
+  // Saved personalization context (edited via the Financial Context screen).
+  const [profileContext, setProfileContext] = useState<ContextValues>({});
   const inputRef = useRef<TextInput>(null);
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
@@ -94,6 +88,23 @@ export default function HomeScreen({ navigation }: Props) {
       .catch(() => console.warn('Failed to load recent scores'))
       .finally(() => setScoresLoading(false));
   }, [user]);
+
+  // Reload saved personalization each time Home regains focus (e.g. after editing
+  // it on the Financial Context screen) so analyses use the latest values.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (user) {
+        (async () => {
+          try {
+            const { data } = await supabase.from('profiles').select(CTX_COLUMNS).eq('id', user.id).maybeSingle();
+            if (active) setProfileContext(valuesFromProfile(data as Record<string, unknown> | null));
+          } catch { /* ignore */ }
+        })();
+      }
+      return () => { active = false; };
+    }, [user, supabase]),
+  );
 
   useEffect(() => {
     if (transcript) {
@@ -145,7 +156,7 @@ export default function HomeScreen({ navigation }: Props) {
       return;
     }
     trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone });
-    const context = Object.values(userContext).some((v) => v !== 'unknown') ? userContext : undefined;
+    const context = Object.keys(profileContext).length > 0 ? profileContext : undefined;
     navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone, userContext: context as any });
   };
 
@@ -297,45 +308,17 @@ export default function HomeScreen({ navigation }: Props) {
             ))}
           </View>
 
-          {/* Optional context form */}
-          <TouchableOpacity onPress={() => setShowContext(!showContext)} activeOpacity={0.7}>
-            <Text style={styles.contextToggle}>
-              {showContext ? '− Hide Context' : '+ Add Financial Context (optional)'}
+          {/* Financial context — opens the personalization form */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('FinancialContext')}
+            activeOpacity={0.7}
+            style={styles.contextRow}
+          >
+            <Text style={styles.contextRowText}>
+              {Object.keys(profileContext).length > 0 ? 'Edit Financial Context' : '+ Add Financial Context (optional)'}
             </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
           </TouchableOpacity>
-          {showContext && (
-            <View style={styles.contextForm}>
-              {[
-                { key: 'state', label: 'State', options: ['unknown', 'CA', 'NY', 'TX', 'FL', 'IL', 'WA', 'MA', 'CO', 'OR', 'GA', 'NC', 'AZ', 'PA', 'OH', 'MI', 'NJ', 'VA', 'MN', 'MD'] },
-                { key: 'incomeBracket', label: 'Monthly Income', options: ['unknown', 'under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k'] },
-                { key: 'ageBracket', label: 'Age', options: ['unknown', '18-24', '25-29', '30-34', '35-44', '45+'] },
-                { key: 'livingSituation', label: 'Housing', options: ['unknown', 'renting', 'owning', 'with_family', 'dorm', 'other'] },
-                { key: 'employmentStatus', label: 'Employment', options: ['unknown', 'full_time', 'part_time', 'self_employed', 'student', 'between_jobs'] },
-                { key: 'debtBracket', label: 'Total Debt', options: ['unknown', 'none', 'under_5k', '5k_15k', '15k_50k', 'over_50k'] },
-                { key: 'liquidSavingsBracket', label: 'Savings', options: ['unknown', 'none', 'under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k'] },
-              ].map((field) => (
-                <View key={field.key} style={styles.contextField}>
-                  <Text style={styles.contextLabel}>{field.label}</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.contextChips}>
-                      {field.options.map((opt) => (
-                        <TouchableOpacity
-                          key={opt}
-                          style={[styles.contextChip, (userContext as any)[field.key] === opt && styles.contextChipActive]}
-                          onPress={() => setUserContext((prev) => ({ ...prev, [field.key]: opt }))}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.contextChipText, (userContext as any)[field.key] === opt && styles.contextChipTextActive]}>
-                            {opt.replace(/_/g, ' ')}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
-              ))}
-            </View>
-          )}
 
           {/* Recent scores */}
           {!scoresLoading && recentScores.length > 0 && (
@@ -442,15 +425,11 @@ const styles = StyleSheet.create({
   toneLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   toneLabelActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   cta: { marginBottom: Spacing.sm },
-  contextToggle: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.tint, textAlign: 'center', marginBottom: Spacing.md },
-  contextForm: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
-  contextField: { marginBottom: Spacing.sm },
-  contextLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
-  contextChips: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'wrap' as const },
-  contextChip: { backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderWidth: 1, borderColor: Colors.glassBorder },
-  contextChipActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
-  contextChipText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
-  contextChipTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  contextRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
+    paddingVertical: Spacing.sm, marginBottom: Spacing.md,
+  },
+  contextRowText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.tint },
   ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xl },
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },

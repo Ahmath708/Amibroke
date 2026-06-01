@@ -53,7 +53,7 @@ export default function LandingScreen({ navigation }: Props) {
 
   const handleStart = () => {
     trackFunnelStep('landing_cta_clicked');
-    navigation.navigate('Login');
+    navigation.navigate('Login', { mode: 'signup' });
   };
 
   const handleSignIn = () => {
@@ -105,7 +105,7 @@ export default function LandingScreen({ navigation }: Props) {
         {/* CTA Buttons */}
         <Animated.View style={[styles.ctaWrap, { opacity: fadeAnim, transform: [{ scale: pulseAnim }] }]}>
           <NeonButton
-            label="Analyze My Finances"
+            label="Get Started"
             onPress={handleStart}
             style={styles.ctaBtn}
           />

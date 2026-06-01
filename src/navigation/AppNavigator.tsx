@@ -32,6 +32,7 @@ import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
 import UsernameSetupScreen from '@/screens/UsernameSetupScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
+import FinancialContextScreen from '@/screens/FinancialContextScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
@@ -117,11 +118,11 @@ const sharedHeader = {
 } as const;
 
 export default function AppNavigator() {
-  const { loading, user, needsUsername } = useAuth();
+  const { loading, user, needsUsername, needsOnboarding } = useAuth();
 
-  // Splash while the session restores, or while a signed-in user's username
-  // status is still resolving (needsUsername === null = unknown).
-  if (loading || (user && needsUsername === null)) {
+  // Splash while the session restores, or while a signed-in user's first-run
+  // gates are still resolving (null = unknown).
+  if (loading || (user && (needsUsername === null || needsOnboarding === null))) {
     return <SplashScreen />;
   }
 
@@ -137,6 +138,9 @@ export default function AppNavigator() {
         ) : needsUsername ? (
           /* ─── First-run gate: pick a username (mainly OAuth users) ─── */
           <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'fade' }} />
+        ) : needsOnboarding ? (
+          /* ─── First-run gate: personalization ─── */
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'fade' }} />
         ) : (
           /* ─── Signed in: APP STACK ─── */
           <>
@@ -146,6 +150,7 @@ export default function AppNavigator() {
             <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
             <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
             <Stack.Screen name="Settings" component={SettingsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Settings', animation: 'slide_from_right' }} />
+            <Stack.Screen name="FinancialContext" component={FinancialContextScreen} options={{ ...sharedHeader, headerShown: true, title: 'Financial Context', animation: 'slide_from_right' }} />
             <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
             <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
             <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />

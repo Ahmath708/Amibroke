@@ -29,12 +29,13 @@ type AuthContextType = {
   loading: boolean;
   supabase: SupabaseClient;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, username?: string) => Promise<{ error?: string }>;
   signInWithApple: () => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   needsUsername: boolean | null;
-  refreshNeedsUsername: () => void;
+  needsOnboarding: boolean | null;
+  refreshProfile: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -42,24 +43,28 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  // null = not yet resolved; true/false once the profile username is known.
+  // null = not yet resolved; true/false once the profile is known.
   const [needsUsername, setNeedsUsername] = useState<boolean | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   // Single shared, session-aware client (see services/supabaseClient.ts) so every
   // service rides the same authenticated session and RLS passes.
   const supabase = getSupabaseClient() as SupabaseClient;
 
-  // Whether the signed-in user still needs to pick a username (first-run gate).
-  const checkUsername = useCallback(async (u: User | null) => {
-    if (!u) { setNeedsUsername(false); return; }
+  // Resolve the first-run gates (username + onboarding) from the user's profile.
+  const checkProfile = useCallback(async (u: User | null) => {
+    if (!u) { setNeedsUsername(false); setNeedsOnboarding(false); return; }
     try {
-      const { data } = await supabase.from('profiles').select('username').eq('id', u.id).maybeSingle();
-      setNeedsUsername(!(data as { username?: string } | null)?.username);
+      const { data } = await supabase.from('profiles').select('username, onboarded').eq('id', u.id).maybeSingle();
+      const row = data as { username?: string; onboarded?: boolean } | null;
+      setNeedsUsername(!row?.username);
+      setNeedsOnboarding(!row?.onboarded);
     } catch {
       setNeedsUsername(false);
+      setNeedsOnboarding(false);
     }
   }, [supabase]);
 
-  const refreshNeedsUsername = useCallback(() => checkUsername(user), [checkUsername, user]);
+  const refreshProfile = useCallback(() => checkProfile(user), [checkProfile, user]);
 
   useEffect(() => {
     // Keep the RevenueCat app-user-id in sync with the Supabase session so
@@ -73,26 +78,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const u = session?.user ?? null;
       setUser(u);
       syncPurchasesIdentity(u);
-      checkUsername(u).finally(() => setLoading(false));
+      checkProfile(u).finally(() => setLoading(false));
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
       syncPurchasesIdentity(u);
-      checkUsername(u);
+      checkProfile(u);
     });
 
     return () => subscription.unsubscribe();
-  }, [checkUsername]);
+  }, [checkProfile]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message };
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, username?: string) => {
     try {
+      // Availability check BEFORE creating the account — the hard gate unmounts
+      // the signup form the instant a session exists, so we can't surface "taken"
+      // there afterward. set_username remains the backstop for the TOCTOU race.
+      if (username) {
+        const { data: avail, error: availErr } = await supabase.rpc('is_username_available', { p_username: username.trim() });
+        if (availErr) return { error: 'Could not verify username. Please try again.' };
+        if (avail === false) return { error: 'That username is taken — try another.' };
+      }
+
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) {
         // Handle specific Supabase error cases
@@ -108,14 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error.message };
       }
       // If signUp succeeds but email confirmation is required
-      if (data?.user) {
-        // Check if email confirmation is required
-        if (data.user.confirmation_sent_at && !data.user.confirmed_at) {
-          return { 
-            error: 'Check your email to confirm your account. Please check your inbox (and spam folder) for a confirmation link.' 
-          };
-        }
+      if (data?.user && data.user.confirmation_sent_at && !data.user.confirmed_at) {
+        return {
+          error: 'Check your email to confirm your account. Please check your inbox (and spam folder) for a confirmation link.',
+        };
       }
+      // Session established — claim the username, then re-resolve the first-run gates.
+      if (username) {
+        await supabase.rpc('set_username', { p_username: username.trim().toLowerCase() });
+      }
+      await checkProfile(data?.user ?? null);
       return {}; // No error
     } catch (err) {
       console.error('Sign up error:', err);
@@ -147,10 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result.type !== 'success' || !result.url) {
           return { error: 'Authentication was cancelled' };
         }
-        // PKCE: the browser returns ?code=...; exchange it (using the stored
-        // code_verifier) for a session. Without this the sign-in silently no-ops.
+        // The browser returns ?code=… on success. Surface any provider error
+        // (e.g. Supabase "unable to exchange external code" → Google creds issue).
         const { params, errorCode } = QueryParams.getQueryParams(result.url);
-        if (errorCode) return { error: errorCode };
+        if (errorCode || params.error) {
+          return { error: params.error_description || params.error || errorCode || 'Sign-in failed.' };
+        }
         const { code } = params;
         if (!code) return { error: 'No authorization code returned from provider.' };
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -204,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, supabase, signIn, signUp, signInWithApple, signInWithGoogle, signOut, needsUsername, refreshNeedsUsername }}>
+    <AuthContext.Provider value={{ user, loading, supabase, signIn, signUp, signInWithApple, signInWithGoogle, signOut, needsUsername, needsOnboarding, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

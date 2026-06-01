@@ -5,23 +5,30 @@ import {
 } from 'react-native';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import { useAuth } from '@/context/AuthContext';
 import ScreenBackground from '@/components/ScreenBackground';
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Login'> };
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
+  route: RouteProp<RootStackParamList, 'Login'>;
+};
 
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { signIn, signUp, signInWithApple, signInWithGoogle } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup'>(route.params?.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [termsAgreed, setTermsAgreed] = useState(false);
@@ -40,12 +47,18 @@ export default function LoginScreen({ navigation }: Props) {
       return;
     }
 
+    if (mode === 'signup' && !/^[a-z0-9_]{3,24}$/.test(username.trim().toLowerCase())) {
+      Alert.alert('Invalid username', 'Username must be 3–24 characters: lowercase letters, numbers, or underscores.');
+      return;
+    }
+
     setLoading(true);
-    const fn = mode === 'login' ? signIn : signUp;
-    const { error } = await fn(trimmedEmail, password);
+    const { error } = mode === 'login'
+      ? await signIn(trimmedEmail, password)
+      : await signUp(trimmedEmail, password, username.trim().toLowerCase());
     setLoading(false);
     if (error) {
-      Alert.alert('Authentication failed', error);
+      Alert.alert(mode === 'login' ? 'Sign in failed' : 'Sign up failed', error);
       return;
     }
     // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
@@ -151,6 +164,25 @@ export default function LoginScreen({ navigation }: Props) {
 
           {/* Form — iOS inset grouped style */}
           <View style={styles.formGroup}>
+            {mode === 'signup' && (
+              <>
+                <View style={styles.formCell}>
+                  <Text style={styles.formLabel}>Username</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="yourname"
+                    placeholderTextColor={Colors.textMuted}
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={24}
+                    returnKeyType="next"
+                  />
+                </View>
+                <View style={styles.cellSeparator} />
+              </>
+            )}
             <View style={styles.formCell}>
               <Text style={styles.formLabel}>Email</Text>
               <TextInput
@@ -167,16 +199,25 @@ export default function LoginScreen({ navigation }: Props) {
             <View style={styles.cellSeparator} />
             <View style={styles.formCell}>
               <Text style={styles.formLabel}>Password</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="••••••••"
-                placeholderTextColor={Colors.textMuted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleAuth}
-              />
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.formInput, styles.passwordInput]}
+                  placeholder="••••••••"
+                  placeholderTextColor={Colors.textMuted}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAuth}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((s) => !s)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -288,6 +329,8 @@ const styles = StyleSheet.create({
   formCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
   formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, width: 80 },
   formInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, textAlign: 'right' },
+  passwordRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  passwordInput: { marginRight: Spacing.sm },
   cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.xl },
   forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },

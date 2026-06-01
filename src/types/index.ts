@@ -95,7 +95,7 @@ export type TabScreenNav<T extends keyof MainTabsParamList> = CompositeNavigatio
 export type RootStackParamList = {
   // Auth + first-run gates
   Landing: undefined;
-  Login: undefined;
+  Login: { mode?: 'login' | 'signup' } | undefined;
   Onboarding: undefined;
   UsernameSetup: undefined;
   // App
@@ -108,6 +108,7 @@ export type RootStackParamList = {
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
+  FinancialContext: undefined;
   Settings: undefined;
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
