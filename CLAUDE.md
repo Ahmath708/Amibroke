@@ -144,6 +144,9 @@ client-side.
 ## Skills (in `.claude/skills/`)
 
 Project-scoped skills curated for this stack — invoke when relevant:
+- **audit-screen** — design-audit a single screen against the app concept + theme
+  (`/audit-screen <name>`): screenshots the SE sim, checks readability/contrast/hierarchy/
+  consistency, judges if it's too basic. Recommend-only; never implements until approved.
 - **react-patterns**, **react-performance** — React hooks/state/perf (web-oriented; principles
   transfer to React Native)
 - **react-testing** — jest/RTL component + hook testing, network mocking
