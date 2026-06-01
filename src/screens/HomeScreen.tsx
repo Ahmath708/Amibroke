@@ -21,6 +21,7 @@ import { ContextValues, CTX_COLUMNS, valuesFromProfile } from '@/components/Fina
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { trackFunnelStep } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
+import PremiumCard from '@/components/PremiumCard';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
@@ -340,19 +341,7 @@ export default function HomeScreen({ navigation }: Props) {
           )}
 
           {/* Premium teaser */}
-          <TouchableOpacity onPress={() => navigation.navigate('Paywall')} activeOpacity={0.85}>
-            <LinearGradient
-              colors={['rgba(189,0,255,0.25)', 'rgba(231,0,110,0.20)']}
-              style={styles.premiumBanner}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            >
-              <View>
-                <Text style={styles.premiumTitle}>Go Premium</Text>
-                <Text style={styles.premiumBody}>Your 90-day Action Plan, debt payoff strategy & monthly check-ins.</Text>
-              </View>
-              <Text style={styles.premiumChevron}>›</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          <PremiumCard onPress={() => navigation.navigate('Paywall')} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Animated.View>
@@ -436,12 +425,4 @@ const styles = StyleSheet.create({
   scoreNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700' },
   scoreLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: 2 },
   scoreUser: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.xs },
-  premiumBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: Radius.lg, padding: Spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-  },
-  premiumTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.primary, marginBottom: Spacing.xs },
-  premiumBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, maxWidth: 240, lineHeight: 18 },
-  premiumChevron: { fontSize: Typography.title2.fontSize, color: Colors.primary, fontWeight: '300' },
 });

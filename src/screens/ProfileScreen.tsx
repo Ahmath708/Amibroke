@@ -18,6 +18,7 @@ import { getProfile, updateProfile, getAnalysisHistory, uploadAvatar } from '@/s
 import { getSubscription, isSubscriptionPremium } from '@/services/subscriptions';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
+import PremiumCard from '@/components/PremiumCard';
 
 type Props = { navigation: TabScreenNav<'Profile'> };
 
@@ -226,19 +227,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* Upgrade CTA — separate from avatar card */}
         {user && !isSubscriptionPremium(purchaseTier) && (
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Paywall')}
-            style={styles.upgradeCta}
-            activeOpacity={0.85}
-          >
-            <LinearGradient colors={['rgba(189,0,255,0.25)', 'rgba(231,0,110,0.20)']} style={styles.upgradeCtaGradient}>
-              <Text style={styles.upgradeCtaTitle}>✨ Unlock Premium</Text>
-              <Text style={styles.upgradeCtaBody}>Debt payoff planner, scenario simulator & more.</Text>
-              <View style={styles.upgradeCtaArrow}>
-                <Text style={styles.upgradeCtaChevron}>›</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+          <PremiumCard onPress={() => navigation.navigate('Paywall')} style={styles.upgradeCta} />
         )}
 
         {/* Stats row */}
@@ -333,14 +322,6 @@ const styles = StyleSheet.create({
   avatarInfo: { flex: 1, gap: Spacing.xs },
   username: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600' },
   upgradeCta: { marginBottom: Spacing.lg },
-  upgradeCtaGradient: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: Radius.lg, padding: Spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-  },
-  upgradeCtaTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '600' },
-  upgradeCtaBody: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, flex: 1, lineHeight: 17, marginTop: 2 },
-  upgradeCtaArrow: { marginLeft: Spacing.sm },
-  upgradeCtaChevron: { fontSize: 26, color: Colors.primary, fontWeight: '300' },
   statsRow: {
     flexDirection: 'row',
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg,
