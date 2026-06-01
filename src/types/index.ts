@@ -58,7 +58,47 @@ export interface CheckIn {
   savings: number | null;
   debt: number | null;
   created_at: string;
+  /** Per-event values for pinned goals, keyed by TrackedGoal.id. */
+  metrics?: Record<string, number> | null;
 }
+
+// ─── Monthly check-in: pinned-goal tracking ───
+/** Derived/extracted metrics a user can pin to track month over month. */
+export type MetricKey =
+  | 'liquidSavings'
+  | 'savingsRate'
+  | 'emergencyFundMonths'
+  | 'debtTotal'
+  | 'monthlySavings'
+  | 'debtToIncomeRatio'
+  | 'monthlyIncome'
+  | 'monthlyExpenses';
+
+export type GoalKind = 'metric' | 'debt';
+export type GoalUnit = 'currency' | 'percent' | 'months' | 'number';
+/** Which direction counts as improvement (savings up, debt/expenses down). */
+export type GoalDirection = 'up' | 'down';
+
+export interface TrackedGoal {
+  id: string;                       // stable id (key for CheckIn.metrics)
+  kind: GoalKind;
+  key: string;                      // MetricKey for 'metric'; debt name for 'debt'
+  label: string;                    // display label
+  unit: GoalUnit;
+  direction: GoalDirection;
+  baseline: number;                 // value when pinned
+  baselineDate: string;             // ISO
+  target?: number | null;           // optional goal target
+  sourceAnalysisId?: string | null; // analysis the goal was pinned from
+}
+
+export interface CheckinConfig {
+  firstAnalyzeAt: string | null;    // ISO — schedule anchor source
+  anchorDay: number | null;         // 1..31 day-of-month the check-in is due
+  goals: TrackedGoal[];
+}
+
+export const EMPTY_CHECKIN_CONFIG: CheckinConfig = { firstAnalyzeAt: null, anchorDay: null, goals: [] };
 
 export interface Referral {
   id: string;

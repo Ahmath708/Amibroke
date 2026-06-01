@@ -11,8 +11,9 @@
  * Timestamps are written in LOCAL time (no trailing Z) so the day-view time labels
  * read as authored regardless of the machine timezone.
  */
-import type { AnalysisHistoryItem, CheckIn } from '@/types';
+import type { AnalysisHistoryItem, CheckIn, CheckinConfig, TrackedGoal } from '@/types';
 import type { FinalAnalysis } from '@shared/types';
+import { metricGoalId, debtGoalId } from '@/utils/checkinGoals';
 import { SAMPLE_ANALYSIS } from './sampleAnalysis';
 
 function labelFor(score: number): string {
@@ -77,9 +78,32 @@ export const MOCK_HISTORY: AnalysisHistoryItem[] = SEEDS
   }))
   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // newest first
 
+// Stable goal ids (also key each check-in's `metrics`).
+const G_DEBT = metricGoalId('debtTotal');
+const G_SAVINGS = metricGoalId('liquidSavings');
+const G_EF = metricGoalId('emergencyFundMonths');
+const G_CARD = debtGoalId('Capital One Credit Card');
+
+const BASELINE_DATE = '2026-04-12T00:00:00';
+const MOCK_GOALS: TrackedGoal[] = [
+  { id: G_DEBT, kind: 'metric', key: 'debtTotal', label: 'Total debt', unit: 'currency', direction: 'down', baseline: 16500, baselineDate: BASELINE_DATE, target: 0, sourceAnalysisId: 'mock-3' },
+  { id: G_CARD, kind: 'debt', key: 'Capital One Credit Card', label: 'Capital One Credit Card', unit: 'currency', direction: 'down', baseline: 4200, baselineDate: BASELINE_DATE, target: 0, sourceAnalysisId: 'mock-3' },
+  { id: G_SAVINGS, kind: 'metric', key: 'liquidSavings', label: 'Savings balance', unit: 'currency', direction: 'up', baseline: 1200, baselineDate: BASELINE_DATE, target: 5000, sourceAnalysisId: 'mock-3' },
+  { id: G_EF, kind: 'metric', key: 'emergencyFundMonths', label: 'Emergency fund', unit: 'months', direction: 'up', baseline: 0.29, baselineDate: BASELINE_DATE, target: 3, sourceAnalysisId: 'mock-3' },
+];
+
+// First analysis Feb 3 → check-ins are due on the 3rd of each following month.
+export const MOCK_CHECKIN_CONFIG: CheckinConfig = {
+  firstAnalyzeAt: '2026-02-03T14:00:00',
+  anchorDay: 3,
+  goals: MOCK_GOALS,
+};
+
 export const MOCK_CHECKINS: CheckIn[] = [
-  { id: 'ci-2', mood: 4, notes: 'Paid off the Capital One card this month. Felt unreal.', income: 5000, expenses: 3900, savings: 2100, debt: 11500, created_at: '2026-05-20T12:00:00' },
-  { id: 'ci-1', mood: 2, notes: 'Tight month, car needed brakes. Held the line though.', income: 4800, expenses: 4400, savings: 900, debt: 14800, created_at: '2026-03-22T12:00:00' },
+  { id: 'ci-2', mood: 4, notes: 'Paid off the Capital One card this month. Felt unreal.', income: 5000, expenses: 3900, savings: 2100, debt: 11500, created_at: '2026-05-20T12:00:00',
+    metrics: { [G_DEBT]: 11500, [G_CARD]: 0, [G_SAVINGS]: 2100, [G_EF]: 0.6 } },
+  { id: 'ci-1', mood: 2, notes: 'Tight month, car needed brakes. Held the line though.', income: 4800, expenses: 4400, savings: 900, debt: 14800, created_at: '2026-03-22T12:00:00',
+    metrics: { [G_DEBT]: 14800, [G_CARD]: 3800, [G_SAVINGS]: 900, [G_EF]: 0.4 } },
 ];
 
 /** Returns a coherent full analysis for a tapped row (clone + score overrides). */
