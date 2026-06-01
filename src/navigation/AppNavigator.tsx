@@ -113,7 +113,9 @@ const sharedHeader = {
     color: Colors.textPrimary,
   },
   headerShadowVisible: false,
-  headerBackTitleVisible: false,
+  // RN Navigation v7 removed `headerBackTitleVisible`; use display mode instead.
+  // 'minimal' = chevron only (no leaked previous-route name like "MainTabs").
+  headerBackButtonDisplayMode: 'minimal',
   contentStyle: { backgroundColor: 'transparent' },
 } as const;
 
