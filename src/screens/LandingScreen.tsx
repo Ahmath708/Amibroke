@@ -10,6 +10,7 @@ import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import ScreenBackground from '@/components/ScreenBackground';
+import AnalyzingHero from '@/components/AnalyzingHero';
 import { trackFunnelStep } from '@/services/analytics';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Landing'> };
@@ -64,10 +65,9 @@ export default function LandingScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <ScreenBackground variant="home" />
-      <View style={[styles.content, { paddingTop: insets.top + Spacing.xxl }]}>
+      <View style={[styles.content, { paddingTop: insets.top + Spacing.md }]}>
         {/* Hero Section */}
         <Animated.View style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={styles.heroPre}>Your bank account won't judge you.</Text>
           <View style={styles.heroTitleWrap}>
             {HERO_LINES.map((line, i) => (
               <View key={i} style={styles.heroLine}>
@@ -75,9 +75,7 @@ export default function LandingScreen({ navigation }: Props) {
               </View>
             ))}
           </View>
-          <Text style={styles.heroSub}>
-            Type your finances. Get an AI roast. See your score. Fix your life.
-          </Text>
+          <AnalyzingHero />
         </Animated.View>
 
         {/* Value Props */}
@@ -97,7 +95,13 @@ export default function LandingScreen({ navigation }: Props) {
 
         {/* Social Proof */}
         <Animated.View style={[styles.socialProof, { opacity: fadeAnim }]}>
-          <Text style={styles.socialProofText}>Free · Brutally honest · 60 seconds</Text>
+          <Text style={styles.socialProofText}>
+            <Text style={styles.socialProofAccent}>Free</Text>
+            <Text style={styles.socialProofDot}>  ·  </Text>
+            Brutally honest
+            <Text style={styles.socialProofDot}>  ·  </Text>
+            <Text style={styles.socialProofAccent}>Results in seconds</Text>
+          </Text>
         </Animated.View>
 
         {/* CTA Buttons */}
@@ -111,11 +115,6 @@ export default function LandingScreen({ navigation }: Props) {
             <Text style={styles.signInText}>Already have an account? Sign in</Text>
           </TouchableOpacity>
         </Animated.View>
-
-        {/* Disclaimer */}
-        <Text style={styles.disclaimer}>
-          This app is for educational and entertainment purposes only and does not constitute financial advice.
-        </Text>
       </View>
     </View>
   );
@@ -124,13 +123,7 @@ export default function LandingScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: Spacing.xl },
-  hero: { marginBottom: Spacing.xxl },
-  heroPre: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.subhead.fontSize,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-  },
+  hero: { marginBottom: Spacing.lg },
   heroTitleWrap: { marginBottom: Spacing.md },
   heroLine: { flexDirection: 'row', alignItems: 'center' },
   heroTitle: {
@@ -139,17 +132,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
     letterSpacing: -1.5,
-    lineHeight: 48,
+    lineHeight: 44,
   },
   heroEmoji: { fontSize: 42, marginLeft: Spacing.sm },
-  heroSub: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.subhead.fontSize,
-    color: Colors.textSecondary,
-    lineHeight: 22,
-    marginTop: Spacing.sm,
-  },
-  values: { gap: Spacing.md, marginBottom: Spacing.xl },
+  values: { gap: Spacing.md, marginBottom: Spacing.lg },
   valueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   valueIcon: {
     width: 44, height: 44, borderRadius: Radius.lg,
@@ -169,31 +155,25 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 1,
   },
-  socialProof: { alignItems: 'center', marginBottom: Spacing.xl },
+  socialProof: { alignItems: 'center', marginBottom: Spacing.lg },
   socialProofText: {
     fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize,
-    color: Colors.textSecondary,
+    fontSize: Typography.subhead.fontSize,
+    color: Colors.textPrimary,
     letterSpacing: 0.3,
   },
-  socialProofNum: {
+  socialProofAccent: {
     fontFamily: Typography.fonts.headingSemi,
     color: Colors.primary,
+    fontWeight: '700',
   },
-  ctaWrap: { gap: Spacing.md, marginBottom: Spacing.xl },
+  socialProofDot: { color: Colors.textMuted },
+  ctaWrap: { gap: Spacing.sm, marginBottom: Spacing.md },
   ctaBtn: {},
   signInBtn: { alignItems: 'center', paddingVertical: Spacing.sm },
   signInText: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.callout.fontSize,
     color: Colors.textSecondary,
-  },
-  disclaimer: {
-    fontFamily: Typography.fonts.body,
-    fontSize: 10,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 14,
-    paddingBottom: Spacing.lg,
   },
 });
