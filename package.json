@@ -61,6 +61,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "ios:se": "expo run:ios --device \"iPhone SE (3rd generation)\"",
+    "ios:rebuild": "expo prebuild --clean && expo run:ios --device \"iPhone SE (3rd generation)\"",
     "test": "jest",
     "test:purchases": "jest src/services/__tests__/purchases.test.ts --runInBand"
   },

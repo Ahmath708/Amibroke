@@ -35,6 +35,8 @@ import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
+import { TAB_BAR_HEIGHT } from '@/navigation/constants';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
@@ -48,7 +50,7 @@ const TAB_ICONS: Record<string, { active: IoniconsName; inactive: IoniconsName }
 
 function IOSTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
-  const TAB_HEIGHT = 49;
+  const TAB_HEIGHT = TAB_BAR_HEIGHT;
 
   return (
     <View style={[tabStyles.outerWrapper, { paddingBottom: insets.bottom }]}>

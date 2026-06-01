@@ -5,6 +5,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,6 +20,9 @@ import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { trackFunnelStep } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import { TAB_BAR_HEIGHT } from '@/navigation/constants';
+
+const MAX_INPUT_CHARS = 4000;
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
 
@@ -52,8 +56,8 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [input, setInput] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
-  const [selectedProvider, setSelectedProvider] = useState<'claude' | 'groq'>('claude');
   const [showContext, setShowContext] = useState(false);
   const [userContext, setUserContext] = useState({
     state: 'unknown' as string,
@@ -68,6 +72,14 @@ export default function HomeScreen({ navigation }: Props) {
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
   const micPulse = useRef(new Animated.Value(1)).current;
+  // Suggestion fade-and-rise: input text fades in + slides up; tapped chip bounces.
+  const inputOpacity = useRef(new Animated.Value(1)).current;
+  const inputTranslateY = useRef(new Animated.Value(0)).current;
+  const chipScales = useRef<Record<string, Animated.Value>>({}).current;
+  const getChipScale = (chip: string) => {
+    if (!chipScales[chip]) chipScales[chip] = new Animated.Value(1);
+    return chipScales[chip];
+  };
 
   const { listening, transcript, startListening, stopListening, supported, error } = useVoiceInput();
   const { animatedStyle } = useEntryAnimation();
@@ -108,12 +120,31 @@ export default function HomeScreen({ navigation }: Props) {
     }
   }, [listening]);
 
+  const applySuggestion = (chip: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    // Replace the current input with the suggestion (clear-then-insert).
+    setInput(chip);
+    // Bounce the tapped chip.
+    const scale = getChipScale(chip);
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 0.92, duration: 80, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }),
+    ]).start();
+    // Fade + rise the new input text in.
+    inputOpacity.setValue(0);
+    inputTranslateY.setValue(8);
+    Animated.parallel([
+      Animated.timing(inputOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.spring(inputTranslateY, { toValue: 0, friction: 6, tension: 80, useNativeDriver: true }),
+    ]).start();
+  };
+
   const handleAnalyze = () => {
     if (!input.trim()) {
       inputRef.current?.focus();
       return;
     }
-    trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone, provider: selectedProvider });
+    trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone });
     const context = Object.values(userContext).some((v) => v !== 'unknown') ? userContext : undefined;
     navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone, userContext: context as any });
   };
@@ -131,9 +162,10 @@ export default function HomeScreen({ navigation }: Props) {
       <ScreenBackground variant="home" />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + Spacing.xxl }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           {/* Large Title header */}
           <View style={styles.pageHeader}>
@@ -158,25 +190,33 @@ export default function HomeScreen({ navigation }: Props) {
           {/* Input card */}
           <GlassCard variant="inset" style={styles.inputCard}>
             <View style={styles.inputFieldWrap}>
-              <TextInput
-                ref={inputRef}
-                style={styles.textInput}
-                placeholder=""
-                placeholderTextColor={Colors.textMuted}
-                multiline
-                value={input}
-                onChangeText={setInput}
-                returnKeyType="default"
-                textAlignVertical="top"
-              />
-              {input.length === 0 && (
+              <Animated.View style={{ opacity: inputOpacity, transform: [{ translateY: inputTranslateY }] }}>
+                <TextInput
+                  ref={inputRef}
+                  style={styles.textInput}
+                  placeholder=""
+                  placeholderTextColor={Colors.textMuted}
+                  multiline
+                  scrollEnabled
+                  maxLength={MAX_INPUT_CHARS}
+                  value={input}
+                  onChangeText={setInput}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  returnKeyType="default"
+                  textAlignVertical="top"
+                />
+              </Animated.View>
+              {/* Animated placeholder only when empty AND not focused — stops the
+                  typing animation the moment the user is about to type. */}
+              {input.length === 0 && !inputFocused && (
                 <View style={styles.placeholderOverlay} pointerEvents="none">
-                  <TypingPlaceholder placeholders={PLACEHOLDERS} />
+                  <TypingPlaceholder placeholders={PLACEHOLDERS} textStyle={styles.placeholderText} />
                 </View>
               )}
             </View>
             <View style={styles.inputFooter}>
-              <Text style={styles.charCount}>{input.length} chars</Text>
+              <Text style={styles.charCount}>{input.length}/{MAX_INPUT_CHARS}</Text>
               <View style={styles.inputActions}>
                 {input.length > 0 && (
                   <TouchableOpacity onPress={() => setInput('')}>
@@ -202,24 +242,44 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </GlassCard>
 
+          {/* CTA — directly under the input for immediate access */}
+          <NeonButton
+            label="Analyze My Finances"
+            onPress={handleAnalyze}
+            disabled={!input.trim()}
+            style={styles.cta}
+          />
+          <Text style={styles.ctaHint}>Powered by Claude · Usually takes ~5 seconds</Text>
+
           {/* Suggestion chips */}
           <Text style={styles.sectionLabel}>Suggestions</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
-            {CHIPS.map((chip) => (
-              <TouchableOpacity
-                key={chip}
-                style={styles.chip}
-                onPress={() => setInput((prev) => prev ? prev + ' ' + chip : chip)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.chipText}>{chip}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.chipsScrollWrap}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
+              {CHIPS.map((chip) => (
+                <Animated.View key={chip} style={{ transform: [{ scale: getChipScale(chip) }] }}>
+                  <TouchableOpacity
+                    style={styles.chip}
+                    onPress={() => applySuggestion(chip)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.chipText}>{chip}</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </ScrollView>
+            {/* Right-edge fade: signals there are more suggestions to scroll to. */}
+            <LinearGradient
+              colors={['transparent', Colors.background]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.chipsFade}
+              pointerEvents="none"
+            />
+          </View>
 
           {/* Roast Tone selector */}
           <Text style={styles.sectionLabel}>Roast Tone</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
+          <View style={styles.toneWrap}>
             {TONES.map((tone) => (
               <TouchableOpacity
                 key={tone.key}
@@ -235,25 +295,6 @@ export default function HomeScreen({ navigation }: Props) {
                 <Text style={[styles.toneLabel, selectedTone === tone.key && styles.toneLabelActive]}>{tone.label}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
-
-          {/* AI Provider toggle */}
-          <Text style={styles.sectionLabel}>AI Engine</Text>
-          <View style={styles.providerRow}>
-            <TouchableOpacity
-              style={[styles.providerChip, selectedProvider === 'claude' && styles.providerChipActive]}
-              onPress={() => setSelectedProvider('claude')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.providerText, selectedProvider === 'claude' && styles.providerTextActive]}>Claude</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.providerChip, selectedProvider === 'groq' && styles.providerChipActive]}
-              onPress={() => setSelectedProvider('groq')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.providerText, selectedProvider === 'groq' && styles.providerTextActive]}>Groq</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Optional context form */}
@@ -296,15 +337,6 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           )}
 
-          {/* CTA */}
-          <NeonButton
-            label="Analyze My Finances"
-            onPress={handleAnalyze}
-            disabled={!input.trim()}
-            style={styles.cta}
-          />
-          <Text style={styles.ctaHint}>Powered by {selectedProvider === 'groq' ? 'Groq (Llama 3.3)' : 'Claude Sonnet'} · Usually takes ~5 seconds</Text>
-
           {/* Recent scores */}
           {!scoresLoading && recentScores.length > 0 && (
             <>
@@ -333,7 +365,7 @@ export default function HomeScreen({ navigation }: Props) {
             >
               <View>
                 <Text style={styles.premiumTitle}>Go Premium</Text>
-                <Text style={styles.premiumBody}>Debt payoff planner, scenario simulator, monthly check-ins & more.</Text>
+                <Text style={styles.premiumBody}>Your 90-day Action Plan, debt payoff strategy & monthly check-ins.</Text>
               </View>
               <Text style={styles.premiumChevron}>›</Text>
             </LinearGradient>
@@ -362,15 +394,18 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl, lineHeight: 21,
   },
   inputCard: { padding: Spacing.lg, marginBottom: Spacing.lg },
-  inputFieldWrap: { position: 'relative', minHeight: 120 },
+  inputFieldWrap: { position: 'relative', height: 160 },
   placeholderOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0,
   },
   textInput: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.callout.fontSize, color: Colors.textPrimary,
-    minHeight: 120, lineHeight: 24,
+    height: 160, lineHeight: 24, // fixed height — overflow scrolls inside the box
+    padding: 0, // remove iOS multiline inset so typed text aligns with the placeholder
   },
+  // Must match textInput's font metrics exactly so there's no jump when typing starts.
+  placeholderText: { fontSize: Typography.callout.fontSize, lineHeight: 24 },
   inputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm },
   charCount: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
   inputActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -384,7 +419,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.6,
     marginBottom: Spacing.sm, marginTop: Spacing.xs,
   },
-  chipsScroll: { marginHorizontal: -Spacing.xl, marginBottom: Spacing.xl },
+  chipsScrollWrap: { position: 'relative', marginHorizontal: -Spacing.xl, marginBottom: Spacing.xl },
+  chipsFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 36 },
   chipsContent: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },
   chip: {
     backgroundColor: Colors.primaryContainer,
@@ -393,6 +429,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   chipText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.primary },
+  toneWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
   toneChip: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
     backgroundColor: Colors.groupedRow,
@@ -404,17 +441,6 @@ const styles = StyleSheet.create({
   toneEmoji: { fontSize: Typography.subhead.fontSize },
   toneLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   toneLabelActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
-  providerRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
-  providerChip: {
-    flex: 1, alignItems: 'center',
-    backgroundColor: Colors.groupedRow,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.sm,
-    borderWidth: 1.5, borderColor: Colors.glassBorder,
-  },
-  providerChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
-  providerText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  providerTextActive: { color: Colors.primary },
   cta: { marginBottom: Spacing.sm },
   contextToggle: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.tint, textAlign: 'center', marginBottom: Spacing.md },
   contextForm: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
@@ -425,7 +451,7 @@ const styles = StyleSheet.create({
   contextChipActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
   contextChipText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   contextChipTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
-  ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xxl + Spacing.xs },
+  ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xl },
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },
   scoreNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700' },

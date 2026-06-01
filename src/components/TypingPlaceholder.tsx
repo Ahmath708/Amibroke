@@ -8,6 +8,8 @@ interface TypingPlaceholderProps {
   deletingSpeed?: number;
   pauseDuration?: number;
   style?: object;
+  /** Override the text/cursor font metrics (e.g. to match the host TextInput exactly). */
+  textStyle?: object;
 }
 
 export default function TypingPlaceholder({
@@ -16,6 +18,7 @@ export default function TypingPlaceholder({
   deletingSpeed = 30,
   pauseDuration = 2000,
   style,
+  textStyle,
 }: TypingPlaceholderProps) {
   const [displayText, setDisplayText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -58,9 +61,9 @@ export default function TypingPlaceholder({
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.text}>
+      <Text style={[styles.text, textStyle]}>
         {displayText}
-        <Text style={[styles.cursor, { opacity: isPaused ? 0.3 : 1 }]}>|</Text>
+        <Text style={[styles.cursor, textStyle, { opacity: isPaused ? 0.3 : 1 }]}>|</Text>
       </Text>
     </View>
   );
@@ -71,7 +74,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     minHeight: 24,
-    paddingTop: 2,
   },
   text: {
     fontFamily: Typography.fonts.body,
