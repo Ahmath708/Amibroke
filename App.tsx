@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, StatusBar } from 'react-native';
+import { View, StyleSheet, StatusBar, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -22,6 +22,12 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/theme/colors';
 import { initAnalytics } from './src/services/analytics';
 import { configurePurchases } from './src/services/purchases';
+
+// Suppress the in-app LogBox warning overlay in dev. The simulator warnings here
+// are known-benign noise (see CLAUDE.md "Gotchas") and the overlay sits over the
+// bottom tab bar. Dev-only — never ships (release builds are __DEV__ === false).
+// Errors still surface; remove this line to bring warning toasts back during QA.
+if (__DEV__) LogBox.ignoreAllLogs();
 
 // Keep the splash screen visible while fonts load
 SplashScreen.preventAutoHideAsync();

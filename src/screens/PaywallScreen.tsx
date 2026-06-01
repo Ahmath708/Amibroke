@@ -25,16 +25,25 @@ const FREE_FEATURES = [
   { icon: '🖼️', label: 'Shareable Result Card' },
 ];
 
-const COMPARE = [
+// Cell state: true = included, false = not included, 'soon' = built but not shipped yet.
+type CompareCell = boolean | 'soon';
+const COMPARE: { feature: string; free: CompareCell; ap: CompareCell; dd: CompareCell }[] = [
   { feature: '90-Day Step-by-Step Plan', free: false, ap: true, dd: true },
   { feature: 'Weekly Goals with Dollar Amounts', free: false, ap: true, dd: true },
   { feature: 'Debt Payoff Timeline', free: false, ap: true, dd: true },
   { feature: 'Subscription Audit', free: true, ap: true, dd: true },
   { feature: 'Prioritized Fix List', free: false, ap: true, dd: true },
-  { feature: 'Scenario Simulator', free: false, ap: false, dd: true },
+  { feature: 'Scenario Simulator', free: false, ap: false, dd: 'soon' },
   { feature: 'Avalanche vs Snowball', free: false, ap: false, dd: true },
   { feature: 'Downloadable PDF Report', free: false, ap: false, dd: true },
 ];
+
+function CompareMark({ v }: { v: CompareCell }) {
+  if (v === 'soon') return <Text style={[styles.compareCheck, styles.checkSoon]}>Soon</Text>;
+  return (
+    <Text style={[styles.compareCheck, v ? styles.checkYes : styles.checkNo]}>{v ? '✓' : '—'}</Text>
+  );
+}
 
 export default function PaywallScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -130,7 +139,7 @@ export default function PaywallScreen({ navigation }: Props) {
           </Text>
           <View style={styles.heroUrgency}>
             <Text style={styles.heroUrgencyDot}>●</Text>
-            <Text style={styles.heroUrgencyText}>4,283 people unlocked their plan today</Text>
+            <Text style={styles.heroUrgencyText}>7-day free trial · Cancel anytime</Text>
           </View>
         </View>
 
@@ -176,8 +185,8 @@ export default function PaywallScreen({ navigation }: Props) {
               <Text style={styles.previewTitle}>Scenario Simulator</Text>
               <Text style={styles.previewDesc}>What if you got a raise? Cut DoorDash? Find out instantly</Text>
             </View>
-            <View style={styles.previewLock}>
-              <Text style={styles.previewLockIcon}>🔒</Text>
+            <View style={styles.previewSoon}>
+              <Text style={styles.previewSoonText}>SOON</Text>
             </View>
           </LinearGradient>
         </View>
@@ -223,15 +232,9 @@ export default function PaywallScreen({ navigation }: Props) {
               {i > 0 && <View style={styles.compareSep} />}
               <View style={styles.compareRow}>
                 <Text style={styles.compareFeature}>{row.feature}</Text>
-                <Text style={[styles.compareCheck, row.free ? styles.checkYes : styles.checkNo]}>
-                  {row.free ? '✓' : '—'}
-                </Text>
-                <Text style={[styles.compareCheck, row.ap ? styles.checkYes : styles.checkNo]}>
-                  {row.ap ? '✓' : '—'}
-                </Text>
-                <Text style={[styles.compareCheck, row.dd ? styles.checkYes : styles.checkNo]}>
-                  {row.dd ? '✓' : '—'}
-                </Text>
+                <CompareMark v={row.free} />
+                <CompareMark v={row.ap} />
+                <CompareMark v={row.dd} />
               </View>
             </React.Fragment>
           ))}
@@ -291,6 +294,11 @@ const styles = StyleSheet.create({
   previewDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
   previewLock: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center' },
   previewLockIcon: { fontSize: Typography.subhead.fontSize },
+  previewSoon: {
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1, borderRadius: Radius.pill,
+    backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.warning,
+  },
+  previewSoonText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, color: Colors.warning },
   freeBox: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
@@ -339,6 +347,7 @@ const styles = StyleSheet.create({
   compareCheck: { flex: 1, textAlign: 'center', fontSize: Typography.subhead.fontSize, fontWeight: '600' },
   checkYes: { color: Colors.success },
   checkNo: { color: Colors.textMuted },
+  checkSoon: { color: Colors.warning, fontSize: Typography.caption2.fontSize, fontWeight: '700' },
   cta: { marginBottom: Spacing.sm },
   restoreBtn: { alignItems: 'center', paddingVertical: Spacing.sm, marginBottom: Spacing.sm },
   restoreText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },

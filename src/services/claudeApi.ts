@@ -267,6 +267,11 @@ async function runActionPlan(
 }
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { MOCK_HISTORY } = require('@/__fixtures__/mockHistory');
+    return MOCK_HISTORY;
+  }
   const client = getSupabase();
   if (!client) return [];
   try {
@@ -576,6 +581,11 @@ export async function saveCheckIn(userId: string, data: {
 }
 
 export async function getCheckIns(userId: string): Promise<CheckIn[]> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { MOCK_CHECKINS } = require('@/__fixtures__/mockHistory');
+    return MOCK_CHECKINS;
+  }
   const client = getSupabase();
   if (!client) return [];
   try {
@@ -602,6 +612,11 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
 }
 
 export async function getAnalysisById(id: string): Promise<FinalAnalysis | null> {
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { getMockAnalysisById } = require('@/__fixtures__/mockHistory');
+    return getMockAnalysisById(id);
+  }
   const client = getSupabase();
   if (!client) return null;
   try {
