@@ -9,37 +9,28 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, DebtItem } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
-import StatusPill from '@/components/StatusPill';
+import SeverityPill from '@/components/SeverityPill';
+import SelectableChip from '@/components/SelectableChip';
 import LoadingState from '@/components/LoadingState';
 import { getSubscription, hasAccessTo } from '@/services/subscriptions';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
+import SectionLabel from '@/components/SectionLabel';
+import EmptyState from '@/components/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
+import { simulateDebtPayoff } from '@shared/calculations.ts';
 import { useAuth } from '@/context/AuthContext';
 
 type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
 
-const DEFAULT_DEBTS: DebtItem[] = [
-  { name: 'Chase Sapphire', balance: 4200, interestRate: 24.99, minimumPayment: 84, urgency: 'critical' },
-  { name: 'Capital One', balance: 1800, interestRate: 19.99, minimumPayment: 36, urgency: 'high' },
-  { name: 'Student Loan', balance: 18000, interestRate: 5.5, minimumPayment: 200, urgency: 'low' },
-  { name: 'Car Loan', balance: 8500, interestRate: 7.9, minimumPayment: 280, urgency: 'medium' },
-];
-
 type Strategy = 'avalanche' | 'snowball';
 
-function calcPayoff(debts: DebtItem[], extraMonthly: number, strategy: Strategy) {
-  const sorted = [...debts].sort((a, b) =>
-    strategy === 'avalanche' ? b.interestRate - a.interestRate : a.balance - b.balance
-  );
-  const totalMin = debts.reduce((s, d) => s + d.minimumPayment, 0);
-  const monthlyBudget = totalMin + extraMonthly;
-  return Math.round(monthlyBudget > 0 ? (debts.reduce((s, d) => s + d.balance, 0) / monthlyBudget) : 999);
-}
+const fmtDuration = (m: number) => (m < 24 ? `${m} mo` : `${(m / 12).toFixed(1)} yr`);
 
 export default function DebtPayoffScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
-  const debts = route.params?.debts?.length > 0 ? route.params.debts : DEFAULT_DEBTS;
+  const debts: DebtItem[] = route.params?.debts ?? [];
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -62,17 +53,31 @@ export default function DebtPayoffScreen({ route }: Props) {
   if (loading) return <LoadingState />;
   if (!authorized) return null;
 
+  if (debts.length === 0) {
+    return (
+      <View style={styles.container}>
+        <ScreenBackground variant="debt" />
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            emoji="🎉"
+            title="No debts to plan"
+            body="Your latest analysis didn’t list any debts. When you’ve got debt to tackle, your payoff plan shows up here."
+          />
+        </View>
+      </View>
+    );
+  }
+
   const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
-  const totalMin = debts.reduce((s, d) => s + d.minimumPayment, 0);
-  const months = calcPayoff(debts, extra, strategy);
-  const totalInterestSaved = Math.round(extra * 12 * 0.18);
+  const payoff = simulateDebtPayoff(debts, extra, strategy);
+  const baseline = simulateDebtPayoff(debts, 0, strategy);
+  const interestSaved = Math.max(0, baseline.totalInterest - payoff.totalInterest);
 
   const sortedDebts = [...debts].sort((a, b) =>
     strategy === 'avalanche' ? b.interestRate - a.interestRate : a.balance - b.balance
   );
 
   const fmt = (n: number) => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  const urgencyVariant = (u: string) => u === 'critical' ? 'danger' : u === 'high' ? 'warning' : u === 'medium' ? 'info' : 'muted';
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -88,17 +93,17 @@ export default function DebtPayoffScreen({ route }: Props) {
             <Text style={styles.summaryLabel}>Total Debt</Text>
           </GlassCard>
           <GlassCard style={styles.summaryCard}>
-            <Text style={[styles.summaryNum, { color: Colors.success }]}>{months} mo</Text>
+            <Text style={[styles.summaryNum, { color: Colors.success }]}>{payoff.feasible ? fmtDuration(payoff.months) : '50+ yr'}</Text>
             <Text style={styles.summaryLabel}>Payoff Time</Text>
           </GlassCard>
           <GlassCard style={styles.summaryCard}>
-            <Text style={[styles.summaryNum, { color: Colors.primary }]}>{fmt(totalInterestSaved)}</Text>
+            <Text style={[styles.summaryNum, { color: Colors.primary }]}>{fmt(interestSaved)}</Text>
             <Text style={styles.summaryLabel}>Interest Saved</Text>
           </GlassCard>
         </View>
 
         {/* Strategy toggle */}
-        <Text style={styles.sectionLabel}>Strategy</Text>
+        <SectionLabel>Strategy</SectionLabel>
         <View style={styles.segmentRow}>
           {(['avalanche', 'snowball'] as Strategy[]).map((s) => (
             <TouchableOpacity
@@ -107,9 +112,16 @@ export default function DebtPayoffScreen({ route }: Props) {
               onPress={() => setStrategy(s)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.segmentText, strategy === s && styles.segmentTextActive]}>
-                {s === 'avalanche' ? '🌊 Avalanche' : '⛄ Snowball'}
-              </Text>
+              <View style={styles.segmentInner}>
+                <Ionicons
+                  name={s === 'avalanche' ? 'water-outline' : 'snow-outline'}
+                  size={15}
+                  color={strategy === s ? Colors.textPrimary : Colors.textSecondary}
+                />
+                <Text style={[styles.segmentText, strategy === s && styles.segmentTextActive]}>
+                  {s === 'avalanche' ? 'Avalanche' : 'Snowball'}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -122,24 +134,20 @@ export default function DebtPayoffScreen({ route }: Props) {
         </GlassCard>
 
         {/* Extra payment */}
-        <Text style={styles.sectionLabel}>Extra Monthly Payment</Text>
+        <SectionLabel>Extra Monthly Payment</SectionLabel>
         <View style={styles.extraGroup}>
           {[0, 50, 100, 200, 500].map((amt) => (
-            <TouchableOpacity
+            <SelectableChip
               key={amt}
-              style={[styles.extraBtn, extra === amt && styles.extraBtnActive]}
+              label={amt === 0 ? 'Min Only' : `+${fmt(amt)}`}
+              active={extra === amt}
               onPress={() => setExtra(amt)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.extraBtnText, extra === amt && styles.extraBtnTextActive]}>
-                {amt === 0 ? 'Min Only' : `+${fmt(amt)}`}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
         </View>
 
         {/* Debt list */}
-        <Text style={styles.sectionLabel}>Priority Order — {strategy === 'avalanche' ? 'Highest Rate First' : 'Lowest Balance First'}</Text>
+        <SectionLabel>Priority Order — {strategy === 'avalanche' ? 'Highest Rate First' : 'Lowest Balance First'}</SectionLabel>
         <View style={styles.debtGroup}>
           {sortedDebts.map((debt, i) => (
             <React.Fragment key={debt.name}>
@@ -150,14 +158,14 @@ export default function DebtPayoffScreen({ route }: Props) {
                 </View>
                 <View style={styles.debtInfo}>
                   <View style={styles.debtHeader}>
-                    <Text style={styles.debtName}>{debt.name}</Text>
-                    <StatusPill label={debt.urgency} variant={urgencyVariant(debt.urgency) as any} />
+                    <Text style={styles.debtName} numberOfLines={1}>{debt.name}</Text>
+                    <SeverityPill level={debt.urgency} />
                   </View>
                   <View style={styles.debtStats}>
                     <Text style={styles.debtStat}>{fmt(debt.balance)}</Text>
                     <Text style={styles.debtStatSep}>·</Text>
-                    <Text style={[styles.debtStat, { color: debt.interestRate > 15 ? Colors.danger : Colors.textSecondary }]}>
-                      {debt.interestRate}% APR
+                    <Text style={[styles.debtStat, { color: debt.interestRate > 0.15 ? Colors.danger : Colors.textSecondary }]}>
+                      {(debt.interestRate * 100).toFixed(2)}% APR
                     </Text>
                     <Text style={styles.debtStatSep}>·</Text>
                     <Text style={styles.debtStat}>Min {fmt(debt.minimumPayment)}</Text>
@@ -179,10 +187,8 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },
   summaryNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
   summaryLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
+  segmentInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   segmentRow: {
     flexDirection: 'row', backgroundColor: Colors.backgroundSecondary,
     borderRadius: Radius.md, padding: Spacing.xs, marginBottom: Spacing.md, gap: 2,
@@ -194,14 +200,6 @@ const styles = StyleSheet.create({
   stratDesc: { padding: Spacing.md, marginBottom: Spacing.xxl },
   stratDescText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
   extraGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.xxl },
-  extraBtn: {
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.pill,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
-  },
-  extraBtnActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
-  extraBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  extraBtnTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   debtGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
