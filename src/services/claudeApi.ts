@@ -378,20 +378,49 @@ export async function uploadAvatar(userId: string, localUri: string): Promise<st
 
 // ─── Community Feed ──────────────────────────────────────────────
 
-export async function getCommunityFeed(userId?: string): Promise<CommunityPost[]> {
+export type FeedSort = 'recent' | 'trending' | 'lowest';
+/** Opaque keyset cursor — the caller just stores it and passes it back. */
+export interface FeedCursor { createdAt: string; score: number; count: number; }
+export interface FeedPage { posts: CommunityPost[]; nextCursor: FeedCursor | null; hasMore: boolean; }
+
+/**
+ * One page of the community feed, ordered + keyset-paginated server-side per tab:
+ *   recent   → created_at DESC                       (created_at is the unique cursor)
+ *   lowest   → score ASC, created_at ASC             (composite — score has heavy ties)
+ *   trending → reaction_count DESC, created_at DESC  (composite — counts have heavy ties)
+ * Fetches limit+1 to detect `hasMore` with no count query. created_at is double-quoted
+ * inside the composite .or() so its timezone "+" survives URL encoding.
+ */
+export async function getCommunityFeed(
+  opts: { sort?: FeedSort; userId?: string; cursor?: FeedCursor | null; limit?: number } = {},
+): Promise<FeedPage> {
+  const { sort = 'recent', userId, cursor = null, limit = 20 } = opts;
+  const empty: FeedPage = { posts: [], nextCursor: null, hasMore: false };
   const client = getSupabase();
-  if (!client) return [];
+  if (!client) return empty;
   try {
-    let query = (client as any)
-      .from('community_posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+    let query = (client as any).from('community_posts').select('*');
+
+    if (sort === 'lowest') {
+      query = query.order('score', { ascending: true }).order('created_at', { ascending: true });
+      if (cursor) query = query.or(`score.gt.${cursor.score},and(score.eq.${cursor.score},created_at.gt."${cursor.createdAt}")`);
+    } else if (sort === 'trending') {
+      query = query.order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
+      if (cursor) query = query.or(`reaction_count.lt.${cursor.count},and(reaction_count.eq.${cursor.count},created_at.lt."${cursor.createdAt}")`);
+    } else {
+      query = query.order('created_at', { ascending: false });
+      if (cursor) query = query.lt('created_at', cursor.createdAt);
+    }
+    query = query.limit(limit + 1);
 
     const { data, error } = await query;
     if (error) throw error;
 
-    let posts: CommunityPost[] = (data || []).map((p: any) => ({
+    const rows = data || [];
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+
+    let posts: CommunityPost[] = pageRows.map((p: any) => ({
       id: p.id,
       user_id: p.user_id,
       display_name: p.display_name,
@@ -404,20 +433,59 @@ export async function getCommunityFeed(userId?: string): Promise<CommunityPost[]
       my_reactions: [],
     }));
 
-    if (userId) {
+    if (userId && posts.length) {
+      const ids = posts.map((p) => p.id);
       const { data: myReactions } = await (client as any)
         .from('post_reactions')
         .select('post_id, emoji')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .in('post_id', ids);
       const reactMap: Record<string, string[]> = {};
       (myReactions || []).forEach((r: any) => { (reactMap[r.post_id] ||= []).push(r.emoji); });
       posts = posts.map((p) => ({ ...p, my_reactions: reactMap[p.id] || [] }));
     }
 
-    return posts;
+    const last: any = pageRows[pageRows.length - 1];
+    const nextCursor: FeedCursor | null = hasMore && last
+      ? { createdAt: last.created_at, score: last.score, count: last.reaction_count ?? 0 }
+      : null;
+
+    return { posts, nextCursor, hasMore };
   } catch (error) {
     console.warn('Failed to fetch community feed:', error);
-    return [];
+    return empty;
+  }
+}
+
+/** Authoritative reaction state for a single post — used to patch one card after an
+ *  optimistic reaction fails, without resetting the whole paginated feed. */
+export async function getPostReactions(
+  postId: string,
+  userId?: string,
+): Promise<{ reactions: Record<string, number>; my_reactions: string[] } | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  try {
+    const { data, error } = await (client as any)
+      .from('community_posts')
+      .select('reactions')
+      .eq('id', postId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    let my_reactions: string[] = [];
+    if (userId) {
+      const { data: mine } = await (client as any)
+        .from('post_reactions')
+        .select('emoji')
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+      my_reactions = (mine || []).map((r: any) => r.emoji);
+    }
+    return { reactions: data.reactions || {}, my_reactions };
+  } catch (error) {
+    console.warn('Failed to fetch post reactions:', error);
+    return null;
   }
 }
 
