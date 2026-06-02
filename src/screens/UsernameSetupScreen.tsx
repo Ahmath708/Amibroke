@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import AppTextInput from '@/components/AppTextInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import { impact, ImpactFeedbackStyle } from '@/utils/haptics';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -52,7 +52,7 @@ export default function UsernameSetupScreen({ navigation }: Props) {
 
     const result = data as { ok: boolean; username?: string; error?: string } | null;
     if (result?.ok) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      impact(ImpactFeedbackStyle.Medium);
       // Username set → re-resolve the gate; AppNavigator swaps to the app stack.
       refreshProfile();
     } else if (result?.error === 'taken') {

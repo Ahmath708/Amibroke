@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Animated,
 } from 'react-native';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
-import * as Haptics from 'expo-haptics';
+import { selection } from '@/utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -115,7 +115,7 @@ export default function CommunityFeedScreen() {
     const post = posts.find((p) => p.id === postId);
     if (!post) return;
     const adding = !post.my_reactions.includes(emoji);
-    Haptics.selectionAsync().catch(() => {});
+    selection();
     pendingRef.current.add(key);
 
     // Optimistic: flip local state immediately so the tap feels instant. The DB

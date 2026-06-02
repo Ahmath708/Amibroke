@@ -297,6 +297,59 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
   }
 }
 
+export interface AnalysesPage { items: AnalysisHistoryItem[]; nextCursor: string | null; hasMore: boolean; }
+
+function mapAnalysisRow(row: any): AnalysisHistoryItem {
+  return {
+    id: row.id,
+    score: row.score,
+    score_label: row.score_label,
+    summary: row.summary,
+    created_at: row.created_at,
+    emotional_status: row.emotional_status,
+    has_action_plan: !!(row.action_plan && (Array.isArray(row.action_plan) ? row.action_plan.length > 0 : true)),
+    has_captions: !!row.share_captions,
+  };
+}
+
+/** One keyset-paginated page of all the user's analyses (created_at DESC) — for the
+ *  "View All" screen. N+1 to detect hasMore, cursor = last item's created_at. */
+export async function getAnalysesPage(
+  opts: { userId: string; cursor?: string | null; limit?: number },
+): Promise<AnalysesPage> {
+  const { userId, cursor = null, limit = 20 } = opts;
+  const { USE_AI_MOCKS } = require('@/config/ai');
+  if (USE_AI_MOCKS) {
+    const { MOCK_HISTORY } = require('@/__fixtures__/mockHistory');
+    const all: AnalysisHistoryItem[] = MOCK_HISTORY;
+    const start = cursor ? all.findIndex((a) => a.created_at === cursor) + 1 : 0;
+    const items = all.slice(start, start + limit);
+    const hasMore = start + limit < all.length;
+    return { items, nextCursor: items.length ? items[items.length - 1].created_at : null, hasMore };
+  }
+  const empty: AnalysesPage = { items: [], nextCursor: null, hasMore: false };
+  const client = getSupabase();
+  if (!client) return empty;
+  try {
+    let q = (client as any)
+      .from('analyses')
+      .select('id, score, score_label, summary, created_at, emotional_status, action_plan, share_captions')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1);
+    if (cursor) q = q.lt('created_at', cursor);
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = data || [];
+    const hasMore = rows.length > limit;
+    const items = (hasMore ? rows.slice(0, limit) : rows).map(mapAnalysisRow);
+    return { items, nextCursor: items.length ? items[items.length - 1].created_at : null, hasMore };
+  } catch (error) {
+    console.warn('Failed to fetch analyses page:', error);
+    return empty;
+  }
+}
+
 export async function getProfile(userId: string): Promise<any> {
   const client = getSupabase();
   if (!client) return null;
@@ -375,6 +428,21 @@ export async function uploadAvatar(userId: string, localUri: string): Promise<st
   }
 }
 
+
+/** Delete all of the user's analyses (Settings → Clear Analysis History).
+ *  RLS allows deleting own rows; community_posts.analysis_id is ON DELETE SET NULL. */
+export async function deleteAllAnalyses(userId: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await (client as any).from('analyses').delete().eq('user_id', userId);
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.warn('Failed to clear analyses:', error);
+    return false;
+  }
+}
 
 // ─── Community Feed ──────────────────────────────────────────────
 

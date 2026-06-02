@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
+import { impact, ImpactFeedbackStyle } from '@/utils/haptics';
 import { Colors, Radius, Spacing, Typography } from '@/theme/colors';
 
 interface Props {
@@ -38,7 +38,7 @@ export default function NeonButton({
 }: Props) {
   const handlePress = () => {
     if (disabled || loading) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact(ImpactFeedbackStyle.Medium);
     onPress();
   };
 

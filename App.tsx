@@ -24,6 +24,8 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/theme/colors';
 import { initAnalytics } from './src/services/analytics';
 import { configurePurchases } from './src/services/purchases';
+import { loadHapticsPref } from './src/utils/haptics';
+import BiometricLockGate from './src/components/BiometricLockGate';
 
 // Suppress the in-app LogBox warning overlay in dev. The simulator warnings here
 // are known-benign noise (see CLAUDE.md "Gotchas") and the overlay sits over the
@@ -74,6 +76,7 @@ export default function App() {
     }
 
     bootstrap();
+    loadHapticsPref();
     initAnalytics().catch(() => {});
     // Configure RevenueCat anonymously at startup; AuthContext calls logIn once
     // the user is known so purchases map to the Supabase user id.
@@ -125,7 +128,9 @@ export default function App() {
           },
         }}
       >
-        <AppNavigator />
+        <BiometricLockGate>
+          <AppNavigator />
+        </BiometricLockGate>
       </NavigationContainer>
       </LegalProvider>
       </ErrorBoundary>

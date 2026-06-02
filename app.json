@@ -21,7 +21,8 @@
       "bundleIdentifier": "com.aibroke.app",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Used for voice input to describe your financial situation."
+        "NSMicrophoneUsageDescription": "Used for voice input to describe your financial situation.",
+        "NSFaceIDUsageDescription": "Used to lock the app so only you can view your financial data."
       }
     },
     "android": {

@@ -11,13 +11,17 @@ import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
+import * as Notifications from 'expo-notifications';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth, setPendingRedirect } from '@/context/AuthContext';
 import { useLegal } from '@/context/LegalContext';
-import { downloadUserData, deleteUserData, anonymizeUserData } from '@/services/gdpr';
+import { deleteUserData } from '@/services/gdpr';
+import { setHapticsEnabled, getHapticsEnabled } from '@/utils/haptics';
+import { isBiometricAvailable, isLockEnabled, setLockEnabled, authenticate } from '@/services/biometric';
 import { useSubscription } from '@/hooks/useSubscription';
 import { manageSubscriptions } from '@/services/purchases';
 import { PURCHASE_PRODUCTS } from '@/types';
-import { getCheckinConfig, getCheckIns } from '@/services/claudeApi';
+import { getCheckinConfig, getCheckIns, deleteAllAnalyses } from '@/services/claudeApi';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import {
   requestNotificationPermission, scheduleCheckinReminder, cancelCheckinReminders,
@@ -37,22 +41,64 @@ export default function SettingsScreen({ navigation }: Props) {
   const { tier, premium } = useSubscription();
   const { showLegal } = useLegal();
   const [toggles, setToggles] = useState({
-    notifications: true,
+    notifications: false,
     monthlyReminder: false,
-    communityVisible: true,
     haptics: true,
     faceID: false,
   });
   const [gdprLoading, setGdprLoading] = useState<string | null>(null);
   const { animatedStyle } = useEntryAnimation();
 
-  // Reflect the persisted monthly-reminder state on mount.
+  // Reflect persisted / OS state on mount.
   useEffect(() => {
     getCheckinReminderEnabled().then((on) => setToggles((p) => ({ ...p, monthlyReminder: on })));
+    isLockEnabled().then((on) => setToggles((p) => ({ ...p, faceID: on })));
+    Notifications.getPermissionsAsync().then((s) => setToggles((p) => ({ ...p, notifications: s.granted }))).catch(() => {});
+    setToggles((p) => ({ ...p, haptics: getHapticsEnabled() }));
   }, []);
 
-  const toggle = (key: string) =>
-    setToggles((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+  // Push Notifications: iOS can't revoke permission in-app, so reflect the real
+  // permission and route to iOS Settings to change it.
+  const onTogglePush = async (next: boolean) => {
+    if (next) {
+      const granted = await requestNotificationPermission();
+      setToggles((p) => ({ ...p, notifications: granted }));
+      if (!granted) {
+        Alert.alert('Enable in Settings', 'Turn on notifications for Am I Broke? in iOS Settings.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]);
+      }
+    } else {
+      Alert.alert('Manage in Settings', 'Turn notifications off for Am I Broke? in iOS Settings.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]);
+      const s = await Notifications.getPermissionsAsync();
+      setToggles((p) => ({ ...p, notifications: s.granted })); // stays reflecting reality
+    }
+  };
+
+  const onToggleHaptics = (next: boolean) => {
+    setToggles((p) => ({ ...p, haptics: next }));
+    setHapticsEnabled(next);
+  };
+
+  // Face ID / Touch ID app lock. Enabling requires hardware + a confirming auth.
+  const onToggleFaceID = async (next: boolean) => {
+    if (next) {
+      if (!(await isBiometricAvailable())) {
+        Alert.alert('Biometrics unavailable', 'Set up Face ID or Touch ID on your device first, then try again.');
+        return; // leave the toggle off
+      }
+      if (!(await authenticate('Enable app lock'))) return; // auth failed/cancelled
+      await setLockEnabled(true);
+      setToggles((p) => ({ ...p, faceID: true }));
+    } else {
+      await setLockEnabled(false);
+      setToggles((p) => ({ ...p, faceID: false }));
+    }
+  };
 
   // Monthly check-in reminder: request permission, schedule at the next anchor, persist.
   const onToggleReminder = async (next: boolean) => {
@@ -77,21 +123,6 @@ export default function SettingsScreen({ navigation }: Props) {
       setToggles((p) => ({ ...p, monthlyReminder: false }));
       await setCheckinReminderEnabledFlag(false);
       await cancelCheckinReminders();
-    }
-  };
-
-  const handleExportData = async () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to export your data.');
-      return;
-    }
-    setGdprLoading('export');
-    const success = await downloadUserData(user.id);
-    setGdprLoading(null);
-    if (success) {
-      Alert.alert('Data Exported', 'Your data has been downloaded as a JSON file.');
-    } else {
-      Alert.alert('Export Failed', 'Could not export your data. Please try again.');
     }
   };
 
@@ -122,34 +153,9 @@ export default function SettingsScreen({ navigation }: Props) {
     );
   };
 
-  const handleAnonymize = async () => {
-    if (!user) return;
-    Alert.alert(
-      'Anonymize Account?',
-      'This will remove your personal info but keep your analysis history.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Anonymize',
-          style: 'destructive',
-          onPress: async () => {
-            setGdprLoading('anonymize');
-            const result = await anonymizeUserData(user.id);
-            setGdprLoading(null);
-            if (result.success) {
-              Alert.alert('Anonymized', 'Your account has been anonymized.');
-            } else {
-              Alert.alert('Failed', result.error || 'Could not anonymize your account.');
-            }
-          },
-        },
-      ],
-    );
-  };
-
   const accountRows: SettingRow[] = [
-    { type: 'nav', label: 'Profile', icon: '👤', detail: '@yourusername', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },
-    { type: 'nav', label: 'Subscription', icon: '💳', detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
+    { type: 'nav', label: 'Profile', icon: 'person-outline', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },
+    { type: 'nav', label: 'Subscription', icon: 'card-outline', detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
       if (!user) {
         setPendingRedirect('Paywall');
         navigation.navigate('Login');
@@ -159,7 +165,7 @@ export default function SettingsScreen({ navigation }: Props) {
         navigation.navigate('Paywall');
       }
     }},
-    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: '📈' as const, onPress: () => navigation.navigate('CreatorDashboard') }] : []),
+    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: 'trending-up-outline', onPress: () => navigation.navigate('CreatorDashboard') }] : []),
   ];
 
   const SECTIONS: { title: string; rows: SettingRow[] }[] = [
@@ -170,48 +176,48 @@ export default function SettingsScreen({ navigation }: Props) {
     {
       title: 'Notifications',
       rows: [
-        { type: 'toggle', label: 'Push Notifications', key: 'notifications', icon: '🔔' },
-        { type: 'toggle', label: 'Monthly Check-In Reminder', key: 'monthlyReminder', icon: '📅', detail: 'On your check-in date each month' },
+        { type: 'toggle', label: 'Push Notifications', key: 'notifications', icon: 'notifications-outline' },
+        { type: 'toggle', label: 'Monthly Check-In Reminder', key: 'monthlyReminder', icon: 'calendar-outline', detail: 'On your check-in date each month' },
       ],
     },
     {
-      title: 'Privacy',
+      title: 'Security',
       rows: [
-        { type: 'toggle', label: 'Appear in Community Feed', key: 'communityVisible', icon: '👥' },
-        { type: 'toggle', label: 'Face ID / Touch ID', key: 'faceID', icon: '🔐' },
+        { type: 'toggle', label: 'Face ID / Touch ID', key: 'faceID', icon: 'finger-print-outline', detail: 'Require unlock to open the app' },
       ],
     },
     {
       title: 'App',
       rows: [
-        { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: '📳' },
-        { type: 'nav', label: 'Monthly Check-In', icon: '📋', onPress: () => navigation.navigate('MonthlyCheckIn') },
-        { type: 'nav', label: 'Subscription Audit', icon: '🗂️', onPress: () => navigation.navigate('SubscriptionAudit') },
+        { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: 'pulse-outline' },
+        { type: 'nav', label: 'Monthly Check-In', icon: 'clipboard-outline', onPress: () => navigation.navigate('MonthlyCheckIn') },
+        { type: 'nav', label: 'Subscription Audit', icon: 'search-outline', onPress: () => navigation.navigate('SubscriptionAudit') },
       ],
     },
     {
       title: 'Support',
       rows: [
-        { type: 'nav', label: 'Help & FAQ', icon: '❓', onPress: () => navigation.navigate('HelpFAQ') },
-        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => showLegal('privacy') },
-        { type: 'nav', label: 'Terms of Service', icon: '📄', onPress: () => showLegal('terms') },
-        { type: 'nav', label: 'Rate Am I Broke?', icon: '⭐', onPress: () => Linking.openURL('https://apps.apple.com/app/am-i-broke/id123456789') },
-      ],
-    },
-    {
-      title: 'Privacy & Data',
-      rows: [
-        { type: 'action', label: 'Export My Data', icon: '📥', detail: 'Download all your data as JSON', onPress: handleExportData },
-        { type: 'action', label: 'Anonymize Account', icon: '👤', detail: 'Remove personal info', onPress: handleAnonymize },
-        { type: 'nav', label: 'Privacy Policy', icon: '🔒', onPress: () => showLegal('privacy') },
+        { type: 'nav', label: 'Help & FAQ', icon: 'help-circle-outline', onPress: () => navigation.navigate('HelpFAQ') },
+        { type: 'nav', label: 'Privacy Policy', icon: 'lock-closed-outline', onPress: () => showLegal('privacy') },
+        { type: 'nav', label: 'Terms of Service', icon: 'document-text-outline', onPress: () => showLegal('terms') },
+        { type: 'nav', label: 'Rate Am I Broke?', icon: 'star-outline', onPress: () => Linking.openURL('https://apps.apple.com/app/am-i-broke/id123456789') },
       ],
     },
     {
       title: 'Danger Zone',
       rows: [
-        { type: 'action', label: 'Sign Out', icon: '🚪', destructive: true, onPress: () => signOut() },
-        { type: 'action', label: 'Clear Analysis History', icon: '🗑️', destructive: true, onPress: () => Alert.alert('Clear History?', 'This cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Clear', style: 'destructive', onPress: () => {} }]) },
-        { type: 'action', label: 'Delete Account', icon: '❌', destructive: true, onPress: handleDeleteAccount },
+        { type: 'action', label: 'Sign Out', icon: 'log-out-outline', destructive: true, onPress: () => signOut() },
+        { type: 'action', label: 'Clear Analysis History', icon: 'trash-outline', destructive: true, onPress: () => {
+          if (!user) return;
+          Alert.alert('Clear History?', 'This permanently deletes all your analyses. This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Clear', style: 'destructive', onPress: async () => {
+              const ok = await deleteAllAnalyses(user.id);
+              Alert.alert(ok ? 'History Cleared' : 'Failed', ok ? 'All your analyses have been deleted.' : 'Could not clear your history.');
+            } },
+          ]);
+        } },
+        { type: 'action', label: 'Delete Account', icon: 'close-circle-outline', destructive: true, onPress: handleDeleteAccount },
       ],
     },
   ];
@@ -243,7 +249,11 @@ export default function SettingsScreen({ navigation }: Props) {
                     <View style={styles.cell}>
                       <View style={styles.cellLeft}>
                         <View style={[styles.iconBadge, row.type === 'action' && row.destructive && styles.iconBadgeDanger]}>
-                          <Text style={styles.cellIcon}>{row.icon}</Text>
+                          <Ionicons
+                            name={row.icon as any}
+                            size={18}
+                            color={row.type === 'action' && row.destructive ? Colors.danger : Colors.primary}
+                          />
                         </View>
                         <View>
                           <Text style={[
@@ -257,7 +267,12 @@ export default function SettingsScreen({ navigation }: Props) {
                         {row.type === 'toggle' && (
                           <Switch
                             value={toggles[row.key as keyof typeof toggles]}
-                            onValueChange={(v) => (row.key === 'monthlyReminder' ? onToggleReminder(v) : toggle(row.key))}
+                            onValueChange={(v) => {
+                              if (row.key === 'monthlyReminder') onToggleReminder(v);
+                              else if (row.key === 'notifications') onTogglePush(v);
+                              else if (row.key === 'haptics') onToggleHaptics(v);
+                              else if (row.key === 'faceID') onToggleFaceID(v);
+                            }}
                             trackColor={{ false: Colors.backgroundSecondary, true: Colors.primarySolid }}
                             thumbColor="#fff"
                             ios_backgroundColor={Colors.backgroundSecondary}
@@ -336,5 +351,5 @@ const styles = StyleSheet.create({
   cellDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
   cellRight: { marginLeft: Spacing.sm },
   chevronBtn: { padding: 4 },
-  chevron: { fontSize: Typography.title2.fontSize, color: Colors.textMuted, fontWeight: '300' },
+  chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
 });

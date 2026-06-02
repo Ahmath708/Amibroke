@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import AppTextInput from '@/components/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { selection } from '@/utils/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -136,7 +136,7 @@ export default function HomeScreen({ navigation }: Props) {
   }, [listening]);
 
   const applySuggestion = (chip: string) => {
-    Haptics.selectionAsync().catch(() => {});
+    selection();
     // Replace the current input with the suggestion (clear-then-insert).
     setInput(chip);
     // Bounce the tapped chip.

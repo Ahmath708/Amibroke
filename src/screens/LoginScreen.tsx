@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, Alert, Animated,
 } from 'react-native';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
-import * as Haptics from 'expo-haptics';
+import { impact, notify, ImpactFeedbackStyle, NotificationFeedbackType } from '@/utils/haptics';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,7 +50,7 @@ export default function LoginScreen({ navigation, route }: Props) {
 
   const requireTerms = () => {
     if (termsAgreed) return true;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    notify(NotificationFeedbackType.Warning);
     Alert.alert('One more thing', 'Please agree to the Terms of Service and Privacy Policy first.');
     return false;
   };
@@ -236,7 +236,7 @@ export default function LoginScreen({ navigation, route }: Props) {
           <TouchableOpacity
             style={styles.termsRow}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              impact(ImpactFeedbackStyle.Light);
               setTermsAgreed(!termsAgreed);
             }}
             activeOpacity={0.7}
