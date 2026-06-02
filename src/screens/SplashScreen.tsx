@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { Colors, Typography, Spacing } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -79,14 +78,7 @@ export default function SplashScreen() {
 
       {/* Logo */}
       <Animated.View style={[styles.logoWrap, { transform: [{ scale }], opacity }]}>
-        <LinearGradient
-          colors={Colors.gradientPrimary}
-          style={styles.logoCircle}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.logoEmoji}>💸</Text>
-        </LinearGradient>
+        <Image source={require('../../assets/logo-mark.png')} style={styles.logoImage} resizeMode="contain" />
       </Animated.View>
 
       {/* Text group */}
@@ -159,14 +151,10 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 20,
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImage: {
+    width: 140,
+    height: 140,
   },
-  logoEmoji: { fontSize: 48 },
   textGroup: { alignItems: 'center', gap: Spacing.xs },
   appName: {
     fontFamily: Typography.fonts.heading,

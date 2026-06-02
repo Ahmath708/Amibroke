@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert, Animated,
+  KeyboardAvoidingView, Platform, ScrollView, Alert, Animated, Image,
 } from 'react-native';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { impact, notify, ImpactFeedbackStyle, NotificationFeedbackType } from '@/utils/haptics';
@@ -119,7 +119,7 @@ export default function LoginScreen({ navigation, route }: Props) {
         >
           {/* Header — app mock logo + wordmark + rotating tagline */}
           <View style={styles.header}>
-            <View style={styles.logoMini}><Text style={styles.logoEmoji}>💸</Text></View>
+            <Image source={require('../../assets/logo-mark.png')} style={styles.logoMark} resizeMode="contain" />
             <Text style={styles.wordmark}>Am I Broke?</Text>
             <TypingPlaceholder placeholders={TAGLINES} style={styles.tagline} textStyle={styles.taglineText} />
           </View>
@@ -270,13 +270,9 @@ const styles = StyleSheet.create({
   backBtn: { padding: Spacing.xs },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xs },
   header: { alignItems: 'center', marginBottom: Spacing.md },
-  logoMini: {
-    width: 64, height: 64, borderRadius: Radius.xxl,
-    backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.sm,
-    shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.45, shadowRadius: 16, elevation: 8,
+  logoMark: {
+    width: 92, height: 92, marginBottom: Spacing.sm,
   },
-  logoEmoji: { fontSize: 36 },
   wordmark: {
     fontFamily: Typography.fonts.heading,
     fontSize: Typography.title1.fontSize, fontWeight: '700',
