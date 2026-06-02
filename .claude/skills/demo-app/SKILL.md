@@ -98,6 +98,35 @@ Total ≈ 90s of motion inside the ~100s window (buffer at the tail).
 - If a beat is off (mistimed sheet, scroll too fast, missed tap), reset to Phase 0 and re-record
   with adjusted sleeps/targets. The `.mp4` is the deliverable; frames are for QA.
 
+## Calibrated targets (SE · recalibrate on any layout change)
+
+Captured against the current SDK-55 build. **Key finding:** `idb ui describe-all` returns
+**content-space** coords on scrollable screens (e.g. the Paywall CTA reports y≈1487 on a 667pt
+screen). So only **fixed-position** elements are tap-safe from a cached coord; **scrollable**
+targets must be **scrolled into view, then `describe-all`-located live**; OS sheets/alerts (Sign Out
+confirm, Google account, Test Store) are located live too.
+
+**Timing (cold launch → screen):** springboard ~1s → splash (native + in-app logo) →
+**Landing ≈ 4.5s**. Begin the Landing dwell at ~4.5s.
+
+**Fixed coords (x,y @ SE 375×667):**
+- Tab bar (y≈643): Home `62` · Tools `188` · Community `312`.
+- Dashboard (scrolled to top): avatar→Profile `336,47` · New roast `188,340` · trend "View all"→History `327,454` · "Your plan & tools"→Tools `188,593`.
+- Landing: "Get Started" `187,586` · "Sign in" link `187,640`.
+- Login (Sign-In mode): Sign In seg `105,183` · Sign Up seg `269,183` · **…with Google** `187,294` · legal row `187,507` (Terms ≈ `145,507`, Privacy ≈ `300,507`) · submit `187,558`.
+- Sign Out confirm alert: Cancel `113,379` · **Sign Out** `261,379`.
+- Test Store sheet (after "Start 7-Day Free Trial"): **Test valid purchase** ≈ `188,424` (verify live).
+
+**Scroll + live-locate (do NOT cache):** Paywall (plan cards, "Start 7-Day Free Trial" CTA —
+Deep Dive is default-selected), Profile rows ("Your Plan"→Paywall while free), Results content,
+the Financial Context form, Community feed, Tools grid. Swipe to reveal, then `describe-all` → tap.
+
+**Driver rules:**
+- Fixed element → tap cached coord. Scrollable target → swipe to reveal → `describe-all` → tap.
+- Variable transition (splash→Landing, Google→Dashboard, Analyze→Processing→Results,
+  Start-Trial→Test-Store) → **poll `describe-all` until the expected element appears**, then act
+  (don't blind-sleep). Google's account sheet auto-resolves — just wait for the Dashboard.
+
 ## Guardrails
 
 - Start signed OUT every run (Phase 0) or the splash→Landing→auth beats won't happen.
