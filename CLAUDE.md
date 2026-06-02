@@ -30,9 +30,11 @@ and correctness as first-class.
 
 ## Tech stack
 
-- **App:** Expo SDK 54, React Native 0.81.5, React 19.1.0, TypeScript 5.9 (`strict`), New
+- **App:** Expo SDK 55, React Native 0.83.6, React 19.2.0, TypeScript 5.9 (`strict`), New
   Architecture enabled. Metro bundler. Entry: `App.tsx` → `src/navigation/AppNavigator.tsx`.
-- **Navigation:** React Navigation v7 — native-stack + bottom-tabs (+ legacy stack).
+- **Navigation:** React Navigation v7 — native-stack + bottom-tabs (+ legacy stack). Tabs are
+  **Home (`DashboardScreen`) · Tools · Community**; the analyze input is `HomeScreen`, pushed as
+  the **"New Roast"** (`Analyze`) route; **Profile** and **History** are pushed stack screens.
 - **State:** React Context (`AuthContext`) + hooks. No Redux/MobX. Local persistence via
   `@react-native-async-storage/async-storage`.
 - **Backend:** Supabase — Postgres (SQL migrations + RLS) and **Deno edge functions**. LLM work
@@ -71,7 +73,9 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
   manual-test.ts         Human-review CLI for the edge functions, `--input <name>` / `--save` (PAID — rule #1)
   test_anthropic.ts      Deprecated direct-Anthropic probe — use manual-test.ts (PAID — rule #1)
   deploy-all.sh          Deploy all 6 Supabase edge functions + run migrations
+  run-sim.sh             Build+launch on the iOS sim (`npm run ios:sim`) — see the gotcha below
   sim-capture.sh         Drive the iOS simulator via idb to screenshot a long screen for UI review
+  sim-record.sh          Record the booted sim to mp4 + extract frames (motion: splash/transitions/anims)
   lib/call-counter.ts    Shared 40-call/session hard cap used by the paid scripts
 ```
 
@@ -113,7 +117,8 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
 ## Common commands
 
 ```bash
-npx expo run:ios --device "iPhone SE (3rd generation)"   # build+run on a specific simulator
+npm run ios:sim                                           # build+launch on the SE sim (USE THIS — see gotcha)
+npx expo run:ios --device "iPhone SE (3rd generation)"   # ⚠️ broken under Xcode 26 + SDK 55 (signing error)
 npx expo start                                            # Metro (press shift+i to switch sims)
 npx tsc --noEmit                                          # typecheck the app
 npm test                                                  # jest
@@ -129,6 +134,11 @@ RevenueCat webhook auth, service role) are set via `supabase secrets set` and ar
 client-side.
 
 ## Gotchas
+
+- **Build with `npm run ios:sim`, not `expo run:ios`.** Under Xcode 26 + Expo SDK 55, `expo run:ios`
+  (and the `ios`/`ios:se` scripts) mis-resolve the destination to a device/Mac target and fail with
+  "No code signing certificates are available." `tools/run-sim.sh` builds the *iphonesimulator* SDK
+  directly (no signing) and installs/launches via `simctl`, sidestepping Expo's device picker.
 
 - **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
   timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
