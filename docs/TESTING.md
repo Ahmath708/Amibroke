@@ -7,7 +7,7 @@ The project uses a structured eval framework to test backend edge functions (ana
 ### Structure
 
 ```
-scripts/eval/
+tools/eval/
 ├── lib/
 │   └── harness.ts          # Shared test harness (fixture runner, assertions, logging)
 ├── fixtures.analyze.ts     # 13 test fixtures for analyze
@@ -25,15 +25,15 @@ scripts/eval/
 
 ```bash
 # Run all fixtures for a function
-npx tsx scripts/eval/runner.action-plan.ts --cycle 4 --fixture all
+npx tsx tools/eval/runner.action-plan.ts --cycle 4 --fixture all
 
 # Run a specific fixture
-npx tsx scripts/eval/runner.action-plan.ts --cycle 4 --fixture ap_fragile_negative_savings
+npx tsx tools/eval/runner.action-plan.ts --cycle 4 --fixture ap_fragile_negative_savings
 ```
 
 ### Cycle conventions
 
-- Each cycle increments the counter in `scripts/eval/lib/harness.ts` (max 40 calls before reset)
+- Each cycle increments the counter in `tools/eval/lib/harness.ts` (max 40 calls before reset)
 - Results append to `results/SUMMARY.md`
 - If a hypothesis (prompt change) is KEPT, mark it explicitly in the summary
 

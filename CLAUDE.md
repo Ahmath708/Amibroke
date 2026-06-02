@@ -7,8 +7,8 @@ Guidance for Claude Code working in this repository. Read this first.
 1. **Paid API cost confirmation.** Before running any script that calls the Anthropic API, the
    Groq API, or any other paid external API, first tell the human how many calls the script will
    make and the estimated cost. Wait for human confirmation before executing. **Never run paid
-   scripts silently.** (Notable paid scripts: `scripts/test_anthropic.ts`, `scripts/eval/*`,
-   `scripts/manual-test.ts`.)
+   scripts silently.** (Notable paid scripts: `tools/test_anthropic.ts`, `tools/eval/*`,
+   `tools/manual-test.ts`.)
 2. **AI mocks are ON in dev by default** (`src/config/ai.ts` → `USE_AI_MOCKS = __DEV__ && true`)
    so the frontend never burns API credits during QA. Mocks never ship to prod (`__DEV__` is
    false in release). Only flip mocks off deliberately, and mind rule #1 when you do.
@@ -37,7 +37,7 @@ and correctness as first-class.
   `@react-native-async-storage/async-storage`.
 - **Backend:** Supabase — Postgres (SQL migrations + RLS) and **Deno edge functions**. LLM work
   (Anthropic Claude + Groq) lives server-side in edge functions, keyed by Supabase secrets.
-- **Payments:** RevenueCat In-App Purchase (`react-native-purchases`). See `REVENUECAT_SETUP.md`.
+- **Payments:** RevenueCat In-App Purchase (`react-native-purchases`). See `docs/REVENUECAT_SETUP.md`.
 - **Auth:** Supabase Auth, Google OAuth via PKCE (`expo-auth-session`); deep-link scheme
   `amibroke://`.
 - **Analytics:** PostHog (`posthog-react-native`), forced onto AsyncStorage.
@@ -66,7 +66,13 @@ shared/                  Framework-agnostic financial logic shared by app + edge
 supabase/
   migrations/            00001–00014, applied via `supabase db push`
   functions/             Deno edge functions (see below)
-scripts/                 deploy-all.sh, eval/, manual-test.ts, test_anthropic.ts (PAID — rule #1)
+tools/                   Dev / test / ops scripts — NOT bundled into the app (`tsconfig` excludes it)
+  eval/                  LLM eval harness: fixtures, runners, Zod assertions, cycle results in results/ (PAID — rule #1)
+  manual-test.ts         Human-review CLI for the edge functions, `--input <name>` / `--save` (PAID — rule #1)
+  test_anthropic.ts      Deprecated direct-Anthropic probe — use manual-test.ts (PAID — rule #1)
+  deploy-all.sh          Deploy all 6 Supabase edge functions + run migrations
+  sim-capture.sh         Drive the iOS simulator via idb to screenshot a long screen for UI review
+  lib/call-counter.ts    Shared 40-call/session hard cap used by the paid scripts
 ```
 
 ### `src/services/` (the IO layer)
@@ -93,7 +99,7 @@ scripts/                 deploy-all.sh, eval/, manual-test.ts, test_anthropic.ts
 - **Theme:** import tokens from `@/theme/colors` (`Colors`, `Typography`, `Spacing`, `Radius`);
   don't hardcode colors/spacing.
 - **File references in chat:** use clickable markdown links, e.g. `[file.ts:42](src/file.ts#L42)`.
-- **`tsconfig` excludes** `supabase/` and `scripts/` (they're Deno/Node, not RN) — typecheck the
+- **`tsconfig` excludes** `supabase/` and `tools/` (they're Deno/Node, not RN) — typecheck the
   app with `npx tsc --noEmit`.
 
 ## Testing
@@ -128,7 +134,7 @@ client-side.
   timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
 - **RevenueCat is not testable** without a paid Apple Developer Program membership; the dev account
   is free-tier only. Local IAP testing is possible via an Xcode StoreKit Configuration file (no
-  paid account needed) but the webhook→DB mirror still needs sandbox. See `REVENUECAT_SETUP.md`.
+  paid account needed) but the webhook→DB mirror still needs sandbox. See `docs/REVENUECAT_SETUP.md`.
 
 ## Parked / removed features
 

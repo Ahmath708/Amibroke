@@ -7,7 +7,7 @@
 # PNGs between swipes. Built for the "Am I Broke?" UI-polish loop on the iPhone SE.
 #
 # Usage:
-#   scripts/sim-capture.sh <label> [frames] [outdir]
+#   tools/sim-capture.sh <label> [frames] [outdir]
 #     label   prefix for the screenshot files (e.g. "results")
 #     frames  number of screenshots to take (default 5). Swipes happen between them,
 #             so N frames => N-1 swipes.

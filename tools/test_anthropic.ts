@@ -1,9 +1,9 @@
-// DEPRECATED. Use scripts/manual-test.ts (Node + tsx) instead.
+// DEPRECATED. Use tools/manual-test.ts (Node + tsx) instead.
 // This Deno-based script does not work with the new tool-use architecture.
 
 // Test script to call Anthropic Claude Sonnet model directly. (OLD APPROACH — DO NOT USE)
-// Usage (with Deno): deno run -A scripts/test_anthropic.ts "<user input>" [tone]
-// Example: deno run -A scripts/test_anthropic.ts "I earn $5000 a month and spend $3000 on rent and groceries" savage
+// Usage (with Deno): deno run -A tools/test_anthropic.ts "<user input>" [tone]
+// Example: deno run -A tools/test_anthropic.ts "I earn $5000 a month and spend $3000 on rent and groceries" savage
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -14,7 +14,7 @@ if (!ANTHROPIC_API_KEY) {
 
 const args = Deno.args;
 if (args.length < 1) {
-  console.error("Usage: deno run -A scripts/test_anthropic.ts <userInput> [tone]");
+  console.error("Usage: deno run -A tools/test_anthropic.ts <userInput> [tone]");
   Deno.exit(1);
 }
 const userInput = args[0];

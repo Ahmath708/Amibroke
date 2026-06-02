@@ -8,7 +8,7 @@ const INPUTS_DIR = path.resolve(__dirname, 'test-snapshots/inputs');
 const OUTPUTS_DIR = path.resolve(__dirname, 'test-snapshots/outputs');
 
 function usage(): void {
-  console.log('Usage: npx tsx scripts/manual-test.ts <options>');
+  console.log('Usage: npx tsx tools/manual-test.ts <options>');
   console.log('');
   console.log('Options:');
   console.log('  --health-check              Ping the endpoint (1 API call)');
@@ -17,8 +17,8 @@ function usage(): void {
   console.log('  --help                      Show this help');
   console.log('');
   console.log('Examples:');
-  console.log('  npx tsx scripts/manual-test.ts --health-check');
-  console.log('  npx tsx scripts/manual-test.ts --input vague_broke --save');
+  console.log('  npx tsx tools/manual-test.ts --health-check');
+  console.log('  npx tsx tools/manual-test.ts --input vague_broke --save');
   process.exit(0);
 }
 

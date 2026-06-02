@@ -64,7 +64,7 @@ Then Read the PNG. Beyond a single shot:
   transitions (some frames legitimately catch a fade gap — don't mistake it for a bug).
 - **Overflow / scrollable screens (EXPECTED for Settings, Results, ActionPlan, History, long
   forms):** the first viewport is not the whole screen. Scroll and capture multiple sections —
-  use `scripts/sim-capture.sh <label> <frames>` or idb swipes directly:
+  use `tools/sim-capture.sh <label> <frames>` or idb swipes directly:
   - idb binary: `~/.idb-venv/bin/idb`. SE is **375×667** logical. Swipe up (e.g. y 500→200) to
     scroll down. **Do NOT set `IDB_COMPANION`** (idb manages the companion via `idb connect`).
   - Evaluate the entire scroll, not just the top.

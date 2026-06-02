@@ -6,7 +6,7 @@
  * This is BEST-EFFORT and fully defensive — any failure is swallowed so it can
  * never break `expo prebuild`. If it doesn't take effect, set it manually in
  * Xcode: Edit Scheme → Run → Options → StoreKit Configuration → select
- * storekit/AmIBroke.products.storekit (see REVENUECAT_SETUP.md).
+ * storekit/AmIBroke.products.storekit (see docs/REVENUECAT_SETUP.md).
  */
 const { withDangerousMod } = require('@expo/config-plugins');
 const fs = require('fs');

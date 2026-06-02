@@ -104,7 +104,7 @@ export async function runSuite(config: RunConfig): Promise<void> {
       fixtureFilter = args[i + 1];
       i++;
     } else if (args[i] === '--help') {
-      console.log('Usage: npx tsx scripts/eval/runner.<suite>.ts --cycle <n> --fixture <id|all>');
+      console.log('Usage: npx tsx tools/eval/runner.<suite>.ts --cycle <n> --fixture <id|all>');
       console.log('');
       console.log('Options:');
       console.log('  --cycle <n>       Cycle number (default: 1)');

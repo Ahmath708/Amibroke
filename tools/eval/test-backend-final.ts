@@ -1,7 +1,7 @@
-// End-to-end mock tests for 528_BACKEND_FINAL
+// End-to-end mock tests for the backend hardening + subscriptions milestone
 // Requires: supabase start, supabase functions serve (with .env.stripe.local)
 //           stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
-// Run with: npx tsx scripts/eval/test-backend-final.ts
+// Run with: npx tsx tools/eval/test-backend-final.ts
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zefhsplmgxefmpdqbbvv.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZmhzcGxtZ3hlZm1wZHFiYnZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzc5NzksImV4cCI6MjA5NDg1Mzk3OX0.IYVIlo7Na7-L-rHBenSxW3uf_sM88AHg_eQewIxpdRs';
@@ -64,7 +64,7 @@ async function main() {
     return res.ok ? res.json() : null;
   }
 
-  console.log('Starting 528_BACKEND_FINAL E2E tests...\n');
+  console.log('Starting backend E2E tests...\n');
 
   const ts = Date.now();
 

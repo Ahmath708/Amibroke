@@ -124,7 +124,7 @@ All three AI endpoints have:
 - **Rate limiting** — Postgres-backed fixed-window limiter (30 req/hour/IP, env-tunable)
 - **Upstream safety** — 30s fetch timeout via AbortController, max 3 retries, clear error stages
 - **CI/CD** — GitHub Actions workflow (`.github/workflows/ci.yml`) runs typecheck → test → deploy on main
-- **Deploy script** — `scripts/deploy-all.sh` deploys all 6 functions + runs migrations
+- **Deploy script** — `tools/deploy-all.sh` deploys all 6 functions + runs migrations
 - **Pre-commit hook** — `.githooks/pre-commit` runs `npx tsc --noEmit`
 - **Staging** — Separate Supabase project (`zgrfgzjnhkellqgqfque`) for pre-production testing
 
@@ -144,15 +144,15 @@ Both write only on success, return the cached value on subsequent visits, and fa
 
 | Tool | Purpose |
 |------|---------|
-| `scripts/eval/lib/harness.ts` | Shared eval library — runSuite() with cost prompts, raw-output logging, SUMMARY.md |
-| `scripts/eval/runner.analyze.ts` | Analyze runner — 13 fixtures across 5 groups (vague/partial/detailed/edge/CFPB) |
-| `scripts/eval/runner.action-plan.ts` | Action-plan runner — 11 fixtures (8 original + 3 edge: score 0, score 100, multi-debt) |
-| `scripts/eval/runner.captions.ts` | Captions runner — 8 fixtures (6 original + 2 edge: score 0, score 100) |
-| `scripts/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings (word-boundary regex), plan consistency |
-| `scripts/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md — 9 cycles across 6 suites |
-| `scripts/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
-| `scripts/eval/test-backend-final.ts` | 16 E2E tests — auth hardening, community feed, subscriptions against production Supabase |
-| `scripts/manual-test.ts` | Human-review testing with `--input <name>` and `--save` flags |
+| `tools/eval/lib/harness.ts` | Shared eval library — runSuite() with cost prompts, raw-output logging, SUMMARY.md |
+| `tools/eval/runner.analyze.ts` | Analyze runner — 13 fixtures across 5 groups (vague/partial/detailed/edge/CFPB) |
+| `tools/eval/runner.action-plan.ts` | Action-plan runner — 11 fixtures (8 original + 3 edge: score 0, score 100, multi-debt) |
+| `tools/eval/runner.captions.ts` | Captions runner — 8 fixtures (6 original + 2 edge: score 0, score 100) |
+| `tools/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings (word-boundary regex), plan consistency |
+| `tools/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md — 9 cycles across 6 suites |
+| `tools/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
+| `tools/eval/test-backend-final.ts` | 16 E2E tests — auth hardening, community feed, subscriptions against production Supabase |
+| `tools/manual-test.ts` | Human-review testing with `--input <name>` and `--save` flags |
 
 All edge functions return structured errors with failure stage (`parse_error`, `rate_limited`, `upstream_timeout`, `upstream_unavailable`, `claude_api_error`, `groq_api_error`, `validation_error`, `tool_use_missing`) so the client can display specific error messages.
 
@@ -214,7 +214,7 @@ Monthly auto-renewable subscriptions via **RevenueCat** (Apple In-App Purchase):
 - **Restore Purchases** — required by App Review; available on the paywall
 - **Creator Referral System** — Earn per signup
 
-RevenueCat's on-device `customerInfo` is the source of truth for entitlements. The `user_subscriptions` table is a server-side mirror, written only by the `revenuecat-webhook` (service role, no client access). Billing was migrated from Stripe to RevenueCat in May 2026 — see `REVENUECAT_SETUP.md` for the full setup and free-tier StoreKit testing guide.
+RevenueCat's on-device `customerInfo` is the source of truth for entitlements. The `user_subscriptions` table is a server-side mirror, written only by the `revenuecat-webhook` (service role, no client access). Billing was migrated from Stripe to RevenueCat in May 2026 — see `docs/REVENUECAT_SETUP.md` for the full setup and free-tier StoreKit testing guide.
 
 ---
 
@@ -230,12 +230,12 @@ AmIBroke/
 ├── .env.example
 ├── .github/workflows/ci.yml   # CI/CD pipeline (typecheck → test → deploy)
 ├── .githooks/pre-commit       # TypeScript check hook (npx tsc --noEmit)
-├── CONTRIBUTING.md            # Eval methodology, fixture conventions, CI/CD
 ├── CLAUDE.md                  # AI safety rules
-├── DECISIONS.md               # Architecture decisions + subscription product spec
-├── 528_NEXT_STEPS.md          # Action-plan + captions iteration plan (✅ complete)
-├── 528_BACKEND_FINAL.md       # Backend final: hardening, subscriptions, deploy (✅ complete)
-├── FRONTEND_TODO.md           # Known frontend gaps
+├── docs/                      # Project documentation
+│   ├── TESTING.md             # Eval methodology, fixture conventions, pre-commit, CI/CD
+│   ├── DECISIONS.md           # Architecture decisions + subscription product spec
+│   ├── REVENUECAT_SETUP.md    # RevenueCat setup + free-tier StoreKit testing
+│   └── 531_NEXT_STEPS.md      # Latest next-steps / iteration plan
 ├── shared/                    # Shared types & logic (frontend + backend)
 │   ├── types.ts               # TypeScript types (inferred from Zod)
 │   ├── schemas.ts             # Zod schemas (request, AI output, caption, final response)
@@ -276,7 +276,7 @@ AmIBroke/
 │       │   └── tool.ts        # submit_captions tool JSON Schema
 │       └── revenuecat-webhook/        # Inbound RevenueCat webhook → user_subscriptions
 │           └── index.ts
-├── scripts/                   # Testing infrastructure
+├── tools/                   # Dev / test / deploy scripts (not bundled into the app)
 │   ├── lib/
 │   │   └── call-counter.ts    # 40-call session hard cap
 │   ├── eval/
