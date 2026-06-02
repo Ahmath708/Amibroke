@@ -8,7 +8,9 @@
  * Xcode: Edit Scheme → Run → Options → StoreKit Configuration → select
  * storekit/AmIBroke.products.storekit (see docs/REVENUECAT_SETUP.md).
  */
-const { withDangerousMod } = require('@expo/config-plugins');
+// Import from Expo's re-export so it always resolves against the installed Expo
+// version (SDK 55+ no longer hoists @expo/config-plugins to the project root).
+const { withDangerousMod } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 

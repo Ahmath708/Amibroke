@@ -3,7 +3,6 @@
     "name": "Am I Broke?",
     "slug": "am-i-broke",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
     "scheme": "amibroke",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -52,7 +51,9 @@
       "expo-audio",
       "expo-apple-authentication",
       "expo-notifications",
-      "./plugins/withStoreKitConfig"
+      "./plugins/withStoreKitConfig",
+      "expo-sharing",
+      "expo-web-browser"
     ]
   }
 }
