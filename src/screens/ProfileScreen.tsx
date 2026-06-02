@@ -12,6 +12,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
+import { scoreGradient } from '@/utils/scoreVisual';
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
@@ -25,15 +28,21 @@ import PremiumCard from '@/components/PremiumCard';
 type Props = { navigation: TabScreenNav<'Profile'> };
 
 const BASE_MENU_ITEMS = [
-  { icon: '💳', label: 'Subscription', detail: 'Free Plan', nav: 'Paywall' as const },
-  { icon: '📋', label: '90-Day Action Plan', detail: '3/8 complete', nav: 'ActionPlan' as const, params: { steps: [] } },
-  { icon: '🔮', label: 'Scenario Simulator', nav: 'ScenarioSimulator' as const },
-  { icon: '🔍', label: 'Subscription Audit', nav: 'SubscriptionAudit' as const },
-  { icon: '⚙️', label: 'Settings', nav: 'Settings' as const, detail: undefined },
+  { icon: 'card-outline', label: 'Subscription', nav: 'Paywall' as const }, // detail = live tier (see render)
+  { icon: 'clipboard-outline', label: '90-Day Action Plan', nav: 'ActionPlan' as const, params: { steps: [] } },
+  { icon: 'flask-outline', label: 'Scenario Simulator', nav: 'ScenarioSimulator' as const },
+  { icon: 'search-outline', label: 'Subscription Audit', nav: 'SubscriptionAudit' as const },
+  { icon: 'settings-outline', label: 'Settings', nav: 'Settings' as const },
 ];
 
+// Current-score ring (partial-fill, band gradient) — matches History/Community/Results.
+const CS_RING = 56;
+const CS_STROKE = 5;
+const CS_R = (CS_RING - CS_STROKE) / 2;
+const CS_CIRC = 2 * Math.PI * CS_R;
+
 const MENU_ITEMS = FEATURES.CREATOR_DASHBOARD
-  ? [...BASE_MENU_ITEMS.slice(0, -1), { icon: '📈', label: 'Creator Dashboard', nav: 'CreatorDashboard' as const, detail: undefined }, ...BASE_MENU_ITEMS.slice(-1)]
+  ? [...BASE_MENU_ITEMS.slice(0, -1), { icon: 'trending-up-outline', label: 'Creator Dashboard', nav: 'CreatorDashboard' as const, detail: undefined }, ...BASE_MENU_ITEMS.slice(-1)]
   : BASE_MENU_ITEMS;
 
 export default function ProfileScreen({ navigation }: Props) {
@@ -47,8 +56,8 @@ export default function ProfileScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [analysisCount, setAnalysisCount] = useState(0);
   const [latestScore, setLatestScore] = useState<number | null>(null);
-  const [latestLabel, setLatestLabel] = useState('');
   const [bestScore, setBestScore] = useState<number | null>(null);
+  const [avgScore, setAvgScore] = useState<number | null>(null);
   const [latestDate, setLatestDate] = useState('');
   const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -85,13 +94,14 @@ export default function ProfileScreen({ navigation }: Props) {
       if (history && history.length > 0) {
         setAnalysisCount(history.length);
         setLatestScore(history[0].score);
-        setLatestLabel(history[0].score_label);
         setLatestDate(history[0].created_at);
         setBestScore(Math.max(...history.map((h) => h.score)));
+        setAvgScore(Math.round(history.reduce((s, h) => s + h.score, 0) / history.length));
       } else {
         setAnalysisCount(0);
         setLatestScore(null);
         setBestScore(null);
+        setAvgScore(null);
       }
     } catch {
       setError('Failed to load profile.');
@@ -159,7 +169,8 @@ export default function ProfileScreen({ navigation }: Props) {
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
-  const scoreColor = !latestScore ? Colors.textMuted : getScoreBand(latestScore).color;
+  const scoreColor = latestScore == null ? Colors.textMuted : getScoreBand(latestScore).color;
+  const tierLabel = purchaseTier === 'deep_dive' ? 'Deep Dive' : purchaseTier === 'action_plan' ? 'Action Plan' : 'Free Plan';
 
   if (loading) {
     return (
@@ -218,10 +229,7 @@ export default function ProfileScreen({ navigation }: Props) {
               </TouchableOpacity>
             )}
             {user && (
-              <StatusPill
-                label={purchaseTier === 'deep_dive' ? 'Deep Dive' : purchaseTier === 'action_plan' ? 'Action Plan' : 'Free Plan'}
-                variant={isSubscriptionPremium(purchaseTier) ? 'good' : 'muted'}
-              />
+              <StatusPill label={tierLabel} variant={isSubscriptionPremium(purchaseTier) ? 'good' : 'muted'} />
             )}
           </View>
         </View>
@@ -235,6 +243,8 @@ export default function ProfileScreen({ navigation }: Props) {
 {user && (
   <View style={styles.statsRow}>
     {[
+      { label: 'Analyses', value: String(analysisCount) },
+      { label: 'Avg Score', value: avgScore != null ? String(avgScore) : '—' },
       { label: 'Best Score', value: bestScore != null ? String(bestScore) : '—' },
     ].map((s, i, arr) => (
       <React.Fragment key={s.label}>
@@ -256,8 +266,28 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={styles.currentScoreDate}>{fmtDate(latestDate)}</Text>
             </View>
             <View style={styles.currentScoreRight}>
-              <Text style={[styles.currentScoreNum, { color: scoreColor }]}>{latestScore}</Text>
-              <StatusPill label={latestLabel} variant="muted" color={latestScore ? scoreColor : undefined} />
+              <View style={styles.csRing}>
+                <Svg width={CS_RING} height={CS_RING}>
+                  <Defs>
+                    <SvgGradient id="profileScoreRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <Stop offset="0%" stopColor={scoreGradient(latestScore)[0]} />
+                      <Stop offset="100%" stopColor={scoreGradient(latestScore)[1]} />
+                    </SvgGradient>
+                  </Defs>
+                  <Circle cx={CS_RING / 2} cy={CS_RING / 2} r={CS_R} fill="none" stroke={Colors.backgroundSecondary} strokeWidth={CS_STROKE} />
+                  <Circle
+                    cx={CS_RING / 2} cy={CS_RING / 2} r={CS_R} fill="none" stroke="url(#profileScoreRing)" strokeWidth={CS_STROKE}
+                    strokeDasharray={CS_CIRC} strokeDashoffset={CS_CIRC * (1 - latestScore / 100)} strokeLinecap="round"
+                    transform={`rotate(-90 ${CS_RING / 2} ${CS_RING / 2})`}
+                  />
+                </Svg>
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <View style={styles.csRingCenter}>
+                    <Text style={[styles.csRingNum, { color: scoreColor }]}>{latestScore}</Text>
+                  </View>
+                </View>
+              </View>
+              <StatusPill label={getScoreBand(latestScore).label} color={scoreColor} />
             </View>
           </View>
         )}
@@ -265,25 +295,28 @@ export default function ProfileScreen({ navigation }: Props) {
         {/* Menu */}
         <Text style={styles.sectionLabel}>Quick Access</Text>
         <View style={styles.menuGroup}>
-          {MENU_ITEMS.map((item, i) => (
-            <React.Fragment key={item.label}>
-              {i > 0 && <View style={styles.menuSep} />}
-              <TouchableOpacity
-                style={styles.menuCell}
-                onPress={() => (navigation.navigate as any)(item.nav, (item as any).params)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.menuIconBadge}>
-                  <Text style={styles.menuIcon}>{item.icon}</Text>
-                </View>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-                <View style={styles.menuRight}>
-                  {item.detail && <Text style={styles.menuDetail}>{item.detail}</Text>}
-                  <Text style={styles.menuChevron}>›</Text>
-                </View>
-              </TouchableOpacity>
-            </React.Fragment>
-          ))}
+          {MENU_ITEMS.map((item, i) => {
+            const detail = item.label === 'Subscription' ? tierLabel : (item as any).detail;
+            return (
+              <React.Fragment key={item.label}>
+                {i > 0 && <View style={styles.menuSep} />}
+                <TouchableOpacity
+                  style={styles.menuCell}
+                  onPress={() => (navigation.navigate as any)(item.nav, (item as any).params)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.menuIconBadge}>
+                    <Ionicons name={item.icon as any} size={18} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <View style={styles.menuRight}>
+                    {detail ? <Text style={styles.menuDetail}>{detail}</Text> : null}
+                    <Text style={styles.menuChevron}>›</Text>
+                  </View>
+                </TouchableOpacity>
+              </React.Fragment>
+            );
+          })}
         </View>
 
         {/* Sign out */}
@@ -342,7 +375,9 @@ const styles = StyleSheet.create({
   currentScoreLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   currentScoreDate: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },
   currentScoreRight: { alignItems: 'flex-end', gap: Spacing.xs },
-  currentScoreNum: { fontFamily: Typography.fonts.heading, fontSize: 36, fontWeight: '700' },
+  csRing: { width: CS_RING, height: CS_RING },
+  csRingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  csRingNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700' },
   sectionLabel: {
     fontFamily: Typography.fonts.bodyMed,
     fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
@@ -364,7 +399,7 @@ const styles = StyleSheet.create({
   menuLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   menuRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   menuDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  menuChevron: { fontSize: Typography.title2.fontSize, color: Colors.textMuted, fontWeight: '300' },
+  menuChevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
   signOutBtn: { alignItems: 'center', paddingVertical: Spacing.lg },
   signOutText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.danger },
   });
