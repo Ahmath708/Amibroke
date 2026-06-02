@@ -114,7 +114,7 @@ export default function DebtPayoffScreen({ route }: Props) {
             >
               <View style={styles.segmentInner}>
                 <Ionicons
-                  name={s === 'avalanche' ? 'water-outline' : 'snow-outline'}
+                  name={s === 'avalanche' ? 'flame-outline' : 'snow-outline'}
                   size={15}
                   color={strategy === s ? Colors.textPrimary : Colors.textSecondary}
                 />

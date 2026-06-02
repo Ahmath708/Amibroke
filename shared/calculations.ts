@@ -50,12 +50,25 @@ export function simulateDebtPayoff(
   strategy: PayoffStrategy,
 ): PayoffResult {
   const bal = debts.map((d) => ({ rate: d.interestRate, min: d.minimumPayment, balance: d.balance }));
+  // Total monthly outlay stays CONSTANT (sum of minimums + extra). As debts clear,
+  // their freed-up minimums roll into the attack budget — the snowball/avalanche engine.
   const monthlyBudget = debts.reduce((s, d) => s + d.minimumPayment, 0) + Math.max(0, extraMonthly);
+
+  // Commit to ONE payoff order up front (the canonical method): avalanche attacks the
+  // highest APR first, snowball the smallest balance first. Computing it once — rather
+  // than re-sorting each month — avoids "target thrashing" (a high-minimum debt dipping
+  // below the current target and silently stealing focus), which would understate
+  // snowball's true cost and diverge from the method users are told they're following.
+  const order = bal
+    .map((_, i) => i)
+    .sort((i, j) => (strategy === 'avalanche' ? bal[j].rate - bal[i].rate : bal[i].balance - bal[j].balance));
+
   let months = 0;
   let totalInterest = 0;
 
   while (bal.some((d) => d.balance > 0.5) && months < MAX_PAYOFF_MONTHS) {
     months++;
+    // 1. Accrue one month of interest on every outstanding balance.
     for (const d of bal) {
       if (d.balance > 0) {
         const interest = d.balance * (d.rate / 12); // rate is an annual fraction
@@ -63,6 +76,7 @@ export function simulateDebtPayoff(
         totalInterest += interest;
       }
     }
+    // 2. Pay the minimum on every debt (capped at its remaining balance).
     let budget = monthlyBudget;
     for (const d of bal) {
       if (d.balance > 0) {
@@ -71,13 +85,13 @@ export function simulateDebtPayoff(
         budget -= pay;
       }
     }
-    const priority = bal
-      .filter((d) => d.balance > 0)
-      .sort((a, b) => (strategy === 'avalanche' ? b.rate - a.rate : a.balance - b.balance));
-    for (const d of priority) {
+    // 3. Throw everything left (extra + minimums freed by cleared debts) at the target
+    //    debts in the committed order, cascading to the next once one is paid off.
+    for (const i of order) {
       if (budget <= 0.5) break;
-      const pay = Math.min(budget, d.balance);
-      d.balance -= pay;
+      if (bal[i].balance <= 0) continue;
+      const pay = Math.min(budget, bal[i].balance);
+      bal[i].balance -= pay;
       budget -= pay;
     }
   }
