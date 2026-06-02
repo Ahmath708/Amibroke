@@ -35,9 +35,9 @@ export interface CommunityPost {
   score_label: string;
   roast: string;
   summary: string;
-  reactions: { fire: number; cry: number; skull: number };
+  reactions: Record<string, number>; // emoji → count (see post_reactions CHECK, migration 00011)
   created_at: string;
-  my_reaction?: string | null;
+  my_reactions: string[];            // emojis the current user has reacted with (multiple allowed)
 }
 
 export interface Subscription {

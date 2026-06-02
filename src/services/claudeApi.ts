@@ -399,8 +399,9 @@ export async function getCommunityFeed(userId?: string): Promise<CommunityPost[]
       score_label: p.score_label,
       roast: p.roast,
       summary: p.summary,
-      reactions: p.reactions || { fire: 0, cry: 0, skull: 0 },
+      reactions: p.reactions || {},
       created_at: p.created_at,
+      my_reactions: [],
     }));
 
     if (userId) {
@@ -408,9 +409,9 @@ export async function getCommunityFeed(userId?: string): Promise<CommunityPost[]
         .from('post_reactions')
         .select('post_id, emoji')
         .eq('user_id', userId);
-      const reactMap: Record<string, string> = {};
-      (myReactions || []).forEach((r: any) => { reactMap[r.post_id] = r.emoji; });
-      posts = posts.map((p) => ({ ...p, my_reaction: reactMap[p.id] || null }));
+      const reactMap: Record<string, string[]> = {};
+      (myReactions || []).forEach((r: any) => { (reactMap[r.post_id] ||= []).push(r.emoji); });
+      posts = posts.map((p) => ({ ...p, my_reactions: reactMap[p.id] || [] }));
     }
 
     return posts;

@@ -1,4 +1,5 @@
 import { getSupabaseClient as getSupabase } from './supabaseClient';
+import { totalReactions } from '@/utils/reactions';
 
 export interface CreatorSubmission {
   id: string;
@@ -50,8 +51,8 @@ export async function getCreatorStats(userId: string): Promise<CreatorStats | nu
       .order('created_at', { ascending: false });
 
     const totalRoasts = posts?.length || 0;
-    const totalViews = posts?.reduce((sum, p) => sum + ((p.reactions?.fire || 0) + (p.reactions?.cry || 0) + (p.reactions?.skull || 0)) * 10, 0) || 0;
-    const totalShares = posts?.reduce((sum, p) => sum + ((p.reactions?.fire || 0) + (p.reactions?.cry || 0) + (p.reactions?.skull || 0)), 0) || 0;
+    const totalViews = posts?.reduce((sum, p) => sum + totalReactions(p.reactions) * 10, 0) || 0;
+    const totalShares = posts?.reduce((sum, p) => sum + totalReactions(p.reactions), 0) || 0;
 
     const { data: referrals } = await client
       .from('referrals')
