@@ -117,10 +117,12 @@ export default function LoginScreen({ navigation, route }: Props) {
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          {/* Header — app mock logo + wordmark + rotating tagline */}
+          {/* Header — horizontal logo lockup + rotating tagline */}
           <View style={styles.header}>
-            <Image source={require('../../assets/logo-mark.png')} style={styles.logoMark} resizeMode="contain" />
-            <Text style={styles.wordmark}>Am I Broke?</Text>
+            <View style={styles.lockup}>
+              <Image source={require('../../assets/logo-mark.png')} style={styles.logoMark} resizeMode="contain" />
+              <Text style={styles.wordmark}>Am I Broke?</Text>
+            </View>
             <TypingPlaceholder placeholders={TAGLINES} style={styles.tagline} textStyle={styles.taglineText} />
           </View>
 
@@ -269,9 +271,10 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingBottom: Spacing.xs },
   backBtn: { padding: Spacing.xs },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xs },
-  header: { alignItems: 'center', marginBottom: Spacing.md },
+  header: { alignItems: 'center', marginBottom: Spacing.sm },
+  lockup: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   logoMark: {
-    width: 92, height: 92, marginBottom: Spacing.sm,
+    width: 60, height: 60,
   },
   wordmark: {
     fontFamily: Typography.fonts.heading,
@@ -282,7 +285,7 @@ const styles = StyleSheet.create({
   taglineText: { fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   segmentRow: {
     flexDirection: 'row', backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.md, padding: Spacing.xs, marginBottom: Spacing.md,
+    borderRadius: Radius.md, padding: Spacing.xs, marginBottom: Spacing.sm,
   },
   segment: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm, borderWidth: 1, borderColor: 'transparent' },
   segmentActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
