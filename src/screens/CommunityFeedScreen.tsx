@@ -10,6 +10,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
 import { REACTION_EMOJIS, totalReactions } from '@/utils/reactions';
@@ -19,7 +22,9 @@ import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import { getCommunityFeed, getPostReactions, addReaction, removeReaction, FeedSort, FeedCursor } from '@/services/claudeApi';
 import ScreenBackground from '@/components/ScreenBackground';
+import ShareManagerSheet from '@/components/ShareManagerSheet';
 import { useAuth } from '@/context/AuthContext';
+import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -53,6 +58,7 @@ export default function CommunityFeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null); // post id whose emoji picker is open
+  const [managerOpen, setManagerOpen] = useState(false);           // share-manager sheet
   const loadingRef = useRef(false);                    // guards concurrent page loads
   const pendingRef = useRef<Set<string>>(new Set());   // `${postId}:${emoji}` reactions in flight
   const { animatedStyle } = useEntryAnimation();
@@ -169,7 +175,10 @@ export default function CommunityFeedScreen() {
             </View>
           </View>
           <View style={styles.cardMeta}>
-            <Text style={styles.cardUser}>@{post.display_name}</Text>
+            <View style={styles.cardUserRow}>
+              <Text style={styles.cardUser}>@{post.display_name}</Text>
+              {user && post.user_id === user.id && <Text style={styles.youBadge}>You</Text>}
+            </View>
             <View style={styles.cardMetaRow}>
               <StatusPill label={band.label} color={scoreColor} />
               <Text style={styles.cardTime}>{timeAgo(post.created_at)}</Text>
@@ -187,24 +196,32 @@ export default function CommunityFeedScreen() {
             if (count === 0) return null;
             const mine = post.my_reactions.includes(emoji);
             return (
-              <TouchableOpacity
+              <Reanimated.View
                 key={emoji}
-                style={[styles.reactBtn, mine && styles.reactBtnActive]}
-                onPress={() => handleReact(post.id, emoji)}
-                activeOpacity={0.7}
+                entering={ZoomIn.duration(180)}
+                exiting={ZoomOut.duration(140)}
+                layout={LinearTransition.duration(180)}
               >
-                <Text style={styles.reactEmoji}>{emoji}</Text>
-                <Text style={[styles.reactCount, mine && styles.reactCountActive]}>{count}</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.reactBtn, mine && styles.reactBtnActive]}
+                  onPress={() => handleReact(post.id, emoji)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.reactEmoji}>{emoji}</Text>
+                  <Text style={[styles.reactCount, mine && styles.reactCountActive]}>{count}</Text>
+                </TouchableOpacity>
+              </Reanimated.View>
             );
           })}
-          <TouchableOpacity
-            style={styles.reactAddBtn}
-            onPress={() => setPickerFor(pickerFor === post.id ? null : post.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.reactAddText}>{totalReactions(post.reactions) === 0 ? '＋ React' : '＋'}</Text>
-          </TouchableOpacity>
+          <Reanimated.View layout={LinearTransition.duration(180)}>
+            <TouchableOpacity
+              style={styles.reactAddBtn}
+              onPress={() => setPickerFor(pickerFor === post.id ? null : post.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.reactAddText}>{totalReactions(post.reactions) === 0 ? '＋ React' : '＋'}</Text>
+            </TouchableOpacity>
+          </Reanimated.View>
         </View>
 
         {/* Emoji picker (toggles a reaction; multiple allowed per user) */}
@@ -278,18 +295,27 @@ export default function CommunityFeedScreen() {
           )
         }
         ListFooterComponent={
-          loadingMore ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} />
-          ) : posts.length > 0 && !hasMore ? (
-            <View style={styles.submitCard}>
-              <Text style={styles.submitTitle}>Share your roast</Text>
-              <Text style={styles.submitBody}>Run an analysis to get your anonymous score added to the feed.</Text>
-              <TouchableOpacity style={styles.submitBtn} activeOpacity={0.85} onPress={() => navigation.navigate('Home')}>
-                <Text style={styles.submitBtnText}>Run My Analysis →</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
+          loadingMore ? <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} /> : null
         }
+      />
+
+      {/* Floating share entry — opens the manager of your analyses (post/unpost) */}
+      <TouchableOpacity
+        style={[styles.fab, { bottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.md }]}
+        onPress={() => setManagerOpen(true)}
+        activeOpacity={0.85}
+        accessibilityLabel="Manage what you share"
+      >
+        <LinearGradient colors={Colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fabInner}>
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={styles.fabText}>Share</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      <ShareManagerSheet
+        visible={managerOpen}
+        onClose={() => setManagerOpen(false)}
+        onRunAnalysis={() => { setManagerOpen(false); navigation.navigate('Home'); }}
       />
     </Animated.View>
   );
@@ -323,7 +349,13 @@ const styles = StyleSheet.create({
   scoreAvatarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scoreAvatarNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.subhead.fontSize, fontWeight: '700' },
   cardMeta: { flex: 1, gap: Spacing.xs },
+  cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   cardUser: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, fontWeight: '500' },
+  youBadge: {
+    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.primary,
+    backgroundColor: Colors.primaryContainer, paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: Radius.pill, overflow: 'hidden',
+  },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   cardTime: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   roastText: {
@@ -358,14 +390,12 @@ const styles = StyleSheet.create({
   pickerEmoji: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: Radius.sm },
   pickerEmojiActive: { backgroundColor: Colors.primaryContainer },
   pickerEmojiText: { fontSize: Typography.title3.fontSize },
-  submitCard: {
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: Radius.lg, padding: Spacing.lg + 2, marginTop: Spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    gap: 6,
+  fab: { position: 'absolute', right: Spacing.xl },
+  fabInner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+    paddingLeft: Spacing.md, paddingRight: Spacing.lg, paddingVertical: Spacing.sm + 2,
+    borderRadius: Radius.pill,
+    shadowColor: Colors.primarySolid, shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 10,
   },
-  submitTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600' },
-  submitBody: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  submitBtn: { marginTop: 6, alignSelf: 'flex-start' },
-  submitBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '500' },
+  fabText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: '#fff', fontWeight: '600' },
 });

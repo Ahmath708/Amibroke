@@ -527,6 +527,42 @@ export async function shareToFeed(
   }
 }
 
+/** Analysis IDs the user currently has live in the community feed (drives the share manager toggles). */
+export async function getMySharedAnalysisIds(userId: string): Promise<string[]> {
+  const client = getSupabase();
+  if (!client) return [];
+  try {
+    const { data, error } = await (client as any)
+      .from('community_posts')
+      .select('analysis_id')
+      .eq('user_id', userId);
+    if (error) throw error;
+    return (data || []).map((r: any) => r.analysis_id).filter(Boolean);
+  } catch (error) {
+    console.warn('Failed to fetch shared analysis ids:', error);
+    return [];
+  }
+}
+
+/** Remove the user's post for an analysis from the feed (RLS allows deleting own posts;
+ *  post_reactions cascade-delete, so reactions are lost — re-sharing starts fresh). */
+export async function unshareFromFeed(analysisId: string, userId: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await (client as any)
+      .from('community_posts')
+      .delete()
+      .eq('analysis_id', analysisId)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.warn('Failed to unshare from feed:', error);
+    return false;
+  }
+}
+
 export async function addReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
   const client = getSupabase();
   if (!client) return false;
