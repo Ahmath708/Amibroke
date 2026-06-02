@@ -30,6 +30,7 @@ import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
 import UsernameSetupScreen from '@/screens/UsernameSetupScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
+import AllAnalysesScreen from '@/screens/AllAnalysesScreen';
 import FinancialContextScreen from '@/screens/FinancialContextScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
@@ -159,6 +160,7 @@ export default function AppNavigator() {
             <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
             <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
             <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
+            <Stack.Screen name="AllAnalyses" component={AllAnalysesScreen} options={{ ...sharedHeader, headerShown: true, title: 'All Analyses', animation: 'slide_from_right' }} />
             <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
             <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />

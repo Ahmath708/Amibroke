@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
+import SectionLabel from '@/components/SectionLabel';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
 import { goalProgress, formatGoalValue } from '@/utils/checkinGoals';
 
@@ -35,9 +36,9 @@ export default function CheckinTrend() {
   const maxV = Math.max(...points.map((p) => Math.abs(p.value)), 1);
 
   return (
-    <GlassCard style={styles.card}>
-      <Text style={styles.title}>Progress</Text>
-
+    <>
+      <SectionLabel style={styles.heading}>Progress</SectionLabel>
+      <GlassCard style={styles.card}>
       {goals.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {goals.map((g) => {
@@ -67,13 +68,14 @@ export default function CheckinTrend() {
           );
         })}
       </ScrollView>
-    </GlassCard>
+      </GlassCard>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   card: { padding: Spacing.lg, marginBottom: Spacing.xl },
-  title: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '600', marginBottom: Spacing.md },
+  heading: { marginTop: Spacing.xl },
   chips: { gap: Spacing.xs, paddingBottom: Spacing.md },
   chip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.pill, backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
   chipOn: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },

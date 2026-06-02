@@ -16,6 +16,8 @@ import GlassCard from '@/components/GlassCard';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import EmptyState from '@/components/EmptyState';
+import SectionLabel from '@/components/SectionLabel';
+import AnalysisRow from '@/components/AnalysisRow';
 import { getAnalysisHistory, getCheckIns, getAnalysisById } from '@/services/claudeApi';
 import { AnalysisHistoryItem, CheckIn } from '@/types';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -24,13 +26,8 @@ import CheckinTrend from '@/components/CheckinTrend';
 import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
-const MAX_SCORE = 100;
-
-// Entry score ring geometry (partial-fill, band-gradient).
-const RING_SIZE = 48;
-const RING_STROKE = 4;
-const RING_R = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRC = 2 * Math.PI * RING_R;
+// Inline analyses shown under the chart before the "View All" link.
+const INLINE_LIMIT = 5;
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
@@ -164,7 +161,7 @@ export default function HistoryScreen() {
         ) : (
           <>
             {/* Filterable chart */}
-            <Text style={styles.sectionLabel}>Score Trend</Text>
+            <SectionLabel>Score Trend</SectionLabel>
             <HistoryChart
               items={history}
               granularity={granularity}
@@ -174,90 +171,29 @@ export default function HistoryScreen() {
               onOpenAnalysis={handleRowPress}
             />
 
-            {/* List — scoped to the chart's current period */}
-            <Text style={styles.sectionLabel}>Analyses</Text>
+            {/* List — scoped to the chart's current period, capped; full archive via "View All" */}
+            <SectionLabel>Analyses</SectionLabel>
             {periodItems.length === 0 ? (
               <Text style={styles.periodEmpty}>No analyses in this period.</Text>
             ) : (
-            <View style={styles.historyGroup}>
-              {periodItems.map((h, i) => {
-                const band = getScoreBand(h.score); // single source of truth — matches Results/Home/landing
-                const [ringFrom, ringTo] = scoreGradient(h.score);
-                let deltaText = '';
-                let deltaColor = Colors.textMuted;
-                const diff = deltaById.get(h.id);
-                if (diff !== undefined && diff > 0) { deltaText = `+${diff}`; deltaColor = Colors.success; }
-                else if (diff !== undefined && diff < 0) { deltaText = `${diff}`; deltaColor = Colors.danger; }
-                const isLoading = rowLoading === h.id;
-
-                return (
+              <View style={styles.historyGroup}>
+                {periodItems.slice(0, INLINE_LIMIT).map((h, i) => (
                   <React.Fragment key={h.id}>
                     {i > 0 && <View style={styles.rowSep} />}
-                    <TouchableOpacity
-                      onPress={() => handleRowPress(h.id)}
-                      activeOpacity={0.7}
-                      style={[styles.historyRow, isLoading && { opacity: 0.6 }]}
+                    <AnalysisRow
+                      item={h}
+                      delta={deltaById.get(h.id)}
+                      loading={rowLoading === h.id}
                       disabled={!!rowLoading}
-                    >
-                      <View style={styles.scoreRing}>
-                        <Svg width={RING_SIZE} height={RING_SIZE}>
-                          <Defs>
-                            <SvgGradient id={`histRing${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                              <Stop offset="0%" stopColor={ringFrom} />
-                              <Stop offset="100%" stopColor={ringTo} />
-                            </SvgGradient>
-                          </Defs>
-                          <Circle
-                            cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
-                            fill="none" stroke={Colors.backgroundSecondary} strokeWidth={RING_STROKE}
-                          />
-                          <Circle
-                            cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
-                            fill="none" stroke={`url(#histRing${i})`} strokeWidth={RING_STROKE}
-                            strokeDasharray={RING_CIRC}
-                            strokeDashoffset={RING_CIRC * (1 - h.score / MAX_SCORE)}
-                            strokeLinecap="round"
-                            transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
-                          />
-                        </Svg>
-                        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                          <View style={styles.scoreRingCenter}>
-                            <Text style={[styles.scoreCircleNum, { color: band.color }]}>{h.score}</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={styles.historyInfo}>
-                        <View style={styles.historyMeta}>
-                          <Text style={styles.historyDate}>{fmtDate(h.created_at)}</Text>
-                          <Text style={[styles.historyVerdict, { color: band.color }]} numberOfLines={1}>
-                            {band.label}
-                          </Text>
-                          {h.emotional_status?.emoji && (
-                            <Text style={styles.historyEmoji}>{h.emotional_status.emoji}</Text>
-                          )}
-                          {deltaText ? (
-                            <Text style={[styles.historyDelta, { color: deltaColor }]}>
-                              {deltaText}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <Text style={styles.historySummary} numberOfLines={2}>
-                          {h.summary}
-                        </Text>
-                        {(h.has_action_plan || h.has_captions) && (
-                          <View style={styles.historyBadges}>
-                            {h.has_action_plan && <Text style={styles.historyBadge}>📋 Plan</Text>}
-                            {h.has_captions && <Text style={styles.historyBadge}>📸 Captions</Text>}
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.chevron}>{isLoading ? '⏳' : '›'}</Text>
-                    </TouchableOpacity>
+                      onPress={() => handleRowPress(h.id)}
+                    />
                   </React.Fragment>
-                );
-              })}
-            </View>
+                ))}
+              </View>
             )}
+            <TouchableOpacity style={styles.viewAll} activeOpacity={0.7} onPress={() => navigation.navigate('AllAnalyses')}>
+              <Text style={styles.viewAllText}>View All →</Text>
+            </TouchableOpacity>
 
             {/* Progress trend across check-ins (self-hides until there's data) */}
             <CheckinTrend />
@@ -265,7 +201,7 @@ export default function HistoryScreen() {
             {/* Check-ins list */}
             {checkIns.length > 0 && (
               <>
-                <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>Monthly Check-Ins</Text>
+                <SectionLabel style={{ marginTop: Spacing.xl }}>Monthly Check-Ins</SectionLabel>
                 <View style={styles.historyGroup}>
                   {checkIns.map((c, i) => {
                     const MOODS = ['😭', '😟', '😐', '🙂', '🤑'];
@@ -314,6 +250,8 @@ const styles = StyleSheet.create({
   signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginBottom: Spacing.lg, fontStyle: 'italic' },
   periodEmpty: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, paddingVertical: Spacing.lg, textAlign: 'center' },
+  viewAll: { alignSelf: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
+  viewAllText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.primary, fontWeight: '600' },
   newCheckinBtn: {
     marginTop: Spacing.lg, alignItems: 'center', justifyContent: 'center',
     minHeight: 44, paddingVertical: Spacing.md,
@@ -333,9 +271,6 @@ const styles = StyleSheet.create({
   },
   rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 70 },
   historyRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
-  scoreRing: { width: RING_SIZE, height: RING_SIZE },
-  scoreRingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scoreCircleNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700' },
   historyInfo: { flex: 1, gap: Spacing.xs },
   historyMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   historyDate: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },

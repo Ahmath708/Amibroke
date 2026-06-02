@@ -148,6 +148,7 @@ export type RootStackParamList = {
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
+  AllAnalyses: undefined;
   FinancialContext: undefined;
   Settings: undefined;
   HelpFAQ: undefined;
