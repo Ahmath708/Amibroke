@@ -9,9 +9,10 @@ interface Props {
   score: number;
   size?: number;
   showLabel?: boolean;
+  showOutOf?: boolean;
 }
 
-export default function ScoreRing({ score, size = 120, showLabel = false }: Props) {
+export default function ScoreRing({ score, size = 120, showLabel = false, showOutOf = false }: Props) {
   const animatedScore = useRef(new Animated.Value(0)).current;
   const strokeWidth = size * 0.08;
   const radius = (size - strokeWidth) / 2;
@@ -63,7 +64,8 @@ export default function ScoreRing({ score, size = 120, showLabel = false }: Prop
       {/* Center content */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={styles.center}>
-          <Text style={[styles.scoreNum, { fontSize: size * 0.22, color }]}>{score}</Text>
+          <Text style={[styles.scoreNum, { fontSize: size * 0.26, color }]}>{score}</Text>
+          {showOutOf && <Text style={[styles.outOf, { fontSize: size * 0.1 }]}>/100</Text>}
           {showLabel && <Text style={styles.scoreLabel}>{band.label}</Text>}
         </View>
       </View>
@@ -78,6 +80,11 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.heading,
     fontWeight: '700',
     letterSpacing: -1,
+  },
+  outOf: {
+    fontFamily: Typography.fonts.body,
+    color: Colors.textSecondary,
+    marginTop: -2,
   },
   scoreLabel: {
     fontFamily: Typography.fonts.body,

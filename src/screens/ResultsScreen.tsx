@@ -1,8 +1,9 @@
-﻿import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Alert,
+  View, Text, StyleSheet, ScrollView, Animated, Alert, TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -14,6 +15,7 @@ import ScoreRing from '@/components/ScoreRing';
 import StatusPill from '@/components/StatusPill';
 import SeverityPill from '@/components/SeverityPill';
 import ConfidenceBadge, { confidenceLevel } from '@/components/ConfidenceBadge';
+import SectionLabel from '@/components/SectionLabel';
 import NeonButton from '@/components/NeonButton';
 import Disclaimer from '@/components/Disclaimer';
 import { GlassSection } from '@/components/iOS/GlassSection';
@@ -30,8 +32,63 @@ type Props = {
   route: RouteProp<RootStackParamList, 'Results'>;
 };
 
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
 function fmt(n: number) {
   return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+type SpendIcon = { lib: 'ion'; name: IoniconsName } | { lib: 'mci'; name: MCIName };
+
+// Map a free-text spending category to a recognizable icon by keyword; anything
+// we don't recognize falls back to a generic tag. Order matters (first match wins).
+// Most icons are Ionicons; a few (e.g. fuel) come from MaterialCommunityIcons.
+function spendingIcon(category: string): SpendIcon {
+  const c = (category || '').toLowerCase();
+  const ion = (name: IoniconsName): SpendIcon => ({ lib: 'ion', name });
+  const mci = (name: MCIName): SpendIcon => ({ lib: 'mci', name });
+  const rules: [RegExp, SpendIcon][] = [
+    [/coffee|starbucks|caf[eé]|latte|dunkin/, ion('cafe-outline')],
+    [/grocer|supermarket|whole foods|trader|aldi|costco/, ion('cart-outline')],
+    [/food|eat|restaurant|doordash|uber\s?eats|grubhub|takeout|dining|meal|fast.?food/, ion('fast-food-outline')],
+    [/rent|housing|mortgage|apartment|landlord/, ion('home-outline')],
+    [/gas|fuel|petrol/, mci('gas-station-outline')],
+    [/car|auto|uber|lyft|transport|transit|parking|metro|bus|ride/, ion('car-outline')],
+    [/subscription|netflix|spotify|hulu|disney|streaming|prime\s?video|youtube/, ion('tv-outline')],
+    [/gym|fitness|workout|peloton|yoga/, ion('barbell-outline')],
+    [/shop|amazon|clothes|clothing|retail|store|target|mall|fashion/, ion('bag-handle-outline')],
+    [/phone|internet|wifi|utilit|electric|water|cable|bill/, ion('flash-outline')],
+    [/health|medical|doctor|pharmacy|insurance|dental|therapy/, ion('medkit-outline')],
+    [/travel|flight|hotel|vacation|airbnb|trip/, ion('airplane-outline')],
+    [/game|gaming|xbox|playstation|steam|nintendo/, ion('game-controller-outline')],
+    [/drink|bar|alcohol|beer|wine|liquor/, ion('beer-outline')],
+    [/pet|dog|cat|vet/, ion('paw-outline')],
+    [/movie|concert|event|entertain|cinema|ticket/, ion('film-outline')],
+    [/save|saving|invest|401k|roth/, ion('wallet-outline')],
+  ];
+  for (const [re, ic] of rules) if (re.test(c)) return ic;
+  return ion('pricetag-outline');
+}
+
+// Renders the right icon family for a spending category.
+function SpendingIcon({ category, size, color }: { category: string; size: number; color: string }) {
+  const ic = spendingIcon(category);
+  return ic.lib === 'mci'
+    ? <MaterialCommunityIcons name={ic.name} size={size} color={color} style={styles.metricIcon} />
+    : <Ionicons name={ic.name} size={size} color={color} style={styles.metricIcon} />;
+}
+
+// A compact icon-button for the secondary actions row.
+function IconAction({ icon, label, onPress, tint = Colors.primary }: { icon: IoniconsName; label: string; onPress: () => void; tint?: string }) {
+  return (
+    <TouchableOpacity style={iaStyles.btn} onPress={onPress} activeOpacity={0.7}>
+      <View style={[iaStyles.badge, { backgroundColor: Colors.primaryContainer }]}>
+        <Ionicons name={icon} size={20} color={tint} />
+      </View>
+      <Text style={iaStyles.label}>{label}</Text>
+    </TouchableOpacity>
+  );
 }
 
 export default function ResultsScreen({ navigation, route }: Props) {
@@ -64,8 +121,6 @@ export default function ResultsScreen({ navigation, route }: Props) {
       saveAnalysis(user.id, userInput, analysis)
         .then((id) => {
           setAnalysisId(id);
-          // saveAnalysis returns null on failure — surface it, since a missing
-          // id silently disables sharing and the action plan.
           if (!id) setSaveFailed(true);
         })
         .catch(() => setSaveFailed(true));
@@ -74,14 +129,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
 
   const handleShareToFeed = async () => {
     if (!user || !analysisId) return;
-    const id = await shareToFeed(
-      user.id,
-      analysisId,
-      analysis.score,
-      analysis.scoreLabel,
-      analysis.roast,
-      analysis.summary,
-    );
+    const id = await shareToFeed(user.id, analysisId, analysis.score, analysis.scoreLabel, analysis.roast, analysis.summary);
     if (id) {
       setShared(true);
       Alert.alert('Shared!', 'Your roast is now live in the Community Feed.', [{ text: 'OK' }]);
@@ -91,6 +139,24 @@ export default function ResultsScreen({ navigation, route }: Props) {
   };
 
   const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
+  const canDeepDive = hasAccessTo(purchaseTier, 'deep_dive');
+  const hasDebt = (analysis.debtTotal ?? 0) > 0;
+
+  // Key metrics — vector icons, "N/A" rows hidden so it never looks unfinished.
+  const income = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
+  const expenses = analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0;
+  const allMetrics: { label: string; value: string; icon: IoniconsName; highlight?: boolean }[] = [
+    { label: 'Monthly Income', value: fmt(income), icon: 'cash-outline' },
+    { label: 'Monthly Expenses', value: fmt(expenses), icon: 'card-outline' },
+    { label: 'Liquid Savings', value: fmt(analysis.liquidSavings?.value ?? analysis.liquidSavings ?? 0), icon: 'wallet-outline' },
+    { label: 'Monthly Savings', value: fmt(analysis.monthlySavings ?? 0), icon: 'save-outline', highlight: (analysis.monthlySavings ?? 0) < 0 },
+    { label: 'Total Debt', value: fmt(analysis.debtTotal ?? 0), icon: 'trending-down-outline', highlight: (analysis.debtTotal ?? 0) > 0 },
+    { label: 'Savings Rate', value: analysis.savingsRate != null ? `${Math.round(analysis.savingsRate * 100)}%` : 'N/A', icon: 'trending-up-outline' },
+    { label: 'Emergency Fund', value: analysis.emergencyFundMonths != null ? `${analysis.emergencyFundMonths.toFixed(1)} mo` : 'N/A', icon: 'shield-checkmark-outline' },
+    { label: 'Debt-to-Income', value: analysis.debtToIncomeRatio != null ? `${(analysis.debtToIncomeRatio * 100).toFixed(0)}%` : 'N/A', icon: 'pie-chart-outline' },
+    { label: 'Monthly Debt Service', value: fmt(analysis.monthlyDebtService ?? 0), icon: 'calendar-outline' },
+  ];
+  const metrics = allMetrics.filter((m) => m.value !== 'N/A');
 
   return (
     <View style={styles.container}>
@@ -100,141 +166,134 @@ export default function ResultsScreen({ navigation, route }: Props) {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Score hero */}
+        {/* Score hero — score + /100 inside the ring; band + data confidence beside it */}
         <GlassSection delay={0}>
           <View style={styles.scoreHero}>
-            <ScoreRing score={analysis.score} size={140} />
+            <ScoreRing score={analysis.score} size={140} showOutOf />
             <View style={styles.scoreInfo}>
               <StatusPill label={analysis.scoreLabel} color={scoreColor} size="md" />
-              <Text style={styles.scoreNum} adjustsFontSizeToFit numberOfLines={1}>
-                {analysis.score}<Text style={styles.scoreOf}>/100</Text>
-              </Text>
+              {analysis.avgConfidence > 0 && (
+                <View style={styles.confidenceSlot}>
+                  <SectionLabel style={styles.confidenceLabel}>Data Confidence</SectionLabel>
+                  <ConfidenceBadge level={confidenceLevel(analysis.avgConfidence)} size="md" />
+                </View>
+              )}
             </View>
           </View>
         </GlassSection>
 
-        {/* Roast card */}
+        {/* Roast */}
         <GlassSection delay={120}>
+          <Text style={styles.roastLabel}>Roast</Text>
           <LinearGradient
             colors={['rgba(189,0,255,0.2)', 'rgba(231,0,110,0.15)']}
             style={styles.roastCard}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.roastEmoji}>🔥</Text>
             <Text style={styles.roastText}>"{analysis.roast}"</Text>
           </LinearGradient>
         </GlassSection>
 
-        {/* Summary */}
+        {/* The breakdown (summary) */}
         <GlassSection delay={220}>
+          <SectionLabel>The Breakdown</SectionLabel>
           <GlassCard style={styles.summaryCard}>
             <Text style={styles.summaryText}>{analysis.summary}</Text>
           </GlassCard>
         </GlassSection>
 
-        {/* Key metrics — iOS-style grouped rows */}
-        <Text style={styles.sectionTitle}>Key Metrics</Text>
+        {/* #1 Thing To Fix — moved up: the single most actionable line */}
+        {analysis.topFix && (
+          <>
+            <SectionLabel>#1 Thing To Fix</SectionLabel>
+            <GlassCard style={styles.topFixCard}>
+              <Text style={styles.topFixAction}>{analysis.topFix.action}</Text>
+              <Text style={styles.topFixImpact}>
+                Est. monthly improvement: ${analysis.topFix.monthlyImpact.toLocaleString()}
+              </Text>
+            </GlassCard>
+          </>
+        )}
+
+        {/* Key metrics */}
+        <SectionLabel>Key Metrics</SectionLabel>
         <View style={styles.metricsGroup}>
-          {[
-            { label: 'Monthly Income', value: fmt(analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0), icon: '💵', confidence: analysis.monthlyIncome?.confidence },
-            { label: 'Monthly Expenses', value: fmt(analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0), icon: '💸', confidence: analysis.monthlyExpenses?.confidence },
-            { label: 'Liquid Savings', value: fmt(analysis.liquidSavings?.value ?? analysis.liquidSavings ?? 0), icon: '🏦', confidence: analysis.liquidSavings?.confidence },
-            { label: 'Monthly Savings', value: fmt(analysis.monthlySavings ?? 0), icon: '💰', highlight: (analysis.monthlySavings ?? 0) < 0 },
-            { label: 'Total Debt', value: fmt(analysis.debtTotal ?? 0), icon: '📉', highlight: (analysis.debtTotal ?? 0) > 0 },
-            { label: 'Savings Rate', value: analysis.savingsRate != null ? `${Math.round(analysis.savingsRate * 100)}%` : 'N/A', icon: '📈' },
-            { label: 'Emergency Fund', value: analysis.emergencyFundMonths != null ? `${analysis.emergencyFundMonths.toFixed(1)} mo` : 'N/A', icon: '🛡️' },
-            { label: 'Debt-to-Income', value: analysis.debtToIncomeRatio != null ? `${(analysis.debtToIncomeRatio * 100).toFixed(0)}%` : 'N/A', icon: '⚖️' },
-            { label: 'Monthly Debt Service', value: fmt(analysis.monthlyDebtService ?? 0), icon: '💳' },
-          ].map((m, i, arr) => (
+          {metrics.map((m, i) => (
             <React.Fragment key={m.label}>
               <View style={styles.metricRow}>
-                <Text style={styles.metricIcon}>{m.icon}</Text>
+                <Ionicons name={m.icon} size={18} color={Colors.textSecondary} style={styles.metricIcon} />
                 <Text style={styles.metricLabel}>{m.label}</Text>
                 <Text style={[styles.metricValue, m.highlight && { color: Colors.danger }]}>{m.value}</Text>
-                {'confidence' in m && m.confidence && (
-                  <View style={styles.confBadgeWrap}>
-                    <ConfidenceBadge level={m.confidence as any} />
-                  </View>
-                )}
               </View>
-              {i < arr.length - 1 && <View style={styles.rowSep} />}
+              {i < metrics.length - 1 && <View style={styles.rowSep} />}
             </React.Fragment>
           ))}
         </View>
 
-        {/* Overall data confidence */}
-        {analysis.avgConfidence > 0 && (
-          <GlassCard style={styles.emotionCard}>
-            <Text style={styles.emotionLabel}>Data Confidence</Text>
-            <ConfidenceBadge level={confidenceLevel(analysis.avgConfidence)} size="md" />
-          </GlassCard>
-        )}
-
-        {/* Emotional status */}
+        {/* Emotional status (AI-provided emoji is content, kept as-is) */}
         {analysis.emotionalStatus && (
-          <GlassCard style={styles.emotionCard}>
-            <Text style={styles.emotionEmoji}>{analysis.emotionalStatus.emoji}</Text>
-            <View>
-              <Text style={styles.emotionLabel}>Emotional Status</Text>
+          <>
+            <SectionLabel>Emotional Status</SectionLabel>
+            <GlassCard style={styles.emotionCard}>
+              <Text style={styles.emotionEmoji}>{analysis.emotionalStatus.emoji}</Text>
               <Text style={styles.emotionText}>{analysis.emotionalStatus.label}</Text>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </>
         )}
 
-        {/* Score modifier reason */}
+        {/* Score adjustment */}
         {analysis.scoreModifierReason && (
-          <GlassCard style={styles.modifierCard}>
-            <Text style={styles.modifierLabel}>Score Adjustment</Text>
-            <Text style={styles.modifierText}>{analysis.scoreModifierReason}</Text>
-          </GlassCard>
+          <>
+            <SectionLabel>Score Adjustment</SectionLabel>
+            <GlassCard style={styles.modifierCard}>
+              <Text style={styles.modifierText}>{analysis.scoreModifierReason}</Text>
+            </GlassCard>
+          </>
         )}
 
-        {/* #1 Thing To Fix */}
-        {analysis.topFix && (
-          <GlassCard style={styles.topFixCard}>
-            <Text style={styles.topFixLabel}>🚨 #1 Thing To Fix</Text>
-            <Text style={styles.topFixAction}>{analysis.topFix.action}</Text>
-            <Text style={styles.topFixImpact}>
-              Estimated monthly improvement: ${analysis.topFix.monthlyImpact.toLocaleString()}
-            </Text>
-          </GlassCard>
-        )}
-
-        {/* Positive behaviors */}
+        {/* What you're doing right */}
         {analysis.positiveBehaviors && analysis.positiveBehaviors.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>✅ What You're Doing Right</Text>
-            <View style={styles.insightsList}>
-              {analysis.positiveBehaviors.map((pb, i) => (
-                <View key={i} style={styles.insightRow}>
-                  <Text style={styles.positiveBullet}>✓</Text>
-                  <Text style={styles.positiveText}>{pb}</Text>
-                </View>
+            <SectionLabel>What You're Doing Right</SectionLabel>
+            <View style={styles.listCard}>
+              {analysis.positiveBehaviors.map((pb, i, arr) => (
+                <React.Fragment key={i}>
+                  <View style={styles.listRow}>
+                    <Ionicons name="checkmark-circle" size={18} color={Colors.success} style={styles.bullet} />
+                    <Text style={styles.listText}>{pb}</Text>
+                  </View>
+                  {i < arr.length - 1 && <View style={styles.rowSep} />}
+                </React.Fragment>
               ))}
             </View>
           </>
         )}
 
-        {/* Top problems */}
+        {/* Biggest problems */}
         {analysis.topProblems && analysis.topProblems.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>🚩 Biggest Problems</Text>
-            <View style={styles.insightsList}>
-              {analysis.topProblems.map((p, i) => (
-                <View key={i} style={styles.insightRow}>
-                  <Text style={styles.problemBullet}>✗</Text>
-                  <Text style={styles.problemText}>{p}</Text>
-                </View>
+            <SectionLabel>Biggest Problems</SectionLabel>
+            <View style={styles.listCard}>
+              {analysis.topProblems.map((p, i, arr) => (
+                <React.Fragment key={i}>
+                  <View style={styles.listRow}>
+                    <Ionicons name="close-circle" size={18} color={Colors.danger} style={styles.bullet} />
+                    <Text style={styles.listText}>{p}</Text>
+                  </View>
+                  {i < arr.length - 1 && <View style={styles.rowSep} />}
+                </React.Fragment>
               ))}
             </View>
           </>
         )}
 
-        {/* Debts summary */}
+        {/* Debts */}
         {analysis.debts && analysis.debts.length > 0 && (
-          <GlassCard style={styles.debtsCard}>
+          <>
+            <SectionLabel>Debts</SectionLabel>
+            <GlassCard style={styles.debtsCard}>
             <View style={styles.debtsHeader}>
-              <Text style={styles.debtsTitle}>📋 {analysis.debts.length} {analysis.debts.length === 1 ? 'Debt' : 'Debts'}</Text>
+              <Text style={styles.debtsTitle}>{analysis.debts.length} {analysis.debts.length === 1 ? 'Debt' : 'Debts'}</Text>
               <Text style={styles.debtsTotal}>{fmt(analysis.debtTotal ?? 0)} total</Text>
             </View>
             {analysis.debts.slice(0, 3).map((d: any) => (
@@ -246,26 +305,38 @@ export default function ResultsScreen({ navigation, route }: Props) {
             {analysis.debts.length > 3 && (
               <Text style={styles.debtsMore}>+{analysis.debts.length - 3} more</Text>
             )}
-            {(analysis.debtTotal ?? 0) > 0 && hasAccessTo(purchaseTier, 'deep_dive') && (
-              <NeonButton
-                label="Full Debt Payoff Plan"
-                onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts ?? [], monthlyIncome: analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0 })}
-                variant="secondary"
-                style={styles.debtsCta}
-              />
+            {hasDebt && (
+              canDeepDive ? (
+                <NeonButton
+                  label="View Debt Payoff Plan"
+                  onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts ?? [], monthlyIncome: income })}
+                  variant="secondary"
+                  style={styles.debtsCta}
+                />
+              ) : (
+                <TouchableOpacity style={styles.lockedCta} onPress={() => navigation.navigate('Paywall')} activeOpacity={0.85}>
+                  <Ionicons name="lock-closed" size={16} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.lockedCtaTitle}>Upgrade to Deep Dive</Text>
+                    <Text style={styles.lockedCtaSub}>Unlock your full debt payoff plan</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              )
             )}
-          </GlassCard>
+            </GlassCard>
+          </>
         )}
 
         {/* What you mentioned spending */}
         {analysis.mentionedSpending && analysis.mentionedSpending.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>What You Mentioned Spending</Text>
+            <SectionLabel>What You Mentioned Spending</SectionLabel>
             <View style={styles.metricsGroup}>
               {analysis.mentionedSpending.map((item: any, i: number, arr: any[]) => (
                 <React.Fragment key={item.category}>
                   <View style={styles.metricRow}>
-                    <Text style={styles.metricIcon}>💳</Text>
+                    <SpendingIcon category={item.category} size={18} color={Colors.textSecondary} />
                     <Text style={styles.metricLabel}>{item.category}</Text>
                     <Text style={styles.metricValue}>{item.amount ? `$${item.amount.toLocaleString()}` : 'mentioned'}</Text>
                   </View>
@@ -276,89 +347,57 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {/* Recommended Budget */}
-        <Text style={styles.sectionTitle}>Recommended Budget</Text>
+        {/* Recommended budget (50/30/20) */}
+        <SectionLabel>Recommended Budget</SectionLabel>
         <View style={styles.metricsGroup}>
           {(() => {
-            const income = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
-            const expenses = analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0;
             const savings = analysis.monthlySavings ?? 0;
             const needsPct = income > 0 ? (expenses / income) * 100 : 0;
             const wantsPct = income > 0 ? Math.max(0, ((income - expenses - savings) / income) * 100) : 0;
             const savingsPct = income > 0 ? (savings / income) * 100 : 0;
-            const recNeeds = income * 0.5;
-            const recWants = income * 0.3;
-            const recSavings = income * 0.2;
-            return (
-              <>
+            const rows: { icon: IoniconsName; label: string; pct: number; current: number; target: number; targetPct: number; danger?: boolean }[] = [
+              { icon: 'home-outline', label: 'Needs', pct: needsPct, current: expenses, target: income * 0.5, targetPct: 50 },
+              { icon: 'game-controller-outline', label: 'Wants', pct: wantsPct, current: Math.max(0, income - expenses - savings), target: income * 0.3, targetPct: 30 },
+              { icon: 'wallet-outline', label: 'Savings / Debt', pct: savingsPct, current: savings, target: income * 0.2, targetPct: 20, danger: savingsPct < 20 },
+            ];
+            return rows.map((r, i) => (
+              <React.Fragment key={r.label}>
                 <View style={styles.metricRow}>
-                  <Text style={styles.metricIcon}>🏠</Text>
-                  <Text style={styles.metricLabel}>Needs</Text>
-                  <Text style={styles.metricValue}>{needsPct.toFixed(0)}%</Text>
+                  <Ionicons name={r.icon} size={18} color={Colors.textSecondary} style={styles.metricIcon} />
+                  <Text style={styles.metricLabel}>{r.label}</Text>
+                  <Text style={[styles.metricValue, r.danger && { color: Colors.danger }]}>{r.pct.toFixed(0)}%</Text>
                 </View>
                 {income > 0 && (
                   <View style={styles.budgetDetail}>
-                    <Text style={styles.budgetDetailText}>
-                      Current: ${expenses.toLocaleString()}/mo
-                    </Text>
-                    <Text style={styles.budgetDetailText}>
-                      Target: ${recNeeds.toLocaleString()}/mo (50%)
-                    </Text>
+                    <Text style={styles.budgetDetailText}>Current: ${Math.round(r.current).toLocaleString()}/mo</Text>
+                    <Text style={styles.budgetDetailText}>Target: ${Math.round(r.target).toLocaleString()}/mo ({r.targetPct}%)</Text>
                   </View>
                 )}
-                <View style={styles.rowSep} />
-                <View style={styles.metricRow}>
-                  <Text style={styles.metricIcon}>🎮</Text>
-                  <Text style={styles.metricLabel}>Wants</Text>
-                  <Text style={styles.metricValue}>{wantsPct.toFixed(0)}%</Text>
-                </View>
-                {income > 0 && (
-                  <View style={styles.budgetDetail}>
-                    <Text style={styles.budgetDetailText}>
-                      Current: ${Math.max(0, income - expenses - savings).toLocaleString()}/mo
-                    </Text>
-                    <Text style={styles.budgetDetailText}>
-                      Target: ${recWants.toLocaleString()}/mo (30%)
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.rowSep} />
-                <View style={styles.metricRow}>
-                  <Text style={styles.metricIcon}>💰</Text>
-                  <Text style={styles.metricLabel}>Savings / Debt</Text>
-                  <Text style={[styles.metricValue, savingsPct < 20 && { color: Colors.danger }]}>{savingsPct.toFixed(0)}%</Text>
-                </View>
-                {income > 0 && (
-                  <View style={styles.budgetDetail}>
-                    <Text style={styles.budgetDetailText}>
-                      Current: ${savings.toLocaleString()}/mo
-                    </Text>
-                    <Text style={styles.budgetDetailText}>
-                      Target: ${recSavings.toLocaleString()}/mo (20%)
-                    </Text>
-                  </View>
-                )}
-              </>
-            );
+                {i < rows.length - 1 && <View style={styles.rowSep} />}
+              </React.Fragment>
+            ));
           })()}
         </View>
 
-        {/* Insights */}
+        {/* Key insights */}
         {analysis.insights?.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Key Insights</Text>
-            <View style={styles.insightsList}>
-              {analysis.insights.map((insight, i) => (
-                <View key={i} style={styles.insightRow}>
-                  <Text style={styles.insightBullet}>→</Text>
-                  <Text style={styles.insightText}>{insight}</Text>
-                </View>
+            <SectionLabel>Key Insights</SectionLabel>
+            <View style={styles.listCard}>
+              {analysis.insights.map((insight, i, arr) => (
+                <React.Fragment key={i}>
+                  <View style={styles.listRow}>
+                    <Ionicons name="arrow-forward" size={16} color={Colors.primary} style={styles.bullet} />
+                    <Text style={styles.listText}>{insight}</Text>
+                  </View>
+                  {i < arr.length - 1 && <View style={styles.rowSep} />}
+                </React.Fragment>
               ))}
             </View>
           </>
         )}
 
-        {/* Actions */}
+        {/* Primary action + compact secondary row */}
         <View style={styles.actionsGroup}>
           {hasAccessTo(purchaseTier, 'action_plan') ? (
             <NeonButton
@@ -368,64 +407,27 @@ export default function ResultsScreen({ navigation, route }: Props) {
                 const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
                 navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage });
               }}
-              style={styles.actionBtn}
             />
           ) : (
             <NeonButton
               label="Unlock 90-Day Action Plan — $4.99"
               onPress={() => navigation.navigate('Paywall')}
-              style={styles.actionBtn}
-              variant="secondary"
             />
           )}
-          {(analysis.debtTotal ?? 0) > 0 && hasAccessTo(purchaseTier, 'deep_dive') && (
-            <NeonButton
-              label="Debt Payoff Calculator"
-              onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts ?? [], monthlyIncome: analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0 })}
-              variant="secondary"
-              style={styles.actionBtn}
-            />
-          )}
-          <NeonButton
-            label="Share My Score"
-            onPress={() => navigation.navigate('Share', { analysis })}
-            variant="tinted"
-            style={styles.actionBtn}
-            icon="📤"
-          />
-          {!user ? (
-            <NeonButton
-              label="Sign in to Share to Community"
-              onPress={() => navigation.navigate('Login')}
-              variant="secondary"
-              style={styles.actionBtn}
-              icon="🔑"
-            />
-          ) : !shared ? (
-            <NeonButton
-              label="+ Share to Community Feed"
-              onPress={handleShareToFeed}
-              variant="secondary"
-              style={styles.actionBtn}
-              icon="🌐"
-            />
-          ) : (
-            <NeonButton
-              label="✓ Shared to Community Feed"
-              onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })}
-              variant="tinted"
-              style={styles.actionBtn}
-            />
-          )}
-          {user && (
-            <NeonButton
-              label="Track these numbers monthly"
-              onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })}
-              variant="secondary"
-              style={styles.actionBtn}
-              icon="📅"
-            />
-          )}
+
+          <View style={styles.iconRow}>
+            <IconAction icon="share-social-outline" label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
+            {!user ? (
+              <IconAction icon="log-in-outline" label="Sign in" onPress={() => navigation.navigate('Login')} />
+            ) : !shared ? (
+              <IconAction icon="globe-outline" label="Post" onPress={handleShareToFeed} />
+            ) : (
+              <IconAction icon="checkmark-circle-outline" label="Posted" tint={Colors.success} onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })} />
+            )}
+            {user && (
+              <IconAction icon="calendar-outline" label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
+            )}
+          </View>
         </View>
 
         <Disclaimer style={{ marginTop: Spacing.xl }} />
@@ -441,6 +443,12 @@ export default function ResultsScreen({ navigation, route }: Props) {
   );
 }
 
+const iaStyles = StyleSheet.create({
+  btn: { flex: 1, alignItems: 'center', gap: Spacing.xs },
+  badge: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  label: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
@@ -448,31 +456,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: Spacing.xl,
     marginBottom: Spacing.xl,
   },
-  scoreInfo: { flex: 1, gap: Spacing.sm },
-scoreNum: {
-  fontFamily: Typography.fonts.heading,
-  fontSize: Typography.title1.fontSize, fontWeight: '700',
-  color: Colors.textPrimary, letterSpacing: -2,
-},
-  scoreOf: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '400' },
+  scoreInfo: { flex: 1, gap: Spacing.md },
+  confidenceSlot: { gap: Spacing.xs, alignItems: 'flex-start' },
+  confidenceLabel: { marginBottom: 0 },
   roastCard: {
-    borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.md,
+    borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.xxl,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
   },
-  roastEmoji: { fontSize: Typography.title3.fontSize, marginTop: Spacing.xs },
+  roastLabel: {
+    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize,
+    color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.6,
+    marginBottom: Spacing.sm,
+  },
   roastText: {
-    flex: 1, fontFamily: Typography.fonts.body,
+    fontFamily: Typography.fonts.body,
     fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontStyle: 'italic', lineHeight: 22,
   },
   summaryCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   summaryText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 22 },
-  sectionTitle: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6,
-    marginBottom: Spacing.sm, marginTop: Spacing.xs,
-  },
   metricsGroup: {
     backgroundColor: Colors.groupedRow,
     borderRadius: Radius.lg, overflow: 'hidden',
@@ -480,49 +481,45 @@ scoreNum: {
     marginBottom: Spacing.xxl,
   },
   metricRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
-  metricIcon: { fontSize: Typography.body.fontSize, marginRight: Spacing.sm },
+  metricIcon: { marginRight: Spacing.xs },
   metricLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   metricValue: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 46 },
-  breakdownCard: { overflow: 'hidden', marginBottom: Spacing.xxl },
-  breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  breakdownLeft: { width: 110 },
-  breakdownName: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary },
-  breakdownPct: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary },
-  breakdownBarWrap: { flex: 1, height: 6, backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.xs, overflow: 'hidden' },
-  breakdownBar: { height: '100%', borderRadius: Radius.xs },
-  breakdownAmt: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, width: 56, textAlign: 'right' },
-  insightsList: { gap: Spacing.sm, marginBottom: Spacing.xxl },
-  insightRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
-  insightBullet: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.primary, marginTop: 1 },
-  insightText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  emotionCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.md },
+  rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg + 22 },
+  // Carded lists (positives / problems / insights) — consistent with the metric groups.
+  listCard: {
+    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    marginBottom: Spacing.xxl,
+  },
+  listRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  bullet: { marginTop: 1 },
+  listText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
+  emotionCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.xxl },
   emotionEmoji: { fontSize: Typography.title2.fontSize },
-  emotionLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
-  emotionText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginTop: 2 },
-  topFixCard: { padding: Spacing.lg, marginBottom: Spacing.md, borderLeftWidth: 3, borderLeftColor: Colors.tertiarySolid },
-  modifierCard: { padding: Spacing.md, marginBottom: Spacing.md },
-  modifierLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
+  emotionText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  modifierCard: { padding: Spacing.md, marginBottom: Spacing.xxl },
   modifierText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, fontStyle: 'italic', lineHeight: 18 },
-  debtsCard: { padding: Spacing.lg, marginBottom: Spacing.md },
+  topFixCard: { padding: Spacing.lg, marginBottom: Spacing.xxl, borderLeftWidth: 3, borderLeftColor: Colors.tertiarySolid },
+  topFixAction: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, lineHeight: 22, marginBottom: Spacing.xs },
+  topFixImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.success },
+  debtsCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   debtsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   debtsTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   debtsTotal: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  debtMiniRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.xs },
+  debtMiniRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.xs },
   debtMiniName: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, flex: 1 },
-  debtMiniUrgency: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, textTransform: 'capitalize' },
   debtsMore: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: Spacing.xs },
-  debtsCta: { marginTop: Spacing.sm },
-  confBadgeWrap: { marginLeft: 6 },
-  topFixLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.tertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
-  topFixAction: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, lineHeight: 22, marginBottom: Spacing.xs },
-  topFixImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.success },
-  positiveBullet: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.success, marginTop: 1 },
-  positiveText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  problemBullet: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.danger, marginTop: 1 },
-  problemText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  actionsGroup: { gap: Spacing.sm, marginTop: Spacing.xs },
-  actionBtn: {},
-  budgetDetail: { paddingLeft: Spacing.xl + Spacing.sm, paddingBottom: Spacing.xs },
-  budgetDetailText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, lineHeight: 16 },
+  debtsCta: { marginTop: Spacing.md },
+  lockedCta: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginTop: Spacing.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  lockedCtaTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.primary },
+  lockedCtaSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
+  budgetDetail: { paddingLeft: Spacing.lg, paddingBottom: Spacing.sm, gap: 1 },
+  budgetDetailText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 17 },
+  actionsGroup: { gap: Spacing.lg, marginTop: Spacing.xs },
+  iconRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-start' },
 });
