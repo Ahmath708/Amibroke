@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, StatusBar, LogBox } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
@@ -71,7 +71,6 @@ export default function App() {
         console.warn('Font loading error:', e);
       } finally {
         setFontsLoaded(true);
-        await SplashScreen.hideAsync();
       }
     }
 
@@ -88,11 +87,20 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
+  // Hide the native splash only after the JS tree has painted its first frame,
+  // so there's no black gap between the native splash and the in-app splash.
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
   if (!fontsLoaded) {
     return null;
   }
 
   return (
+    <View style={styles.container} onLayout={onLayoutRootView}>
     <SafeAreaProvider>
       <StatusBar
         barStyle="light-content"
@@ -136,6 +144,7 @@ export default function App() {
       </ErrorBoundary>
       </AuthProvider>
     </SafeAreaProvider>
+    </View>
   );
 }
 
