@@ -42,6 +42,7 @@ export const Colors = {
   successContainer:      'rgba(57, 255, 20, 0.14)',
   warning:               '#FF6B00',
   warningContainer:      'rgba(255, 107, 0, 0.14)',
+  caution:               '#FFCC00',   // iOS systemYellow — confidence-medium (distinct from severity's orange)
   danger:                '#ff453a',   // iOS systemRed
   dangerContainer:       'rgba(255, 69, 58, 0.16)',
   info:                  '#b9f1ff',
@@ -113,3 +114,12 @@ export const Radius = {
   xxl:  20,
   pill: 999,
 };
+
+// ── Tier palette ────────────────────────────────────────────────────────────────
+// One color per subscription tier. Deliberately steers clear of the score-band
+// palette (red→green) so "tier" never reads as "financial health" to the user.
+export const TierColors = {
+  free:        Colors.textSecondary,  // neutral gray
+  action_plan: Colors.secondary,      // neon cyan
+  deep_dive:   Colors.primary,        // electric purple
+} as const;

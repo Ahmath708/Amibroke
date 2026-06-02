@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Animated,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -145,7 +146,7 @@ export default function SubscriptionAuditScreen() {
           <EmptyState emoji="🗂️" title="No subscriptions yet" body="Add your subscriptions manually to audit your monthly spending." />
         ) : (
           <>
-            <Text style={styles.sectionLabel}>Your Subscriptions · {subs.length} found</Text>
+            <SectionLabel>Your Subscriptions · {subs.length} found</SectionLabel>
             <View style={styles.subGroup}>
               {subs.map((sub, i) => {
                 const d = decisions[sub.id];
@@ -253,10 +254,6 @@ const styles = StyleSheet.create({
   summaryValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
   summaryLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   summaryDivider: { width: StyleSheet.hairlineWidth, height: 36, backgroundColor: Colors.separator },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
   subGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,

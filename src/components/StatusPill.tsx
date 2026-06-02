@@ -14,6 +14,9 @@ interface Props {
    * 3-variant mapping so the pill matches the single source of truth.
    */
   color?: string;
+  /** Solid background + light text instead of the translucent default — an
+   *  "alarm" emphasis (e.g. critical severity). */
+  filled?: boolean;
 }
 
 const CONFIG: Record<Variant, { bg: string; color: string }> = {
@@ -25,13 +28,14 @@ const CONFIG: Record<Variant, { bg: string; color: string }> = {
   muted:   { bg: 'rgba(255,255,255,0.07)', color: Colors.textSecondary },
 };
 
-export default function StatusPill({ label, variant = 'info', size = 'sm', color: colorOverride }: Props) {
+export default function StatusPill({ label, variant = 'info', size = 'sm', color: colorOverride, filled }: Props) {
   const base = CONFIG[variant];
-  const color = colorOverride ?? base.color;
-  const bg = colorOverride ? `${colorOverride}22` : base.bg; // ~13% alpha container from the band color
+  const accent = colorOverride ?? base.color;
+  const bg = filled ? accent : colorOverride ? `${colorOverride}22` : base.bg; // ~13% alpha container from the band color
+  const textColor = filled ? Colors.textPrimary : accent;
   return (
     <View style={[styles.pill, { backgroundColor: bg }, size === 'md' && styles.pillMd]}>
-      <Text style={[styles.text, { color }, size === 'md' && styles.textMd]}>{label}</Text>
+      <Text style={[styles.text, { color: textColor }, size === 'md' && styles.textMd]}>{label}</Text>
     </View>
   );
 }

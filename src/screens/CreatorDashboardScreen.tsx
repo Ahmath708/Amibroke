@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Share, Animated,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -105,7 +106,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Stats Grid */}
-        <Text style={styles.sectionLabel}>Your Creator Stats</Text>
+        <SectionLabel>Your Creator Stats</SectionLabel>
         <View style={styles.statsGrid}>
           {[
             { label: 'Total Roasts', value: stats?.totalRoasts || 0, emoji: '🔥' },
@@ -122,7 +123,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
         </View>
 
         {/* Referral Code */}
-        <Text style={styles.sectionLabel}>Your Referral Code</Text>
+        <SectionLabel>Your Referral Code</SectionLabel>
         <GlassCard style={styles.referralCard}>
           {referralCode ? (
             <>
@@ -135,7 +136,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
         </GlassCard>
 
         {/* Batch Roast Mode */}
-        <Text style={styles.sectionLabel}>Batch Roast Mode</Text>
+        <SectionLabel>Batch Roast Mode</SectionLabel>
         <GlassCard style={styles.batchCard}>
           <Text style={styles.batchDesc}>Roast multiple financial situations at once. Perfect for creator content.</Text>
 
@@ -187,7 +188,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
         {/* Batch Results */}
         {batchResults.length > 0 && (
           <>
-            <Text style={styles.sectionLabel}>Results</Text>
+            <SectionLabel>Results</SectionLabel>
             {batchResults.map((r, i) => (
               <GlassCard key={i} style={styles.resultCard}>
                 <View style={styles.resultHeader}>
@@ -208,15 +209,6 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize,
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.md,
-  },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg },
   statCard: { width: '48%', padding: Spacing.md, alignItems: 'center' },
   statEmoji: { fontSize: 24, marginBottom: Spacing.xs },

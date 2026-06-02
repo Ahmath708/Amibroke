@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import SelectableChip from '@/components/SelectableChip';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import StateSelect from '@/components/StateSelect';
@@ -78,14 +79,12 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
               {field.options.map((opt) => {
                 const active = selections[field.key] === opt;
                 return (
-                  <TouchableOpacity
+                  <SelectableChip
                     key={opt}
-                    style={[styles.chip, active && styles.chipActive]}
+                    label={labelFor(opt)}
+                    active={active}
                     onPress={() => setSelections((prev) => ({ ...prev, [field.key]: active ? '' : opt }))}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{labelFor(opt)}</Text>
-                  </TouchableOpacity>
+                  />
                 );
               })}
             </ScrollView>
@@ -115,14 +114,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
   },
   chipsRow: { gap: Spacing.sm, paddingRight: Spacing.xl },
-  chip: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderWidth: 1.5, borderColor: Colors.glassBorder,
-  },
-  chipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
-  chipText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  chipTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   cta: { marginTop: Spacing.lg },
   skipBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   skipText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated, ActivityIndicator,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation } from '@react-navigation/native';
@@ -135,7 +136,7 @@ export default function ShareScreen({ route }: Props) {
       >
         {/* Format toggle */}
         <View style={styles.formatRow}>
-          <Text style={styles.sectionLabel}>Format</Text>
+          <SectionLabel>Format</SectionLabel>
           <View style={styles.formatToggle}>
             <TouchableOpacity
               style={[styles.formatBtn, format === 'tall' && styles.formatBtnActive]}
@@ -154,7 +155,7 @@ export default function ShareScreen({ route }: Props) {
 
         {/* Theme toggle */}
         <View style={styles.formatRow}>
-          <Text style={styles.sectionLabel}>Theme</Text>
+          <SectionLabel>Theme</SectionLabel>
           <View style={styles.formatToggle}>
             <TouchableOpacity
               style={[styles.formatBtn, theme === 'dark' && styles.formatBtnActive]}
@@ -172,7 +173,7 @@ export default function ShareScreen({ route }: Props) {
         </View>
 
         {/* Shareable card preview */}
-        <Text style={styles.sectionLabel}>Your Share Card</Text>
+        <SectionLabel>Your Share Card</SectionLabel>
         <ViewShot ref={cardRef} options={{ format: 'png', quality: 1.0 }}>
           <LinearGradient
             colors={cardBg as [string, string]}
@@ -231,7 +232,7 @@ export default function ShareScreen({ route }: Props) {
         </TouchableOpacity>
 
         {/* Share platforms */}
-        <Text style={styles.sectionLabel}>Share To</Text>
+        <SectionLabel>Share To</SectionLabel>
         <View style={styles.platformGrid}>
           {PLATFORMS.map((p) => (
             <TouchableOpacity
@@ -247,7 +248,7 @@ export default function ShareScreen({ route }: Props) {
         </View>
 
         {/* Captions */}
-        <Text style={styles.sectionLabel}>Share Caption</Text>
+        <SectionLabel>Share Caption</SectionLabel>
         {captionsLoading ? (
           <View style={styles.captionsLoadingBox}>
             <ActivityIndicator size="small" color={Colors.primary} />
@@ -292,10 +293,6 @@ export default function ShareScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
   formatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
   formatToggle: { flexDirection: 'row', backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.md, padding: 2, gap: 0 },
   formatBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs + 2, borderRadius: Radius.sm },

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Animated,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -261,7 +262,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             <Text style={styles.subtitle}>
               Pick the metrics and debts you'll check in on each month. We'll remember the baseline and show your progress.
             </Text>
-            <Text style={styles.sectionLabel}>Track Monthly</Text>
+            <SectionLabel style={{ marginTop: Spacing.md }}>Track Monthly</SectionLabel>
             <View style={styles.formGroup}>
               {pool.map((g, i) => {
                 const on = selectedIds.has(g.id);
@@ -306,7 +307,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             <Text style={styles.title}>{monthLabel} Check-In</Text>
             <Text style={styles.subtitle}>Update your numbers — we'll show how you're tracking against your goals.</Text>
 
-            <Text style={styles.sectionLabel}>This Month's Figures</Text>
+            <SectionLabel style={{ marginTop: Spacing.md }}>This Month's Figures</SectionLabel>
             <View style={styles.formGroup}>
               {needs.income && <BaseInput label="Monthly Income" value={base.income} onChange={(v) => setBase((p) => ({ ...p, income: v }))} first />}
               {needs.expenses && <BaseInput label="Monthly Expenses" value={base.expenses} onChange={(v) => setBase((p) => ({ ...p, expenses: v }))} first={!needs.income} />}
@@ -318,7 +319,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             </View>
 
             {/* Live progress vs baseline */}
-            <Text style={styles.sectionLabel}>Your Progress</Text>
+            <SectionLabel style={{ marginTop: Spacing.md }}>Your Progress</SectionLabel>
             <View style={styles.formGroup}>
               {config.goals.map((g, i) => {
                 const current = computeGoalCurrent(g, currentBase());
@@ -342,7 +343,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
               })}
             </View>
 
-            <Text style={styles.sectionLabel}>How are you feeling?</Text>
+            <SectionLabel style={{ marginTop: Spacing.md }}>How are you feeling?</SectionLabel>
             <View style={styles.moodRow}>
               {MOODS.map((m, i) => (
                 <TouchableOpacity key={i} style={[styles.moodBtn, mood === i && styles.moodBtnActive]} onPress={() => setMood(i)} activeOpacity={0.7}>
@@ -428,7 +429,6 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   title: { fontFamily: Typography.fonts.heading, fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 6 },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl, lineHeight: 22 },
-  sectionLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm, marginTop: Spacing.md },
   formGroup: { backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, marginBottom: Spacing.lg },
   cellSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   formCell: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 13, minHeight: 50 },

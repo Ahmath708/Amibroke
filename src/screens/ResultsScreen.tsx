@@ -12,6 +12,7 @@ import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
 import ScoreRing from '@/components/ScoreRing';
 import StatusPill from '@/components/StatusPill';
+import SeverityPill from '@/components/SeverityPill';
 import ConfidenceBadge, { confidenceLevel } from '@/components/ConfidenceBadge';
 import NeonButton from '@/components/NeonButton';
 import Disclaimer from '@/components/Disclaimer';
@@ -239,7 +240,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
             {analysis.debts.slice(0, 3).map((d: any) => (
               <View key={d.name} style={styles.debtMiniRow}>
                 <Text style={styles.debtMiniName}>{d.name}</Text>
-                <Text style={[styles.debtMiniUrgency, { color: d.urgency === 'critical' ? Colors.danger : d.urgency === 'high' ? Colors.warning : Colors.textSecondary }]}>{d.urgency}</Text>
+                <SeverityPill level={d.urgency} />
               </View>
             ))}
             {analysis.debts.length > 3 && (

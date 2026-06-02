@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import SectionLabel from '@/components/SectionLabel';
+import SelectableChip from '@/components/SelectableChip';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
 import { goalProgress, formatGoalValue } from '@/utils/checkinGoals';
 
@@ -41,14 +42,17 @@ export default function CheckinTrend() {
       <GlassCard style={styles.card}>
       {goals.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {goals.map((g) => {
-            const on = g.id === goal.id;
-            return (
-              <TouchableOpacity key={g.id} onPress={() => setSelectedId(g.id)} style={[styles.chip, on && styles.chipOn]} activeOpacity={0.7}>
-                <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>{g.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {goals.map((g) => (
+            <SelectableChip
+              key={g.id}
+              label={g.label}
+              active={g.id === goal.id}
+              onPress={() => setSelectedId(g.id)}
+              size="sm"
+              maxLines={1}
+              style={styles.goalChip}
+            />
+          ))}
         </ScrollView>
       )}
 
@@ -77,10 +81,7 @@ const styles = StyleSheet.create({
   card: { padding: Spacing.lg, marginBottom: Spacing.xl },
   heading: { marginTop: Spacing.xl },
   chips: { gap: Spacing.xs, paddingBottom: Spacing.md },
-  chip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.pill, backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
-  chipOn: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
-  chipText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, maxWidth: 120 },
-  chipTextOn: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  goalChip: { maxWidth: 160 },
   chart: { alignItems: 'flex-end', gap: Spacing.lg, paddingTop: 14, paddingHorizontal: Spacing.xs, minWidth: '100%' },
   col: { alignItems: 'center', minWidth: 44 },
   val: { fontFamily: Typography.fonts.bodySemi, fontSize: 10, fontWeight: '700', marginBottom: 4 },

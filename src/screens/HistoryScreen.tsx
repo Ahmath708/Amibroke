@@ -259,11 +259,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryContainer,
   },
   newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.primary },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
   historyGroup: {
     backgroundColor: Colors.groupedRow,
     borderRadius: Radius.lg, overflow: 'hidden',

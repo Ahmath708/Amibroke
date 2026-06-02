@@ -1,46 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Radius, Typography } from '@/theme/colors';
+import StatusPill from '@/components/StatusPill';
+import { Colors } from '@/theme/colors';
 
 type Level = 'high' | 'medium' | 'low';
 
-interface Props {
-  level: Level;
-  size?: 'sm' | 'md';
-}
-
-const CONFIG: Record<Level, { bg: string; color: string; label: string }> = {
-  high:   { bg: 'rgba(52,199,89,0.15)', color: '#34C759', label: 'High' },
-  medium: { bg: 'rgba(255,204,0,0.15)', color: '#FFCC00', label: 'Medium' },
-  low:    { bg: 'rgba(255,69,58,0.15)', color: '#FF453A', label: 'Low' },
+// Confidence is the *inverted* axis vs severity: high = good (green), low = bad (red),
+// medium = caution (yellow — kept distinct from severity's orange so the two scales read
+// differently). Wraps StatusPill so all semantic badges share one base + the theme tokens.
+const COLORS: Record<Level, string> = {
+  high: Colors.success,
+  medium: Colors.caution,
+  low: Colors.danger,
 };
 
-export default function ConfidenceBadge({ level, size = 'sm' }: Props) {
-  const { bg, color, label } = CONFIG[level];
-  return (
-    <View style={[styles.pill, { backgroundColor: bg }, size === 'md' && styles.pillMd]}>
-      <Text style={[styles.text, { color }, size === 'md' && styles.textMd]}>{label}</Text>
-    </View>
-  );
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+export default function ConfidenceBadge({ level, size = 'sm' }: { level: Level; size?: 'sm' | 'md' }) {
+  return <StatusPill label={cap(level)} color={COLORS[level]} size={size} />;
 }
 
 export function confidenceLevel(avgConfidence: number): Level {
   return avgConfidence >= 0.8 ? 'high' : avgConfidence >= 0.5 ? 'medium' : 'low';
 }
-
-const styles = StyleSheet.create({
-  pill: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-  },
-  pillMd: { paddingHorizontal: 11, paddingVertical: 4 },
-  text: {
-    fontFamily: Typography.fonts.bodySemi,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  textMd: { fontSize: 12 },
-});

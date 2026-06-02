@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation } from '@react-navigation/native';
@@ -180,7 +181,7 @@ export default function ActionPlanScreen({ route }: Props) {
         )}
 
         {/* Steps — iOS grouped list by week */}
-        <Text style={styles.sectionLabel}>Weekly Actions</Text>
+        <SectionLabel>Weekly Actions</SectionLabel>
         <View style={styles.stepGroup}>
           {steps.map((step, i) => {
             const done = checked.has(step.week);
@@ -242,11 +243,6 @@ const styles = StyleSheet.create({
   progressTrack: { height: 6, backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.xs, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: Radius.xs },
   progressSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
   stepGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
