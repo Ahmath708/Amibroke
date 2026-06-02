@@ -12,7 +12,7 @@ import { selection } from '@/utils/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AnalysisHistoryItem, RoastTone, TabScreenNav } from '@/types';
+import { AnalysisHistoryItem, RoastTone, RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import NeonButton from '@/components/NeonButton';
@@ -33,7 +33,11 @@ import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 const MAX_INPUT_CHARS = 4000;
 
-type Props = { navigation: TabScreenNav<'Home'> };
+// Used in two places: inline as the first-run Home tab (DashboardScreen renders it
+// when there are 0 analyses) and as the pushed "Analyze" route ("New roast"). Typed
+// to the root stack so both call sites work; the stack header replaces the in-screen
+// title when pushed (navigation.canGoBack()).
+type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
 const CHIPS = [
   'I spend more than I earn 😬',
@@ -181,27 +185,30 @@ export default function HomeScreen({ navigation }: Props) {
       <ScreenBackground variant="home" />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: navigation.canGoBack() ? Spacing.lg : insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          {/* Large Title header */}
-          <View style={styles.pageHeader}>
-            <Text style={styles.pageLargeTitle}>Am I Broke?</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate(user ? 'Settings' : 'Login')}
-              style={styles.settingsBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={user ? 'settings-outline' : 'person-outline'}
-                size={22}
-                color={Colors.textSecondary}
-              />
-              {!user && <Text style={styles.loginHint}>Log In</Text>}
-            </TouchableOpacity>
-          </View>
+          {/* Large Title header — only as the first-run Home tab; when pushed as the
+              "Analyze" route, the stack header ("New Roast") replaces it. */}
+          {!navigation.canGoBack() && (
+            <View style={styles.pageHeader}>
+              <Text style={styles.pageLargeTitle}>Am I Broke?</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate(user ? 'Settings' : 'Login')}
+                style={styles.settingsBtn}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={user ? 'settings-outline' : 'person-outline'}
+                  size={22}
+                  color={Colors.textSecondary}
+                />
+                {!user && <Text style={styles.loginHint}>Log In</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
           <Text style={styles.pageSubtitle}>
             Describe your finances. Get roasted by AI. Fix your life.
           </Text>

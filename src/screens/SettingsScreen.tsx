@@ -154,7 +154,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   const accountRows: SettingRow[] = [
-    { type: 'nav', label: 'Profile', icon: 'person-outline', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },
+    { type: 'nav', label: 'Profile', icon: 'person-outline', onPress: () => navigation.navigate('Profile') },
     { type: 'nav', label: 'Subscription', icon: 'card-outline', detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
       if (!user) {
         setPendingRedirect('Paywall');

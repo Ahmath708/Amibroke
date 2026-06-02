@@ -117,12 +117,13 @@ export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: num
   deep_dive: { label: 'Deep Dive', price: 9.99, description: 'Everything in Action Plan plus scenario simulator, debt comparison, and PDF report' },
 };
 
-// Bottom-tab routes (live inside MainTabs).
+// Bottom-tab routes (live inside MainTabs). 3 tabs: dashboard, premium hub, social.
+// History & Profile are no longer tabs — they're pushed routes (History from the
+// dashboard's "View all"; Profile from the dashboard's avatar button).
 export type MainTabsParamList = {
   Home: undefined;
-  History: undefined;
+  Tools: undefined;
   Community: undefined;
-  Profile: undefined;
 };
 
 // Navigation prop for a bottom-tab screen that can also push root-stack screens.
@@ -140,6 +141,9 @@ export type RootStackParamList = {
   UsernameSetup: undefined;
   // App
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
+  Analyze: undefined;           // the "New roast" input (also the first-run Home)
+  History: undefined;           // pushed from the dashboard trend / "View all"
+  Profile: undefined;           // pushed from the dashboard avatar button
   Processing: { userInput: string; tone?: RoastTone; userContext?: Record<string, unknown> };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };

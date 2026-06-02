@@ -16,6 +16,8 @@ import OnboardingScreen from '@/screens/OnboardingScreen';
 import LandingScreen from '@/screens/LandingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import HomeScreen from '@/screens/HomeScreen';
+import DashboardScreen from '@/screens/DashboardScreen';
+import ToolsScreen from '@/screens/ToolsScreen';
 import ProcessingScreen from '@/screens/ProcessingScreen';
 import ResultsScreen from '@/screens/ResultsScreen';
 import ActionPlanScreen from '@/screens/ActionPlanScreen';
@@ -43,9 +45,8 @@ const Tab = createBottomTabNavigator<MainTabsParamList>();
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 const TAB_ICONS: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
   Home:      { active: 'home',        inactive: 'home-outline' },
-  History:   { active: 'stats-chart', inactive: 'stats-chart-outline' },
+  Tools:     { active: 'construct',   inactive: 'construct-outline' },
   Community: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
-  Profile:   { active: 'person',      inactive: 'person-outline' },
 };
 
 function IOSTabBar({ state, descriptors, navigation }: any) {
@@ -95,10 +96,9 @@ function MainTabs() {
       tabBar={(props) => <IOSTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen name="Home" component={DashboardScreen} />
+      <Tab.Screen name="Tools" component={ToolsScreen} />
       <Tab.Screen name="Community" component={CommunityFeedScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -151,6 +151,9 @@ export default function AppNavigator() {
           /* ─── Signed in: APP STACK ─── */
           <>
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Analyze" component={HomeScreen} options={{ ...sharedHeader, headerShown: true, title: 'New Roast', animation: 'slide_from_right' }} />
+            <Stack.Screen name="History" component={HistoryScreen} options={{ ...sharedHeader, headerShown: true, title: 'History', animation: 'slide_from_right' }} />
+            <Stack.Screen name="Profile" component={ProfileScreen} options={{ ...sharedHeader, headerShown: true, title: 'Profile', animation: 'slide_from_right' }} />
             <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
             <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />

@@ -132,7 +132,7 @@ export default function HistoryScreen() {
     <Animated.View style={[styles.container, animatedStyle]}>
       <ScreenBackground variant="history" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

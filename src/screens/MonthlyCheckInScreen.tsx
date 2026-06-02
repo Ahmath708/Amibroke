@@ -252,7 +252,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
               title="Start with an analysis"
               body="Run your first analysis, then pick the numbers you want to track here every month."
             />
-            <NeonButton label="Analyze my finances" onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })} style={{ marginTop: Spacing.lg }} />
+            <NeonButton label="Analyze my finances" onPress={() => navigation.navigate('Analyze')} style={{ marginTop: Spacing.lg }} />
           </View>
         )}
 
