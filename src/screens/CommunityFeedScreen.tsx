@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
@@ -131,8 +132,7 @@ export default function CommunityFeedScreen() {
           <EmptyState emoji="🌱" title="No posts yet" body="Be the first to share your roast with the community." />
         ) : (
           sorted.map((post) => {
-            const scoreColor = post.score < 40 ? Colors.danger : post.score < 65 ? Colors.warning : Colors.success;
-            const variant = post.score < 40 ? 'danger' : post.score < 65 ? 'warning' : 'good';
+            const scoreColor = getScoreBand(post.score).color;
 
             return (
               <View key={post.id} style={styles.card}>
@@ -144,7 +144,7 @@ export default function CommunityFeedScreen() {
                   <View style={styles.cardMeta}>
                     <Text style={styles.cardUser}>@{post.display_name}</Text>
                     <View style={styles.cardMetaRow}>
-                      <StatusPill label={post.score_label} variant={variant} />
+                      <StatusPill label={post.score_label} color={scoreColor} />
                       <Text style={styles.cardTime}>{timeAgo(post.created_at)}</Text>
                     </View>
                   </View>

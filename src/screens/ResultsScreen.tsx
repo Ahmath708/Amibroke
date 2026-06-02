@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
 import ScoreRing from '@/components/ScoreRing';
 import StatusPill from '@/components/StatusPill';
@@ -88,13 +89,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
     }
   };
 
-  const scoreColor = analysis.scoreColor ?? (
-    analysis.score < 40 ? Colors.danger :
-    analysis.score < 65 ? Colors.warning : Colors.success);
-
-  const scoreVariant =
-    analysis.score < 40 ? 'danger' :
-    analysis.score < 65 ? 'warning' : 'good';
+  const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
 
   return (
     <View style={styles.container}>
@@ -109,7 +104,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
           <View style={styles.scoreHero}>
             <ScoreRing score={analysis.score} size={140} />
             <View style={styles.scoreInfo}>
-              <StatusPill label={analysis.scoreLabel} variant={scoreVariant} size="md" />
+              <StatusPill label={analysis.scoreLabel} color={scoreColor} size="md" />
               <Text style={styles.scoreNum} adjustsFontSizeToFit numberOfLines={1}>
                 {analysis.score}<Text style={styles.scoreOf}>/100</Text>
               </Text>

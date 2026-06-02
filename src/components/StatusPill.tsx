@@ -8,6 +8,12 @@ interface Props {
   label: string;
   variant?: Variant;
   size?: 'sm' | 'md';
+  /**
+   * Explicit color override (text + a translucent matching bg). Pass
+   * getScoreBand(score).color for canonical score colors — bypasses the lossy
+   * 3-variant mapping so the pill matches the single source of truth.
+   */
+  color?: string;
 }
 
 const CONFIG: Record<Variant, { bg: string; color: string }> = {
@@ -19,8 +25,10 @@ const CONFIG: Record<Variant, { bg: string; color: string }> = {
   muted:   { bg: 'rgba(255,255,255,0.07)', color: Colors.textSecondary },
 };
 
-export default function StatusPill({ label, variant = 'info', size = 'sm' }: Props) {
-  const { bg, color } = CONFIG[variant];
+export default function StatusPill({ label, variant = 'info', size = 'sm', color: colorOverride }: Props) {
+  const base = CONFIG[variant];
+  const color = colorOverride ?? base.color;
+  const bg = colorOverride ? `${colorOverride}22` : base.bg; // ~13% alpha container from the band color
   return (
     <View style={[styles.pill, { backgroundColor: bg }, size === 'md' && styles.pillMd]}>
       <Text style={[styles.text, { color }, size === 'md' && styles.textMd]}>{label}</Text>

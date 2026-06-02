@@ -8,6 +8,7 @@ import { RouteProp, useNavigation } from '@react-navigation/native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import StatusPill from '@/components/StatusPill';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -84,8 +85,7 @@ export default function ShareScreen({ route }: Props) {
     });
   }, [navigation]);
 
-  const scoreColor = analysis.scoreColor ?? (analysis.score < 40 ? Colors.danger : analysis.score < 65 ? Colors.warning : Colors.success);
-  const variant = analysis.score < 40 ? 'danger' : analysis.score < 65 ? 'warning' : 'good';
+  const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
 
   const handleShare = async () => {
     await Share.share({ message: shareText });
@@ -185,7 +185,7 @@ export default function ShareScreen({ route }: Props) {
             </View>
 
             <Text style={[styles.shareCardScore, { color: scoreColor }]}>{analysis.score}</Text>
-            <StatusPill label={analysis.scoreLabel} variant={variant} size="md" />
+            <StatusPill label={analysis.scoreLabel} color={scoreColor} size="md" />
 
             {analysis.topFix && (
               <View style={styles.shareCardFix}>

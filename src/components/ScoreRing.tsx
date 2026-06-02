@@ -2,18 +2,13 @@
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Colors, Typography } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
+import { scoreGradient } from '@/utils/scoreVisual';
 
 interface Props {
   score: number;
   size?: number;
   showLabel?: boolean;
-}
-
-function getScoreColor(s: number) {
-  if (s >= 75) return Colors.success;
-  if (s >= 50) return Colors.warning;
-  if (s >= 30) return Colors.warning;
-  return Colors.danger;
 }
 
 export default function ScoreRing({ score, size = 120, showLabel = false }: Props) {
@@ -23,7 +18,10 @@ export default function ScoreRing({ score, size = 120, showLabel = false }: Prop
   const circumference = 2 * Math.PI * radius;
   const progress = score / 100;
   const strokeDashoffset = circumference * (1 - progress);
-  const color = getScoreColor(score);
+  // Single source of truth — same band color/label the rest of the app uses.
+  const band = getScoreBand(score);
+  const color = band.color;
+  const [gradFrom, gradTo] = scoreGradient(score);
 
   useEffect(() => {
     Animated.timing(animatedScore, {
@@ -33,19 +31,13 @@ export default function ScoreRing({ score, size = 120, showLabel = false }: Prop
     }).start();
   }, [score]);
 
-  const scoreVariant =
-    score >= 75 ? { label: 'Solid' } :
-    score >= 50 ? { label: 'OK' } :
-    score >= 30 ? { label: 'At Risk' } :
-    { label: 'Critical' };
-
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Defs>
-          <SvgGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={score >= 50 ? Colors.success : Colors.danger} />
-            <Stop offset="100%" stopColor={score >= 50 ? Colors.secondarySolid : Colors.tertiarySolid} />
+          <SvgGradient id="scoreRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={gradFrom} />
+            <Stop offset="100%" stopColor={gradTo} />
           </SvgGradient>
         </Defs>
         {/* Track */}
@@ -59,7 +51,7 @@ export default function ScoreRing({ score, size = 120, showLabel = false }: Prop
         <Circle
           cx={size / 2} cy={size / 2} r={radius}
           fill="none"
-          stroke="url(#scoreGrad)"
+          stroke="url(#scoreRingGrad)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -72,7 +64,7 @@ export default function ScoreRing({ score, size = 120, showLabel = false }: Prop
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={styles.center}>
           <Text style={[styles.scoreNum, { fontSize: size * 0.22, color }]}>{score}</Text>
-          {showLabel && <Text style={styles.scoreLabel}>{scoreVariant.label}</Text>}
+          {showLabel && <Text style={styles.scoreLabel}>{band.label}</Text>}
         </View>
       </View>
     </View>

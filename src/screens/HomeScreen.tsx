@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AnalysisHistoryItem, RoastTone, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
 import TypingPlaceholder from '@/components/TypingPlaceholder';
@@ -263,7 +264,7 @@ export default function HomeScreen({ navigation }: Props) {
             disabled={!input.trim()}
             style={styles.cta}
           />
-          <Text style={styles.ctaHint}>Powered by Claude · Usually takes ~5 seconds</Text>
+          <Text style={styles.ctaHint}>Powered by Claude · Results in seconds</Text>
 
           {/* Suggestion chips */}
           <Text style={styles.sectionLabel}>Suggestions</Text>
@@ -332,11 +333,11 @@ export default function HomeScreen({ navigation }: Props) {
               <Text style={styles.sectionLabel}>Your Recent Scores</Text>
               <View style={styles.scoreCards}>
                 {recentScores.map((s) => {
-                  const color = s.score < 40 ? Colors.danger : s.score < 65 ? Colors.warning : Colors.success;
+                  const color = getScoreBand(s.score).color; // single source of truth — matches Results
                   return (
                     <GlassCard key={s.id} style={styles.scoreCard}>
                       <Text style={[styles.scoreNum, { color }]}>{s.score}</Text>
-                      <Text style={styles.scoreLabel}>{s.score_label}</Text>
+                      <Text style={styles.scoreLabel} numberOfLines={1}>{s.score_label}</Text>
                       <Text style={styles.scoreUser}>{new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
                     </GlassCard>
                   );
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
   // Must match textInput's font metrics exactly so there's no jump when typing starts.
   placeholderText: { fontSize: Typography.callout.fontSize, lineHeight: 24 },
   inputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm },
-  charCount: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
+  charCount: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   inputActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   clearBtn: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
   micBtn: { padding: Spacing.xs },
@@ -424,10 +425,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm, marginBottom: Spacing.md,
   },
   contextRowText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.tint },
-  ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xl },
+  ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl },
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },
   scoreNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700' },
   scoreLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: 2 },
-  scoreUser: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.xs },
+  scoreUser: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: Spacing.xs },
 });

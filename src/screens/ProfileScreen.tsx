@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
@@ -158,8 +159,7 @@ export default function ProfileScreen({ navigation }: Props) {
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
-  const scoreColor = !latestScore ? Colors.textMuted : latestScore < 40 ? Colors.danger : latestScore < 65 ? Colors.warning : Colors.success;
-  const scoreVariant = !latestScore ? 'muted' as const : latestScore < 40 ? 'danger' as const : latestScore < 65 ? 'warning' as const : 'good' as const;
+  const scoreColor = !latestScore ? Colors.textMuted : getScoreBand(latestScore).color;
 
   if (loading) {
     return (
@@ -257,7 +257,7 @@ export default function ProfileScreen({ navigation }: Props) {
             </View>
             <View style={styles.currentScoreRight}>
               <Text style={[styles.currentScoreNum, { color: scoreColor }]}>{latestScore}</Text>
-              <StatusPill label={latestLabel} variant={scoreVariant} />
+              <StatusPill label={latestLabel} variant="muted" color={latestScore ? scoreColor : undefined} />
             </View>
           </View>
         )}
