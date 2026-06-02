@@ -132,9 +132,14 @@ client-side.
 
 - **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
   timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
-- **RevenueCat is not testable** without a paid Apple Developer Program membership; the dev account
-  is free-tier only. Local IAP testing is possible via an Xcode StoreKit Configuration file (no
-  paid account needed) but the webhook→DB mirror still needs sandbox. See `docs/REVENUECAT_SETUP.md`.
+- **RevenueCat IAP is testable for free in dev via the RevenueCat Test Store** (`test_…` key in
+  `EXPO_PUBLIC_REVENUECAT_IOS_KEY`). In a dev build (`expo run:ios`, not Expo Go) the full Paywall →
+  simulated purchase → entitlement → live paywall-subside flow works with no paid Apple account and
+  no sandbox (verified 2026-06-02: bought Deep Dive, gating dropped live). `purchases.ts` refuses a
+  `test_` key in production builds. The webhook→DB mirror (`user_subscriptions`) may not fire for
+  Test Store purchases — that's fine, the app treats RevenueCat `customerInfo` as the source of truth
+  and the DB is only a fallback/record. A paid Apple Developer membership is still needed for App
+  Store Connect products, sandbox/TestFlight, and release. See `docs/REVENUECAT_SETUP.md`.
 
 ## Parked / removed features
 
