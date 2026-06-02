@@ -8,7 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
+import { scoreGradient } from '@/utils/scoreVisual';
 import GlassCard from '@/components/GlassCard';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
@@ -22,6 +25,12 @@ import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
 const MAX_SCORE = 100;
+
+// Entry score ring geometry (partial-fill, band-gradient).
+const RING_SIZE = 48;
+const RING_STROKE = 4;
+const RING_R = (RING_SIZE - RING_STROKE) / 2;
+const RING_CIRC = 2 * Math.PI * RING_R;
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
@@ -146,10 +155,8 @@ export default function HistoryScreen() {
             <Text style={[styles.subtitle, styles.signInLink]}>Sign in to track your progress →</Text>
           </TouchableOpacity>
         )}
-        {history.length > 0 && (
-          <Text style={styles.versionNote}>
-            {history.some((h) => !h.score_label) ? 'Older analyses shown with limited data' : ''}
-          </Text>
+        {history.length > 0 && history.some((h) => !h.score_label) && (
+          <Text style={styles.versionNote}>Older analyses shown with limited data</Text>
         )}
 
         {history.length === 0 ? (
@@ -157,6 +164,7 @@ export default function HistoryScreen() {
         ) : (
           <>
             {/* Filterable chart */}
+            <Text style={styles.sectionLabel}>Score Trend</Text>
             <HistoryChart
               items={history}
               granularity={granularity}
@@ -173,7 +181,8 @@ export default function HistoryScreen() {
             ) : (
             <View style={styles.historyGroup}>
               {periodItems.map((h, i) => {
-                const color = h.score < 40 ? Colors.danger : h.score < 65 ? Colors.warning : Colors.success;
+                const band = getScoreBand(h.score); // single source of truth — matches Results/Home/landing
+                const [ringFrom, ringTo] = scoreGradient(h.score);
                 let deltaText = '';
                 let deltaColor = Colors.textMuted;
                 const diff = deltaById.get(h.id);
@@ -190,12 +199,39 @@ export default function HistoryScreen() {
                       style={[styles.historyRow, isLoading && { opacity: 0.6 }]}
                       disabled={!!rowLoading}
                     >
-                      <View style={[styles.scoreCircle, { borderColor: color }]}>
-                        <Text style={[styles.scoreCircleNum, { color }]}>{h.score}</Text>
+                      <View style={styles.scoreRing}>
+                        <Svg width={RING_SIZE} height={RING_SIZE}>
+                          <Defs>
+                            <SvgGradient id={`histRing${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                              <Stop offset="0%" stopColor={ringFrom} />
+                              <Stop offset="100%" stopColor={ringTo} />
+                            </SvgGradient>
+                          </Defs>
+                          <Circle
+                            cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
+                            fill="none" stroke={Colors.backgroundSecondary} strokeWidth={RING_STROKE}
+                          />
+                          <Circle
+                            cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
+                            fill="none" stroke={`url(#histRing${i})`} strokeWidth={RING_STROKE}
+                            strokeDasharray={RING_CIRC}
+                            strokeDashoffset={RING_CIRC * (1 - h.score / MAX_SCORE)}
+                            strokeLinecap="round"
+                            transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+                          />
+                        </Svg>
+                        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                          <View style={styles.scoreRingCenter}>
+                            <Text style={[styles.scoreCircleNum, { color: band.color }]}>{h.score}</Text>
+                          </View>
+                        </View>
                       </View>
                       <View style={styles.historyInfo}>
                         <View style={styles.historyMeta}>
                           <Text style={styles.historyDate}>{fmtDate(h.created_at)}</Text>
+                          <Text style={[styles.historyVerdict, { color: band.color }]} numberOfLines={1}>
+                            {band.label}
+                          </Text>
                           {h.emotional_status?.emoji && (
                             <Text style={styles.historyEmoji}>{h.emotional_status.emoji}</Text>
                           )}
@@ -276,26 +312,15 @@ const styles = StyleSheet.create({
   },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
   signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
-  versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginBottom: Spacing.lg, fontStyle: 'italic' },
-  periodEmpty: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, paddingVertical: Spacing.lg, textAlign: 'center' },
+  versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginBottom: Spacing.lg, fontStyle: 'italic' },
+  periodEmpty: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, paddingVertical: Spacing.lg, textAlign: 'center' },
   newCheckinBtn: {
-    marginTop: Spacing.lg, alignItems: 'center', paddingVertical: Spacing.md,
+    marginTop: Spacing.lg, alignItems: 'center', justifyContent: 'center',
+    minHeight: 44, paddingVertical: Spacing.md,
     borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.primary,
     backgroundColor: Colors.primaryContainer,
   },
   newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.primary },
-  chartCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
-  chartTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, marginBottom: Spacing.lg, fontWeight: '600' },
-  chart: { flexDirection: 'row', height: 120, gap: Spacing.sm, alignItems: 'flex-end' },
-  barCol: { flex: 1, alignItems: 'center', height: '100%' },
-  barNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700', marginBottom: Spacing.xs },
-  barTrack: {
-    flex: 1, width: '70%',
-    backgroundColor: Colors.backgroundSecondary, borderRadius: 6,
-    justifyContent: 'flex-end', overflow: 'hidden',
-  },
-  barFill: { width: '100%', borderRadius: 6 },
-  barDate: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.xs },
   sectionLabel: {
     fontFamily: Typography.fonts.bodyMed,
     fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
@@ -308,23 +333,26 @@ const styles = StyleSheet.create({
   },
   rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 70 },
   historyRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
-  scoreCircle: {
-    width: 48, height: 48, borderRadius: 24,
-    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
-  },
+  scoreRing: { width: RING_SIZE, height: RING_SIZE },
+  scoreRingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scoreCircleNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700' },
   historyInfo: { flex: 1, gap: Spacing.xs },
   historyMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   historyDate: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
+  historyVerdict: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, fontWeight: '600', flexShrink: 1 },
   historyDelta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
   historySummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
-  chevron: { fontSize: Typography.title2.fontSize, color: Colors.textMuted, fontWeight: '300' },
+  chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
   checkinEmoji: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
   },
   checkinEmojiText: { fontSize: Typography.title2.fontSize },
   historyEmoji: { fontSize: Typography.subhead.fontSize, marginLeft: 2 },
-  historyBadges: { flexDirection: 'row', gap: 6, marginTop: 3 },
-  historyBadge: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
+  historyBadges: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  historyBadge: {
+    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.primary,
+    backgroundColor: Colors.primaryContainer, paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: Radius.pill, overflow: 'hidden',
+  },
 });

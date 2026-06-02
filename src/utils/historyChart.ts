@@ -3,14 +3,15 @@
  *
  * Given a granularity (year/month/week/day) and an anchor date, we compute the
  * period window and split the analyses into x-axis "slots":
- *   - year  → 12 month slots
+ *   - year  → 12 month slots, each a single bar at that month's AVERAGE score
  *   - month → one slot per day of the month
  *   - week  → 7 day slots (Sun–Sat), empty days included so the whole week shows
  *   - day   → one slot per analysis, labelled by time (no hourly bucketing)
  *
- * Within a slot, each analysis is its own bar UNTIL the count exceeds
- * COLLAPSE_THRESHOLD, at which point the slot collapses to a single bar at the
- * average score with a "×N" badge (tap to drill into the finer granularity).
+ * In month/week/day, each analysis is its own bar UNTIL the count exceeds
+ * COLLAPSE_THRESHOLD, at which point the slot collapses to a single averaged bar
+ * with a "×N" badge. Year is always one averaged bar per month (no ×N). Tapping a
+ * non-entry bar drills into the finer granularity.
  *
  * No React / theme imports — kept pure so it can be unit-tested and the colour
  * mapping stays in the component.
@@ -30,8 +31,8 @@ export interface ChartEntry {
 }
 
 export interface ChartBar {
-  kind: 'entry' | 'aggregate';
-  score: number;          // entry score, or rounded average for an aggregate
+  kind: 'entry' | 'aggregate' | 'average';
+  score: number;          // entry score, or rounded average for an aggregate / yearly-average bar
   id?: string;            // present for single entries (→ open that Results)
   count?: number;         // present for aggregates (→ "×count")
   timeLabel?: string;     // present in day view (e.g. "8:30a")
@@ -87,7 +88,6 @@ export function shiftAnchor(g: Granularity, anchor: Date, dir: 1 | -1): Date {
 }
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTHS_LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function periodLabel(g: Granularity, anchor: Date): string {
@@ -157,9 +157,14 @@ export function buildSlots(g: Granularity, anchor: Date, items: AnalysisHistoryI
   }
 
   if (g === 'year') {
+    // High-level overview: one bar per month at the month's AVERAGE score (no
+    // per-entry bars, no ×N). Tap a month → drill into its Month view.
     return MONTHS_SHORT.map((_, month) => {
       const inSlot = entries.filter((e) => e.date.getMonth() === month);
-      return { label: MONTHS_LETTER[month], date: new Date(anchor.getFullYear(), month, 1), bars: barsFor(inSlot) };
+      const bars: ChartBar[] = inSlot.length === 0
+        ? []
+        : [{ kind: 'average', score: round(avg(inSlot.map((e) => e.score))) }];
+      return { label: MONTHS_SHORT[month], date: new Date(anchor.getFullYear(), month, 1), bars };
     });
   }
 

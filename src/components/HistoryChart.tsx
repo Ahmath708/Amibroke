@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
 import type { AnalysisHistoryItem } from '@/types';
 import {
@@ -27,16 +28,19 @@ const FILTER_LABELS: Record<Granularity, string> = { year: 'Year', month: 'Month
 // Drill target when an aggregate (collapsed) slot is tapped.
 const FINER: Partial<Record<Granularity, Granularity>> = { year: 'month', month: 'day', week: 'day' };
 
+// Single source of truth — same band color as the entry rings, Results, etc.
+// The bar keeps its existing color→translucent gradient (see render), now band-tinted.
 function barColor(score: number): string {
-  if (score < 40) return Colors.danger;
-  if (score < 65) return Colors.warning;
-  return Colors.success;
+  return getScoreBand(score).color;
 }
 
 export default function HistoryChart({ items, granularity, anchor, now, onChange, onOpenAnalysis }: Props) {
   const slots = buildSlots(granularity, anchor, items);
   const atLatest = isLatestPeriod(granularity, anchor, now);
   const hasData = slots.some((s) => s.bars.length > 0);
+  // Year shows all 12 months at once; tighten the gap so the 3-letter labels fit
+  // the card width without clipping Dec (other granularities scroll, so keep 10).
+  const slotGap = granularity === 'year' ? 6 : SLOT_GAP;
 
   const tapBar = (slot: ChartSlot, bar: ChartBar) => {
     if (bar.kind === 'entry' && bar.id) {
@@ -96,7 +100,7 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
           contentContainerStyle={styles.scrollContent}
         >
           {slots.map((slot, i) => (
-            <View key={i} style={[styles.slot, { marginLeft: i === 0 ? 0 : SLOT_GAP }]}>
+            <View key={i} style={[styles.slot, { marginLeft: i === 0 ? 0 : slotGap }]}>
               <View style={styles.barsRow}>
                 {slot.bars.length === 0 ? (
                   <View style={styles.emptyTick} />
