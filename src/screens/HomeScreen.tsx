@@ -4,6 +4,8 @@ import {
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
   Animated,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
+import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
 import { selection } from '@/utils/haptics';
@@ -21,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { ContextValues, CTX_COLUMNS, valuesFromProfile } from '@/components/FinancialContextForm';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { useSubscription } from '@/hooks/useSubscription';
 import { trackFunnelStep } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
@@ -61,6 +64,7 @@ const PLACEHOLDERS = [
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user, supabase } = useAuth();
+  const { tier } = useSubscription();
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
@@ -267,7 +271,7 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.ctaHint}>Powered by Claude · Results in seconds</Text>
 
           {/* Suggestion chips */}
-          <Text style={styles.sectionLabel}>Suggestions</Text>
+          <SectionLabel>Suggestions</SectionLabel>
           <View style={styles.chipsScrollWrap}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {CHIPS.map((chip) => (
@@ -293,22 +297,16 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           {/* Roast Tone selector */}
-          <Text style={styles.sectionLabel}>Roast Tone</Text>
+          <SectionLabel>Roast Tone</SectionLabel>
           <View style={styles.toneWrap}>
             {TONES.map((tone) => (
-              <TouchableOpacity
+              <SelectableChip
                 key={tone.key}
-                style={[styles.toneChip, selectedTone === tone.key && styles.toneChipActive]}
+                label={tone.label}
+                icon={tone.icon}
+                active={selectedTone === tone.key}
                 onPress={() => setSelectedTone(tone.key)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={tone.icon}
-                  size={16}
-                  color={selectedTone === tone.key ? Colors.primary : Colors.textSecondary}
-                />
-                <Text style={[styles.toneLabel, selectedTone === tone.key && styles.toneLabelActive]}>{tone.label}</Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
 
@@ -330,7 +328,7 @@ export default function HomeScreen({ navigation }: Props) {
           {/* Recent scores */}
           {!scoresLoading && recentScores.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>Your Recent Scores</Text>
+              <SectionLabel>Your Recent Scores</SectionLabel>
               <View style={styles.scoreCards}>
                 {recentScores.map((s) => {
                   const color = getScoreBand(s.score).color; // single source of truth — matches Results
@@ -346,8 +344,13 @@ export default function HomeScreen({ navigation }: Props) {
             </>
           )}
 
-          {/* Premium teaser */}
-          <PremiumCard onPress={() => navigation.navigate('Paywall')} />
+          {/* Premium teaser — hidden on Deep Dive, an upgrade CTA on Action Plan */}
+          {tier !== 'deep_dive' && (
+            <PremiumCard
+              variant={tier === 'action_plan' ? 'upgrade' : 'go'}
+              onPress={() => navigation.navigate('Paywall')}
+            />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </Animated.View>
@@ -391,12 +394,6 @@ const styles = StyleSheet.create({
   micBtn: { padding: Spacing.xs },
   micBtnActive: { backgroundColor: Colors.primaryContainer, borderRadius: Radius.pill },
   micIcon: { fontSize: Typography.subhead.fontSize },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6,
-    marginBottom: Spacing.sm, marginTop: Spacing.xs,
-  },
   chipsScrollWrap: { position: 'relative', marginHorizontal: -Spacing.xl, marginBottom: Spacing.xl },
   chipsFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 36 },
   chipsContent: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },
@@ -408,17 +405,6 @@ const styles = StyleSheet.create({
   },
   chipText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.primary },
   toneWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
-  toneChip: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-    backgroundColor: Colors.groupedRow,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderWidth: 1.5, borderColor: Colors.glassBorder,
-  },
-  toneChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
-  toneEmoji: { fontSize: Typography.subhead.fontSize },
-  toneLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  toneLabelActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
   cta: { marginBottom: Spacing.sm },
   contextRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,

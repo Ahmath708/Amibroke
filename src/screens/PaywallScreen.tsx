@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,13 +29,13 @@ const FREE_FEATURES = [
 // Cell state: true = included, false = not included, 'soon' = built but not shipped yet.
 type CompareCell = boolean | 'soon';
 const COMPARE: { feature: string; free: CompareCell; ap: CompareCell; dd: CompareCell }[] = [
+  { feature: 'AI Roast & Health Score', free: true, ap: true, dd: true },
   { feature: '90-Day Step-by-Step Plan', free: false, ap: true, dd: true },
   { feature: 'Weekly Goals with Dollar Amounts', free: false, ap: true, dd: true },
-  { feature: 'Debt Payoff Timeline', free: false, ap: true, dd: true },
-  { feature: 'Subscription Audit', free: true, ap: true, dd: true },
+  { feature: 'Subscription Audit', free: false, ap: true, dd: true },
   { feature: 'Prioritized Fix List', free: false, ap: true, dd: true },
   { feature: 'Scenario Simulator', free: false, ap: false, dd: 'soon' },
-  { feature: 'Avalanche vs Snowball', free: false, ap: false, dd: true },
+  { feature: 'Debt Payoff Planner', free: false, ap: false, dd: true },
   { feature: 'Downloadable PDF Report', free: false, ap: false, dd: true },
 ];
 
@@ -53,7 +54,7 @@ export default function PaywallScreen({ navigation }: Props) {
   const [restoring, setRestoring] = useState(false);
   const { animatedStyle } = useEntryAnimation();
   const { user } = useAuth();
-  const { refresh } = useSubscription();
+  const { refresh, tier: owned } = useSubscription();
 
   useEffect(() => {
     trackPaywallViewed(selected);
@@ -66,6 +67,16 @@ export default function PaywallScreen({ navigation }: Props) {
   const product = PURCHASE_PRODUCTS[selected];
   const actionPlan = PURCHASE_PRODUCTS.action_plan!;
   const deepDive = PURCHASE_PRODUCTS.deep_dive!;
+
+  // The CTA reflects what the user already owns. Deep Dive supersedes Action Plan,
+  // so on Deep Dive the Action Plan option is a no-op (disabled), not a downgrade.
+  // The selected plan is baked into the label so it's obvious at the tap point.
+  const cta = (() => {
+    if (owned === selected) return { label: 'Current Plan', disabled: true };
+    if (owned === 'deep_dive') return { label: 'Included in Deep Dive', disabled: true };
+    if (owned === 'action_plan' && selected === 'deep_dive') return { label: 'Upgrade to Deep Dive', disabled: false };
+    return { label: 'Start 7-Day Free Trial', disabled: false };
+  })();
 
   // Prefer RevenueCat's localized, store-accurate price; fall back to static
   // copy before RevenueCat is configured.
@@ -157,7 +168,7 @@ export default function PaywallScreen({ navigation }: Props) {
         </View>
 
         {/* Preview locked content */}
-        <Text style={styles.sectionLabel}>Preview What's Inside</Text>
+        <SectionLabel>Preview What's Inside</SectionLabel>
         <View style={styles.previewList}>
           <LinearGradient colors={['rgba(189,0,255,0.2)', 'rgba(0,224,255,0.08)']} style={styles.previewCard}>
             <Text style={styles.previewIcon}>🗓️</Text>
@@ -192,13 +203,16 @@ export default function PaywallScreen({ navigation }: Props) {
         </View>
 
         {/* Product picker */}
-        <Text style={styles.sectionLabel}>Choose Your Upgrade</Text>
+        <SectionLabel>Choose Your Upgrade</SectionLabel>
         <View style={styles.planRow}>
           <TouchableOpacity
             style={[styles.planCard, selected === 'action_plan' && styles.planCardActive]}
             onPress={() => setSelected('action_plan')}
             activeOpacity={0.8}
           >
+            {owned === 'action_plan' && (
+              <View style={styles.planBadge}><Text style={styles.planBadgeText}>CURRENT</Text></View>
+            )}
             <Text style={styles.planName}>{actionPlan.label}</Text>
             <Text style={styles.planPrice}>{priceLabel('action_plan', actionPlan.price)}</Text>
             <Text style={styles.planDesc}>per month</Text>
@@ -210,7 +224,7 @@ export default function PaywallScreen({ navigation }: Props) {
             activeOpacity={0.8}
           >
             <View style={styles.planBadge}>
-              <Text style={styles.planBadgeText}>BEST VALUE</Text>
+              <Text style={styles.planBadgeText}>{owned === 'deep_dive' ? 'CURRENT' : 'BEST VALUE'}</Text>
             </View>
             <Text style={styles.planName}>{deepDive.label}</Text>
             <Text style={styles.planPrice}>{priceLabel('deep_dive', deepDive.price)}</Text>
@@ -219,7 +233,7 @@ export default function PaywallScreen({ navigation }: Props) {
         </View>
 
         {/* Feature comparison */}
-        <Text style={styles.sectionLabel}>What's Included</Text>
+        <SectionLabel>What's Included</SectionLabel>
         <View style={styles.compareGroup}>
           <View style={styles.compareHeader}>
             <Text style={styles.compareHeaderFeature}>Feature</Text>
@@ -240,11 +254,18 @@ export default function PaywallScreen({ navigation }: Props) {
           ))}
         </View>
 
+        {/* Selected plan, right at the tap point so the choice is unambiguous. */}
+        {product && !cta.disabled && (
+          <Text style={styles.ctaSummary}>
+            {product.label} · <Text style={styles.ctaSummaryPrice}>{priceLabel(selected, product.price)}/mo</Text>
+          </Text>
+        )}
         {product && (
           <NeonButton
-            label={processing ? '' : `Start 7-Day Free Trial`}
+            label={processing ? '' : cta.label}
             onPress={handleSubscribe}
             loading={processing}
+            disabled={cta.disabled}
             style={styles.cta}
           />
         )}
@@ -309,11 +330,6 @@ const styles = StyleSheet.create({
   freeFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   freeFeatureIcon: { fontSize: Typography.subhead.fontSize },
   freeFeatureLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
   planRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl },
   planCard: {
     flex: 1, backgroundColor: Colors.groupedRow,
@@ -348,6 +364,8 @@ const styles = StyleSheet.create({
   checkYes: { color: Colors.success },
   checkNo: { color: Colors.textMuted },
   checkSoon: { color: Colors.warning, fontSize: Typography.caption2.fontSize, fontWeight: '700' },
+  ctaSummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.sm },
+  ctaSummaryPrice: { fontFamily: Typography.fonts.bodySemi, color: Colors.textPrimary, fontWeight: '600' },
   cta: { marginBottom: Spacing.sm },
   restoreBtn: { alignItems: 'center', paddingVertical: Spacing.sm, marginBottom: Spacing.sm },
   restoreText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },

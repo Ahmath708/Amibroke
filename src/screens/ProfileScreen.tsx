@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, Animated,
 } from 'react-native';
+import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,23 +17,34 @@ import { scoreGradient } from '@/utils/scoreVisual';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import StatusPill from '@/components/StatusPill';
+import TierPill from '@/components/TierPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
-import { getProfile, updateProfile, getAnalysisHistory, uploadAvatar } from '@/services/claudeApi';
-import { getSubscription, isSubscriptionPremium } from '@/services/subscriptions';
+import { getProfile, updateProfile, getAnalysisHistory, uploadAvatar, getAnalysisById } from '@/services/claudeApi';
+import { isSubscriptionPremium, hasAccessTo } from '@/services/subscriptions';
+import { manageSubscriptions } from '@/services/purchases';
+import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
 
 type Props = { navigation: TabScreenNav<'Profile'> };
 
-const BASE_MENU_ITEMS = [
-  { icon: 'card-outline', label: 'Subscription', nav: 'Paywall' as const }, // detail = live tier (see render)
-  { icon: 'clipboard-outline', label: '90-Day Action Plan', nav: 'ActionPlan' as const, params: { steps: [] } },
-  { icon: 'flask-outline', label: 'Scenario Simulator', nav: 'ScenarioSimulator' as const },
-  { icon: 'search-outline', label: 'Subscription Audit', nav: 'SubscriptionAudit' as const },
-  { icon: 'settings-outline', label: 'Settings', nav: 'Settings' as const },
+// Account / app items (always available).
+const ACCOUNT_ITEMS: { icon: string; label: string; nav: string }[] = [
+  { icon: 'card-outline', label: 'Your Plan', nav: 'Paywall' }, // premium→manage, free→Paywall; detail = live tier (see render)
+  ...(FEATURES.CREATOR_DASHBOARD ? [{ icon: 'trending-up-outline', label: 'Creator Dashboard', nav: 'CreatorDashboard' }] : []),
+  { icon: 'settings-outline', label: 'Settings', nav: 'Settings' },
+];
+
+// Premium features — gated by tier. Items without `nav` are analysis-scoped (open the
+// latest analysis); items with `nav` are standalone screens.
+const PREMIUM_TOOLS: { icon: string; label: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'latest' | 'debt' }[] = [
+  { icon: 'clipboard-outline', label: '90-Day Action Plan', requires: 'action_plan', action: 'latest' },
+  { icon: 'trending-down-outline', label: 'Debt Payoff', requires: 'deep_dive', action: 'debt' },
+  { icon: 'search-outline', label: 'Subscription Audit', requires: 'action_plan', nav: 'SubscriptionAudit' },
+  { icon: 'flask-outline', label: 'Scenario Simulator', requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },
 ];
 
 // Current-score ring (partial-fill, band gradient) — matches History/Community/Results.
@@ -40,10 +52,6 @@ const CS_RING = 56;
 const CS_STROKE = 5;
 const CS_R = (CS_RING - CS_STROKE) / 2;
 const CS_CIRC = 2 * Math.PI * CS_R;
-
-const MENU_ITEMS = FEATURES.CREATOR_DASHBOARD
-  ? [...BASE_MENU_ITEMS.slice(0, -1), { icon: 'trending-up-outline', label: 'Creator Dashboard', nav: 'CreatorDashboard' as const, detail: undefined }, ...BASE_MENU_ITEMS.slice(-1)]
-  : BASE_MENU_ITEMS;
 
 export default function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -58,24 +66,22 @@ export default function ProfileScreen({ navigation }: Props) {
   const [latestScore, setLatestScore] = useState<number | null>(null);
   const [bestScore, setBestScore] = useState<number | null>(null);
   const [avgScore, setAvgScore] = useState<number | null>(null);
+  const [latestAnalysisId, setLatestAnalysisId] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  const firstLoad = useRef(true); // gate the full-screen loader to the first load only
   const [latestDate, setLatestDate] = useState('');
-  const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const { animatedStyle } = useEntryAnimation();
+  // Shared hook → live customerInfo listener, so the tier updates the moment a
+  // purchase lands (the old one-shot fetch left Profile stuck on the old tier).
+  const { tier: purchaseTier, refresh: refreshSub } = useSubscription();
 
-  useEffect(() => {
-    (async () => {
-      const { tier } = await getSubscription(user?.id ?? '');
-      setPurchaseTier(tier);
-    })();
-  }, [user]);
-
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     if (!user) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true); // silent refetches (focus) keep content mounted — no flash, scroll preserved
     setError(null);
     try {
       const [profile, history] = await Promise.all([
@@ -95,11 +101,13 @@ export default function ProfileScreen({ navigation }: Props) {
         setAnalysisCount(history.length);
         setLatestScore(history[0].score);
         setLatestDate(history[0].created_at);
+        setLatestAnalysisId(history[0].id);
         setBestScore(Math.max(...history.map((h) => h.score)));
         setAvgScore(Math.round(history.reduce((s, h) => s + h.score, 0) / history.length));
       } else {
         setAnalysisCount(0);
         setLatestScore(null);
+        setLatestAnalysisId(null);
         setBestScore(null);
         setAvgScore(null);
       }
@@ -112,8 +120,10 @@ export default function ProfileScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      fetchData();
-    }, [fetchData])
+      fetchData(!firstLoad.current); // first focus shows the loader; later focuses refresh silently
+      firstLoad.current = false;
+      refreshSub(); // re-resolve tier on focus (e.g. returning from the Paywall)
+    }, [fetchData, refreshSub])
   );
 
   const saveUsername = async () => {
@@ -122,6 +132,48 @@ export default function ProfileScreen({ navigation }: Props) {
     const ok = await updateProfile(user.id, { username: userName, display_name: displayName });
     if (!ok) Alert.alert('Error', 'Failed to save profile.');
   };
+
+  // Analysis-scoped premium tools (Action Plan, Debt Payoff) live inside a specific
+  // analysis, so open the latest one — or nudge to run an analysis if there are none.
+  const openLatestAnalysis = useCallback(async () => {
+    if (opening) return;
+    if (!latestAnalysisId) {
+      Alert.alert('No analysis yet', 'Run an analysis first, then your premium tools open right from it.');
+      return;
+    }
+    setOpening(true);
+    try {
+      const analysis = await getAnalysisById(latestAnalysisId);
+      if (analysis) (navigation.navigate as any)('Results', { analysis, userInput: '' });
+    } catch {
+      // ignore
+    } finally {
+      setOpening(false);
+    }
+  }, [opening, latestAnalysisId, navigation]);
+
+  // Debt Payoff deep-links straight into the latest analysis's debts (its screen
+  // shows an empty state if there are none) — no detour through Results.
+  const openDebtPayoff = useCallback(async () => {
+    if (opening) return;
+    if (!latestAnalysisId) {
+      Alert.alert('No analysis yet', 'Run an analysis first, then your premium tools open right from it.');
+      return;
+    }
+    setOpening(true);
+    try {
+      const analysis: any = await getAnalysisById(latestAnalysisId);
+      if (analysis) {
+        const debts = analysis.debts ?? [];
+        const monthlyIncome = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
+        (navigation.navigate as any)('DebtPayoff', { debts, monthlyIncome });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setOpening(false);
+    }
+  }, [opening, latestAnalysisId, navigation]);
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure?', [
@@ -170,7 +222,6 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   const scoreColor = latestScore == null ? Colors.textMuted : getScoreBand(latestScore).color;
-  const tierLabel = purchaseTier === 'deep_dive' ? 'Deep Dive' : purchaseTier === 'action_plan' ? 'Action Plan' : 'Free Plan';
 
   if (loading) {
     return (
@@ -229,14 +280,18 @@ export default function ProfileScreen({ navigation }: Props) {
               </TouchableOpacity>
             )}
             {user && (
-              <StatusPill label={tierLabel} variant={isSubscriptionPremium(purchaseTier) ? 'good' : 'muted'} />
+              <TierPill tier={purchaseTier} />
             )}
           </View>
         </View>
 
         {/* Upgrade CTA — separate from avatar card */}
-        {user && !isSubscriptionPremium(purchaseTier) && (
-          <PremiumCard onPress={() => navigation.navigate('Paywall')} style={styles.upgradeCta} />
+        {user && purchaseTier !== 'deep_dive' && (
+          <PremiumCard
+            variant={purchaseTier === 'action_plan' ? 'upgrade' : 'go'}
+            onPress={() => navigation.navigate('Paywall')}
+            style={styles.upgradeCta}
+          />
         )}
 
         {/* Stats row */}
@@ -293,16 +348,24 @@ export default function ProfileScreen({ navigation }: Props) {
         )}
 
         {/* Menu */}
-        <Text style={styles.sectionLabel}>Quick Access</Text>
+        <SectionLabel>Quick Access</SectionLabel>
         <View style={styles.menuGroup}>
-          {MENU_ITEMS.map((item, i) => {
-            const detail = item.label === 'Subscription' ? tierLabel : (item as any).detail;
+          {ACCOUNT_ITEMS.map((item, i) => {
+            const isPlan = item.label === 'Your Plan';
+            const detail = (item as any).detail;
+            const onPress = isPlan
+              ? () => {
+                  // Subscribed → native manage sheet (cancel/change); free → the paywall.
+                  if (isSubscriptionPremium(purchaseTier)) manageSubscriptions();
+                  else navigation.navigate('Paywall');
+                }
+              : () => (navigation.navigate as any)(item.nav, (item as any).params);
             return (
               <React.Fragment key={item.label}>
                 {i > 0 && <View style={styles.menuSep} />}
                 <TouchableOpacity
                   style={styles.menuCell}
-                  onPress={() => (navigation.navigate as any)(item.nav, (item as any).params)}
+                  onPress={onPress}
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuIconBadge}>
@@ -310,8 +373,43 @@ export default function ProfileScreen({ navigation }: Props) {
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
                   <View style={styles.menuRight}>
-                    {detail ? <Text style={styles.menuDetail}>{detail}</Text> : null}
+                    {isPlan ? <TierPill tier={purchaseTier} /> : detail ? <Text style={styles.menuDetail}>{detail}</Text> : null}
                     <Text style={styles.menuChevron}>›</Text>
+                  </View>
+                </TouchableOpacity>
+              </React.Fragment>
+            );
+          })}
+        </View>
+
+        {/* Premium tools — locked by tier with an upgrade nudge */}
+        <SectionLabel>Premium Tools</SectionLabel>
+        <View style={styles.menuGroup}>
+          {PREMIUM_TOOLS.map((tool, i) => {
+            const unlocked = hasAccessTo(purchaseTier, tool.requires);
+            const onPress = !unlocked
+              ? () => navigation.navigate('Paywall')
+              : tool.nav
+                ? () => (navigation.navigate as any)(tool.nav)
+                : tool.action === 'debt'
+                  ? openDebtPayoff
+                  : openLatestAnalysis;
+            return (
+              <React.Fragment key={tool.label}>
+                {i > 0 && <View style={styles.menuSep} />}
+                <TouchableOpacity style={styles.menuCell} onPress={onPress} activeOpacity={0.7} disabled={opening}>
+                  <View style={[styles.menuIconBadge, !unlocked && styles.menuIconBadgeLocked]}>
+                    <Ionicons name={tool.icon as any} size={18} color={unlocked ? Colors.primary : Colors.textMuted} />
+                  </View>
+                  <View style={styles.toolText}>
+                    <Text style={[styles.toolLabel, !unlocked && styles.toolLabelLocked]}>{tool.label}</Text>
+                    {!unlocked && <Text style={styles.lockHint}>Subscribe to unlock</Text>}
+                  </View>
+                  <View style={styles.menuRight}>
+                    {unlocked && tool.soon ? <Text style={styles.soonTag}>Soon</Text> : null}
+                    {unlocked
+                      ? <Text style={styles.menuChevron}>›</Text>
+                      : <Ionicons name="lock-closed" size={15} color={Colors.textMuted} />}
                   </View>
                 </TouchableOpacity>
               </React.Fragment>
@@ -378,11 +476,6 @@ const styles = StyleSheet.create({
   csRing: { width: CS_RING, height: CS_RING },
   csRingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   csRingNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700' },
-  sectionLabel: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
-  },
   menuGroup: {
     backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
@@ -397,6 +490,12 @@ const styles = StyleSheet.create({
   },
   menuIcon: { fontSize: Typography.subhead.fontSize },
   menuLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  menuIconBadgeLocked: { backgroundColor: Colors.backgroundSecondary },
+  toolText: { flex: 1 },
+  toolLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  toolLabelLocked: { color: Colors.textMuted },
+  lockHint: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.primary, marginTop: 2 },
+  soonTag: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, letterSpacing: 0.3 },
   menuRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   menuDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   menuChevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },

@@ -6,10 +6,18 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 interface Props {
   onPress: () => void;
   style?: ViewStyle;
+  /** 'go' = free→premium upsell; 'upgrade' = action_plan→Deep Dive. */
+  variant?: 'go' | 'upgrade';
 }
 
-/** Reusable "Go Premium" upsell card (Home, Profile, …) for consistent design. */
-export default function PremiumCard({ onPress, style }: Props) {
+const COPY = {
+  go: { title: '💎 Go Premium', body: 'Unlock your Action Plan, debt tools & deep-dive insights.' },
+  upgrade: { title: '💎 Upgrade to Deep Dive', body: 'Add the scenario simulator, debt comparison & PDF report.' },
+};
+
+/** Reusable premium upsell card (Home, Profile, …) for consistent design. */
+export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
+  const copy = COPY[variant];
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={style}>
       <LinearGradient
@@ -19,8 +27,8 @@ export default function PremiumCard({ onPress, style }: Props) {
         style={styles.banner}
       >
         <View style={styles.textWrap}>
-          <Text style={styles.title}>💎 Go Premium</Text>
-          <Text style={styles.body}>Your 90-day Action Plan, debt payoff strategy & monthly check-ins.</Text>
+          <Text style={styles.title}>{copy.title}</Text>
+          <Text style={styles.body}>{copy.body}</Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </LinearGradient>
