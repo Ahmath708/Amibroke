@@ -1,7 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  HomeIcon as HomeOutline,
+  WrenchScrewdriverIcon as WrenchOutline,
+  ChatBubbleLeftRightIcon as ChatOutline,
+} from 'react-native-heroicons/outline';
+import {
+  HomeIcon as HomeSolid,
+  WrenchScrewdriverIcon as WrenchSolid,
+  ChatBubbleLeftRightIcon as ChatSolid,
+} from 'react-native-heroicons/solid';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,11 +51,12 @@ import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-const TAB_ICONS: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
-  Home:      { active: 'home',        inactive: 'home-outline' },
-  Tools:     { active: 'construct',   inactive: 'construct-outline' },
-  Community: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
+// UI/navigation chrome → Heroicons (active = solid, inactive = outline). Category/
+// decorative icons elsewhere stay on Ionicons (Heroicons doesn't cover them).
+const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: React.ComponentType<any> }> = {
+  Home:      { active: HomeSolid,   inactive: HomeOutline },
+  Tools:     { active: WrenchSolid, inactive: WrenchOutline },
+  Community: { active: ChatSolid,   inactive: ChatOutline },
 };
 
 function IOSTabBar({ state, descriptors, navigation }: any) {
@@ -72,12 +82,16 @@ function IOSTabBar({ state, descriptors, navigation }: any) {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={focused ? icons.active : icons.inactive}
-                  size={22}
-                  color={focused ? Colors.tint : Colors.textSecondary}
-                  style={{ opacity: focused ? 1 : 0.55 }}
-                />
+                {(() => {
+                  const TabIcon = focused ? icons.active : icons.inactive;
+                  return (
+                    <TabIcon
+                      size={22}
+                      color={focused ? Colors.tint : Colors.textSecondary}
+                      style={{ opacity: focused ? 1 : 0.55 }}
+                    />
+                  );
+                })()}
                 <Text style={[tabStyles.tabLabel, focused && tabStyles.tabLabelActive]}>
                   {route.name}
                 </Text>

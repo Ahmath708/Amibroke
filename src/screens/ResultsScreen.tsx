@@ -4,6 +4,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  ShareIcon, ArrowRightOnRectangleIcon, GlobeAltIcon, CalendarIcon, CheckCircleIcon,
+  ChevronDownIcon, ChevronUpIcon, ChevronRightIcon, LockClosedIcon, ArrowRightIcon,
+} from 'react-native-heroicons/outline';
+import { CheckCircleIcon as CheckCircleSolid, XCircleIcon as XCircleSolid } from 'react-native-heroicons/solid';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -80,12 +85,12 @@ function SpendingIcon({ category, size, color }: { category: string; size: numbe
     : <Ionicons name={ic.name} size={size} color={color} style={styles.metricIcon} />;
 }
 
-// A compact icon-button for the secondary actions row.
-function IconAction({ icon, label, onPress, tint = Colors.primary }: { icon: IoniconsName; label: string; onPress: () => void; tint?: string }) {
+// A compact icon-button for the secondary actions row (Heroicons UI chrome).
+function IconAction({ Icon, label, onPress, tint = Colors.accent }: { Icon: React.ComponentType<any>; label: string; onPress: () => void; tint?: string }) {
   return (
     <PressableScale style={iaStyles.btn} onPress={onPress} haptic="light">
       <View style={[iaStyles.badge, { backgroundColor: Colors.accentContainer }]}>
-        <Ionicons name={icon} size={20} color={tint} />
+        <Icon size={20} color={tint} />
       </View>
       <Text style={iaStyles.label}>{label}</Text>
     </PressableScale>
@@ -239,16 +244,16 @@ export default function ResultsScreen({ navigation, route }: Props) {
           )}
 
           <View style={styles.iconRow}>
-            <IconAction icon="share-social-outline" label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
+            <IconAction Icon={ShareIcon} label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
             {!user ? (
-              <IconAction icon="log-in-outline" label="Sign in" onPress={() => navigation.navigate('Login')} />
+              <IconAction Icon={ArrowRightOnRectangleIcon} label="Sign in" onPress={() => navigation.navigate('Login')} />
             ) : !shared ? (
-              <IconAction icon="globe-outline" label="Post" onPress={handleShareToFeed} />
+              <IconAction Icon={GlobeAltIcon} label="Post" onPress={handleShareToFeed} />
             ) : (
-              <IconAction icon="checkmark-circle-outline" label="Posted" tint={Colors.success} onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })} />
+              <IconAction Icon={CheckCircleIcon} label="Posted" tint={Colors.success} onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })} />
             )}
             {user && (
-              <IconAction icon="calendar-outline" label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
+              <IconAction Icon={CalendarIcon} label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
             )}
           </View>
         </View>
@@ -256,7 +261,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
         {/* Progressive disclosure — the full report is one tap away */}
         <PressableScale style={styles.expandToggle} onPress={toggleBreakdown} haptic="light">
           <Text style={styles.expandToggleText}>{expanded ? 'Hide the full breakdown' : 'See the full breakdown'}</Text>
-          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.accent} />
+          {expanded ? <ChevronUpIcon size={18} color={Colors.accent} /> : <ChevronDownIcon size={18} color={Colors.accent} />}
         </PressableScale>
 
         {expanded && (
@@ -311,7 +316,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               {analysis.positiveBehaviors.map((pb, i, arr) => (
                 <React.Fragment key={i}>
                   <View style={styles.listRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={Colors.success} style={styles.bullet} />
+                    <CheckCircleSolid size={18} color={Colors.success} style={styles.bullet} />
                     <Text style={styles.listText}>{pb}</Text>
                   </View>
                   {i < arr.length - 1 && <View style={styles.rowSep} />}
@@ -329,7 +334,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               {analysis.topProblems.map((p, i, arr) => (
                 <React.Fragment key={i}>
                   <View style={styles.listRow}>
-                    <Ionicons name="close-circle" size={18} color={Colors.danger} style={styles.bullet} />
+                    <XCircleSolid size={18} color={Colors.danger} style={styles.bullet} />
                     <Text style={styles.listText}>{p}</Text>
                   </View>
                   {i < arr.length - 1 && <View style={styles.rowSep} />}
@@ -367,12 +372,12 @@ export default function ResultsScreen({ navigation, route }: Props) {
                 />
               ) : (
                 <TouchableOpacity style={styles.lockedCta} onPress={() => navigation.navigate('Paywall')} activeOpacity={0.85}>
-                  <Ionicons name="lock-closed" size={16} color={Colors.primary} />
+                  <LockClosedIcon size={16} color={Colors.accent} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.lockedCtaTitle}>Upgrade to Deep Dive</Text>
                     <Text style={styles.lockedCtaSub}>Unlock your full debt payoff plan</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                  <ChevronRightIcon size={16} color={Colors.textSecondary} />
                 </TouchableOpacity>
               )
             )}
@@ -439,7 +444,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               {analysis.insights.map((insight, i, arr) => (
                 <React.Fragment key={i}>
                   <View style={styles.listRow}>
-                    <Ionicons name="arrow-forward" size={16} color={Colors.primary} style={styles.bullet} />
+                    <ArrowRightIcon size={16} color={Colors.accent} style={styles.bullet} />
                     <Text style={styles.listText}>{insight}</Text>
                   </View>
                   {i < arr.length - 1 && <View style={styles.rowSep} />}

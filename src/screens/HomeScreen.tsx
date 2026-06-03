@@ -8,6 +8,9 @@ import SectionLabel from '@/components/SectionLabel';
 import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Cog6ToothIcon, UserIcon, MicrophoneIcon, StopCircleIcon, SparklesIcon, ChevronRightIcon,
+} from 'react-native-heroicons/outline';
 import { selection } from '@/utils/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -200,11 +203,9 @@ export default function HomeScreen({ navigation }: Props) {
                 style={styles.settingsBtn}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={user ? 'settings-outline' : 'person-outline'}
-                  size={22}
-                  color={Colors.textSecondary}
-                />
+                {user
+                  ? <Cog6ToothIcon size={22} color={Colors.textSecondary} />
+                  : <UserIcon size={22} color={Colors.textSecondary} />}
                 {!user && <Text style={styles.loginHint}>Log In</Text>}
               </TouchableOpacity>
             </View>
@@ -256,11 +257,9 @@ export default function HomeScreen({ navigation }: Props) {
                     activeOpacity={0.7}
                   >
                     <Animated.View style={{ transform: [{ scale: micPulse }] }}>
-                      <Ionicons
-                        name={listening ? 'stop-circle-outline' : 'mic-outline'}
-                        size={20}
-                        color={listening ? Colors.danger : Colors.textSecondary}
-                      />
+                      {listening
+                        ? <StopCircleIcon size={20} color={Colors.danger} />
+                        : <MicrophoneIcon size={20} color={Colors.textSecondary} />}
                     </Animated.View>
                   </TouchableOpacity>
                 )}
@@ -271,7 +270,7 @@ export default function HomeScreen({ navigation }: Props) {
           {/* No-Plaid honesty cue — sets expectations (input-based, not bank-linked)
               and nudges honest input, which is how we stay accurate without Plaid. */}
           <View style={styles.honestyRow}>
-            <Ionicons name="sparkles-outline" size={13} color={Colors.textTertiary} />
+            <SparklesIcon size={13} color={Colors.textTertiary} />
             <Text style={styles.honestyText}>
               I only know what you tell me — the realer the input, the sharper the roast.
             </Text>
@@ -335,7 +334,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.contextRowText}>
               {Object.keys(profileContext).length > 0 ? 'Edit Financial Context' : '+ Add Financial Context (optional)'}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            <ChevronRightIcon size={16} color={Colors.textSecondary} />
           </TouchableOpacity>
 
           {/* Monthly check-in nudge (only for users who track goals) */}

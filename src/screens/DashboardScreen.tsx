@@ -4,7 +4,9 @@ import {
 } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  UserIcon, ArrowUpIcon, ArrowDownIcon, ArrowLongRightIcon, ChevronRightIcon, WrenchScrewdriverIcon,
+} from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AnalysisHistoryItem, TabScreenNav } from '@/types';
@@ -130,7 +132,7 @@ export default function DashboardScreen({ navigation }: Props) {
             <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
               {avatarUri
                 ? <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-                : <Ionicons name="person" size={18} color={Colors.onAccent} />}
+                : <UserIcon size={18} color={Colors.onAccent} />}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -142,11 +144,9 @@ export default function DashboardScreen({ navigation }: Props) {
             <StatusPill label={band.label} color={band.color} />
             {delta != null && delta !== 0 && (
               <View style={styles.deltaRow}>
-                <Ionicons
-                  name={delta > 0 ? 'arrow-up' : 'arrow-down'}
-                  size={13}
-                  color={delta > 0 ? Colors.success : Colors.danger}
-                />
+                {delta > 0
+                  ? <ArrowUpIcon size={13} color={Colors.success} />
+                  : <ArrowDownIcon size={13} color={Colors.danger} />}
                 <Text style={[styles.deltaText, { color: delta > 0 ? Colors.success : Colors.danger }]}>
                   {Math.abs(delta)} since last
                 </Text>
@@ -175,7 +175,7 @@ export default function DashboardScreen({ navigation }: Props) {
           </Svg>
           <View style={styles.trendNums}>
             <Text style={styles.trendEnd}>{series[0]}</Text>
-            <Ionicons name="arrow-forward" size={14} color={Colors.textSecondary} />
+            <ArrowLongRightIcon size={18} color={Colors.textSecondary} />
             <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
           </View>
         </TouchableOpacity>
@@ -183,12 +183,12 @@ export default function DashboardScreen({ navigation }: Props) {
         {/* Premium card */}
         {tier === 'deep_dive' ? (
           <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
-            <View style={styles.toolsIcon}><Ionicons name="construct" size={18} color={Colors.primary} /></View>
+            <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.primary} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.toolsTitle}>Your plan & tools</Text>
               <Text style={styles.toolsSub}>Action plan · debt payoff · scenarios</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+            <ChevronRightIcon size={18} color={Colors.textSecondary} />
           </TouchableOpacity>
         ) : (
           <PremiumCard
@@ -217,7 +217,7 @@ export default function DashboardScreen({ navigation }: Props) {
                     <Text style={styles.recentLabel}>{h.score_label}</Text>
                     <Text style={styles.recentDate}>{fmt(h.created_at)}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                  <ChevronRightIcon size={16} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </React.Fragment>
             );
