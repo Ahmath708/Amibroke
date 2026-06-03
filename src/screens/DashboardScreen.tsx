@@ -166,24 +166,24 @@ export default function DashboardScreen({ navigation }: Props) {
           <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.lg }} />
         </ReAnimated.View>
 
-        {/* Trend */}
-        <ReAnimated.View entering={enterUp(4)}>
-        <View style={styles.rowLabel}>
-          <SectionLabel style={{ marginBottom: 0 }}>Your Trend</SectionLabel>
-          <TouchableOpacity onPress={() => navigation.navigate('History')} activeOpacity={0.7}>
-            <Text style={styles.viewAll}>View all ›</Text>
-          </TouchableOpacity>
-        </View>
-        <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={styles.trendCard}>
-          <Svg width={SPARK_W} height={SPARK_H}>
-            <Polyline points={points} fill="none" stroke={band.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-          </Svg>
-          <View style={styles.trendNums}>
-            <Text style={styles.trendEnd}>{series[0]}</Text>
-            <ArrowLongRightIcon size={18} color={Colors.textSecondary} />
-            <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
-          </View>
-        </PressableScale>
+        {/* Bento row: a wider Trend tile + a Roasts-count stat tile (varied weights) */}
+        <ReAnimated.View entering={enterUp(4)} style={styles.bentoRow}>
+          <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.trendTile]}>
+            <Text style={styles.tileLabel}>Trend</Text>
+            <Svg width={SPARK_W} height={SPARK_H}>
+              <Polyline points={points} fill="none" stroke={band.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+            </Svg>
+            <View style={styles.trendNums}>
+              <Text style={styles.trendEnd}>{series[0]}</Text>
+              <ArrowLongRightIcon size={16} color={Colors.textSecondary} />
+              <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
+            </View>
+          </PressableScale>
+          <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.statTile]}>
+            <Text style={styles.tileLabel}>Roasts</Text>
+            <Text style={styles.tileStat}>{history.length}</Text>
+            <Text style={styles.tileSub}>so far</Text>
+          </PressableScale>
         </ReAnimated.View>
 
         {/* Premium card */}
@@ -263,6 +263,14 @@ const styles = StyleSheet.create({
   trendCard: { ...card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.lg, marginBottom: Spacing.lg },
   trendNums: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   trendEnd: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
+  // Bento tiles (varied-weight 2-col row)
+  bentoRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg },
+  bentoTile: { ...card, padding: Spacing.lg },
+  trendTile: { flex: 1.4, justifyContent: 'space-between' },
+  statTile: { flex: 1, justifyContent: 'space-between' },
+  tileLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm },
+  tileStat: { fontFamily: Typography.fonts.heading, fontSize: 40, color: Colors.textPrimary, letterSpacing: -1.5, marginTop: Spacing.xs },
+  tileSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   toolsCard: { ...card, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.lg },
   toolsIcon: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
   toolsTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
