@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Alert, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, Animated, Alert, TouchableOpacity, LayoutAnimation,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ import SeverityPill from '@/components/SeverityPill';
 import ConfidenceBadge, { confidenceLevel } from '@/components/ConfidenceBadge';
 import SectionLabel from '@/components/SectionLabel';
 import NeonButton from '@/components/NeonButton';
+import { PressableScale } from '@/components/motion';
 import Disclaimer from '@/components/Disclaimer';
 import { GlassSection } from '@/components/iOS/GlassSection';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -82,12 +83,12 @@ function SpendingIcon({ category, size, color }: { category: string; size: numbe
 // A compact icon-button for the secondary actions row.
 function IconAction({ icon, label, onPress, tint = Colors.primary }: { icon: IoniconsName; label: string; onPress: () => void; tint?: string }) {
   return (
-    <TouchableOpacity style={iaStyles.btn} onPress={onPress} activeOpacity={0.7}>
-      <View style={[iaStyles.badge, { backgroundColor: Colors.primaryContainer }]}>
+    <PressableScale style={iaStyles.btn} onPress={onPress} haptic="light">
+      <View style={[iaStyles.badge, { backgroundColor: Colors.accentContainer }]}>
         <Ionicons name={icon} size={20} color={tint} />
       </View>
       <Text style={iaStyles.label}>{label}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -101,6 +102,13 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
   const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
+  // Progressive disclosure: lead with the hit (score/roast/#1 fix/CTA); the full
+  // report stays one tap away so the screen doesn't read as a homework packet.
+  const [expanded, setExpanded] = useState(false);
+  const toggleBreakdown = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((e) => !e);
+  };
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: Spacing.lg * 6.25, useNativeDriver: true }).start();
@@ -199,15 +207,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </LinearGradient>
         </GlassSection>
 
-        {/* The breakdown (summary) */}
-        <GlassSection delay={220}>
-          <SectionLabel>The Breakdown</SectionLabel>
-          <GlassCard style={styles.summaryCard}>
-            <Text style={styles.summaryText}>{analysis.summary}</Text>
-          </GlassCard>
-        </GlassSection>
-
-        {/* #1 Thing To Fix — moved up: the single most actionable line */}
+        {/* #1 Thing To Fix — the single most actionable line, part of the hit */}
         {analysis.topFix && (
           <>
             <SectionLabel>#1 Thing To Fix</SectionLabel>
@@ -219,6 +219,53 @@ export default function ResultsScreen({ navigation, route }: Props) {
             </GlassCard>
           </>
         )}
+
+        {/* Lead with the action — Plan CTA + share/track — before the deep report */}
+        <View style={styles.actionsGroup}>
+          {hasAccessTo(purchaseTier, 'action_plan') ? (
+            <NeonButton
+              label="View 90-Day Action Plan"
+              onPress={async () => {
+                const { fetchOrGenerateActionPlan } = await import('@/services/claudeApi');
+                const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
+                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage });
+              }}
+            />
+          ) : (
+            <NeonButton
+              label="Unlock 90-Day Action Plan — $4.99"
+              onPress={() => navigation.navigate('Paywall')}
+            />
+          )}
+
+          <View style={styles.iconRow}>
+            <IconAction icon="share-social-outline" label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
+            {!user ? (
+              <IconAction icon="log-in-outline" label="Sign in" onPress={() => navigation.navigate('Login')} />
+            ) : !shared ? (
+              <IconAction icon="globe-outline" label="Post" onPress={handleShareToFeed} />
+            ) : (
+              <IconAction icon="checkmark-circle-outline" label="Posted" tint={Colors.success} onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })} />
+            )}
+            {user && (
+              <IconAction icon="calendar-outline" label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
+            )}
+          </View>
+        </View>
+
+        {/* Progressive disclosure — the full report is one tap away */}
+        <PressableScale style={styles.expandToggle} onPress={toggleBreakdown} haptic="light">
+          <Text style={styles.expandToggleText}>{expanded ? 'Hide the full breakdown' : 'See the full breakdown'}</Text>
+          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.accent} />
+        </PressableScale>
+
+        {expanded && (
+          <View>
+            {/* The breakdown (summary) */}
+            <SectionLabel>The Breakdown</SectionLabel>
+            <GlassCard style={styles.summaryCard}>
+              <Text style={styles.summaryText}>{analysis.summary}</Text>
+            </GlassCard>
 
         {/* Key metrics */}
         <SectionLabel>Key Metrics</SectionLabel>
@@ -402,38 +449,8 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {/* Primary action + compact secondary row */}
-        <View style={styles.actionsGroup}>
-          {hasAccessTo(purchaseTier, 'action_plan') ? (
-            <NeonButton
-              label="View 90-Day Action Plan"
-              onPress={async () => {
-                const { fetchOrGenerateActionPlan } = await import('@/services/claudeApi');
-                const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
-                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage });
-              }}
-            />
-          ) : (
-            <NeonButton
-              label="Unlock 90-Day Action Plan — $4.99"
-              onPress={() => navigation.navigate('Paywall')}
-            />
-          )}
-
-          <View style={styles.iconRow}>
-            <IconAction icon="share-social-outline" label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
-            {!user ? (
-              <IconAction icon="log-in-outline" label="Sign in" onPress={() => navigation.navigate('Login')} />
-            ) : !shared ? (
-              <IconAction icon="globe-outline" label="Post" onPress={handleShareToFeed} />
-            ) : (
-              <IconAction icon="checkmark-circle-outline" label="Posted" tint={Colors.success} onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })} />
-            )}
-            {user && (
-              <IconAction icon="calendar-outline" label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
-            )}
           </View>
-        </View>
+        )}
 
         <Disclaimer style={{ marginTop: Spacing.xl }} />
       </Animated.ScrollView>
@@ -465,24 +482,25 @@ const styles = StyleSheet.create({
   confidenceSlot: { gap: Spacing.xs, alignItems: 'flex-start' },
   confidenceLabel: { marginBottom: 0 },
   roastCard: {
-    borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.xxl,
+    borderRadius: Radius.xl, padding: Spacing.xl, marginBottom: Spacing.xxl,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   roastLabel: {
     fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize,
-    color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.6,
+    color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.6,
     marginBottom: Spacing.sm,
   },
+  // The roast is the personality — give it presence (bigger, more line height).
   roastText: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontStyle: 'italic', lineHeight: 22,
+    fontFamily: Typography.fonts.headingMed,
+    fontSize: 20, color: Colors.textPrimary, lineHeight: 28, letterSpacing: -0.2,
   },
   summaryCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   summaryText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 22 },
   metricsGroup: {
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     marginBottom: Spacing.xxl,
   },
   metricRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
@@ -492,8 +510,8 @@ const styles = StyleSheet.create({
   rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg + 22 },
   // Carded lists (positives / problems / insights) — consistent with the metric groups.
   listCard: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     marginBottom: Spacing.xxl,
   },
   listRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
@@ -527,4 +545,12 @@ const styles = StyleSheet.create({
   budgetDetailText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 17 },
   actionsGroup: { gap: Spacing.lg, marginTop: Spacing.xs },
   iconRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-start' },
+  expandToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
+    paddingVertical: Spacing.lg, marginTop: Spacing.lg, marginBottom: Spacing.sm,
+  },
+  expandToggleText: {
+    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize,
+    color: Colors.accent, letterSpacing: -0.2,
+  },
 });

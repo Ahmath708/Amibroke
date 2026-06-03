@@ -24,11 +24,13 @@ export default function GlassCard({ children, style, variant = 'default', paddin
 }
 
 const styles = StyleSheet.create({
+  // Default = an *elevated* surface: on dark, depth comes from a lighter surface
+  // + a crisp top-lit border, not shadow (Material/Linear dark-mode approach).
   base: {
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.glassBorder,
+    borderColor: Colors.glassBorderLight,
     overflow: 'hidden',
   },
   inset: {
