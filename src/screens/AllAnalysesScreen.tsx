@@ -94,7 +94,7 @@ export default function AllAnalysesScreen() {
           loading ? (
             <LoadingState style={{ paddingTop: 60 }} />
           ) : (
-            <EmptyState emoji="📋" title="No analyses yet" body="Run your first analysis to start your history." />
+            <EmptyState emoji="📋" title="No roasts yet" body="Run your first roast to start building your history." />
           )
         }
         ListFooterComponent={

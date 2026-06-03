@@ -143,25 +143,17 @@ export default function HistoryScreen() {
           />
         }
       >
-        {/* Large title */}
-        <Text style={styles.largeTitle}>History</Text>
-        {user ? (
-          <Text style={styles.subtitle}>{history.length} {history.length === 1 ? 'analysis' : 'analyses'}</Text>
-        ) : (
+        {!user && (
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
             <Text style={[styles.subtitle, styles.signInLink]}>Sign in to track your progress →</Text>
           </TouchableOpacity>
         )}
-        {history.length > 0 && history.some((h) => !h.score_label) && (
-          <Text style={styles.versionNote}>Older analyses shown with limited data</Text>
-        )}
 
         {history.length === 0 ? (
-          <EmptyState emoji="📋" title="No analyses yet" body="Run your first analysis to start tracking your financial progress over time." />
+          <EmptyState emoji="📋" title="No roasts yet" body="Run your first roast to start tracking your financial progress over time." />
         ) : (
           <>
-            {/* Filterable chart */}
-            <SectionLabel>Score Trend</SectionLabel>
+            {/* Score trend chart — the hero of the Trend screen */}
             <HistoryChart
               items={history}
               granularity={granularity}
@@ -171,29 +163,8 @@ export default function HistoryScreen() {
               onOpenAnalysis={handleRowPress}
             />
 
-            {/* List — scoped to the chart's current period, capped; full archive via "View All" */}
-            <SectionLabel>Recent Analyses</SectionLabel>
-            {periodItems.length === 0 ? (
-              <Text style={styles.periodEmpty}>No analyses in this period.</Text>
-            ) : (
-              <View style={styles.historyGroup}>
-                {periodItems.slice(0, INLINE_LIMIT).map((h, i) => (
-                  <React.Fragment key={h.id}>
-                    {i > 0 && <View style={styles.rowSep} />}
-                    <AnalysisRow
-                      item={h}
-                      delta={deltaById.get(h.id)}
-                      loading={rowLoading === h.id}
-                      disabled={!!rowLoading}
-                      onPress={() => handleRowPress(h.id)}
-                    />
-                  </React.Fragment>
-                ))}
-              </View>
-            )}
-            <TouchableOpacity style={styles.viewAll} activeOpacity={0.7} onPress={() => navigation.navigate('AllAnalyses')}>
-              <Text style={styles.viewAllText}>View All →</Text>
-            </TouchableOpacity>
+            {/* The roast LIST lives on its own screen (All Roasts), reached from the
+                Dashboard "Roasts" tile — Trend is just the chart + check-ins. */}
 
             {/* Progress trend across check-ins (self-hides until there's data) */}
             <CheckinTrend />

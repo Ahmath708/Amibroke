@@ -180,7 +180,7 @@ export default function DashboardScreen({ navigation }: Props) {
               <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
             </View>
           </PressableScale>
-          <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.statTile]}>
+          <PressableScale haptic="light" onPress={() => navigation.navigate('AllAnalyses')} style={[styles.bentoTile, styles.statTile]}>
             <Text style={styles.tileLabel}>Roasts</Text>
             <Text style={styles.tileStat}>{history.length}</Text>
             <Text style={styles.tileSub}>so far</Text>
