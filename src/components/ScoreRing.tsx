@@ -75,7 +75,13 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
   const ringScale = useSharedValue(1);
   const bloom = useSharedValue(0); // landing glow pulse (every score)
   const burst = useSharedValue(0); // particle flourish (good = rise, broke = ember)
-  const tier: 'good' | 'mid' | 'broke' = score >= 70 ? 'good' : score < 40 ? 'broke' : 'mid';
+  // Tier follows the actual score BANDS (not arbitrary cutoffs): Stable/Thriving
+  // celebrate (rising shimmer), Financially Fragile gets the ember, Surviving is
+  // neutral (bloom only — the "meh" middle shouldn't over-praise or get torched).
+  const tier: 'good' | 'mid' | 'broke' =
+    band.label === 'Financially Fragile' ? 'broke'
+      : band.label === 'Surviving' ? 'mid'
+        : 'good'; // Stable | Thriving
 
   useEffect(() => {
     const duration = reveal ? Durations.reveal : Durations.normal;
