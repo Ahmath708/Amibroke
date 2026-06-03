@@ -169,7 +169,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
         {/* Score hero — score + /100 inside the ring; band + data confidence beside it */}
         <GlassSection delay={0}>
           <View style={styles.scoreHero}>
-            <ScoreRing score={analysis.score} size={140} showOutOf />
+            <ScoreRing score={analysis.score} size={140} showOutOf reveal />
             <View style={styles.scoreInfo}>
               <StatusPill label={analysis.scoreLabel} color={scoreColor} size="md" />
               {analysis.avgConfidence > 0 && (
@@ -182,11 +182,16 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </View>
         </GlassSection>
 
+        {/* TODO(redesign Phase 2): confetti burst when a *good* score lands (e.g.
+            score >= 70), synced to the ScoreRing reveal completion. Stubbed for now —
+            needs react-native-fast-confetti (Skia dep), deferred to keep the slice
+            dependency-light. */}
+
         {/* Roast */}
         <GlassSection delay={120}>
           <Text style={styles.roastLabel}>Roast</Text>
           <LinearGradient
-            colors={['rgba(189,0,255,0.2)', 'rgba(231,0,110,0.15)']}
+            colors={[Colors.accentContainer, 'transparent']}
             style={styles.roastCard}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           >
