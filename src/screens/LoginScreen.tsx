@@ -6,7 +6,8 @@ import {
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { impact, notify, ImpactFeedbackStyle, NotificationFeedbackType } from '@/utils/haptics';
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // kept for the Apple brand logo (no Heroicon)
+import { ChevronLeftIcon, EyeIcon, EyeSlashIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -106,7 +107,7 @@ export default function LoginScreen({ navigation, route }: Props) {
       {/* Top bar — back chevron dismisses to Landing */}
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
         <TouchableOpacity onPress={dismiss} hitSlop={HIT} style={styles.backBtn} accessibilityLabel="Back">
-          <Ionicons name="chevron-back" size={28} color={Colors.tint} />
+          <ChevronLeftIcon size={28} color={Colors.tint} />
         </TouchableOpacity>
       </View>
 
@@ -222,7 +223,9 @@ export default function LoginScreen({ navigation, route }: Props) {
                   onSubmitEditing={handleAuth}
                 />
                 <TouchableOpacity onPress={() => setShowPassword((s) => !s)} hitSlop={HIT} activeOpacity={0.7}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textSecondary} />
+                  {showPassword
+                    ? <EyeSlashIcon size={20} color={Colors.textSecondary} />
+                    : <EyeIcon size={20} color={Colors.textSecondary} />}
                 </TouchableOpacity>
               </View>
             </View>

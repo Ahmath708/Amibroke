@@ -11,7 +11,7 @@ import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import { PlusIcon } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
@@ -307,7 +307,7 @@ export default function CommunityFeedScreen() {
         accessibilityLabel="Manage what you share"
       >
         <LinearGradient colors={Colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fabInner}>
-          <Ionicons name="add" size={20} color="#fff" />
+          <PlusIcon size={20} color={Colors.onAccent} />
           <Text style={styles.fabText}>Share</Text>
         </LinearGradient>
       </TouchableOpacity>

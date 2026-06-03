@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // kept for the cycling step icons
+import { CheckCircleIcon, ExclamationTriangleIcon } from 'react-native-heroicons/solid';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -158,9 +159,9 @@ export default function ProcessingScreen({ navigation, route }: Props) {
             >
               <Animated.View style={{ opacity: done && !error ? successOpacity : 1 }}>
                 {done ? (
-                  <Ionicons name="checkmark-circle" size={36} color={Colors.success} />
+                  <CheckCircleIcon size={36} color={Colors.success} />
                 ) : error ? (
-                  <Ionicons name="warning" size={36} color={Colors.warning} />
+                  <ExclamationTriangleIcon size={36} color={Colors.warning} />
                 ) : (
                   <Ionicons name={STEPS[stepIndex].icon} size={36} color={Colors.primary} />
                 )}
