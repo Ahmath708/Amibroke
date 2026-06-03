@@ -1,8 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
 } from 'react-native';
-import { PressableScale } from '@/components/motion';
+import ReAnimated from 'react-native-reanimated';
+import { PressableScale, enterUp } from '@/components/motion';
 import Svg, { Polyline } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -16,7 +17,6 @@ import { getScoreBand } from '@shared/scoring/bands.ts';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById, getProfile } from '@/services/claudeApi';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
@@ -38,7 +38,6 @@ export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { tier } = useSubscription();
-  const { animatedStyle } = useEntryAnimation();
 
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -120,14 +119,14 @@ export default function DashboardScreen({ navigation }: Props) {
     new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <View style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.sm, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header: wordmark + avatar → Profile */}
-        <View style={styles.header}>
+        <ReAnimated.View entering={enterUp(0)} style={styles.header}>
           <Text style={styles.wordmark}>Am I Broke?</Text>
           <PressableScale onPress={() => navigation.navigate('Profile')} haptic="light">
             <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
@@ -136,10 +135,10 @@ export default function DashboardScreen({ navigation }: Props) {
                 : <UserIcon size={18} color={Colors.onAccent} />}
             </LinearGradient>
           </PressableScale>
-        </View>
+        </ReAnimated.View>
 
         {/* Score hero — focal glow on the home score */}
-        <View style={styles.hero}>
+        <ReAnimated.View entering={enterUp(1)} style={styles.hero}>
           <ScoreRing score={latest.score} size={140} showOutOf glow />
           <View style={styles.heroMeta}>
             <StatusPill label={band.label} color={band.color} />
@@ -155,15 +154,20 @@ export default function DashboardScreen({ navigation }: Props) {
             )}
             <Text style={styles.checkedDate}>Checked {fmt(latest.created_at)}</Text>
           </View>
-        </View>
+        </ReAnimated.View>
 
         {/* Primary CTA */}
-        <NeonButton label="New roast" onPress={() => navigation.navigate('Analyze')} style={styles.cta} />
+        <ReAnimated.View entering={enterUp(2)}>
+          <NeonButton label="New roast" onPress={() => navigation.navigate('Analyze')} style={styles.cta} />
+        </ReAnimated.View>
 
         {/* Check-in nudge — renders itself only when a check-in is due */}
-        <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.lg }} />
+        <ReAnimated.View entering={enterUp(3)}>
+          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.lg }} />
+        </ReAnimated.View>
 
         {/* Trend */}
+        <ReAnimated.View entering={enterUp(4)}>
         <View style={styles.rowLabel}>
           <SectionLabel style={{ marginBottom: 0 }}>Your Trend</SectionLabel>
           <TouchableOpacity onPress={() => navigation.navigate('History')} activeOpacity={0.7}>
@@ -180,8 +184,10 @@ export default function DashboardScreen({ navigation }: Props) {
             <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
           </View>
         </PressableScale>
+        </ReAnimated.View>
 
         {/* Premium card */}
+        <ReAnimated.View entering={enterUp(5)}>
         {tier === 'deep_dive' ? (
           <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
             <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.primary} /></View>
@@ -198,8 +204,10 @@ export default function DashboardScreen({ navigation }: Props) {
             style={{ marginBottom: Spacing.lg }}
           />
         )}
+        </ReAnimated.View>
 
         {/* Recent */}
+        <ReAnimated.View entering={enterUp(6)}>
         <View style={styles.rowLabel}>
           <SectionLabel style={{ marginBottom: 0 }}>Recent</SectionLabel>
           <TouchableOpacity onPress={() => navigation.navigate('History')} activeOpacity={0.7}>
@@ -224,8 +232,9 @@ export default function DashboardScreen({ navigation }: Props) {
             );
           })}
         </View>
+        </ReAnimated.View>
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 }
 
