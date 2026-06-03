@@ -27,7 +27,7 @@ import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
 // Inline analyses shown under the chart before the "View All" link.
-const INLINE_LIMIT = 5;
+const INLINE_LIMIT = 2; // short preview; full archive via "View All"
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
@@ -172,7 +172,7 @@ export default function HistoryScreen() {
             />
 
             {/* List — scoped to the chart's current period, capped; full archive via "View All" */}
-            <SectionLabel>Analyses</SectionLabel>
+            <SectionLabel>Recent Analyses</SectionLabel>
             {periodItems.length === 0 ? (
               <Text style={styles.periodEmpty}>No analyses in this period.</Text>
             ) : (

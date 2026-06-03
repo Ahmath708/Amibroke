@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
+  View, Text, StyleSheet, ScrollView, Image,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { PressableScale, enterUp } from '@/components/motion';
@@ -19,7 +19,6 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById, getProfile } from '@/services/claudeApi';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
-import SectionLabel from '@/components/SectionLabel';
 import StatusPill from '@/components/StatusPill';
 import ScoreRing from '@/components/ScoreRing';
 import PremiumCard from '@/components/PremiumCard';
@@ -137,23 +136,25 @@ export default function DashboardScreen({ navigation }: Props) {
           </PressableScale>
         </ReAnimated.View>
 
-        {/* Score hero — focal glow on the home score */}
-        <ReAnimated.View entering={enterUp(1)} style={styles.hero}>
-          <ScoreRing score={latest.score} size={140} showOutOf glow />
-          <View style={styles.heroMeta}>
-            <StatusPill label={band.label} color={band.color} />
-            {delta != null && delta !== 0 && (
-              <View style={styles.deltaRow}>
-                {delta > 0
-                  ? <ArrowUpIcon size={13} color={Colors.success} />
-                  : <ArrowDownIcon size={13} color={Colors.danger} />}
-                <Text style={[styles.deltaText, { color: delta > 0 ? Colors.success : Colors.danger }]}>
-                  {Math.abs(delta)} since last
-                </Text>
-              </View>
-            )}
-            <Text style={styles.checkedDate}>Checked {fmt(latest.created_at)}</Text>
-          </View>
+        {/* Score hero — focal glow on the home score; tap to reopen your latest roast */}
+        <ReAnimated.View entering={enterUp(1)}>
+          <PressableScale style={styles.hero} onPress={() => openAnalysis(latest.id)} haptic="light" disabled={opening}>
+            <ScoreRing score={latest.score} size={140} showOutOf glow />
+            <View style={styles.heroMeta}>
+              <StatusPill label={band.label} color={band.color} />
+              {delta != null && delta !== 0 && (
+                <View style={styles.deltaRow}>
+                  {delta > 0
+                    ? <ArrowUpIcon size={13} color={Colors.success} />
+                    : <ArrowDownIcon size={13} color={Colors.danger} />}
+                  <Text style={[styles.deltaText, { color: delta > 0 ? Colors.success : Colors.danger }]}>
+                    {Math.abs(delta)} since last
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.checkedDate}>Tap to view · checked {fmt(latest.created_at)}</Text>
+            </View>
+          </PressableScale>
         </ReAnimated.View>
 
         {/* Primary CTA */}
@@ -204,34 +205,6 @@ export default function DashboardScreen({ navigation }: Props) {
             style={{ marginBottom: Spacing.lg }}
           />
         )}
-        </ReAnimated.View>
-
-        {/* Recent */}
-        <ReAnimated.View entering={enterUp(6)}>
-        <View style={styles.rowLabel}>
-          <SectionLabel style={{ marginBottom: 0 }}>Recent</SectionLabel>
-          <TouchableOpacity onPress={() => navigation.navigate('History')} activeOpacity={0.7}>
-            <Text style={styles.viewAll}>View all ›</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.recentGroup}>
-          {history.slice(0, 2).map((h, i) => {
-            const c = getScoreBand(h.score).color;
-            return (
-              <React.Fragment key={h.id}>
-                {i > 0 && <View style={styles.recentSep} />}
-                <PressableScale style={styles.recentRow} onPress={() => openAnalysis(h.id)} haptic="light" disabled={opening}>
-                  <Text style={[styles.recentScore, { color: c }]}>{h.score}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.recentLabel}>{h.score_label}</Text>
-                    <Text style={styles.recentDate}>{fmt(h.created_at)}</Text>
-                  </View>
-                  <ChevronRightIcon size={16} color={Colors.textSecondary} />
-                </PressableScale>
-              </React.Fragment>
-            );
-          })}
-        </View>
         </ReAnimated.View>
       </ScrollView>
     </View>
