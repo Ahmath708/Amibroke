@@ -1,64 +1,18 @@
 // ─── Cinematic Honesty × iOS HIG Design System ───────────────────────────────
+//
+// Colors are sourced from a swappable brand palette (see src/theme/palettes/).
+// Brand pole is selected here (neon today; `warm` added in redesign Phase 5);
+// within "neon" the signature accent is swappable via palettes/accents.ts
+// (default magenta; preview others with EXPO_PUBLIC_NEON_ACCENT=lime|cyan).
+// Typography / Spacing / Radius below are palette-independent.
 
-export const Colors = {
-  // ── iOS System Backgrounds (dark adaptive) ──
-  background:            '#19101c',   // systemBackground
-  backgroundSecondary:   '#211824',   // secondarySystemBackground
-  backgroundTertiary:    '#261c28',   // tertiarySystemBackground
-  groupedBackground:     '#130b16',   // systemGroupedBackground
-  groupedRow:            '#1e1221',   // secondarySystemGroupedBackground
+import { neonPalette } from './palettes/neon';
 
-  // ── Surfaces / Glass ──
-  surface:               'rgba(38, 28, 40, 0.72)',
-  surfaceElevated:       'rgba(50, 36, 54, 0.85)',
-  glassBackground:       'rgba(38, 28, 40, 0.60)',
-  glassBorder:           'rgba(255, 255, 255, 0.08)',
-  glassBorderLight:      'rgba(255, 255, 255, 0.14)',
+export type { Palette } from './palettes/neon';
 
-  // ── Separators ──
-  separator:             'rgba(255, 255, 255, 0.10)',
-  separatorOpaque:       '#2d1f30',
-
-  // ── Labels (iOS label hierarchy) ──
-  textPrimary:           '#eeddee',   // label
-  textSecondary:         '#a897ab',   // secondaryLabel
-  textTertiary:          '#6e5f71',   // tertiaryLabel
-  textMuted:             '#4a3d4d',   // quaternaryLabel
-  textInverse:           '#19101c',
-
-  // ── Brand ──
-  primary:               '#ecb2ff',   // Electric Purple
-  primaryContainer:      'rgba(189, 0, 255, 0.22)',
-  primarySolid:          '#bd00ff',
-  secondary:             '#b9f1ff',   // Neon Cyan
-  secondaryContainer:    'rgba(0, 224, 255, 0.18)',
-  secondarySolid:        '#00e0ff',
-  tertiary:              '#ffb1c3',   // Hot Pink
-  tertiaryContainer:     'rgba(231, 0, 110, 0.22)',
-  tertiarySolid:         '#e7006e',
-
-  // ── Semantic status ──
-  success:               '#39FF14',
-  successContainer:      'rgba(57, 255, 20, 0.14)',
-  warning:               '#FF6B00',
-  warningContainer:      'rgba(255, 107, 0, 0.14)',
-  caution:               '#FFCC00',   // iOS systemYellow — confidence-medium (distinct from severity's orange)
-  danger:                '#ff453a',   // iOS systemRed
-  dangerContainer:       'rgba(255, 69, 58, 0.16)',
-  info:                  '#b9f1ff',
-  infoContainer:         'rgba(185, 241, 255, 0.14)',
-
-  // ── Tints (iOS tintColor) ──
-  tint:                  '#ecb2ff',
-
-  // ── Gradients ──
-  gradientPrimary:  ['#bd00ff', '#e7006e'] as [string, string],
-  gradientScore:    ['#ecb2ff', '#bd00ff'] as [string, string],
-  gradientCyan:     ['#00e0ff', '#0080ff'] as [string, string],
-  gradientDanger:   ['#e7006e', '#ff4500'] as [string, string],
-  gradientSuccess:  ['#39FF14', '#00e0ff'] as [string, string],
-  gradientDark:     ['#19101c', '#1f0a2e'] as [string, string],
-};
+// Brand-pole selector. The `warm` palette is authored in Phase 5; until then
+// every pole resolves to neon.
+export const Colors = neonPalette;
 
 // ── iOS Typography Scale ──────────────────────────────────────────────────────
 export const Typography = {

@@ -1,16 +1,13 @@
 ﻿import React from 'react';
 import {
-  TouchableOpacity,
-  TouchableNativeFeedback,
   Text,
   StyleSheet,
   ViewStyle,
   ActivityIndicator,
   View,
-  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { impact, ImpactFeedbackStyle } from '@/utils/haptics';
+import { PressableScale } from '@/components/motion';
 import { Colors, Radius, Spacing, Typography } from '@/theme/colors';
 
 interface Props {
@@ -24,8 +21,6 @@ interface Props {
   icon?: string;
 }
 
-const Touchable = Platform.OS === 'android' ? TouchableNativeFeedback : TouchableOpacity;
-
 export default function NeonButton({
   label,
   onPress,
@@ -38,24 +33,26 @@ export default function NeonButton({
 }: Props) {
   const handlePress = () => {
     if (disabled || loading) return;
-    impact(ImpactFeedbackStyle.Medium);
     onPress();
   };
+  // Primary CTA gets a firmer tap; supporting buttons a light one. PressableScale
+  // adds the spring press + haptic (and skips both under Reduce Motion).
+  const haptic = variant === 'primary' ? 'medium' : 'light';
 
   const heights = { lg: 56, md: 44, sm: 36 };
   const fontSizes = { lg: 17, md: 15, sm: 13 };
 
   if (variant === 'primary') {
     return (
-      <Touchable onPress={handlePress} disabled={disabled || loading} style={[styles.wrapper, style]}>
+      <PressableScale onPress={handlePress} disabled={disabled || loading} haptic={haptic} style={[styles.wrapper, style]}>
         <LinearGradient
-          colors={disabled ? ['#3a2540', '#3a2540'] : Colors.gradientPrimary}
+          colors={disabled ? [Colors.backgroundTertiary, Colors.backgroundTertiary] : Colors.gradientPrimary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.base, { height: heights[size], borderRadius: Radius.xl }]}
         >
           {loading
-            ? <ActivityIndicator color={Colors.textPrimary} />
+            ? <ActivityIndicator color={Colors.onAccent} />
             : <View style={styles.inner}>
                 {icon ? <Text style={styles.icon}>{icon}</Text> : null}
                 <Text style={[styles.label, { fontSize: fontSizes[size] }, disabled && styles.labelDisabled]}>
@@ -64,15 +61,16 @@ export default function NeonButton({
               </View>
           }
         </LinearGradient>
-      </Touchable>
+      </PressableScale>
     );
   }
 
   if (variant === 'secondary') {
     return (
-      <Touchable
+      <PressableScale
         onPress={handlePress}
         disabled={disabled || loading}
+        haptic={haptic}
         style={[styles.secondaryBtn, { height: heights[size] }, style]}
       >
         {loading
@@ -82,44 +80,46 @@ export default function NeonButton({
               <Text style={[styles.secondaryLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
             </View>
         }
-      </Touchable>
+      </PressableScale>
     );
   }
 
   if (variant === 'tinted') {
     return (
-      <Touchable
+      <PressableScale
         onPress={handlePress}
         disabled={disabled || loading}
+        haptic={haptic}
         style={[styles.tintedBtn, { height: heights[size] }, style]}
       >
         <View style={styles.inner}>
           {icon ? <Text style={styles.icon}>{icon}</Text> : null}
           <Text style={[styles.tintedLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
         </View>
-      </Touchable>
+      </PressableScale>
     );
   }
 
   if (variant === 'danger') {
     return (
-      <Touchable
+      <PressableScale
         onPress={handlePress}
         disabled={disabled || loading}
+        haptic={haptic}
         style={[styles.dangerBtn, { height: heights[size] }, style]}
       >
         <View style={styles.inner}>
           {icon ? <Text style={styles.icon}>{icon}</Text> : null}
           <Text style={[styles.dangerLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
         </View>
-      </Touchable>
+      </PressableScale>
     );
   }
 
   return (
-    <Touchable onPress={handlePress} disabled={disabled} style={[styles.wrapper, style]}>
+    <PressableScale onPress={handlePress} disabled={disabled} haptic={haptic} style={[styles.wrapper, style]}>
       <Text style={[styles.plainLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
-    </Touchable>
+    </PressableScale>
   );
 }
 
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   icon: { fontSize: 17 },
   label: {
     fontFamily: Typography.fonts.bodySemi,
-    color: '#fff',
+    color: Colors.onAccent, // contrast-safe on the accent fill (white on magenta, dark on lime)
     fontWeight: '600',
     letterSpacing: -0.3,
   },

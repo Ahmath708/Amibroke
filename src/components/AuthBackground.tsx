@@ -4,6 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing,
 } from 'react-native-reanimated';
+import { Colors } from '@/theme/colors';
+import { resolveAccent } from '@/theme/palettes/accents';
+
+const A = resolveAccent();
 
 interface OrbProps {
   colors: [string, string];
@@ -39,17 +43,17 @@ function Orb({ colors, size, top, left, right, bottom, range, duration, delay, o
 }
 
 /**
- * Living auth background: a deep gradient with three slowly drifting neon orbs.
- * Self-contained (Reanimated, UI-thread) so only the auth screen gets the motion —
- * it doesn't touch the shared ScreenBackground used everywhere else.
+ * Auth background: a flat dark field with ONE restrained, slow, anchored accent
+ * glow. (Research 2026-06-03: multiple drifting orbs read as vibe-coded; a single
+ * subtle brand-colored glow on a first-impression surface is the defensible
+ * config.) Self-contained Reanimated so only auth gets the motion. The fuller
+ * branded entrance is finalized in the Phase 3 login reskin.
  */
 export default function AuthBackground() {
   return (
     <Animated.View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={['#130b16', '#1a0026']} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-      <Orb colors={['#bd00ff', '#7c00cc']} size={340} top={-110} left={-70} range={70} duration={9000} delay={0} opacity={0.22} />
-      <Orb colors={['#e7006e', '#bd00ff']} size={300} bottom={-90} right={-50} range={90} duration={11000} delay={1500} opacity={0.18} />
-      <Orb colors={['#00e0ff', '#7c00cc']} size={220} top={240} right={-90} range={60} duration={13000} delay={800} opacity={0.12} />
+      <LinearGradient colors={[Colors.groupedBackground, Colors.background]} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+      <Orb colors={[A.solid, A.gradient[1]]} size={360} top={-120} left={-80} range={40} duration={14000} delay={0} opacity={0.16} />
     </Animated.View>
   );
 }

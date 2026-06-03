@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -21,12 +22,12 @@ interface Props {
 export default function SelectableChip({ label, active, onPress, icon, size = 'md', style, maxLines }: Props) {
   const accent = active ? Colors.primary : Colors.textSecondary;
   return (
-    <TouchableOpacity style={[styles.chip, active && styles.chipActive, style]} onPress={onPress} activeOpacity={0.7}>
+    <PressableScale style={[styles.chip, active && styles.chipActive, style]} onPress={onPress} haptic="light">
       {icon ? <Ionicons name={icon} size={size === 'sm' ? 14 : 16} color={accent} /> : null}
       <Text style={[styles.text, size === 'sm' && styles.textSm, active && styles.textActive]} numberOfLines={maxLines}>
         {label}
       </Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
