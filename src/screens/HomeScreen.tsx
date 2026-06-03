@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: Spacing.xl },
   pageHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: Spacing.xs },
   pageLargeTitle: {
-    ...Typography.largeTitle,
+    ...Typography.screenTitle,
     fontFamily: Typography.fonts.heading,
     color: Colors.textPrimary,
   },

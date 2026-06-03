@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
   largeTitle: {
-    fontFamily: Typography.fonts.heading, ...Typography.largeTitle,
+    fontFamily: Typography.fonts.heading, ...Typography.screenTitle,
     color: Colors.textPrimary, marginBottom: Spacing.xs,
   },
   subtitle: { fontFamily: Typography.fonts.body, ...Typography.subhead, color: Colors.textSecondary, marginBottom: Spacing.xl },

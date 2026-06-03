@@ -35,8 +35,8 @@ export const neonPalette = {
   // ── Labels (iOS label hierarchy) ──
   textPrimary: '#eeddee', // label
   textSecondary: '#a897ab', // secondaryLabel
-  textTertiary: '#6e5f71', // tertiaryLabel
-  textMuted: '#4a3d4d', // quaternaryLabel
+  textTertiary: '#8a7b8d', // tertiaryLabel — bumped for WCAG AA (4.7:1 on bg; was 3.1 fail)
+  textMuted: '#7a6b7c', // quaternaryLabel — bumped to pass AA-large (3.7:1; was 1.8 fail)
   textInverse: '#19101c',
 
   // ── Signature accent (semantic roles — swap the ramp, not these) ──

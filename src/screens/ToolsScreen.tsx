@@ -1,7 +1,8 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, Alert, Animated,
 } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import {
   ClipboardDocumentListIcon, ArrowTrendingDownIcon, MagnifyingGlassIcon, BeakerIcon,
   ChevronRightIcon, LockClosedIcon,
@@ -113,7 +114,7 @@ export default function ToolsScreen({ navigation }: Props) {
             return (
               <React.Fragment key={tool.label}>
                 {i > 0 && <View style={styles.sep} />}
-                <TouchableOpacity style={styles.cell} onPress={onPress} activeOpacity={0.7} disabled={opening}>
+                <PressableScale style={styles.cell} onPress={onPress} haptic="light" disabled={opening}>
                   <View style={[styles.iconBadge, !unlocked && styles.iconBadgeLocked]}>
                     <ToolIcon size={18} color={unlocked ? Colors.primary : Colors.textMuted} />
                   </View>
@@ -127,7 +128,7 @@ export default function ToolsScreen({ navigation }: Props) {
                       ? <ChevronRightIcon size={16} color={Colors.textSecondary} />
                       : <LockClosedIcon size={15} color={Colors.textMuted} />}
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               </React.Fragment>
             );
           })}
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xs },
-  title: { ...Typography.largeTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
+  title: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl },
   group: {
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',

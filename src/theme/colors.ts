@@ -42,6 +42,10 @@ export const Typography = {
   heroLarge:   { fontSize: 56, fontWeight: '700' as const },
   display:     { fontSize: 72, fontWeight: '700' as const, letterSpacing: -3 },
   stepTitle:   { fontSize: 26, fontWeight: '700' as const },
+  // Expressive redesign headers — oversized + TIGHT negative tracking (the Gen-Z
+  // "hyper-bold anchor" look), deliberately distinct from the iOS-default positive
+  // tracking above. Use as the one dominant headline per screen.
+  screenTitle: { fontSize: 36, fontWeight: '700' as const, letterSpacing: -1.4, lineHeight: 38 },
 };
 
 // ── iOS Spacing ───────────────────────────────────────────────────────────────

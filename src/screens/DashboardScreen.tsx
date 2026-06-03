@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated,
 } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import Svg, { Polyline } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -128,13 +129,13 @@ export default function DashboardScreen({ navigation }: Props) {
         {/* Header: wordmark + avatar → Profile */}
         <View style={styles.header}>
           <Text style={styles.wordmark}>Am I Broke?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
+          <PressableScale onPress={() => navigation.navigate('Profile')} haptic="light">
             <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
               {avatarUri
                 ? <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
                 : <UserIcon size={18} color={Colors.onAccent} />}
             </LinearGradient>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* Score hero — focal glow on the home score */}
@@ -169,7 +170,7 @@ export default function DashboardScreen({ navigation }: Props) {
             <Text style={styles.viewAll}>View all ›</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('History')} style={styles.trendCard}>
+        <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={styles.trendCard}>
           <Svg width={SPARK_W} height={SPARK_H}>
             <Polyline points={points} fill="none" stroke={band.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
           </Svg>
@@ -178,18 +179,18 @@ export default function DashboardScreen({ navigation }: Props) {
             <ArrowLongRightIcon size={18} color={Colors.textSecondary} />
             <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
           </View>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* Premium card */}
         {tier === 'deep_dive' ? (
-          <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
+          <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
             <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.primary} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.toolsTitle}>Your plan & tools</Text>
               <Text style={styles.toolsSub}>Action plan · debt payoff · scenarios</Text>
             </View>
             <ChevronRightIcon size={18} color={Colors.textSecondary} />
-          </TouchableOpacity>
+          </PressableScale>
         ) : (
           <PremiumCard
             variant={tier === 'action_plan' ? 'upgrade' : 'go'}
@@ -211,14 +212,14 @@ export default function DashboardScreen({ navigation }: Props) {
             return (
               <React.Fragment key={h.id}>
                 {i > 0 && <View style={styles.recentSep} />}
-                <TouchableOpacity style={styles.recentRow} onPress={() => openAnalysis(h.id)} activeOpacity={0.7} disabled={opening}>
+                <PressableScale style={styles.recentRow} onPress={() => openAnalysis(h.id)} haptic="light" disabled={opening}>
                   <Text style={[styles.recentScore, { color: c }]}>{h.score}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.recentLabel}>{h.score_label}</Text>
                     <Text style={styles.recentDate}>{fmt(h.created_at)}</Text>
                   </View>
                   <ChevronRightIcon size={16} color={Colors.textSecondary} />
-                </TouchableOpacity>
+                </PressableScale>
               </React.Fragment>
             );
           })}
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
-  wordmark: { ...Typography.title1, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
+  wordmark: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarImg: { width: 38, height: 38, borderRadius: 19 },
   hero: { alignItems: 'center', marginBottom: Spacing.xl },

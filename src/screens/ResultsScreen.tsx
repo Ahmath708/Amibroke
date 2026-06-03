@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Alert, TouchableOpacity, LayoutAnimation,
+  View, Text, StyleSheet, ScrollView, Animated, Alert, LayoutAnimation,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -371,14 +371,14 @@ export default function ResultsScreen({ navigation, route }: Props) {
                   style={styles.debtsCta}
                 />
               ) : (
-                <TouchableOpacity style={styles.lockedCta} onPress={() => navigation.navigate('Paywall')} activeOpacity={0.85}>
+                <PressableScale style={styles.lockedCta} onPress={() => navigation.navigate('Paywall')} haptic="light">
                   <LockClosedIcon size={16} color={Colors.accent} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.lockedCtaTitle}>Upgrade to Deep Dive</Text>
                     <Text style={styles.lockedCtaSub}>Unlock your full debt payoff plan</Text>
                   </View>
                   <ChevronRightIcon size={16} color={Colors.textSecondary} />
-                </TouchableOpacity>
+                </PressableScale>
               )
             )}
             </GlassCard>
@@ -495,10 +495,10 @@ const styles = StyleSheet.create({
     color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.6,
     marginBottom: Spacing.sm,
   },
-  // The roast is the personality — give it presence (bigger, more line height).
+  // The roast is the personality — give it real presence (oversized, tight).
   roastText: {
     fontFamily: Typography.fonts.headingMed,
-    fontSize: 20, color: Colors.textPrimary, lineHeight: 28, letterSpacing: -0.2,
+    fontSize: 23, color: Colors.textPrimary, lineHeight: 31, letterSpacing: -0.4,
   },
   summaryCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
   summaryText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 22 },
