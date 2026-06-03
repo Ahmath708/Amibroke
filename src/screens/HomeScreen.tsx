@@ -268,6 +268,15 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </GlassCard>
 
+          {/* No-Plaid honesty cue — sets expectations (input-based, not bank-linked)
+              and nudges honest input, which is how we stay accurate without Plaid. */}
+          <View style={styles.honestyRow}>
+            <Ionicons name="sparkles-outline" size={13} color={Colors.textTertiary} />
+            <Text style={styles.honestyText}>
+              I only know what you tell me — the realer the input, the sharper the roast.
+            </Text>
+          </View>
+
           {/* CTA — directly under the input for immediate access */}
           <NeonButton
             label="Analyze My Finances"
@@ -381,7 +390,15 @@ const styles = StyleSheet.create({
     fontSize: Typography.subhead.fontSize, color: Colors.textSecondary,
     marginBottom: Spacing.xxl, lineHeight: 21,
   },
-  inputCard: { padding: Spacing.lg, marginBottom: Spacing.lg },
+  inputCard: { padding: Spacing.lg, marginBottom: Spacing.md },
+  honestyRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+    paddingHorizontal: Spacing.xs, marginBottom: Spacing.lg,
+  },
+  honestyText: {
+    flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize,
+    color: Colors.textTertiary, lineHeight: 16,
+  },
   inputFieldWrap: { position: 'relative', height: 160 },
   placeholderOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0,
