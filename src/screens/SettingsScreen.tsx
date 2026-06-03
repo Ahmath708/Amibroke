@@ -328,9 +328,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm, paddingLeft: Spacing.xs,
   },
   group: {
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.rowHeightLg },
   cell: {

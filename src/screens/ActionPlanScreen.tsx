@@ -244,8 +244,8 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: Radius.xs },
   progressSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   stepGroup: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   stepSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 60 },
   stepRow: { flexDirection: 'row', padding: Spacing.md, gap: Spacing.md, alignItems: 'flex-start' },

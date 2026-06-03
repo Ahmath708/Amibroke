@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   previewCard: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     borderRadius: Radius.lg, padding: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   previewIcon: { fontSize: Typography.title2.fontSize },
   previewContent: { flex: 1 },
@@ -321,8 +321,8 @@ const styles = StyleSheet.create({
   },
   previewSoonText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, color: Colors.warning },
   freeBox: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     padding: Spacing.lg, marginBottom: Spacing.xl,
   },
   freeTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.sm },
@@ -332,9 +332,9 @@ const styles = StyleSheet.create({
   freeFeatureLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
   planRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl },
   planCard: {
-    flex: 1, backgroundColor: Colors.groupedRow,
+    flex: 1, backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg, padding: Spacing.lg,
-    borderWidth: 1.5, borderColor: Colors.glassBorder,
+    borderWidth: 1.5, borderColor: Colors.glassBorderLight,
     alignItems: 'center', gap: Spacing.xs,
     position: 'relative',
   },
@@ -349,8 +349,8 @@ const styles = StyleSheet.create({
   planPrice: { fontFamily: Typography.fonts.heading, fontSize: Typography.title2.fontSize, fontWeight: '700', color: Colors.textPrimary },
   planDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   compareGroup: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     marginBottom: Spacing.xl,
   },
   compareHeader: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.primaryContainer },

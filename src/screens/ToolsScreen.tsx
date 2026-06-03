@@ -2,7 +2,10 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  ClipboardDocumentListIcon, ArrowTrendingDownIcon, MagnifyingGlassIcon, BeakerIcon,
+  ChevronRightIcon, LockClosedIcon,
+} from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { TabScreenNav } from '@/types';
@@ -20,14 +23,13 @@ import TierPill from '@/components/TierPill';
 
 type Props = { navigation: TabScreenNav<'Tools'> };
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 // Premium features — gated by tier. `action: 'latest' | 'debt'` are analysis-scoped
 // (open the latest analysis); `nav` items are standalone screens.
-const TOOLS: { icon: IoniconsName; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'latest' | 'debt' }[] = [
-  { icon: 'clipboard-outline',     label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'latest' },
-  { icon: 'trending-down-outline', label: 'Debt Payoff',          sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
-  { icon: 'search-outline',        label: 'Subscription Audit',   sub: 'Find recurring money leaks',      requires: 'action_plan', nav: 'SubscriptionAudit' },
-  { icon: 'flask-outline',         label: 'Scenario Simulator',   sub: 'Model "what if" money moves',     requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },
+const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'latest' | 'debt' }[] = [
+  { icon: ClipboardDocumentListIcon, label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'latest' },
+  { icon: ArrowTrendingDownIcon,     label: 'Debt Payoff',          sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
+  { icon: MagnifyingGlassIcon,       label: 'Subscription Audit',   sub: 'Find recurring money leaks',      requires: 'action_plan', nav: 'SubscriptionAudit' },
+  { icon: BeakerIcon,                label: 'Scenario Simulator',   sub: 'Model "what if" money moves',     requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },
 ];
 
 export default function ToolsScreen({ navigation }: Props) {
@@ -107,12 +109,13 @@ export default function ToolsScreen({ navigation }: Props) {
               : tool.action
                 ? () => openLatest(tool.action!)
                 : () => (navigation.navigate as any)(tool.nav);
+            const ToolIcon = tool.icon;
             return (
               <React.Fragment key={tool.label}>
                 {i > 0 && <View style={styles.sep} />}
                 <TouchableOpacity style={styles.cell} onPress={onPress} activeOpacity={0.7} disabled={opening}>
                   <View style={[styles.iconBadge, !unlocked && styles.iconBadgeLocked]}>
-                    <Ionicons name={tool.icon} size={18} color={unlocked ? Colors.primary : Colors.textMuted} />
+                    <ToolIcon size={18} color={unlocked ? Colors.primary : Colors.textMuted} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.label, !unlocked && styles.labelLocked]}>{tool.label}</Text>
@@ -121,8 +124,8 @@ export default function ToolsScreen({ navigation }: Props) {
                   <View style={styles.right}>
                     {unlocked && tool.soon ? <Text style={styles.soon}>Soon</Text> : null}
                     {unlocked
-                      ? <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
-                      : <Ionicons name="lock-closed" size={15} color={Colors.textMuted} />}
+                      ? <ChevronRightIcon size={16} color={Colors.textSecondary} />
+                      : <LockClosedIcon size={15} color={Colors.textMuted} />}
                   </View>
                 </TouchableOpacity>
               </React.Fragment>
@@ -141,8 +144,8 @@ const styles = StyleSheet.create({
   title: { ...Typography.largeTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl },
   group: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.rowHeightLg },
   cell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: Spacing.md, minHeight: 60 },

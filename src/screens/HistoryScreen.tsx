@@ -260,9 +260,9 @@ const styles = StyleSheet.create({
   },
   newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.primary },
   historyGroup: {
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 70 },
   historyRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },

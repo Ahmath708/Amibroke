@@ -100,11 +100,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl,
   },
   faqGroup: {
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.glassBorder,
+    borderColor: Colors.glassBorderLight,
   },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   faqRow: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },

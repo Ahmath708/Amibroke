@@ -246,8 +246,8 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   summaryRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, paddingVertical: Spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, paddingVertical: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     marginBottom: Spacing.xxl,
   },
   summaryItem: { flex: 1, alignItems: 'center' },
@@ -255,8 +255,8 @@ const styles = StyleSheet.create({
   summaryLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   summaryDivider: { width: StyleSheet.hairlineWidth, height: 36, backgroundColor: Colors.separator },
   subGroup: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     marginBottom: Spacing.xl,
   },
   subSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 60 },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   keepBtn: {
     paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.pill,
     backgroundColor: Colors.backgroundSecondary,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   keepBtnActive: { backgroundColor: Colors.successContainer, borderColor: Colors.success },
   keepBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   cutBtn: {
     paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.pill,
     backgroundColor: Colors.backgroundSecondary,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   cutBtnActive: { backgroundColor: Colors.dangerContainer, borderColor: Colors.danger },
   cutBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
@@ -295,8 +295,8 @@ const styles = StyleSheet.create({
   resultTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, lineHeight: 22 },
   resultSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   addCard: {
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.xl,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, gap: 10,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.xl,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, gap: 10,
   },
   addInput: {
     fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   addBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '600' },
   addRow: {
     alignItems: 'center', paddingVertical: Spacing.md, marginBottom: Spacing.lg,
-    borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, borderStyle: 'dashed',
+    borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, borderStyle: 'dashed',
   },
   addRowText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.tint, fontWeight: '500' },
 });

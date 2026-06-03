@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   ringGradient: { width: '100%', height: '100%' },
   ringCenter: {
     width: 96, height: 96, borderRadius: 48,
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.primaryContainer,
     shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
@@ -264,13 +264,13 @@ const styles = StyleSheet.create({
   },
   retryButtonSecondary: {
     flex: 1,
-    backgroundColor: Colors.groupedRow,
+    backgroundColor: Colors.surfaceElevated,
     paddingVertical: Spacing.md,
     borderRadius: Radius.lg,
     marginTop: Spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
+    borderColor: Colors.glassBorderLight,
   },
   retryText: {
     fontFamily: Typography.fonts.bodyMed,
