@@ -38,21 +38,19 @@ function landHaptic() {
   impact(ImpactFeedbackStyle.Heavy);
 }
 
-// Reveal-climax particles: a band-reactive flourish on landing. Good scores send
-// dots rising upward (celebratory shimmer); "broke" scores get a tighter, warmer
-// ember flicker (on-brand "you're cooked"). Mid scores get none — just the bloom.
+// Rising-shimmer particles for a GOOD reveal: dots spread out + rise + fade.
+// (A celebratory burst is reserved for good news — bad scores get a recoil shudder.)
 const BURST_N = 12;
-function BurstDot({ burst, index, color, tier, size }: {
-  burst: SharedValue<number>; index: number; color: string; tier: 'good' | 'broke'; size: number;
+function BurstDot({ burst, index, color, size }: {
+  burst: SharedValue<number>; index: number; color: string; size: number;
 }) {
   const style = useAnimatedStyle(() => {
     'worklet';
     const p = burst.value;
     const ang = (index / BURST_N) * Math.PI * 2;
     const dist = size * 0.5 * p;
-    const rise = (tier === 'good' ? -size * 0.55 : -size * 0.3) * p;
     const tx = Math.cos(ang) * dist * 0.55;
-    const ty = Math.sin(ang) * dist * 0.35 + rise;
+    const ty = Math.sin(ang) * dist * 0.35 - size * 0.55 * p; // bias upward (rising)
     const opacity = p <= 0 ? 0 : (p < 0.18 ? p / 0.18 : 1 - (p - 0.18) / 0.82);
     const scale = 0.5 + p * 0.8;
     return { opacity, transform: [{ translateX: tx }, { translateY: ty }, { scale }] };
@@ -74,7 +72,8 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
   const progress = useSharedValue(0);
   const ringScale = useSharedValue(1);
   const bloom = useSharedValue(0); // landing glow pulse (every score)
-  const burst = useSharedValue(0); // particle flourish (good = rise, broke = ember)
+  const burst = useSharedValue(0); // rising-shimmer particles (good scores only)
+  const shudder = useSharedValue(0); // recoil shake (Financially Fragile)
   // Tier follows the actual score BANDS (not arbitrary cutoffs): Stable/Thriving
   // celebrate (rising shimmer), Financially Fragile gets the ember, Surviving is
   // neutral (bloom only — the "meh" middle shouldn't over-praise or get torched).
@@ -93,10 +92,19 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
     progress.value = withTiming(score, { duration, easing: Easings.smooth }, (finished) => {
       'worklet';
       if (finished && reveal) {
-        // Land it: overshoot-and-settle + glow bloom + (band-reactive) particle burst + haptic.
+        // Land it: overshoot-and-settle + glow bloom + haptic. Then a band-reactive
+        // beat: good = rising shimmer (celebrate); Fragile = a recoil shudder (alarm,
+        // never a celebratory burst); Surviving = nothing extra (calm).
         ringScale.value = withSequence(withSpring(1.04, Springs.bouncy), withSpring(1, Springs.gentle));
         bloom.value = withSequence(withTiming(1, { duration: 200 }), withTiming(0, { duration: 700 }));
-        if (tier !== 'mid') burst.value = withTiming(1, { duration: 1000 });
+        if (tier === 'good') burst.value = withTiming(1, { duration: 1000 });
+        if (tier === 'broke') {
+          shudder.value = withSequence(
+            withTiming(-8, { duration: 60 }), withTiming(8, { duration: 60 }),
+            withTiming(-6, { duration: 55 }), withTiming(6, { duration: 55 }),
+            withTiming(-3, { duration: 50 }), withTiming(0, { duration: 50 }),
+          );
+        }
         runOnJS(landHaptic)();
       }
     });
@@ -113,7 +121,9 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
     return { text: n, defaultValue: n } as object;
   });
 
-  const ringStyle = useAnimatedStyle(() => ({ transform: [{ scale: ringScale.value }] }));
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shudder.value }, { scale: ringScale.value }],
+  }));
   // Glow blooms (scales + brightens) on landing, then settles back to the calm anchored glow.
   const glowStyle = useAnimatedStyle(() => ({
     opacity: 0.9 + bloom.value * 0.1,
@@ -138,11 +148,12 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
         </Animated.View>
       )}
 
-      {/* Band-reactive landing flourish (good = rising shimmer, broke = ember) */}
-      {reveal && tier !== 'mid' && (
+      {/* Rising-shimmer particles — GOOD scores only (a burst on a bad score reads
+          as celebration; Fragile gets the recoil shudder instead). */}
+      {reveal && tier === 'good' && (
         <View style={styles.glowLayer} pointerEvents="none">
           {Array.from({ length: BURST_N }).map((_, i) => (
-            <BurstDot key={i} burst={burst} index={i} color={color} tier={tier} size={size} />
+            <BurstDot key={i} burst={burst} index={i} color={color} size={size} />
           ))}
         </View>
       )}
