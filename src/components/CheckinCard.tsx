@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Text, View, StyleSheet, ViewStyle } from 'react-native';
+import { ChevronRightIcon } from 'react-native-heroicons/outline';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
 
@@ -13,7 +14,9 @@ interface Props {
 }
 
 /** Home nudge for the monthly check-in. Shows only for users who track goals:
- *  a prominent CTA when due, a compact "next check-in" line otherwise. */
+ *  a prominent CTA when due, a compact "next check-in" line otherwise.
+ *  Neutral elevated surface (the accent moment is reserved for the premium card),
+ *  with an accent-tinted icon badge + chevron for a contained pop. */
 export default function CheckinCard({ onPress, style }: Props) {
   const { loading, configured, due, dueDate } = useCheckinStatus();
   if (loading || !configured) return null;
@@ -23,31 +26,27 @@ export default function CheckinCard({ onPress, style }: Props) {
   if (due) {
     const monthName = dueDate ? MONTHS_FULL[dueDate.getMonth()] : 'your';
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={style}>
-        <LinearGradient
-          colors={['rgba(0,224,255,0.22)', 'rgba(189,0,255,0.18)']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={styles.dueCard}
-        >
-          <Text style={styles.dueEmoji}>📅</Text>
+      <PressableScale onPress={onPress} haptic="light" style={style}>
+        <View style={styles.dueCard}>
+          <View style={styles.iconBadge}><Text style={styles.dueEmoji}>📅</Text></View>
           <View style={styles.dueText}>
             <Text style={styles.dueTitle}>Your {monthName} check-in is ready</Text>
             <Text style={styles.dueBody}>Update your numbers and see your progress.</Text>
           </View>
-          <Text style={styles.chevron}>›</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+          <ChevronRightIcon size={18} color={Colors.accent} />
+        </View>
+      </PressableScale>
     );
   }
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={style}>
+    <PressableScale onPress={onPress} haptic="light" style={style}>
       <View style={styles.compact}>
         <Text style={styles.compactIcon}>✅</Text>
         <Text style={styles.compactText}>Tracking monthly{dateLabel ? ` · Next check-in ${dateLabel}` : ''}</Text>
-        <Text style={styles.chevronMuted}>›</Text>
+        <ChevronRightIcon size={16} color={Colors.textMuted} />
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -55,20 +54,24 @@ const styles = StyleSheet.create({
   dueCard: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     borderRadius: Radius.lg, padding: Spacing.lg,
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  dueEmoji: { fontSize: 26 },
+  iconBadge: {
+    width: 40, height: 40, borderRadius: Radius.md,
+    backgroundColor: Colors.accentContainer,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  dueEmoji: { fontSize: 20 },
   dueText: { flex: 1 },
-  dueTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, marginBottom: 2 },
+  dueTitle: { fontFamily: Typography.fonts.heading, fontSize: 16, color: Colors.textPrimary, letterSpacing: -0.2, marginBottom: 2 },
   dueBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
-  chevron: { fontSize: Typography.title2.fontSize, color: Colors.tint, fontWeight: '300' },
   compact: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     borderRadius: Radius.lg, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.groupedRow,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+    backgroundColor: Colors.surfaceElevated,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   compactIcon: { fontSize: Typography.subhead.fontSize },
   compactText: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  chevronMuted: { fontSize: Typography.headline.fontSize, color: Colors.textMuted, fontWeight: '300' },
 });

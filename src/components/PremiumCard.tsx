@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ChevronRightIcon } from 'react-native-heroicons/outline';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 interface Props {
@@ -15,13 +17,16 @@ const COPY = {
   upgrade: { title: '💎 Upgrade to Deep Dive', body: 'Add the scenario simulator, debt comparison & PDF report.' },
 };
 
-/** Reusable premium upsell card (Home, Profile, …) for consistent design. */
+/**
+ * Premium upsell banner — the screen's one accent moment: an elevated surface
+ * with a subtle accent wash + a bold accent title (follows the swappable accent).
+ */
 export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
   const copy = COPY[variant];
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={style}>
+    <PressableScale onPress={onPress} haptic="light" style={style}>
       <LinearGradient
-        colors={['rgba(189,0,255,0.25)', 'rgba(231,0,110,0.20)']}
+        colors={[Colors.accentContainer, 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.banner}
@@ -30,9 +35,9 @@ export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.body}>{copy.body}</Text>
         </View>
-        <Text style={styles.chevron}>›</Text>
+        <ChevronRightIcon size={20} color={Colors.accent} />
       </LinearGradient>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -40,10 +45,10 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: Radius.lg, padding: Spacing.lg,
+    backgroundColor: Colors.surfaceElevated, // elevated base under the accent wash
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   textWrap: { flex: 1, marginRight: Spacing.sm },
-  title: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.primary, marginBottom: Spacing.xs },
+  title: { fontFamily: Typography.fonts.heading, fontSize: 18, color: Colors.accent, letterSpacing: -0.3, marginBottom: Spacing.xs },
   body: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
-  chevron: { fontSize: Typography.title2.fontSize, color: Colors.primary, fontWeight: '300' },
 });
