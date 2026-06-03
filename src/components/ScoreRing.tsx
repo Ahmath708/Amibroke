@@ -5,7 +5,7 @@ import Svg, {
 } from 'react-native-svg';
 import Animated, {
   useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withSpring, withSequence,
-  runOnJS, useReducedMotion,
+  runOnJS, useReducedMotion, type SharedValue,
 } from 'react-native-reanimated';
 import { Colors, Typography } from '@/theme/colors';
 import { Durations, Easings, Springs } from '@/theme/motion';
@@ -38,6 +38,28 @@ function landHaptic() {
   impact(ImpactFeedbackStyle.Heavy);
 }
 
+// Reveal-climax particles: a band-reactive flourish on landing. Good scores send
+// dots rising upward (celebratory shimmer); "broke" scores get a tighter, warmer
+// ember flicker (on-brand "you're cooked"). Mid scores get none — just the bloom.
+const BURST_N = 12;
+function BurstDot({ burst, index, color, tier, size }: {
+  burst: SharedValue<number>; index: number; color: string; tier: 'good' | 'broke'; size: number;
+}) {
+  const style = useAnimatedStyle(() => {
+    'worklet';
+    const p = burst.value;
+    const ang = (index / BURST_N) * Math.PI * 2;
+    const dist = size * 0.5 * p;
+    const rise = (tier === 'good' ? -size * 0.55 : -size * 0.3) * p;
+    const tx = Math.cos(ang) * dist * 0.55;
+    const ty = Math.sin(ang) * dist * 0.35 + rise;
+    const opacity = p <= 0 ? 0 : (p < 0.18 ? p / 0.18 : 1 - (p - 0.18) / 0.82);
+    const scale = 0.5 + p * 0.8;
+    return { opacity, transform: [{ translateX: tx }, { translateY: ty }, { scale }] };
+  });
+  return <Animated.View style={[styles.dot, { backgroundColor: color }, style]} />;
+}
+
 export default function ScoreRing({ score, size = 120, showLabel = false, showOutOf = false, reveal = false, glow = false }: Props) {
   const reduceMotion = useReducedMotion();
   const strokeWidth = size * 0.08;
@@ -51,6 +73,9 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
   // ONE shared value drives both the arc and the number → guaranteed lockstep.
   const progress = useSharedValue(0);
   const ringScale = useSharedValue(1);
+  const bloom = useSharedValue(0); // landing glow pulse (every score)
+  const burst = useSharedValue(0); // particle flourish (good = rise, broke = ember)
+  const tier: 'good' | 'mid' | 'broke' = score >= 70 ? 'good' : score < 40 ? 'broke' : 'mid';
 
   useEffect(() => {
     const duration = reveal ? Durations.reveal : Durations.normal;
@@ -62,8 +87,10 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
     progress.value = withTiming(score, { duration, easing: Easings.smooth }, (finished) => {
       'worklet';
       if (finished && reveal) {
-        // Land it: a tiny overshoot-and-settle + a haptic on the final frame.
+        // Land it: overshoot-and-settle + glow bloom + (band-reactive) particle burst + haptic.
         ringScale.value = withSequence(withSpring(1.04, Springs.bouncy), withSpring(1, Springs.gentle));
+        bloom.value = withSequence(withTiming(1, { duration: 200 }), withTiming(0, { duration: 700 }));
+        if (tier !== 'mid') burst.value = withTiming(1, { duration: 1000 });
         runOnJS(landHaptic)();
       }
     });
@@ -81,12 +108,17 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
   });
 
   const ringStyle = useAnimatedStyle(() => ({ transform: [{ scale: ringScale.value }] }));
+  // Glow blooms (scales + brightens) on landing, then settles back to the calm anchored glow.
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.9 + bloom.value * 0.1,
+    transform: [{ scale: 1 + bloom.value * 0.28 }],
+  }));
 
   return (
     <Animated.View style={[styles.wrap, { width: size, height: size }, ringStyle]}>
       {/* Single anchored glow — the one allowed glow, in the score's own band color */}
       {(reveal || glow) && (
-        <View style={styles.glowLayer} pointerEvents="none">
+        <Animated.View style={[styles.glowLayer, glowStyle]} pointerEvents="none">
           <Svg width={size * 1.7} height={size * 1.7}>
             <Defs>
               <RadialGradient id="scoreGlow" cx="50%" cy="50%" r="50%">
@@ -97,6 +129,15 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
             </Defs>
             <Rect width={size * 1.7} height={size * 1.7} fill="url(#scoreGlow)" />
           </Svg>
+        </Animated.View>
+      )}
+
+      {/* Band-reactive landing flourish (good = rising shimmer, broke = ember) */}
+      {reveal && tier !== 'mid' && (
+        <View style={styles.glowLayer} pointerEvents="none">
+          {Array.from({ length: BURST_N }).map((_, i) => (
+            <BurstDot key={i} burst={burst} index={i} color={color} tier={tier} size={size} />
+          ))}
         </View>
       )}
 
@@ -153,6 +194,7 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
 const styles = StyleSheet.create({
   wrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
   glowLayer: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  dot: { position: 'absolute', left: '50%', top: '50%', width: 7, height: 7, borderRadius: 4, marginLeft: -3.5, marginTop: -3.5 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scoreNum: {
     fontFamily: Typography.fonts.heading,
