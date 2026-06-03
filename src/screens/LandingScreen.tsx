@@ -8,9 +8,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import ReAnimated from 'react-native-reanimated';
 import NeonButton from '@/components/NeonButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import AnalyzingHero from '@/components/AnalyzingHero';
+import { enterUp } from '@/components/motion';
 import { trackFunnelStep } from '@/services/analytics';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Landing'> };
@@ -78,20 +80,20 @@ export default function LandingScreen({ navigation }: Props) {
           <AnalyzingHero />
         </Animated.View>
 
-        {/* Value Props */}
-        <Animated.View style={[styles.values, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        {/* Value Props — cascade in one after another (staggered entrance) */}
+        <View style={styles.values}>
           {VALUE_PROPS.map((v, i) => (
-            <View key={i} style={styles.valueRow}>
+            <ReAnimated.View key={i} entering={enterUp(i + 2)} style={styles.valueRow}>
               <View style={styles.valueIcon}>
-                <Ionicons name={v.icon} size={22} color={Colors.primary} />
+                <Ionicons name={v.icon} size={22} color={Colors.accent} />
               </View>
               <View style={styles.valueText}>
                 <Text style={styles.valueTitle}>{v.title}</Text>
                 <Text style={styles.valueDesc}>{v.desc}</Text>
               </View>
-            </View>
+            </ReAnimated.View>
           ))}
-        </Animated.View>
+        </View>
 
         {/* Social Proof */}
         <Animated.View style={[styles.socialProof, { opacity: fadeAnim }]}>
