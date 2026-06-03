@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated,
 } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, Polyline } from 'react-native-svg';
+import Svg, { Polyline } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AnalysisHistoryItem, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import { scoreGradient } from '@/utils/scoreVisual';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById, getProfile } from '@/services/claudeApi';
@@ -19,6 +18,7 @@ import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import StatusPill from '@/components/StatusPill';
+import ScoreRing from '@/components/ScoreRing';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
 import NeonButton from '@/components/NeonButton';
@@ -26,12 +26,6 @@ import LoadingState from '@/components/LoadingState';
 import HomeScreen from '@/screens/HomeScreen';
 
 type Props = { navigation: TabScreenNav<'Home'> };
-
-// Hero score ring
-const RING = 140;
-const STROKE = 10;
-const R = (RING - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
 
 // Sparkline box
 const SPARK_W = 140;
@@ -136,35 +130,14 @@ export default function DashboardScreen({ navigation }: Props) {
             <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
               {avatarUri
                 ? <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-                : <Ionicons name="person" size={18} color="#fff" />}
+                : <Ionicons name="person" size={18} color={Colors.onAccent} />}
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        {/* Score hero */}
+        {/* Score hero — focal glow on the home score */}
         <View style={styles.hero}>
-          <View style={styles.ringWrap}>
-            <Svg width={RING} height={RING}>
-              <Defs>
-                <SvgGradient id="dashRing" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor={scoreGradient(latest.score)[0]} />
-                  <Stop offset="100%" stopColor={scoreGradient(latest.score)[1]} />
-                </SvgGradient>
-              </Defs>
-              <Circle cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={Colors.backgroundSecondary} strokeWidth={STROKE} />
-              <Circle
-                cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke="url(#dashRing)" strokeWidth={STROKE}
-                strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - latest.score / 100)} strokeLinecap="round"
-                transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-              />
-            </Svg>
-            <View style={StyleSheet.absoluteFill} pointerEvents="none">
-              <View style={styles.ringCenter}>
-                <Text style={[styles.scoreNum, { color: band.color }]}>{latest.score}</Text>
-                <Text style={styles.scoreOf}>/100</Text>
-              </View>
-            </View>
-          </View>
+          <ScoreRing score={latest.score} size={140} showOutOf glow />
           <View style={styles.heroMeta}>
             <StatusPill label={band.label} color={band.color} />
             {delta != null && delta !== 0 && (
@@ -256,10 +229,10 @@ export default function DashboardScreen({ navigation }: Props) {
 }
 
 const card = {
-  backgroundColor: Colors.groupedRow,
+  backgroundColor: Colors.surfaceElevated,
   borderRadius: Radius.lg,
   borderWidth: StyleSheet.hairlineWidth,
-  borderColor: Colors.glassBorder,
+  borderColor: Colors.glassBorderLight,
 } as const;
 
 const styles = StyleSheet.create({
@@ -270,10 +243,6 @@ const styles = StyleSheet.create({
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarImg: { width: 38, height: 38, borderRadius: 19 },
   hero: { alignItems: 'center', marginBottom: Spacing.xl },
-  ringWrap: { width: RING, height: RING },
-  ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scoreNum: { fontFamily: Typography.fonts.heading, fontSize: 48, fontWeight: '700', lineHeight: 52 },
-  scoreOf: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginTop: -2 },
   heroMeta: { alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.md },
   deltaRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   deltaText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize },

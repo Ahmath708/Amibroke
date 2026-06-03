@@ -27,13 +27,18 @@ interface Props {
    * + spring overshoot. Opt-in so the small rings (lists/history) stay calm.
    */
   reveal?: boolean;
+  /**
+   * Focal glow behind the ring + a quick arc draw, but NO count-up/haptic — for
+   * a calm hero (e.g. the Dashboard score) that shouldn't buzz on every visit.
+   */
+  glow?: boolean;
 }
 
 function landHaptic() {
   impact(ImpactFeedbackStyle.Heavy);
 }
 
-export default function ScoreRing({ score, size = 120, showLabel = false, showOutOf = false, reveal = false }: Props) {
+export default function ScoreRing({ score, size = 120, showLabel = false, showOutOf = false, reveal = false, glow = false }: Props) {
   const reduceMotion = useReducedMotion();
   const strokeWidth = size * 0.08;
   const radius = (size - strokeWidth) / 2;
@@ -80,7 +85,7 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
   return (
     <Animated.View style={[styles.wrap, { width: size, height: size }, ringStyle]}>
       {/* Single anchored glow — the one allowed glow, in the score's own band color */}
-      {reveal && (
+      {(reveal || glow) && (
         <View style={styles.glowLayer} pointerEvents="none">
           <Svg width={size * 1.7} height={size * 1.7}>
             <Defs>
