@@ -1,5 +1,9 @@
-// Height of the custom bottom tab bar's row (excludes the safe-area inset, which
-// is added separately via insets.bottom). The tab bar is position:absolute, so
-// scrollable tab screens must pad their content by this + insets.bottom to avoid
-// being hidden behind it.
-export const TAB_BAR_HEIGHT = 49;
+// Vertical clearance a scrollable tab screen must reserve at the bottom so its
+// content isn't hidden behind the floating tab bar. The bar is position:absolute
+// and floats (detached from the screen edges, Cash-App style), so this covers the
+// capsule height + the gap below it; screens add insets.bottom on top.
+export const TAB_BAR_HEIGHT = 72;
+
+// Internal geometry of the floating capsule (see IOSTabBar in AppNavigator).
+export const TAB_ROW_HEIGHT = 56; // capsule content height
+export const TAB_FLOAT_MARGIN = 12; // gap between the capsule bottom and the safe area

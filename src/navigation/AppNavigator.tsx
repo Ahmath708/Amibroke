@@ -1,21 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, useReducedMotion } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import {
   HomeIcon as HomeOutline,
-  WrenchScrewdriverIcon as WrenchOutline,
-  ChatBubbleLeftRightIcon as ChatOutline,
+  Squares2X2Icon as ToolsOutline,
+  UserGroupIcon as CommunityOutline,
 } from 'react-native-heroicons/outline';
 import {
   HomeIcon as HomeSolid,
-  WrenchScrewdriverIcon as WrenchSolid,
-  ChatBubbleLeftRightIcon as ChatSolid,
+  Squares2X2Icon as ToolsSolid,
+  UserGroupIcon as CommunitySolid,
 } from 'react-native-heroicons/solid';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList, MainTabsParamList } from '@/types';
-import { Colors, Spacing, Typography } from '@/theme/colors';
+import { Colors, Typography } from '@/theme/colors';
+import { Springs } from '@/theme/motion';
 import { useAuth } from '@/context/AuthContext';
 
 
@@ -46,7 +49,7 @@ import FinancialContextScreen from '@/screens/FinancialContextScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
-import { TAB_BAR_HEIGHT } from '@/navigation/constants';
+import { TAB_BAR_HEIGHT, TAB_ROW_HEIGHT, TAB_FLOAT_MARGIN } from '@/navigation/constants';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -54,52 +57,95 @@ const Tab = createBottomTabNavigator<MainTabsParamList>();
 // UI/navigation chrome → Heroicons (active = solid, inactive = outline). Category/
 // decorative icons elsewhere stay on Ionicons (Heroicons doesn't cover them).
 const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: React.ComponentType<any> }> = {
-  Home:      { active: HomeSolid,   inactive: HomeOutline },
-  Tools:     { active: WrenchSolid, inactive: WrenchOutline },
-  Community: { active: ChatSolid,   inactive: ChatOutline },
+  Home:      { active: HomeSolid,      inactive: HomeOutline },
+  Tools:     { active: ToolsSolid,     inactive: ToolsOutline },
+  Community: { active: CommunitySolid, inactive: CommunityOutline },
 };
 
-function IOSTabBar({ state, descriptors, navigation }: any) {
-  const insets = useSafeAreaInsets();
-  const TAB_HEIGHT = TAB_BAR_HEIGHT;
+// Active-indicator pill — a wide, rounded-rectangular magenta sub-pill that slides
+// behind the focused icon (Cash-App floating capsule, our brand tint).
+const PILL_H = 44;
+const PILL_GAP = 24; // horizontal inset of the pill within each slot
+const PILL_RADIUS = 16;
+
+// A single icon-only tab. The active icon brightens + springs up a touch; the
+// sliding sub-pill (rendered once in the row) is what reads the focus.
+function TabBarButton({ route, focused, reduce, onPress }: any) {
+  const icons = TAB_ICONS[route.name];
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    scale.value = reduce ? 1 : withSpring(focused ? 1.1 : 1, Springs.gentle);
+  }, [focused, reduce]);
+  const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const TabIcon = focused ? icons.active : icons.inactive;
 
   return (
-    <View style={[tabStyles.outerWrapper, { paddingBottom: insets.bottom }]}>
-      <BlurView intensity={85} tint="dark" style={tabStyles.blurFill}>
-        <View style={tabStyles.separator} />
-        <View style={[tabStyles.tabRow, { height: TAB_HEIGHT }]}>
-          {state.routes.map((route: any, index: number) => {
-            const focused = state.index === index;
-            const icons = TAB_ICONS[route.name];
+    <TouchableOpacity
+      style={tabStyles.tabItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={route.name}
+      accessibilityState={{ selected: focused }}
+    >
+      <Animated.View style={iconStyle}>
+        <TabIcon size={24} color={focused ? Colors.tint : Colors.textSecondary} style={{ opacity: focused ? 1 : 0.6 }} />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
 
-            return (
-              <TouchableOpacity
+function IOSTabBar({ state, navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const reduce = useReducedMotion();
+  const [rowWidth, setRowWidth] = useState(0);
+  const slotW = state.routes.length ? rowWidth / state.routes.length : 0;
+
+  // The sub-pill tracks the focused tab. Spring on switch (jump if reduced-motion).
+  const indexSV = useSharedValue(state.index);
+  useEffect(() => {
+    indexSV.value = reduce ? state.index : withSpring(state.index, Springs.snappy);
+  }, [state.index, reduce]);
+
+  const pillStyle = useAnimatedStyle(() => {
+    const w = Math.max(0, slotW - PILL_GAP);
+    return {
+      width: w,
+      transform: [{ translateX: slotW * indexSV.value + PILL_GAP / 2 }],
+      opacity: slotW > 0 ? 1 : 0,
+    };
+  });
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={[tabStyles.outerWrapper, { paddingBottom: insets.bottom + TAB_FLOAT_MARGIN }]}
+    >
+      <View style={tabStyles.capsuleShadow}>
+        <BlurView intensity={40} tint="dark" style={tabStyles.capsule}>
+          <View
+            style={tabStyles.tabRow}
+            onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}
+          >
+            <Animated.View pointerEvents="none" style={[tabStyles.pill, pillStyle]} />
+            {state.routes.map((route: any, index: number) => (
+              <TabBarButton
                 key={route.key}
-                style={tabStyles.tabItem}
+                route={route}
+                focused={state.index === index}
+                reduce={reduce}
                 onPress={() => {
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                  if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+                  if (state.index !== index && !event.defaultPrevented) {
+                    Haptics.selectionAsync();
+                    navigation.navigate(route.name);
+                  }
                 }}
-                activeOpacity={0.7}
-              >
-                {(() => {
-                  const TabIcon = focused ? icons.active : icons.inactive;
-                  return (
-                    <TabIcon
-                      size={22}
-                      color={focused ? Colors.tint : Colors.textSecondary}
-                      style={{ opacity: focused ? 1 : 0.55 }}
-                    />
-                  );
-                })()}
-                <Text style={[tabStyles.tabLabel, focused && tabStyles.tabLabelActive]}>
-                  {route.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </BlurView>
+              />
+            ))}
+          </View>
+        </BlurView>
+      </View>
     </View>
   );
 }
@@ -190,38 +236,52 @@ export default function AppNavigator() {
 }
 
 const tabStyles = StyleSheet.create({
+  // Floating capsule: detached from the screen edges, lifted off the safe area.
+  // Wide floating capsule: spans most of the width with modest side margins.
   outerWrapper: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 36,
   },
-  blurFill: { overflow: 'hidden' },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.separator,
+  capsuleShadow: {
+    borderRadius: TAB_ROW_HEIGHT / 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  capsule: {
+    height: TAB_ROW_HEIGHT,
+    borderRadius: TAB_ROW_HEIGHT / 2,
+    overflow: 'hidden',
+    paddingHorizontal: 6, // breathing room at the rounded ends
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.glassBorderLight,
+    backgroundColor: Colors.surfaceElevated,
+    elevation: 12,
   },
   tabRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
   tabItem: {
     flex: 1,
+    height: TAB_ROW_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 6,
   },
-  tabIcon: {},
-  tabLabel: {
-    fontFamily: Typography.fonts.body,
-    fontSize: 10,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    letterSpacing: 0.1,
-  },
-  tabLabelActive: {
-    color: Colors.tint,
-    fontFamily: Typography.fonts.bodyMed,
+  // Wide rounded-rectangular magenta sub-pill (width is set per-slot at runtime).
+  pill: {
+    position: 'absolute',
+    top: (TAB_ROW_HEIGHT - PILL_H) / 2,
+    left: 0,
+    height: PILL_H,
+    borderRadius: PILL_RADIUS,
+    backgroundColor: Colors.accentContainer,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.glassBorderLight,
   },
 });
