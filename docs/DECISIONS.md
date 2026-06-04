@@ -19,10 +19,22 @@ Shift from a per-subscription **7-day free trial** to a **3-day app-granted full
   (blocking analysis itself once the trial expires) lives in `HomeScreen.handleAnalyze` behind
   `FEATURES.PAYWALL_ENFORCEMENT` (env `EXPO_PUBLIC_PAYWALL_ENFORCEMENT`), **default off** so QA isn't
   gated by an aged dev account and so it can't ship ahead of the server check.
-- **Remaining:** **server-side enforcement** — the `analyze` / `action-plan` edge functions must apply
-  the same trial + entitlement rule (client gates are bypassable; this is the security-critical piece),
-  then flip `PAYWALL_ENFORCEMENT` on. Also decide how pre-existing accounts (created >3 days before
-  launch) are treated.
+- **Status (server-side enforcement, 2026-06-04):** implemented. The trial-window math moved to
+  `shared/entitlement.ts` (one source for app + edge; `services/subscriptions.ts` re-exports it).
+  `supabase/functions/_shared/entitlement.ts` exposes `enforceEntitlement(req)` — resolves the user
+  from the JWT (service-role `auth.getUser`), allows if inside the 3-day window (server-set
+  `created_at`) OR holding an active `user_subscriptions` plan, else throws **402**. It's wired into
+  `analyze` / `action-plan` / `generate-captions` (right after rate-limiting, before the paid AI call)
+  and **flagged off** by the `PAYWALL_ENFORCEMENT=true` function secret. It **fails open** on any
+  uncertainty (no token, missing env, lookup error) so a paying user is never wrongly blocked.
+- **Before enabling (`PAYWALL_ENFORCEMENT=true`):** (1) the gate reads the RevenueCat →
+  `user_subscriptions` mirror — confirm the webhook reliably populates it (Test-Store purchases may not
+  fire it; RevenueCat customerInfo is the *client* source of truth and isn't queried server-side);
+  (2) deploy the 3 functions; (3) it couldn't be typechecked/run locally (no Deno; paid APIs; the
+  Supabase project is coworker-owned) — exercise it in a sandbox first. Also: a 402 currently surfaces
+  as a generic analysis error on the client — wire `analyze`'s 402/`stage:'paywall'` to route to the
+  Paywall for a clean UX. And decide how pre-existing accounts (created >3 days before launch) are
+  treated.
 
 This supersedes the **"Trial: 7-day free trial"** line in the 2026-05-29 spec below.
 

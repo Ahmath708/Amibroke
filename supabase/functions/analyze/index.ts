@@ -5,6 +5,7 @@ import type { FinalAnalysis, UserContext } from '../../../shared/types.ts';
 import { deriveMetrics } from '../../../shared/calculations.ts';
 import { computeFinalScore } from '../../../shared/scoring/index.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { enforceEntitlement } from '../_shared/entitlement.ts';
 const SYSTEM_PROMPT = Deno.readTextFileSync(
   new URL('./prompts/system.txt', import.meta.url),
 );
@@ -356,6 +357,7 @@ serve(async (req) => {
     const { freeText, userContext, tone } = validation.parsed;
 
     await enforceRateLimit(req, 'analyze');
+    await enforceEntitlement(req); // hard paywall (flagged off by default) — reject before the paid AI call
 
     if (selectedProvider === 'groq' && !GROQ_API_KEY) {
       return jsonResponse({ error: 'Server misconfiguration: Groq API key not set.', stage: 'config_error' }, 500);

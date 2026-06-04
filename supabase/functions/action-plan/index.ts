@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { generatePlanTool } from './tool.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
+import { enforceEntitlement } from '../_shared/entitlement.ts';
 const ACTION_PLAN_PROMPT = Deno.readTextFileSync(
   new URL('./prompts/system.txt', import.meta.url),
 );
@@ -231,6 +232,7 @@ serve(async (req) => {
     if (!validation.valid) return jsonResponse({ error: validation.error, stage: 'parse_error' }, 400);
 
     await enforceRateLimit(req, 'action-plan');
+    await enforceEntitlement(req); // hard paywall (flagged off by default) — reject before the paid AI call
 
     if (selectedProvider === 'groq' && !GROQ_API_KEY) return jsonResponse({ error: 'Groq API key not set', stage: 'config_error' }, 500);
     if (selectedProvider === 'claude' && !ANTHROPIC_API_KEY) return jsonResponse({ error: 'Claude API key not set', stage: 'config_error' }, 500);
