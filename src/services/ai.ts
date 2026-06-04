@@ -5,6 +5,7 @@
 import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
 import { FinalAnalysis, CaptionResponse, ActionPlanResponse, UserContext } from '@shared/types';
 import { RoastTone } from '@/types';
+import { USE_AI_MOCKS } from '@/config/ai';
 import { getSupabase } from './supabaseClient';
 
 export function isFinancialAnalysis(x: unknown): x is FinalAnalysis {
@@ -46,7 +47,6 @@ export async function analyzeFinancialSituation(
   retries = 2,
   userContext?: Partial<UserContext>,
 ): Promise<FinalAnalysis> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { SAMPLE_ANALYSIS } = require('../__fixtures__/sampleAnalysis');
     await new Promise((r) => setTimeout(r, 600));
@@ -160,7 +160,6 @@ async function runActionPlan(
   tone: RoastTone,
   analysisId?: string,
 ): Promise<ActionPlanResponse | null> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { SAMPLE_ACTION_PLAN } = require('../__fixtures__/sampleAnalysis');
     await new Promise((r) => setTimeout(r, 600));
@@ -218,7 +217,6 @@ export async function fetchOrGenerateCaptions(
   tone: RoastTone,
   analysisId?: string,
 ): Promise<CaptionResponse | null> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { SAMPLE_CAPTIONS } = require('../__fixtures__/sampleAnalysis');
     await new Promise((r) => setTimeout(r, 600));

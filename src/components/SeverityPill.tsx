@@ -1,5 +1,6 @@
 import React from 'react';
 import StatusPill from '@/components/StatusPill';
+import { capitalize as cap } from '@/utils/string';
 
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 
@@ -13,8 +14,6 @@ const META: Record<SeverityLevel, { variant: 'danger' | 'warning' | 'muted'; fil
   medium:   { variant: 'warning', filled: false },
   low:      { variant: 'muted', filled: false },
 };
-
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function SeverityPill({ level, size }: { level: SeverityLevel; size?: 'sm' | 'md' }) {
   const m = META[level];

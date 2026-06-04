@@ -8,6 +8,7 @@ import { RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, DebtItem } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { formatCurrency as fmt } from '@/utils/format';
 import GlassCard from '@/components/GlassCard';
 import SeverityPill from '@/components/SeverityPill';
 import SelectableChip from '@/components/SelectableChip';
@@ -77,7 +78,6 @@ export default function DebtPayoffScreen({ route }: Props) {
     strategy === 'avalanche' ? b.interestRate - a.interestRate : a.balance - b.balance
   );
 
-  const fmt = (n: number) => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>

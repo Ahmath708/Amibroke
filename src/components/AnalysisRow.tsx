@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
+import { formatShortDate as fmtDate } from '@/utils/format';
 import { AnalysisHistoryItem } from '@/types';
 
 const RING = 48;
@@ -20,8 +21,6 @@ interface Props {
   onPress: () => void;
 }
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 /** A single analysis entry — partial-fill band ring + date · verdict + summary + chips.
  *  Shared by the History inline list and the All Analyses screen. */

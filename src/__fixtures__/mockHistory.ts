@@ -14,13 +14,11 @@
 import type { AnalysisHistoryItem, CheckIn, CheckinConfig, TrackedGoal } from '@/types';
 import type { FinalAnalysis } from '@shared/types';
 import { metricGoalId, debtGoalId } from '@/utils/checkinGoals';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import { SAMPLE_ANALYSIS } from './sampleAnalysis';
 
 function labelFor(score: number): string {
-  if (score <= 40) return 'Financially Fragile';
-  if (score <= 60) return 'Surviving';
-  if (score <= 80) return 'Stable';
-  return 'Thriving';
+  return getScoreBand(score).label;
 }
 function emojiFor(score: number): string {
   if (score < 40) return '😰';

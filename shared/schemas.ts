@@ -22,12 +22,15 @@ export const UserContextSchema = z.object({
   primaryConcern: z.enum(['debt_payoff', 'building_savings', 'curious', 'investing', 'other']).optional(),
 });
 
+// Roast tone — single source for the analyze / action-plan / caption schemas.
+export const ToneSchema = z.enum(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']);
+
 // ─── Request body sent from frontend to /analyze ────────────────
 
 export const AnalyzeRequestSchema = z.object({
   freeText: z.string().min(10).max(5000),
   userContext: UserContextSchema,
-  tone: z.enum(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']),
+  tone: ToneSchema,
 });
 
 // ─── AI's structured output (the tool call) ─────────────────────
@@ -98,8 +101,6 @@ export const FinalAnalysisSchema = AIRawOutputSchema.extend({
 
 // ─── Action plan schemas ─────────────────────────────────────────
 
-export const ToneSchema = z.enum(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']);
-
 export const ActionPlanStepSchema = z.object({
   week: z.string().max(20),
   title: z.string().max(80),
@@ -126,7 +127,7 @@ export const CaptionRequestSchema = z.object({
   score: z.number().min(0).max(100),
   scoreLabel: z.string(),
   roast: z.string(),
-  tone: z.enum(['savage', 'gentle', 'therapist', 'older_sibling', 'finance_bro']),
+  tone: ToneSchema,
 });
 
 export const CaptionResponseSchema = z.object({

@@ -1,6 +1,7 @@
 import React from 'react';
 import StatusPill from '@/components/StatusPill';
 import { Colors } from '@/theme/colors';
+import { capitalize as cap } from '@/utils/string';
 
 type Level = 'high' | 'medium' | 'low';
 
@@ -12,8 +13,6 @@ const COLORS: Record<Level, string> = {
   medium: Colors.caution,
   low: Colors.danger,
 };
-
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function ConfidenceBadge({ level, size = 'sm' }: { level: Level; size?: 'sm' | 'md' }) {
   return <StatusPill label={cap(level)} color={COLORS[level]} size={size} />;

@@ -2,6 +2,7 @@
 // their check-in config (pinned goals + schedule anchor, stored on `profiles`).
 // Mocked in dev via @/config/ai.
 import { CheckIn, CheckinConfig, EMPTY_CHECKIN_CONFIG } from '@/types';
+import { USE_AI_MOCKS } from '@/config/ai';
 import { getSupabase } from './supabaseClient';
 
 export async function saveCheckIn(userId: string, data: {
@@ -13,7 +14,6 @@ export async function saveCheckIn(userId: string, data: {
   debt?: number;
   metrics?: Record<string, number>;
 }): Promise<string | null> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) return 'mock-checkin-id';
   const client = getSupabase();
   if (!client) return null;
@@ -32,7 +32,6 @@ export async function saveCheckIn(userId: string, data: {
 }
 
 export async function getCheckIns(userId: string): Promise<CheckIn[]> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { MOCK_CHECKINS } = require('@/__fixtures__/mockHistory');
     return MOCK_CHECKINS;
@@ -65,7 +64,6 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
 
 /** Read the user's monthly check-in config (pinned goals + schedule anchor). */
 export async function getCheckinConfig(userId: string): Promise<CheckinConfig> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { MOCK_CHECKIN_CONFIG } = require('@/__fixtures__/mockHistory');
     return MOCK_CHECKIN_CONFIG;
@@ -87,7 +85,6 @@ export async function getCheckinConfig(userId: string): Promise<CheckinConfig> {
 }
 
 export async function saveCheckinConfig(userId: string, config: CheckinConfig): Promise<boolean> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) return true;
   const client = getSupabase();
   if (!client) return false;

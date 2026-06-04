@@ -41,9 +41,7 @@ type Props = {
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-function fmt(n: number) {
-  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-}
+import { formatCurrency as fmt } from '@/utils/format';
 
 type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 type SpendIcon = { lib: 'ion'; name: IoniconsName } | { lib: 'mci'; name: MCIName };

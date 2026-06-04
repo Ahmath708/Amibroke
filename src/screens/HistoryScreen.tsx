@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { formatShortDate as fmtDate } from '@/utils/format';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
 import GlassCard from '@/components/GlassCard';
@@ -108,10 +109,6 @@ export default function HistoryScreen() {
   });
   const periodItems = itemsInPeriod(granularity, anchor, history);
 
-  const fmtDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
 
   if (loading) {
     return (

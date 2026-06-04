@@ -23,6 +23,7 @@ import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile';
 import { getAnalysisHistory } from '@/services/analyses';
+import { formatLongDate as fmtDate } from '@/utils/format';
 import { isSubscriptionPremium } from '@/services/subscriptions';
 import { manageSubscriptions } from '@/services/purchases';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -160,11 +161,6 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
-  const fmtDate = (iso: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  };
 
   const scoreColor = latestScore == null ? Colors.textMuted : getScoreBand(latestScore).color;
 

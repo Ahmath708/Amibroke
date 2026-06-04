@@ -2,6 +2,7 @@
 // Mocked in dev via @/config/ai (mock history fixtures).
 import { FinalAnalysis } from '@shared/types';
 import { AnalysisHistoryItem } from '@/types';
+import { USE_AI_MOCKS } from '@/config/ai';
 import { getSupabase } from './supabaseClient';
 
 export async function saveAnalysis(userId: string, input: string, analysis: FinalAnalysis): Promise<string | null> {
@@ -52,7 +53,6 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
 }
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { MOCK_HISTORY } = require('@/__fixtures__/mockHistory');
     return MOCK_HISTORY;
@@ -66,16 +66,7 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      score: row.score,
-      score_label: row.score_label,
-      summary: row.summary,
-      created_at: row.created_at,
-      emotional_status: row.emotional_status,
-      has_action_plan: !!(row.action_plan && (Array.isArray(row.action_plan) ? row.action_plan.length > 0 : true)),
-      has_captions: !!row.share_captions,
-    }));
+    return (data || []).map(mapAnalysisRow);
   } catch (error) {
     console.warn('Failed to fetch history:', error);
     return [];
@@ -103,7 +94,6 @@ export async function getAnalysesPage(
   opts: { userId: string; cursor?: string | null; limit?: number },
 ): Promise<AnalysesPage> {
   const { userId, cursor = null, limit = 20 } = opts;
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { MOCK_HISTORY } = require('@/__fixtures__/mockHistory');
     const all: AnalysisHistoryItem[] = MOCK_HISTORY;
@@ -136,7 +126,6 @@ export async function getAnalysesPage(
 }
 
 export async function getAnalysisById(id: string): Promise<FinalAnalysis | null> {
-  const { USE_AI_MOCKS } = require('@/config/ai');
   if (USE_AI_MOCKS) {
     const { getMockAnalysisById } = require('@/__fixtures__/mockHistory');
     return getMockAnalysisById(id);

@@ -17,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getProfile } from '@/services/profile';
+import { capitalize } from '@/utils/string';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import StatusPill from '@/components/StatusPill';
@@ -60,7 +61,7 @@ export default function DashboardScreen({ navigation }: Props) {
       .then((p) => {
         const name = (p?.display_name || p?.username || '').trim();
         const first = name ? name.split(/\s+/)[0] : '';
-        setFirstName(first ? first.charAt(0).toUpperCase() + first.slice(1) : '');
+        setFirstName(capitalize(first));
       })
       .catch(() => {});
   }, [user]);
