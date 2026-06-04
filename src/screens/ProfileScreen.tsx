@@ -179,7 +179,7 @@ export default function ProfileScreen({ navigation }: Props) {
   if (error) {
     return (
       <View style={styles.container}>
-        <ErrorState message={error} onRetry={fetchData} style={{ paddingTop: insets.top + 80 }} />
+        <ErrorState message={error} onRetry={() => fetchData()} style={{ paddingTop: insets.top + 80 }} />
       </View>
     );
   }

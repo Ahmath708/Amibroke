@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: 'How much does it cost?',
-    a: 'The basic snapshot (score, roast, spending breakdown) is free forever. Premium features like the 90-day Action Plan, Scenario Simulator, and Monthly Check-Ins are available as one-time purchases starting at $4.99.',
+    a: 'New accounts get 3 days of full free access to everything. After that, Am I Broke? is a subscription — Action Plan ($4.99/mo) for your score, roast, breakdown, 90-day plan, debt payoff and subscription audit, or Deep Dive ($9.99/mo) which adds the scenario simulator. There is no permanent free tier and no separate per-plan trial.',
   },
   {
     q: 'Can I share my results?',

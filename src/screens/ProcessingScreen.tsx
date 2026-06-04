@@ -8,7 +8,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { analyzeFinances } from '@/services/ai';
-import { useAuth } from '@/context/AuthContext';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { trackFunnelStep, trackError } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -17,6 +16,8 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Processing'>;
   route: RouteProp<RootStackParamList, 'Processing'>;
 };
+
+const ANALYSIS_TIMEOUT_MS = 45000;
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 const STEPS: { label: string; icon: IoniconsName }[] = [
@@ -30,7 +31,6 @@ const STEPS: { label: string; icon: IoniconsName }[] = [
 export default function ProcessingScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { userInput, tone, userContext } = route.params;
-  const { user } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
 
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const timeout = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
 
     try {
       const analysis = await analyzeFinances(userInput, tone || 'savage', controller.signal, 2, userContext as Record<string, unknown> | undefined);
@@ -78,7 +78,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
       console.error('[Processing] Analysis error:', e);
 
       if (e instanceof Error && e.name === 'AbortError') {
-        msg = 'Request timed out after 30 seconds. Check your internet connection and try again.';
+        msg = `Request timed out after ${ANALYSIS_TIMEOUT_MS / 1000} seconds. Check your internet connection and try again.`;
       }
 
       // Error microinteraction
@@ -91,7 +91,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
       setError(msg);
     }
 
-  }, [userInput, tone, user, navigation]);
+  }, [userInput, tone, navigation]);
 
   useEffect(() => {
     // Spin animation

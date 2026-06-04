@@ -1,5 +1,7 @@
 import { getSupabaseClient as getSupabase } from './supabaseClient';
 import { totalReactions } from '@/utils/reactions';
+import { analyzeFinancialSituation } from './ai';
+import { RoastTone } from '@/types';
 
 export interface CreatorSubmission {
   id: string;
@@ -125,43 +127,25 @@ export async function applyReferralCode(code: string, referredId: string): Promi
   }
 }
 
+// Both delegate to the shared analyze pipeline (ai.ts) rather than re-invoking the
+// edge function directly — the edge fn requires { freeText, userContext, tone },
+// not { userInput }, so the old direct calls 400'd. analyzeFinancialSituation
+// builds the correct body (and applies input cleaning + retries + validation).
 export async function batchRoast(inputs: string[], tone: string): Promise<any[]> {
-  const client = getSupabase();
-  if (!client) return [];
-
   const results: any[] = [];
-
   for (const input of inputs) {
     try {
-      const { data, error } = await client.functions.invoke('analyze', {
-        body: { userInput: input, tone },
-      });
-
-      if (error) {
-        results.push({ error: error.message, input });
-      } else {
-        results.push(data);
-      }
+      results.push(await analyzeFinancialSituation(input, tone as RoastTone));
     } catch (e) {
       results.push({ error: e instanceof Error ? e.message : 'Unknown error', input });
     }
   }
-
   return results;
 }
 
 export async function submitAudienceRoast(creatorId: string, userInput: string, tone: string): Promise<any | null> {
-  const client = getSupabase();
-  if (!client) return null;
-
   try {
-    const { data, error } = await client.functions.invoke('analyze', {
-      body: { userInput, tone },
-    });
-
-    if (error) return null;
-
-    return data;
+    return await analyzeFinancialSituation(userInput, tone as RoastTone);
   } catch {
     return null;
   }

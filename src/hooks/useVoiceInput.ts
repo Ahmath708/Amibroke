@@ -23,6 +23,7 @@ export function useVoiceInput(): UseVoiceInputResult {
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingActiveRef = useRef(false);
   const permissionRef = useRef(false);
+  const recognitionRef = useRef<any>(null); // the active web SpeechRecognition instance
 
   const isWeb = Platform.OS === 'web';
 
@@ -59,6 +60,7 @@ export function useVoiceInput(): UseVoiceInputResult {
 
         setListening(true);
         const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
         recognition.lang = 'en-US';
         recognition.interimResults = true;
         recognition.continuous = true;
@@ -107,11 +109,8 @@ export function useVoiceInput(): UseVoiceInputResult {
   const stopListening = useCallback(async () => {
     if (isWeb) {
       try {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognition) {
-          const recognition = new SpeechRecognition();
-          recognition.stop();
-        }
+        recognitionRef.current?.stop();
+        recognitionRef.current = null;
       } catch {
         // ignore
       }

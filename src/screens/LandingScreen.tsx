@@ -98,7 +98,7 @@ export default function LandingScreen({ navigation }: Props) {
         {/* Social Proof */}
         <Animated.View style={[styles.socialProof, { opacity: fadeAnim }]}>
           <Text style={styles.socialProofText}>
-            <Text style={styles.socialProofAccent}>Free</Text>
+            <Text style={styles.socialProofAccent}>3 days free</Text>
             <Text style={styles.socialProofDot}>  ·  </Text>
             Brutally honest
             <Text style={styles.socialProofDot}>  ·  </Text>

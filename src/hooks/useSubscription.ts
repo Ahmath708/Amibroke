@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
   getSubscription, SubscriptionTier, SubscriptionRecord,
@@ -27,8 +27,12 @@ export function useSubscription(): UseSubscriptionResult {
   const [tier, setTier] = useState<SubscriptionTier>('free');
   const [record, setRecord] = useState<SubscriptionRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  // Guards against a stale resolve landing after a newer refresh (fast user switch
+  // or an overlapping RevenueCat-listener call) clobbering the current tier.
+  const reqIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const myReq = ++reqIdRef.current;
     if (!user) {
       setTier('free');
       setRecord(null);
@@ -37,6 +41,7 @@ export function useSubscription(): UseSubscriptionResult {
     }
     setLoading(true);
     const result = await getSubscription(user.id);
+    if (myReq !== reqIdRef.current) return; // superseded by a newer refresh
     setTier(result.tier);
     setRecord(result.record);
     setLoading(false);

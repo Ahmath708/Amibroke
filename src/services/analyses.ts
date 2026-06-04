@@ -151,16 +151,21 @@ export async function getAnalysisById(id: string): Promise<FinalAnalysis | null>
       .single();
     if (error) throw error;
     if (!data) return null;
+    // Guard parseFloat against null/garbage columns so NaN never leaks into the analysis.
+    const num = (v: any, fallback = 0) => {
+      const n = parseFloat(v);
+      return Number.isNaN(n) ? fallback : n;
+    };
     return {
-      monthlyIncome: { value: parseFloat(data.monthly_income), confidence: 'medium' },
-      monthlyExpenses: { value: parseFloat(data.monthly_expenses), confidence: 'medium' },
+      monthlyIncome: { value: num(data.monthly_income), confidence: 'medium' },
+      monthlyExpenses: { value: num(data.monthly_expenses), confidence: 'medium' },
       liquidSavings: { value: data.liquid_savings ?? 0, confidence: data.avg_confidence ? 'medium' : 'low' },
-      monthlySavings: parseFloat(data.monthly_savings),
-      savingsRate: parseFloat(data.savings_rate),
-      debtTotal: parseFloat(data.debt_total),
+      monthlySavings: num(data.monthly_savings),
+      savingsRate: num(data.savings_rate),
+      debtTotal: num(data.debt_total),
       monthlyDebtService: data.monthly_debt_service ?? 0,
-      emergencyFundMonths: parseFloat(data.emergency_fund_months),
-      debtToIncomeRatio: parseFloat(data.debt_to_income_ratio),
+      emergencyFundMonths: num(data.emergency_fund_months),
+      debtToIncomeRatio: num(data.debt_to_income_ratio),
       avgConfidence: data.avg_confidence ?? 0.5,
       score: data.score,
       scoreLabel: data.score_label,
