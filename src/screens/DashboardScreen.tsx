@@ -139,14 +139,21 @@ export default function DashboardScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.sm, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header: time-aware greeting + avatar → Profile */}
+        {/* Header: time-aware greeting (small lead + name hero) + avatar → Profile */}
         <ReAnimated.View entering={enterUp(0)} style={styles.header}>
-          <Text style={styles.wordmark} numberOfLines={2}>
-            {firstName ? `${timeGreeting()}, ${firstName}` : timeGreeting()}
-          </Text>
+          <View style={styles.greeting}>
+            {firstName ? (
+              <>
+                <Text style={styles.greetingLead}>{timeGreeting()},</Text>
+                <Text style={styles.greetingName} numberOfLines={1}>{firstName}</Text>
+              </>
+            ) : (
+              <Text style={styles.greetingName} numberOfLines={1}>{timeGreeting()}</Text>
+            )}
+          </View>
           <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
         </ReAnimated.View>
 
@@ -241,8 +248,10 @@ const card = {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
-  wordmark: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary, flex: 1, marginRight: Spacing.md },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: Spacing.lg },
+  greeting: { flex: 1, marginRight: Spacing.md },
+  greetingLead: { fontFamily: Typography.fonts.headingMed, fontSize: Typography.title3.fontSize, color: Colors.textSecondary, letterSpacing: -0.3 },
+  greetingName: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   hero: { alignItems: 'center', marginBottom: Spacing.xl },
   heroMeta: { alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.md },
   deltaRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
