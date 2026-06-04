@@ -11,7 +11,7 @@ import { RootStackParamList, ActionStep } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
-import ScorePlanRing from '@/components/ScorePlanRing';
+import MiniScoreRing from '@/components/MiniScoreRing';
 import { PressableScale } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
@@ -216,10 +216,7 @@ export default function ActionPlanScreen({ route }: Props) {
   const currentStep = firstPendingIndex >= 0 ? rows[firstPendingIndex] : null;
   const upNext = rows.filter((s, i) => s.status !== 'done' && i !== firstPendingIndex);
   const doneSteps = rows.filter((s) => s.status === 'done');
-  // Projected score at the finish — heuristic for the prototype (~+3 health pts/step);
-  // the real projection will come from the scoring engine.
   const score0 = plan?.start_metrics?.score ?? 0;
-  const projected = Math.min(100, score0 + rows.length * 3);
 
   // Contextual revise: only surface the update affordance when the latest check-in is a
   // material change (the deterministic gate) — not as a permanent CTA.
@@ -243,15 +240,13 @@ export default function ActionPlanScreen({ route }: Props) {
           /* Active plan — score-linked hero (the app's North Star + plan completion). */
           <View style={styles.heroBlock}>
             <View style={styles.heroRow}>
-              <ScorePlanRing score={score0} pct={prog!.pct} />
+              <MiniScoreRing score={score0} size={92} stroke={9} numberSize={30} />
               <View style={styles.heroMeta}>
                 <Text style={styles.heroDay}>
                   Day {Math.min(prog!.daysIn + 1, plan!.horizon_days)}<Text style={styles.heroDayTotal}> of {plan!.horizon_days}</Text>
                 </Text>
-                <Text style={styles.heroDone}>{prog!.done} of {prog!.total} steps done</Text>
-                {projected > score0 && (
-                  <Text style={styles.heroProjected}>Finish the plan → <Text style={styles.heroProjectedNum}>{projected}</Text></Text>
-                )}
+                <Text style={styles.heroDone}>{prog!.done} of {prog!.total} done · {prog!.pct}%</Text>
+                <Text style={styles.heroNudge}>Finish the plan, watch your score climb.</Text>
               </View>
             </View>
             {(delta!.debtPaidDown > 0 || delta!.savingsGained > 0) && (
@@ -366,8 +361,7 @@ const styles = StyleSheet.create({
   heroDay: { fontFamily: Typography.fonts.heading, fontSize: 26, fontWeight: '700', color: Colors.textPrimary },
   heroDayTotal: { fontFamily: Typography.fonts.body, fontSize: Typography.title3.fontSize, fontWeight: '400', color: Colors.textMuted },
   heroDone: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  heroProjected: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  heroProjectedNum: { fontFamily: Typography.fonts.bodySemi, color: Colors.accent },
+  heroNudge: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
   heroDelta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent },
 
   // Focal "this week" card
