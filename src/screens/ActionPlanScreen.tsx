@@ -319,33 +319,41 @@ export default function ActionPlanScreen({ route }: Props) {
           </GlassCard>
         )}
 
-        {upNext.length > 0 && <SectionLabel>Up Next</SectionLabel>}
-        {upNext.map((step) => (
-          <View key={step.id} style={styles.compactRow}>
-            <TouchableOpacity
-              onPress={() => isActive && toggle(step.id, false)} disabled={!isActive}
-              hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }} activeOpacity={0.6}
-            >
-              <View style={styles.openCircle} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.compactTextHit} onPress={() => setSelectedId(step.id)} activeOpacity={0.7}>
-              <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
-            </TouchableOpacity>
-            <Text style={styles.compactWeek}>{step.week}</Text>
+        {upNext.length > 0 && (
+          <View style={styles.block}>
+            <SectionLabel>Up Next</SectionLabel>
+            {upNext.map((step) => (
+              <View key={step.id} style={styles.compactRow}>
+                <TouchableOpacity
+                  onPress={() => isActive && toggle(step.id, false)} disabled={!isActive}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }} activeOpacity={0.6}
+                >
+                  <View style={styles.openCircle} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.compactTextHit} onPress={() => setSelectedId(step.id)} activeOpacity={0.7}>
+                  <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
+                </TouchableOpacity>
+                <Text style={styles.compactWeek}>{step.week}</Text>
+              </View>
+            ))}
           </View>
-        ))}
+        )}
 
-        {doneSteps.length > 0 && <SectionLabel>Done</SectionLabel>}
-        {doneSteps.map((step) => (
-          <TouchableOpacity
-            key={step.id} style={styles.compactRow}
-            onPress={isActive ? () => toggle(step.id, true) : undefined}
-            activeOpacity={isActive ? 0.7 : 1} disabled={!isActive}
-          >
-            <View style={styles.compactCheck}><Text style={styles.compactCheckMark}>✓</Text></View>
-            <Text style={[styles.compactTitle, styles.compactTitleDone]} numberOfLines={1}>{step.title}</Text>
-          </TouchableOpacity>
-        ))}
+        {doneSteps.length > 0 && (
+          <View style={styles.block}>
+            <SectionLabel>Done</SectionLabel>
+            {doneSteps.map((step) => (
+              <TouchableOpacity
+                key={step.id} style={styles.compactRow}
+                onPress={isActive ? () => toggle(step.id, true) : undefined}
+                activeOpacity={isActive ? 0.7 : 1} disabled={!isActive}
+              >
+                <View style={styles.compactCheck}><Text style={styles.compactCheckMark}>✓</Text></View>
+                <Text style={[styles.compactTitle, styles.compactTitleDone]} numberOfLines={1}>{step.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {isActive && (
           <TouchableOpacity onPress={restart} activeOpacity={0.7}>
@@ -362,6 +370,10 @@ export default function ActionPlanScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  // Vertical rhythm standard: every top-level block gets marginBottom `block` (Spacing.xl);
+  // SectionLabel owns its own marginBottom (sm) so labels hug their content. marginBottom
+  // only — never marginTop — so gaps never compound.
+  block: { marginBottom: Spacing.xl },
   // Preview card (no active plan)
   progressCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.sm },
   progressTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
@@ -378,7 +390,7 @@ const styles = StyleSheet.create({
   heroDelta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent },
 
   // Focal "this week" card
-  focalCard: { padding: Spacing.lg, marginTop: Spacing.xs, gap: Spacing.xs },
+  focalCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.xs },
   focalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
   catDot: { width: 10, height: 10, borderRadius: 5 },
   focalTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
@@ -396,7 +408,7 @@ const styles = StyleSheet.create({
   compactWeek: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
 
   // Two-state status (top)
-  statusFresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.lg },
+  statusFresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
   statusFreshCheck: { fontSize: Typography.footnote.fontSize, color: Colors.success, fontWeight: '700' },
   statusFreshText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
 
@@ -404,14 +416,14 @@ const styles = StyleSheet.create({
   weekText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.accent },
   updateBanner: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.md, marginTop: Spacing.lg,
+    backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl,
   },
   updateBannerText: { flex: 1, gap: 2 },
   updateBannerTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent },
   updateBannerSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  restartLink: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.xl },
-  disclaimer: { marginTop: Spacing.md },
-  overallMessageCard: { padding: Spacing.lg, marginBottom: Spacing.md },
+  restartLink: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xl },
+  disclaimer: { marginTop: 0 },
+  overallMessageCard: { padding: Spacing.lg, marginBottom: Spacing.xl },
   overallLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
   overallText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19, fontStyle: 'italic' },
 });
