@@ -20,6 +20,11 @@ export interface SubscriptionRecord {
 
 export type SubscriptionTier = 'free' | 'action_plan' | 'deep_dive';
 
+// DEV ONLY: force full (Deep Dive) access so every feature is unlocked during
+// development. Never ships — gated on __DEV__ (false in release builds). Flip to
+// false to exercise real tier/trial gating + the Paywall.
+const DEV_FORCE_DEEP_DIVE = __DEV__ && true;
+
 function tierFromRecord(sub: SubscriptionRecord | null): SubscriptionTier {
   if (!sub) return 'free';
   const active = sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due';
@@ -36,6 +41,7 @@ function tierFromRecord(sub: SubscriptionRecord | null): SubscriptionTier {
  * before RevenueCat is configured.
  */
 export async function getSubscription(userId: string): Promise<{ tier: SubscriptionTier; record: SubscriptionRecord | null }> {
+  if (DEV_FORCE_DEEP_DIVE) return { tier: 'deep_dive', record: null };
   // No signed-in user → no subscription to verify. Bail before querying so we
   // don't send an empty string as a UUID (Postgres 22P02) for signed-out users.
   if (!userId) return { tier: 'free', record: null };
