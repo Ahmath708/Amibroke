@@ -12,6 +12,7 @@ export const TABLES = {
   referrals: 'referrals',
   payments: 'payments',
   active_plans: 'active_plans',
+  financial_snapshots: 'financial_snapshots',
 } as const;
 
 export const BUCKETS = {

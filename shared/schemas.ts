@@ -38,6 +38,10 @@ export const AnalyzeRequestSchema = z.object({
 const NumberWithConfidence = z.object({
   value: z.number().min(0),
   confidence: z.enum(['low', 'medium', 'high']),
+  // Option B (unified financial model #1): did the user state this figure, or did the model
+  // infer it? Feeds the snapshot's confidence ladder (user_stated → `stated`). Optional so
+  // older outputs still validate.
+  source: z.enum(['user_stated', 'inferred']).optional(),
 });
 
 export const DebtItemSchema = z.object({
@@ -46,6 +50,8 @@ export const DebtItemSchema = z.object({
   interestRate: z.number().min(0).max(0.5),
   minimumPayment: z.number().min(0),
   urgency: z.enum(['low', 'medium', 'high', 'critical']),
+  confidence: z.enum(['low', 'medium', 'high']).optional(),
+  source: z.enum(['user_stated', 'inferred']).optional(),
 });
 
 const CfpbResponse = z.object({

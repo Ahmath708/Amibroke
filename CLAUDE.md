@@ -84,7 +84,7 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
   run-sim.sh             Build+launch on the iOS sim (`npm run ios:sim`) — see the gotcha below
   sim-capture.sh         Drive the iOS simulator via idb to screenshot a long screen for UI review
   sim-record.sh          Record the booted sim to mp4 + extract frames (motion: splash/transitions/anims)
-  lib/call-counter.ts    Shared 40-call/session hard cap used by the paid scripts
+  lib/call-counter.ts    No-op shims (the old 40-call hard cap was removed); cost discipline is rule #1
 ```
 
 ### `src/services/` (the IO layer)
@@ -175,6 +175,15 @@ RevenueCat webhook auth, service role) are set via `supabase secrets set` and ar
 client-side.
 
 ## Gotchas
+
+- **Edge-function prompts MUST be a static TS import, never a runtime `.txt` read.** The Supabase
+  eszip deploy bundles only statically-imported modules — a `Deno.readTextFileSync(new URL('./prompts/system.txt', …))`
+  reads a file that isn't in the bundle, so the worker **crashes on boot** (`WORKER_ERROR`, ~120ms,
+  before the LLM). This bit us on revise-plan and again on analyze. Every prompt now lives in a
+  `prompt.ts` (`export const SYSTEM_PROMPT = \`…\``) imported by the function's `index.ts`
+  (analyze / action-plan / generate-captions / revise-plan). **Never re-introduce a `.txt` prompt
+  read.** Note a redeploy of an *unchanged* function with this pattern also crashes — the landmine
+  is the deploy, not the edit.
 
 - **Build with `npm run ios:sim`, not `expo run:ios`.** Under Xcode 26 + Expo SDK 55, `expo run:ios`
   (and the `ios`/`ios:se` scripts) mis-resolve the destination to a device/Mac target and fail with

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
@@ -15,6 +15,8 @@ import SelectableChip from '@/components/SelectableChip';
 import LoadingState from '@/components/LoadingState';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import { useAuth } from '@/context/AuthContext';
+import { getSnapshot } from '@/services/financialSnapshot';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import EmptyState from '@/components/EmptyState';
@@ -30,7 +32,22 @@ const fmtDuration = (m: number) => (m < 24 ? `${m} mo` : `${(m / 12).toFixed(1)}
 export default function DebtPayoffScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
-  const debts: DebtItem[] = route.params?.debts ?? [];
+  const { user } = useAuth();
+  // Source of truth = the unified snapshot (Phase 2a); fall back to the route's latest-roast
+  // debts. Estimated onboarding placeholders are ignored (no APR/min → useless for payoff).
+  const [debts, setDebts] = useState<DebtItem[]>(route.params?.debts ?? []);
+  useEffect(() => {
+    if (!user) return;
+    getSnapshot(user.id).then((snap) => {
+      const d = snap?.debts;
+      if (d && d.confidence !== 'estimated' && d.value.length > 0) {
+        setDebts(d.value.map((x) => ({
+          name: x.name, balance: x.balance, interestRate: x.apr ?? 0,
+          minimumPayment: x.min_payment ?? 0, urgency: 'medium',
+        })));
+      }
+    }).catch(() => {});
+  }, [user]);
   const { authorized, loading } = useRequireEntitlement('deep_dive');
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);

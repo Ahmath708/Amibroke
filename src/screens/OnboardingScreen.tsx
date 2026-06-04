@@ -9,6 +9,7 @@ import SelectableChip from '@/components/SelectableChip';
 import StateSelect from '@/components/StateSelect';
 import NeonButton from '@/components/NeonButton';
 import { CONTEXT_FIELDS, ContextValues, profileUpdateFromValues, labelFor } from '@/components/FinancialContextForm';
+import { seedSnapshotFromOnboarding } from '@/services/financialSnapshot';
 import { useAuth } from '@/context/AuthContext';
 
 const STEP_COUNT = 5;
@@ -70,6 +71,12 @@ export default function OnboardingScreen() {
           const { error } = await supabase.from('profiles').update({ monthly_income: exact }).eq('id', user.id);
           if (error) console.warn('[onboarding] monthly_income not persisted (push migration 00021):', error.message);
         }
+        // Seed the unified snapshot (Phase 2a). Non-fatal — table may be unpushed (00022).
+        await seedSnapshotFromOnboarding(user.id, {
+          incomeBracket: ctx.incomeBracket,
+          debtBracket: ctx.debtBracket,
+          liquidSavingsBracket: ctx.liquidSavingsBracket,
+        }, exact);
       }
     } catch (e) {
       console.warn('[onboarding] save failed:', e);

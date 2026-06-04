@@ -18,6 +18,8 @@ import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getCheckinConfig, saveCheckinConfig, getCheckIns, saveCheckIn } from '@/services/checkins';
+import { mergeSnapshot } from '@/services/financialSnapshot';
+import type { SnapshotPatch } from '@shared/financialSnapshot';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { nextReminderDate } from '@/utils/checkinSchedule';
@@ -211,6 +213,16 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     });
     setSaving(false);
     if (ok === null) { Alert.alert('Error', 'Failed to save your check-in.'); return; }
+    // Keep the unified snapshot current from the check-in figures (Phase 2b). Scalars only,
+    // marked `stated` — a check-in debt total can't itemize, so debt stays roast-driven
+    // (avoids clobbering Debt Payoff's per-debt APRs). Non-fatal.
+    const patch: SnapshotPatch = {};
+    if (needs.income && b.income > 0) patch.monthlyIncome = { value: b.income, confidence: 'stated' };
+    if (needs.expenses && b.expenses > 0) patch.monthlyExpenses = { value: b.expenses, confidence: 'stated' };
+    if (needs.savings && Number.isFinite(b.savings)) patch.liquidSavings = { value: b.savings, confidence: 'stated' };
+    if (patch.monthlyIncome || patch.monthlyExpenses || patch.liquidSavings) {
+      mergeSnapshot(user.id, patch, 'checkin').catch((e) => console.warn('[snapshot] check-in merge failed:', e));
+    }
     // Move the reminder to next month's anchor now that this period is done.
     if (await getCheckinReminderEnabled()) {
       await scheduleCheckinReminder(nextReminderDate(firstAnalyzeAt ? new Date(firstAnalyzeAt) : null, new Date(), new Date()));

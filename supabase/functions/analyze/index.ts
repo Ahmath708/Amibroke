@@ -6,12 +6,7 @@ import { deriveMetrics } from '../../../shared/calculations.ts';
 import { computeFinalScore } from '../../../shared/scoring/index.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
 import { enforceEntitlement } from '../_shared/entitlement.ts';
-const SYSTEM_PROMPT = Deno.readTextFileSync(
-  new URL('./prompts/system.txt', import.meta.url),
-);
-if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 100) {
-  throw new Error('system.txt missing or truncated');
-}
+import { SYSTEM_PROMPT } from './prompt.ts';
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';

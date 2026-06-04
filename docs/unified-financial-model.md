@@ -36,30 +36,38 @@ history) and `check_ins` (the progress time-series).
 Each **input** field carries its own provenance, so writes can MERGE confidently (never
 clobber a stated value with an estimate; never zero a field a roast was silent on — see §1.3).
 `value` is the **exact** number when known.
+
+**Storage layout (DECIDED, #2):** flat columns for the **derived metrics features read** +
+one **`provenance` JSONB** for per-field `{value, source, confidence, updated_at}` + a
+**`debts` JSONB**. Queryable where it matters, flexible where it doesn't.
 ```
-financial_snapshot (one row per user)
+financial_snapshots (one row per user)
   user_id
-  // Input fields — { value, confidence: 'estimated'|'stated', source, source_analysis_id, updated_at }
-  monthly_income        Field<number>
-  monthly_expenses      Field<number>
-  liquid_savings        Field<number>
-  debts                 Field<[{ id, name, balance, apr, min_payment }]>
-  // Derived (recomputed on every write, stored so features don't recompute):
-  monthly_savings, savings_rate, emergency_fund_months, debt_to_income, debt_total
-  score                 number | null   // last roast's health score
+  // Derived metrics — flat columns (what Active Plan / Debt Payoff / Dashboard read):
+  monthly_income, monthly_expenses, monthly_savings, liquid_savings,
+  debt_total, savings_rate, emergency_fund_months, debt_to_income   numeric
+  score                 numeric | null            // last roast's health score
+  debts                 jsonb                     // [{ id, name, balance, apr, min_payment }]
+  // Per-field provenance — { value, source, confidence, updated_at } keyed by field:
+  provenance            jsonb
+  updated_at            timestamptz
 ```
-`source ∈ 'onboarding' | 'roast' | 'checkin' | 'manual'`. `confidence`: onboarding bracket →
-`estimated`; an exact entry or a roast-extracted figure → `stated`.
+`source ∈ 'onboarding' | 'roast' | 'checkin' | 'manual'`.
+
+**Confidence ladder (DECIDED, #1) — one ordering the merge compares against:**
+```
+estimated (inferred) < low < medium < high < stated
+```
+Onboarding bracket / midpoint → `estimated`; exact-entry or an explicit statement → `stated`.
+A roast's numbers map by their existing `low | medium | high` confidence; the option-B
+`source: 'user_stated'` overrides to `stated`. The merge (§1.3) updates a field only when the
+incoming confidence is **≥** the stored one, and **never** downgrades `stated`.
 
 **Exact-when-known, bracket as fallback.** The snapshot stores the **exact** figure; the
 coarse **bracket** lives on `profiles.ctx_*`. Whenever an exact value is set (onboarding's
 optional exact entry, or a roast that yields a precise number), we set the exact value **and
 re-derive the bracket** so the two never drift. The AI prompt **prefers the exact figure and
-falls back to the bracket** — accuracy scales with what the user gave us. (Generalizes to
-income, debt, and savings.)
-
-*(Storage of per-field provenance — JSONB per field vs parallel columns — is an open
-decision, §6.)*
+falls back to the bracket** — accuracy scales with what the user gave us.
 
 ### 1.2 Where it lives
 A new `financial_snapshots` table (one row/user, upserted), RLS own-row — `debts` as JSONB,
@@ -189,12 +197,26 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
 
 ## 4. Migration
 
-- `profiles`: add `first_name TEXT`, `last_name TEXT`.
+- `profiles`: `first_name` / `last_name` (00020, done) + `monthly_income` (00021).
 - New `financial_snapshots` table (RLS own-row); one row/user, upsert.
-- **Backfill existing users:** seed each snapshot from their most-recent `analyses` row
-  (precise) where present; mark `onboarded = true` for users who already have analyses
-  (grandfather — don't force the new flow on existing users), else route them through it.
+- **Grandfathering (DECIDED, #4 — eager backfill):** the Phase-2a migration runs
+  `INSERT … SELECT` to create a snapshot row for **every** existing user, populated from their
+  **most-recent `analyses` row** (their best-known current numbers), falling back to
+  `profiles` brackets + `monthly_income` for users who've never roasted. So features get one
+  read path and no "if-no-snapshot" fallback code. The analysis→snapshot mapping it needs is
+  the **same** one the live roast-write uses (write once, reuse).
 - Reuse the existing `onboarded` flag + `needsOnboarding` gate.
+
+**Bracket → number midpoints (DECIDED, #3)** — used to seed `estimated` values when no exact
+figure is given:
+| income | $ | debt | $ | savings | $ |
+|---|---|---|---|---|---|
+| under_2k | 1,500 | none | 0 | none | 0 |
+| 2k_4k | 3,000 | under_5k | 2,500 | under_500 | 250 |
+| 4k_6k | 5,000 | 5k_15k | 10,000 | 500_2k | 1,250 |
+| 6k_10k | 8,000 | 15k_50k | 30,000 | 2k_10k | 6,000 |
+| over_10k | 12,000 | over_50k | 65,000 | 10k_50k | 30,000 |
+| | | | | over_50k | 65,000 |
 
 ---
 
@@ -204,11 +226,16 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
   write `profiles` (`first_name`, `last_name`, `ctx_*`, `onboarded`). Unlocks the first-name
   greeting + flows brackets into the roast prompt (better accuracy). **No snapshot, no
   exact-entry, no feature-read changes** — all deferred to Phase 2.
-- **Phase 2 — the snapshot as source of truth:** create `financial_snapshots`; seed from the
-  Phase-1 brackets (`estimated`) + add the optional **exact-$ entry**; write from roast
-  (confident-merge with the new `source` field) + check-in/manual; migrate **Active Plan**
-  (staleness vs snapshot) and **Debt Payoff** (read `snapshot.debts`) off "latest roast";
-  **grandfather** existing users (backfill from latest analysis) + define bracket midpoints.
+- **Phase 2a — snapshot foundation (no paid-endpoint change):** create `financial_snapshots` +
+  eager backfill (§4); seed from onboarding (brackets via the §4 midpoints + exact income);
+  write from each roast using the **existing** analyze confidence (mapped onto the §1.1 ladder)
+  via the **client-side** merge (a `shared/` fn — DECIDED, #5); migrate **Active Plan**
+  (staleness vs snapshot) + **Debt Payoff** (read `snapshot.debts`) off "latest roast". Delivers
+  the unified read model with no change to the paid `analyze` endpoint.
+- **Phase 2b — provenance precision:** the analyze **option-B** change (`source: user_stated |
+  inferred` per number + `debts` confidence) → **eval-tested (rule #1) + deployed**; the full
+  confident-merge using it + check-in patch writes. (The merge later moves server-side for
+  authority — a hardening step, not a rewrite, since it lives in `shared/`.)
 - **Phase 3 — tracked features:** Debt Payoff remembers the chosen strategy + tracks paydown
   across check-ins; Dashboard/captions read the snapshot; retire the per-roast `route.params`
   hand-offs.
@@ -218,20 +245,23 @@ and the onboarding pagination. Bracket→estimate and the prompt personalization
 
 ---
 
-## 6. Open decisions (resolve before building)
+## 6. Decisions
 
-- **Snapshot storage:** dedicated table (recommended) vs `profiles` columns; and **per-field
-  provenance** layout — one JSONB object per field vs parallel columns
-  (`monthly_income`, `monthly_income_confidence`, `monthly_income_source`, …).
-- **Bracket → number estimates:** midpoint choice, and how `estimated` confidence is surfaced
-  ("based on your rough estimate"). Exact entries override the estimate + re-derive the bracket.
-- **Onboarding length:** 8 steps may still feel long — combine any (e.g. age+housing)? Which
-  fields are truly mandatory vs "skip for now" (the spec says all mandatory)?
-- **Names:** required (per spec). Confirm display rules (first-name greeting; full name where?).
-- **Grandfathering:** auto-onboard existing users from history, or require the flow once?
-- **Reconciliation (decided: confident merge, §1.3):** remaining edge — detecting that a field
-  *should* drop when it silently changed (e.g. debt cleared but unmentioned) without an
-  explicit statement. Lean on check-ins + the "your numbers changed?" prompt + the edit surface.
-  Also: how confidently must a roast "extract" a field before it counts as `stated`?
-- **Re-onboard / edit:** the Financial Context screen becomes "edit my profile + numbers" that
-  patches the snapshot — confirm that's the single edit surface.
+**Resolved (Phase 2a is build-ready):**
+- **#1 Confidence ladder** — `estimated < low < medium < high < stated`; merge needs ≥, never
+  downgrades `stated` (§1.1).
+- **#2 Storage** — dedicated `financial_snapshots`; flat metric columns + `provenance` JSONB +
+  `debts` JSONB (§1.1).
+- **#3 Bracket midpoints** — table in §4.
+- **#4 Grandfathering** — eager backfill from the latest analysis in the migration (§4).
+- **#5 Merge placement** — client-side `shared/` fn for v1; server-side later as hardening (§1.6).
+- Onboarding: ~5 grouped mandatory steps; first/last name; greeting uses `first_name` (Phase 1, done).
+
+**Remaining (mostly Phase 2b / later):**
+- **Extraction → `stated` threshold:** how confidently must a roast "extract" a field to count
+  as `stated` (vs `inferred`)? A prompt/eval question for the option-B change.
+- **Silent-drop edge:** a field that changed but went unmentioned (e.g. debt cleared) — lean on
+  check-ins + the "your numbers changed?" prompt + the edit surface.
+- **Surfacing `estimated`:** how/whether to tell the user a value is a rough estimate.
+- **Edit surface:** confirm the Financial Context screen becomes "edit my profile + numbers"
+  that patches the snapshot (the single manual-edit path).

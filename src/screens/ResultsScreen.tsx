@@ -30,6 +30,7 @@ import Toast from '@/components/Toast';
 
 import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis } from '@/services/analyses';
+import { updateSnapshotFromAnalysis } from '@/services/financialSnapshot';
 import { shareToFeed } from '@/services/community';
 import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
@@ -136,6 +137,8 @@ export default function ResultsScreen({ navigation, route }: Props) {
           if (!id) setSaveFailed(true);
         })
         .catch(() => setSaveFailed(true));
+      // Confident-merge this roast into the unified snapshot (Phase 2a). Non-fatal.
+      updateSnapshotFromAnalysis(user.id, analysis).catch((e) => console.warn('[snapshot] roast merge failed:', e));
     }
   }, [user, userInput, analysis]);
 

@@ -21,7 +21,7 @@ import {
   getActivePlan, startPlan, setStepStatus, abandonPlan, reviseActivePlan, shouldRevisePlan, planProgress, planDelta,
   type ActivePlan, type PlanStartMetrics,
 } from '@/services/activePlan';
-import { getCheckIns } from '@/services/checkins';
+import { getSnapshot } from '@/services/financialSnapshot';
 import { formatCurrency } from '@/utils/format';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
@@ -141,10 +141,12 @@ export default function ActionPlanScreen({ route }: Props) {
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
-    const [p, checkins] = await Promise.all([getActivePlan(user.id), getCheckIns(user.id)]);
+    // Staleness/delta compare against the unified snapshot (Phase 2a) — the current
+    // financial state (latest roast now; check-ins once 2b writes them) — not just the
+    // latest check-in.
+    const [p, snap] = await Promise.all([getActivePlan(user.id), getSnapshot(user.id)]);
     setPlan(p);
-    const c = checkins?.[0];
-    setLatest(c ? { debt: c.debt, savings: c.savings } : null);
+    setLatest(snap ? { debt: snap.debtTotal, savings: snap.liquidSavings?.value ?? null } : null);
     setLoading(false);
   }, [user]);
 

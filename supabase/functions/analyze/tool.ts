@@ -29,24 +29,27 @@ export const submitAnalysisTool = {
         properties: {
           value: { type: 'number', minimum: 0 },
           confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+          source: { type: 'string', enum: ['user_stated', 'inferred'] },
         },
-        required: ['value', 'confidence'],
+        required: ['value', 'confidence', 'source'],
       },
       monthlyExpenses: {
         type: 'object',
         properties: {
           value: { type: 'number', minimum: 0 },
           confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+          source: { type: 'string', enum: ['user_stated', 'inferred'] },
         },
-        required: ['value', 'confidence'],
+        required: ['value', 'confidence', 'source'],
       },
       liquidSavings: {
         type: 'object',
         properties: {
           value: { type: 'number', minimum: 0 },
           confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+          source: { type: 'string', enum: ['user_stated', 'inferred'] },
         },
-        required: ['value', 'confidence'],
+        required: ['value', 'confidence', 'source'],
       },
       debts: {
         type: 'array',
@@ -59,8 +62,10 @@ export const submitAnalysisTool = {
             interestRate: { type: 'number', minimum: 0, maximum: 0.5 },
             minimumPayment: { type: 'number', minimum: 0 },
             urgency: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+            confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+            source: { type: 'string', enum: ['user_stated', 'inferred'] },
           },
-          required: ['name', 'balance', 'interestRate', 'minimumPayment', 'urgency'],
+          required: ['name', 'balance', 'interestRate', 'minimumPayment', 'urgency', 'source'],
         },
       },
       cfpb_responses: {

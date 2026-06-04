@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { recordApiCall, getCounterState } from '../../lib/call-counter';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -134,26 +133,18 @@ export async function runSuite(config: RunConfig): Promise<void> {
     process.exit(1);
   }
 
-  const counter = getCounterState();
   const plannedCalls = fixturesToRun.length;
   const estimatedCost = (plannedCalls * 0.04).toFixed(2);
 
   console.log(`\n📋 Suite: ${config.suite} — ${fixturesToRun.length} fixture(s)`);
   console.log(`Endpoint: ${config.endpointPath}`);
   console.log(`Cycle: ${cycle}`);
-  console.log(`Counter currently at ${counter.count}/${40} calls.`);
-  console.log(`About to make ${plannedCalls} API call(s), total after run: ${counter.count + plannedCalls}/${40}.`);
-  console.log(`Estimated cost: ~$${estimatedCost}`);
+  console.log(`About to make ${plannedCalls} LLM call(s). Estimated cost: ~$${estimatedCost}`);
   console.log(`\nPress Enter to continue or Ctrl-C to abort.`);
 
   await new Promise<void>((resolve) => {
     process.stdin.once('data', () => resolve());
   });
-
-  if (counter.count + plannedCalls > 40) {
-    console.error(`\n❌ This run would exceed the 40-call cap.`);
-    process.exit(1);
-  }
 
   console.log(`\nRunning ${fixturesToRun.length} fixture(s)...\n`);
 
@@ -163,8 +154,6 @@ export async function runSuite(config: RunConfig): Promise<void> {
 
   for (const fixture of fixturesToRun) {
     process.stdout.write(`  [${fixture.id}] ${fixture.label} ... `);
-
-    recordApiCall(`eval:${config.suite}:${fixture.id}`);
 
     const startTime = Date.now();
     let rawResponseBody: unknown;
@@ -247,14 +236,11 @@ export async function runSuite(config: RunConfig): Promise<void> {
   const resultsFile = writeResultsFile(runResult);
   appendSummary(runResult);
 
-  const finalCounter = getCounterState();
-
   console.log(`\n${'═'.repeat(50)}`);
   console.log(`📊 Suite: ${config.suite}`);
   console.log(`   Cycle: ${cycle}`);
   console.log(`   Pass rate: ${(passRate * 100).toFixed(0)}% (${passed}/${perFixture.length})`);
   console.log(`   Avg response: ${Math.round(avgResponseTimeMs)}ms`);
-  console.log(`   Counter: ${finalCounter.count}/${40}`);
   if (scoreStats) {
     console.log(`   Score range: ${scoreStats.min}–${scoreStats.max} (σ²=${scoreStats.variance.toFixed(1)})`);
   }
