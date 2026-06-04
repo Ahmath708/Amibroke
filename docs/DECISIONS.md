@@ -38,6 +38,24 @@ Shift from a per-subscription **7-day free trial** to a **3-day app-granted full
 
 This supersedes the **"Trial: 7-day free trial"** line in the 2026-05-29 spec below.
 
+## 90-Day Action Plan: per-roast, "latest = your plan" (Model A) — 2026-06-04
+
+The action plan is generated from a specific analysis and cached on that row
+(`analyses.action_plan`, keyed by `analysisId`) — so **each roast can have its own
+plan**, grounded in that snapshot's numbers. The product surface ("your 90-Day
+Action Plan" — the Tools tile, etc.) means **the plan for your *latest* roast**:
+re-roasting updates it to your current finances; older roasts' plans remain as
+historical snapshots; progress over time lives in Monthly Check-Ins. The Tools
+tile opens the latest analysis's plan directly (fetch/generate → push `ActionPlan`),
+mirroring the Debt Payoff tile.
+
+**Parked — Model B (a committed, trackable 90-day program):** the user "starts" a
+plan that locks for 90 days and is tracked against regardless of re-roasts (needs
+an `active_plan` concept: which analysis + a start date + a re-roast rule).
+Conceptually nicer for a "journey," but a meaningful build (schema + flow). Chosen
+to defer; revisit when there's time. A locked plan also goes stale as finances
+change, which is the main argument for A.
+
 ## Subscription Product Spec (2026-05-29)
 
 Decided via Step 3 of 528_BACKEND_FINAL:

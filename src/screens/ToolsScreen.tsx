@@ -26,10 +26,10 @@ type Props = { navigation: TabScreenNav<'Tools'> };
 
 // Premium features — gated by tier. `action: 'latest' | 'debt'` are analysis-scoped
 // (open the latest analysis); `nav` items are standalone screens.
-const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'latest' | 'debt' }[] = [
+const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'plan' | 'debt' }[] = [
   { icon: MagnifyingGlassIcon,       label: 'Subscription Audit',   sub: 'Find recurring money leaks',      requires: 'action_plan', nav: 'SubscriptionAudit' },
   { icon: ArrowTrendingDownIcon,     label: 'Debt Payoff',          sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
-  { icon: ClipboardDocumentListIcon, label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'latest' },
+  { icon: ClipboardDocumentListIcon, label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'plan' },
   { icon: BeakerIcon,                label: 'Scenario Simulator',   sub: 'Model "what if" money moves',     requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },
 ];
 
@@ -54,8 +54,9 @@ export default function ToolsScreen({ navigation }: Props) {
     }, [user, refresh]),
   );
 
-  // Analysis-scoped tools live inside a specific analysis → open the latest one.
-  const openLatest = useCallback(async (mode: 'latest' | 'debt') => {
+  // Analysis-scoped tools open from the user's LATEST analysis (Model A —
+  // "latest = your plan"; see docs/DECISIONS.md), straight into the tool screen.
+  const openLatest = useCallback(async (mode: 'plan' | 'debt') => {
     if (opening) return;
     if (!latestId) {
       Alert.alert('No analysis yet', 'Run an analysis first, then your tools open right from it.');
@@ -70,7 +71,16 @@ export default function ToolsScreen({ navigation }: Props) {
         const monthlyIncome = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
         (navigation.navigate as any)('DebtPayoff', { debts, monthlyIncome });
       } else {
-        (navigation.navigate as any)('Results', { analysis, userInput: '' });
+        // 90-Day Action Plan → open the latest analysis's plan DIRECTLY (the cached
+        // AI plan, or generate it), then push ActionPlan — not the roast. tone
+        // defaults to 'savage'; it only matters if the plan isn't already cached.
+        const { fetchOrGenerateActionPlan } = await import('@/services/ai');
+        const plan = await fetchOrGenerateActionPlan(analysis, 'savage', latestId);
+        (navigation.navigate as any)('ActionPlan', {
+          steps: plan?.steps ?? [],
+          analysis,
+          overallMessage: plan?.overallMessage,
+        });
       }
     } catch {
       // ignore
