@@ -1,6 +1,6 @@
 import {
   periodRange, periodLabel, shiftAnchor, isLatestPeriod, buildSlots, itemsInPeriod,
-  timeLabel, COLLAPSE_THRESHOLD,
+  timeLabel,
 } from '../historyChart';
 import type { AnalysisHistoryItem } from '@/types';
 
@@ -63,23 +63,18 @@ describe('buildSlots', () => {
     expect(slots[1].bars[0]).toMatchObject({ kind: 'entry', score: 70, id: 'a' });
   });
 
-  it('shows each entry as its own bar up to the threshold', () => {
-    const day = new Date(2026, 5, 2, 8);
-    const items = Array.from({ length: COLLAPSE_THRESHOLD }, (_, i) =>
-      row(`e${i}`, 50 + i, new Date(2026, 5, 2, 8 + i)));
-    const slots = buildSlots('week', day, items);
-    const tue = slots.find((s) => s.label === 'Tue')!;
-    expect(tue.bars).toHaveLength(COLLAPSE_THRESHOLD);
-    expect(tue.bars.every((b) => b.kind === 'entry')).toBe(true);
-  });
-
-  it('collapses to one averaged aggregate bar past the threshold', () => {
-    const items = Array.from({ length: COLLAPSE_THRESHOLD + 3 }, (_, i) =>
-      row(`e${i}`, 40, new Date(2026, 5, 2, 6 + i)));
+  it('merges a day\'s multiple entries into one averaged aggregate bar', () => {
+    // Post consistency-overhaul: a period slot shows one bar per day — a lone
+    // entry, or (for 2+) a single bar at the AVERAGE score carrying a ×N count.
+    const items = [
+      row('e0', 40, new Date(2026, 5, 2, 8)),
+      row('e1', 50, new Date(2026, 5, 2, 12)),
+      row('e2', 60, new Date(2026, 5, 2, 16)),
+    ];
     const slots = buildSlots('week', new Date(2026, 5, 2), items);
     const tue = slots.find((s) => s.label === 'Tue')!;
     expect(tue.bars).toHaveLength(1);
-    expect(tue.bars[0]).toMatchObject({ kind: 'aggregate', score: 40, count: COLLAPSE_THRESHOLD + 3 });
+    expect(tue.bars[0]).toMatchObject({ kind: 'aggregate', score: 50, count: 3 }); // avg(40,50,60)=50
   });
 
   it('day view → one time-labelled bar per analysis, chronological', () => {

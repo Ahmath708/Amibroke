@@ -8,10 +8,10 @@
  *   - week  → 7 day slots (Sun–Sat), empty days included so the whole week shows
  *   - day   → one slot per analysis, labelled by time (no hourly bucketing)
  *
- * In month/week/day, each analysis is its own bar UNTIL the count exceeds
- * COLLAPSE_THRESHOLD, at which point the slot collapses to a single averaged bar
- * with a "×N" badge. Year is always one averaged bar per month (no ×N). Tapping a
- * non-entry bar drills into the finer granularity.
+ * In month/week, each day is one bar: a lone entry, or — when a day has 2+
+ * analyses — a single averaged bar carrying a "×N" badge. Year is always one
+ * averaged bar per month. Tapping a non-entry bar drills into the finer
+ * granularity.
  *
  * No React / theme imports — kept pure so it can be unit-tested and the colour
  * mapping stays in the component.
@@ -20,9 +20,6 @@ import type { AnalysisHistoryItem } from '@/types';
 
 export type Granularity = 'year' | 'month' | 'week' | 'day';
 export const GRANULARITIES: Granularity[] = ['year', 'month', 'week', 'day'];
-
-/** Above this many analyses in one slot, collapse to a single averaged bar. */
-export const COLLAPSE_THRESHOLD = 5;
 
 export interface ChartEntry {
   id: string;
