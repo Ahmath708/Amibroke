@@ -139,3 +139,56 @@ machinery we already have.
 - **Entitlement:** which tier owns the active plan + check-in-driven iteration.
 - **Check-in cadence vs the 90-day clock:** monthly check-ins over a 90-day plan = ~3 data
   points; decide if that's enough signal or if we prompt lighter weekly self-reports.
+
+---
+
+## 7. Phase 2 revision — validated 2026-06-04 (prototype)
+
+Prototyped + stress-tested via the `revise-plan` edge function (deployed) and
+`tools/revise-plan-demo.ts`. Findings:
+
+**Output shape — patch, not whole-plan.** Two approaches were tested against the live
+API:
+- *Full-regen* (model returns a new 4–6 step plan): structurally bulletproof (the tool
+  schema enforces the count), great content — **but loses step identity/completion** when
+  applied, so it's wrong for a *tracked* plan.
+- *Patch* (model returns `keep/drop/modify/add` by step `id`): **preserves identity +
+  completion**, cheaper output on dense plans — but the model emits structurally-invalid
+  diffs ~⅔ of the time (count overflow, an id in two op-sets) on invariants no JSON schema
+  can express.
+
+**→ Patch + a deterministic repair pass is the chosen approach.** `applyPatch` (in the
+demo; port to `shared/` when productionizing) records the model's defects, then guarantees
+a valid result: resolve op-set overlap by precedence `modify > keep > drop`, never drop a
+`done` step, default-keep the unclassified, trim to ≤6 (drop excess *adds* first), backfill
+to ≥4. With repair, all test cases pass; the model proposes, our code disposes.
+
+**Duplicate-intent guard (the `target.kind` payoff).** The model sometimes adds a *variation*
+of a goal an existing step already covers instead of modifying in place (e.g. keep the "$50
+on the card" step **and** add a "$300 attack the card" step). The fix uses the measurable
+`target.kind`: singular kinds (`build_efund`, `debt_paydown`) may appear at most once among
+*active* steps; a collision is folded — keep the existing step's `id`+status, adopt the new
+content (recovering the intended modify). A prompt rule reduces how often it happens.
+*Open item:* key `debt_paydown` by **account** in production so two *different* debts aren't
+wrongly folded (the singular-by-kind rule over-folds the compound-debt case).
+
+**Trigger model (resolves the "Re-roast behavior" + materiality open items above):**
+- **Sequencing: after, never parallel.** The revision's `currentSnapshot` *is* the fresh
+  analysis's numbers, so it's data-dependent on the analyze/check-in result.
+- **Gated, not automatic.** A deterministic `shouldRevisePlan(plan, snapshot)` /
+  `isMaterialChange` check (in `services/activePlan.ts`, reusing `planDelta`) decides whether
+  to spend a revise call — debt/savings ±$500, income ±$200, score ±10, or debt→$0.
+- **Backgrounded + offered.** Run after the roast renders; surface "your situation changed —
+  update your plan? [view changes]" rather than silently swapping it.
+- **Triggers:** material check-in (most natural), materially-different re-roast, or explicit
+  user event ("I paid off my car").
+
+**New-user / no-plan policy (firm).** The app **never** auto-generates a plan. A plan exists
+only when the user explicitly commits one (the preview → "Start this plan" flow). With no
+active plan, `shouldRevisePlan` returns `false` → **zero 90-day-plan LLM calls ever fire**.
+Generation is user-initiated (tapping the tool / "View Action Plan"); revision is gated on a
+committed plan + materiality.
+
+**Stress dimensions tested** (poor *and* rich input): contradiction (text vs snapshot),
+compound multi-change, vague/low-signal (anti-fabrication + anti-churn), plus the
+duplicate-intent bait. Deterministic checks encode each failure mode.

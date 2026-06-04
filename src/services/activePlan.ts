@@ -68,6 +68,34 @@ export function planDelta(
   };
 }
 
+// ─── Revision trigger gate (deterministic — no LLM) ─────────────────────────
+// Decides whether a fresh analysis / check-in is a big enough change to bother
+// revising the plan. This is the cost + relevance + trust keystone: a revise call
+// only fires when the gate says yes, and NEVER when there's no committed plan.
+export interface RevisionSnapshot { debtTotal?: number | null; liquidSavings?: number | null; monthlyIncome?: number | null; score?: number | null; }
+
+const MATERIAL = { debt: 500, savings: 500, income: 200, score: 10 };
+
+export function isMaterialChange(start: PlanStartMetrics | null, now: RevisionSnapshot | null): boolean {
+  if (!start || !now) return false;
+  const moved = (from: number, to?: number | null, by = 0) => to != null && Math.abs(from - to) >= by;
+  if (start.debtTotal > 0 && now.debtTotal === 0) return true;            // debt fully paid off
+  if (moved(start.debtTotal, now.debtTotal, MATERIAL.debt)) return true;
+  if (moved(start.liquidSavings, now.liquidSavings, MATERIAL.savings)) return true;
+  if (moved(start.monthlyIncome, now.monthlyIncome, MATERIAL.income)) return true;
+  if (moved(start.score, now.score, MATERIAL.score)) return true;
+  return false;
+}
+
+/** Should we revise the plan for this new snapshot? Returns false (no LLM call) when
+ *  there's no committed plan — the app must NEVER auto-generate or revise without one. */
+export function shouldRevisePlan(plan: ActivePlan | null, now: RevisionSnapshot | null): { revise: boolean; reason: string } {
+  if (!plan) return { revise: false, reason: 'no active plan — never auto-generate or call revise' };
+  if (plan.status !== 'active') return { revise: false, reason: `plan status is ${plan.status}` };
+  if (!isMaterialChange(plan.start_metrics, now)) return { revise: false, reason: 'change below materiality threshold' };
+  return { revise: true, reason: 'material change since the plan started' };
+}
+
 function metricsFromAnalysis(a: FinalAnalysis): PlanStartMetrics {
   return {
     debtTotal: a.debtTotal ?? 0,
