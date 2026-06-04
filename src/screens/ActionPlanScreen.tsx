@@ -1,19 +1,25 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RouteProp, useNavigation } from '@react-navigation/native';
+import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, ActionStep } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
+import NeonButton from '@/components/NeonButton';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import ConfidenceBadge from '@/components/ConfidenceBadge';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
+import { useAuth } from '@/context/AuthContext';
+import {
+  getActivePlan, startPlan, setStepStatus, abandonPlan, planProgress, planDelta, type ActivePlan,
+} from '@/services/activePlan';
+import { getCheckIns } from '@/services/checkins';
+import { formatCurrency } from '@/utils/format';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -109,37 +115,75 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
 
 export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>>();
+  const { user } = useAuth();
   const rawSteps = route.params?.steps;
   const analysis = (route.params as any)?.analysis;
+  const analysisId = (route.params as any)?.analysisId as string | undefined;
   const overallMessage = route.params?.overallMessage;
-  const [steps, setSteps] = useState<ActionStep[]>([]);
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
   const { authorized } = useRequireEntitlement('action_plan');
   const { animatedStyle } = useEntryAnimation();
 
-  useEffect(() => {
-    const personalized = rawSteps?.length > 0
-      ? rawSteps
-      : generatePersonalizedSteps(analysis ?? {});
-    setSteps(personalized.length > 0 ? personalized : DEFAULT_STEPS);
-    trackActionPlanViewed(personalized.length > 0 ? personalized.length : DEFAULT_STEPS.length);
+  const [plan, setPlan] = useState<ActivePlan | null>(null);
+  const [latest, setLatest] = useState<{ debt: number | null; savings: number | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [committing, setCommitting] = useState(false);
+
+  // Candidate plan shown until one is committed (the generated/passed steps).
+  const previewSteps: ActionStep[] = (rawSteps && rawSteps.length > 0)
+    ? rawSteps
+    : (analysis ? generatePersonalizedSteps(analysis) : DEFAULT_STEPS);
+
+  const load = useCallback(async () => {
+    if (!user) { setLoading(false); return; }
+    const [p, checkins] = await Promise.all([getActivePlan(user.id), getCheckIns(user.id)]);
+    setPlan(p);
+    const c = checkins?.[0];
+    setLatest(c ? { debt: c.debt, savings: c.savings } : null);
     setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    load();
+    trackActionPlanViewed(previewSteps.length);
   }, []);
 
-  const toggle = (week: string) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      next.has(week) ? next.delete(week) : next.add(week);
-      return next;
-    });
+  const commit = async () => {
+    if (!user || committing) return;
+    setCommitting(true);
+    try {
+      const p = await startPlan(user.id, analysisId ?? null, analysis ?? {}, previewSteps, overallMessage);
+      if (p) setPlan(p);
+      else Alert.alert('Couldn\'t start plan', 'Something went wrong. Please try again.');
+    } finally {
+      setCommitting(false);
+    }
   };
 
-  const progress = steps.length > 0 ? Math.round((checked.size / steps.length) * 100) : 0;
+  const toggle = async (stepId: string, done: boolean) => {
+    if (!plan) return;
+    const updated = await setStepStatus(plan, stepId, done ? 'pending' : 'done');
+    if (updated) setPlan(updated);
+  };
+
+  const restart = () => {
+    if (!plan) return;
+    Alert.alert('Restart plan?', 'This clears your current 90-day plan. You can start a fresh one from your latest roast.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Restart', style: 'destructive', onPress: async () => { await abandonPlan(plan.id); setPlan(null); } },
+    ]);
+  };
 
   if (loading) return <LoadingState />;
   if (!authorized) return null;
+
+  const isActive = !!plan;
+  // Unified row shape: active rows carry id/status; preview rows are pending + synthetic id.
+  const rows = isActive
+    ? plan!.steps
+    : previewSteps.map((s, i) => ({ ...s, id: `p${i}`, status: 'pending' as const, completed_at: null }));
+  const prog = plan ? planProgress(plan) : null;
+  const delta = plan ? planDelta(plan.start_metrics, latest) : null;
+  const bigPicture = isActive ? plan!.overall_message : overallMessage;
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -148,42 +192,68 @@ export default function ActionPlanScreen({ route }: Props) {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Progress summary */}
-        <GlassCard style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>{checked.size} of {steps.length} complete</Text>
-            <Text style={styles.progressPct}>{progress}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress}%` }]} />
-          </View>
-          <Text style={styles.progressSub}>Keep going — consistency beats intensity every time.</Text>
-        </GlassCard>
-
-        {/* Overall message */}
-        {overallMessage && (
-          <GlassCard style={styles.overallMessageCard}>
-            <Text style={styles.overallLabel}>The Big Picture</Text>
-            <Text style={styles.overallText}>{overallMessage}</Text>
+        {isActive ? (
+          /* Active plan — committed, tracked */
+          <GlassCard style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>
+                Day {Math.min(prog!.daysIn + 1, plan!.horizon_days)} of {plan!.horizon_days} · {prog!.done} of {prog!.total} done
+              </Text>
+              <Text style={styles.progressPct}>{prog!.pct}%</Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${prog!.pct}%` }]} />
+            </View>
+            {(delta!.debtPaidDown > 0 || delta!.savingsGained > 0) ? (
+              <Text style={styles.progressSub}>
+                Since you started
+                {delta!.debtPaidDown > 0 ? `: paid down ${formatCurrency(delta!.debtPaidDown)}` : ''}
+                {delta!.debtPaidDown > 0 && delta!.savingsGained > 0 ? ' ·' : (delta!.savingsGained > 0 ? ':' : '')}
+                {delta!.savingsGained > 0 ? ` saved ${formatCurrency(delta!.savingsGained)}` : ''}.
+              </Text>
+            ) : (
+              <Text style={styles.progressSub}>Keep going — consistency beats intensity every time.</Text>
+            )}
+          </GlassCard>
+        ) : (
+          /* Preview — not yet committed */
+          <GlassCard style={styles.progressCard}>
+            <Text style={styles.progressTitle}>Your 90-day action plan</Text>
+            <Text style={styles.progressSub}>Commit to it and track your progress over the next 90 days.</Text>
+            <NeonButton
+              label={committing ? 'Starting…' : 'Start this plan'}
+              onPress={commit}
+              disabled={committing}
+              style={{ marginTop: Spacing.md }}
+            />
           </GlassCard>
         )}
 
-        {/* Steps — iOS grouped list by week */}
+        {bigPicture && (
+          <GlassCard style={styles.overallMessageCard}>
+            <Text style={styles.overallLabel}>The Big Picture</Text>
+            <Text style={styles.overallText}>{bigPicture}</Text>
+          </GlassCard>
+        )}
+
         <SectionLabel>Weekly Actions</SectionLabel>
         <View style={styles.stepGroup}>
-          {steps.map((step, i) => {
-            const done = checked.has(step.week);
+          {rows.map((step, i) => {
+            const done = step.status === 'done';
             return (
-              <React.Fragment key={step.week}>
+              <React.Fragment key={step.id}>
                 {i > 0 && <View style={styles.stepSep} />}
                 <TouchableOpacity
                   style={styles.stepRow}
-                  onPress={() => toggle(step.week)}
-                  activeOpacity={0.7}
+                  onPress={isActive ? () => toggle(step.id, done) : undefined}
+                  activeOpacity={isActive ? 0.7 : 1}
+                  disabled={!isActive}
                 >
-                  <View style={[styles.checkbox, done && styles.checkboxDone]}>
-                    {done && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
+                  {isActive && (
+                    <View style={[styles.checkbox, done && styles.checkboxDone]}>
+                      {done && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                  )}
                   <View style={styles.stepContent}>
                     <View style={styles.stepHeader}>
                       <Text style={[styles.stepTitle, done && styles.stepTitleDone]}>{step.title}</Text>
@@ -214,6 +284,12 @@ export default function ActionPlanScreen({ route }: Props) {
             );
           })}
         </View>
+
+        {isActive && (
+          <TouchableOpacity onPress={restart} activeOpacity={0.7}>
+            <Text style={styles.restartLink}>Restart plan</Text>
+          </TouchableOpacity>
+        )}
 
         <Disclaimer style={styles.disclaimer} />
       </ScrollView>
@@ -260,7 +336,8 @@ const styles = StyleSheet.create({
   impactRow: { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.xs },
   impactLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   impactValue: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.success, fontWeight: '500' },
-  disclaimer: { marginTop: Spacing.xl },
+  restartLink: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.xl },
+  disclaimer: { marginTop: Spacing.md },
   overallMessageCard: { padding: Spacing.lg, marginBottom: Spacing.md },
   overallLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.xs },
   overallText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19, fontStyle: 'italic' },

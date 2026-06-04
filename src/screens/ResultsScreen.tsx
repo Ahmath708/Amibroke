@@ -233,7 +233,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               onPress={async () => {
                 const { fetchOrGenerateActionPlan } = await import('@/services/ai');
                 const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
-                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage });
+                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage, analysisId: analysisId ?? undefined });
               }}
             />
           ) : (

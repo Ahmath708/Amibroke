@@ -140,7 +140,7 @@ export type RootStackParamList = {
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
-  ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string };
+  ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string };
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;

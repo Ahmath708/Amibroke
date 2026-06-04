@@ -80,6 +80,7 @@ export default function ToolsScreen({ navigation }: Props) {
           steps: plan?.steps ?? [],
           analysis,
           overallMessage: plan?.overallMessage,
+          analysisId: latestId,
         });
       }
     } catch {
