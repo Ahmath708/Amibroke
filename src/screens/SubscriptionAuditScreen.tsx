@@ -6,14 +6,13 @@ import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StackActions, useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { Subscription } from '@/types';
 import { getSubscriptions, saveSubscription, deleteSubscription } from '@/services/subscriptionAudit';
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
-import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
+import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -21,30 +20,17 @@ const ICONS = ['🎬', '🎵', '💪', '🎨', '💼', '🦜', '☁️', '🏰',
 
 export default function SubscriptionAuditScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const { user } = useAuth();
+  const { authorized } = useRequireEntitlement('action_plan');
 
   // All useState calls must be at top — no conditional hooks
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, boolean | null>>({});
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const { animatedStyle } = useEntryAnimation();
-
-  useEffect(() => {
-    (async () => {
-      const { tier } = await getSubscription(user?.id ?? '');
-      if (canAccess(tier, 'action_plan', getTrialStatus(user?.created_at).active)) {
-        setAuthorized(true);
-      } else {
-        navigation.dispatch(StackActions.replace('Paywall'));
-      }
-      setLoading(false);
-    })();
-  }, []);
 
   const fetchSubs = async () => {
     if (!user) return;

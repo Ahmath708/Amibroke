@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
@@ -13,14 +13,13 @@ import GlassCard from '@/components/GlassCard';
 import SeverityPill from '@/components/SeverityPill';
 import SelectableChip from '@/components/SelectableChip';
 import LoadingState from '@/components/LoadingState';
-import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
+import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import EmptyState from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { simulateDebtPayoff } from '@shared/calculations.ts';
-import { useAuth } from '@/context/AuthContext';
 
 type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
 
@@ -32,24 +31,10 @@ export default function DebtPayoffScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
   const debts: DebtItem[] = route.params?.debts ?? [];
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+  const { authorized, loading } = useRequireEntitlement('deep_dive');
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);
   const { animatedStyle } = useEntryAnimation();
-
-  useEffect(() => {
-    (async () => {
-      const { tier } = await getSubscription(user?.id ?? '');
-      if (canAccess(tier, 'deep_dive', getTrialStatus(user?.created_at).active)) {
-        setAuthorized(true);
-      } else {
-        navigation.replace('Paywall');
-      }
-      setLoading(false);
-    })();
-  }, []);
 
   if (loading) return <LoadingState />;
   if (!authorized) return null;

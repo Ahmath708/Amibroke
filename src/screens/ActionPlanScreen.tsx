@@ -13,8 +13,7 @@ import GlassCard from '@/components/GlassCard';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import ConfidenceBadge from '@/components/ConfidenceBadge';
-import { useAuth } from '@/context/AuthContext';
-import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
+import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -110,7 +109,6 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
 
 export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>>();
   const rawSteps = route.params?.steps;
   const analysis = (route.params as any)?.analysis;
@@ -118,26 +116,16 @@ export default function ActionPlanScreen({ route }: Props) {
   const [steps, setSteps] = useState<ActionStep[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+  const { authorized } = useRequireEntitlement('action_plan');
   const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
-    (async () => {
-      const { tier } = await getSubscription(user?.id ?? '');
-      if (canAccess(tier, 'action_plan', getTrialStatus(user?.created_at).active)) {
-        setAuthorized(true);
-      } else {
-        navigation.replace('Paywall');
-      }
-
-      const personalized = rawSteps?.length > 0
-        ? rawSteps
-        : generatePersonalizedSteps(analysis ?? {});
-
-      setSteps(personalized.length > 0 ? personalized : DEFAULT_STEPS);
-      trackActionPlanViewed(personalized.length > 0 ? personalized.length : DEFAULT_STEPS.length);
-      setLoading(false);
-    })();
+    const personalized = rawSteps?.length > 0
+      ? rawSteps
+      : generatePersonalizedSteps(analysis ?? {});
+    setSteps(personalized.length > 0 ? personalized : DEFAULT_STEPS);
+    trackActionPlanViewed(personalized.length > 0 ? personalized.length : DEFAULT_STEPS.length);
+    setLoading(false);
   }, []);
 
   const toggle = (week: string) => {
