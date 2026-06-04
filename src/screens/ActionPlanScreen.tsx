@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, useWindowDimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import { ChevronRightIcon } from 'react-native-heroicons/outline';
@@ -11,7 +11,7 @@ import { RootStackParamList, ActionStep } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
-import PlanTrack from '@/components/PlanTrack';
+import ScorePlanRing from '@/components/ScorePlanRing';
 import { PressableScale } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
@@ -119,7 +119,6 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
 
 export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
-  const { width: screenW } = useWindowDimensions();
   const { user } = useAuth();
   const rawSteps = route.params?.steps;
   const analysis = (route.params as any)?.analysis;
@@ -213,6 +212,15 @@ export default function ActionPlanScreen({ route }: Props) {
   const delta = plan ? planDelta(plan.start_metrics, latest) : null;
   const bigPicture = isActive ? plan!.overall_message : overallMessage;
 
+  // Coach layout: one focal "this week" step + the rest split into up-next / done.
+  const currentStep = firstPendingIndex >= 0 ? rows[firstPendingIndex] : null;
+  const upNext = rows.filter((s, i) => s.status !== 'done' && i !== firstPendingIndex);
+  const doneSteps = rows.filter((s) => s.status === 'done');
+  // Projected score at the finish — heuristic for the prototype (~+3 health pts/step);
+  // the real projection will come from the scoring engine.
+  const score0 = plan?.start_metrics?.score ?? 0;
+  const projected = Math.min(100, score0 + rows.length * 3);
+
   // Contextual revise: only surface the update affordance when the latest check-in is a
   // material change (the deterministic gate) — not as a permanent CTA.
   const snap: PlanStartMetrics | null = plan ? {
@@ -232,22 +240,27 @@ export default function ActionPlanScreen({ route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {isActive ? (
-          /* Active plan — the 90-day journey is the hero (full-bleed, no card). */
+          /* Active plan — score-linked hero (the app's North Star + plan completion). */
           <View style={styles.heroBlock}>
-            <Text style={styles.heroDay}>
-              Day {Math.min(prog!.daysIn + 1, plan!.horizon_days)}<Text style={styles.heroDayTotal}> of {plan!.horizon_days}</Text>
-            </Text>
-            <PlanTrack steps={plan!.steps} width={screenW - Spacing.xl * 2} />
-            <View style={styles.heroFootRow}>
-              <Text style={styles.heroDone}>{prog!.done} of {prog!.total} done</Text>
-              {(delta!.debtPaidDown > 0 || delta!.savingsGained > 0) && (
-                <Text style={styles.heroDelta} numberOfLines={1}>
-                  {delta!.debtPaidDown > 0 ? `↓ ${formatCurrency(delta!.debtPaidDown)} debt` : ''}
-                  {delta!.debtPaidDown > 0 && delta!.savingsGained > 0 ? '  ·  ' : ''}
-                  {delta!.savingsGained > 0 ? `↑ ${formatCurrency(delta!.savingsGained)} saved` : ''}
+            <View style={styles.heroRow}>
+              <ScorePlanRing score={score0} pct={prog!.pct} />
+              <View style={styles.heroMeta}>
+                <Text style={styles.heroDay}>
+                  Day {Math.min(prog!.daysIn + 1, plan!.horizon_days)}<Text style={styles.heroDayTotal}> of {plan!.horizon_days}</Text>
                 </Text>
-              )}
+                <Text style={styles.heroDone}>{prog!.done} of {prog!.total} steps done</Text>
+                {projected > score0 && (
+                  <Text style={styles.heroProjected}>Finish the plan → <Text style={styles.heroProjectedNum}>{projected}</Text></Text>
+                )}
+              </View>
             </View>
+            {(delta!.debtPaidDown > 0 || delta!.savingsGained > 0) && (
+              <Text style={styles.heroDelta} numberOfLines={1}>
+                {delta!.debtPaidDown > 0 ? `↓ ${formatCurrency(delta!.debtPaidDown)} debt` : ''}
+                {delta!.debtPaidDown > 0 && delta!.savingsGained > 0 ? '   ·   ' : ''}
+                {delta!.savingsGained > 0 ? `↑ ${formatCurrency(delta!.savingsGained)} saved` : ''}
+              </Text>
+            )}
           </View>
         ) : (
           /* Preview — not yet committed */
@@ -270,46 +283,51 @@ export default function ActionPlanScreen({ route }: Props) {
           </GlassCard>
         )}
 
-        <SectionLabel>The Road Ahead</SectionLabel>
-        <View style={styles.roadList}>
-          {rows.map((step, i) => {
-            const done = step.status === 'done';
-            const current = !done && i === firstPendingIndex;
-            const isLast = i === rows.length - 1;
-            return (
-              <TouchableOpacity
-                key={step.id}
-                style={styles.roadRow}
-                onPress={isActive ? () => toggle(step.id, done) : undefined}
-                activeOpacity={isActive ? 0.7 : 1}
-                disabled={!isActive}
-              >
-                <View style={styles.rail}>
-                  {i > 0 && <View style={[styles.railLine, styles.railLineTop, (done || current) && styles.railLineOn]} />}
-                  {!isLast && <View style={[styles.railLine, styles.railLineBottom, done && styles.railLineOn]} />}
-                  <View style={[styles.railNode, done && styles.railNodeDone, current && styles.railNodeCurrent]}>
-                    {done ? <Text style={styles.railCheck}>✓</Text> : <View style={[styles.railDot, { backgroundColor: catColor(step.category) }]} />}
-                  </View>
-                </View>
-                <View style={styles.roadContent}>
-                  <View style={styles.stepHeader}>
-                    <Text style={[styles.stepTitle, done && styles.stepTitleDone]}>{step.title}</Text>
-                    <View style={[styles.weekBadge, done && styles.weekBadgeDone]}>
-                      <Text style={[styles.weekText, done && styles.weekTextDone]}>{step.week}</Text>
-                    </View>
-                  </View>
-                  {!done && (
-                    <>
-                      {current && <Text style={styles.nowTag}>DO THIS NOW</Text>}
-                      <Text style={styles.stepDesc}>{step.description}</Text>
-                      <Text style={styles.impactValue} numberOfLines={2}>→ {step.impact}</Text>
-                    </>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SectionLabel>This Week</SectionLabel>
+        {currentStep ? (
+          <GlassCard style={styles.focalCard}>
+            <View style={styles.focalTop}>
+              <View style={styles.weekBadge}><Text style={styles.weekText}>{currentStep.week}</Text></View>
+              <View style={[styles.catDot, { backgroundColor: catColor(currentStep.category) }]} />
+            </View>
+            <Text style={styles.focalTitle}>{currentStep.title}</Text>
+            <Text style={styles.focalDesc}>{currentStep.description}</Text>
+            <Text style={styles.focalImpact} numberOfLines={2}>→ {currentStep.impact}</Text>
+            {isActive && (
+              <NeonButton label="Mark this done" onPress={() => toggle(currentStep.id, false)} style={{ marginTop: Spacing.md }} />
+            )}
+          </GlassCard>
+        ) : (
+          <GlassCard style={styles.focalCard}>
+            <Text style={styles.focalTitle}>All steps done 🎉</Text>
+            <Text style={styles.focalDesc}>You ran the whole 90-day plan. Re-roast to see how far your score moved.</Text>
+          </GlassCard>
+        )}
+
+        {upNext.length > 0 && <SectionLabel>Up Next</SectionLabel>}
+        {upNext.map((step) => (
+          <TouchableOpacity
+            key={step.id} style={styles.compactRow}
+            onPress={isActive ? () => toggle(step.id, false) : undefined}
+            activeOpacity={isActive ? 0.7 : 1} disabled={!isActive}
+          >
+            <View style={[styles.compactDot, { backgroundColor: catColor(step.category) }]} />
+            <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
+            <Text style={styles.compactWeek}>{step.week}</Text>
+          </TouchableOpacity>
+        ))}
+
+        {doneSteps.length > 0 && <SectionLabel>Done</SectionLabel>}
+        {doneSteps.map((step) => (
+          <TouchableOpacity
+            key={step.id} style={styles.compactRow}
+            onPress={isActive ? () => toggle(step.id, true) : undefined}
+            activeOpacity={isActive ? 0.7 : 1} disabled={!isActive}
+          >
+            <View style={styles.compactCheck}><Text style={styles.compactCheckMark}>✓</Text></View>
+            <Text style={[styles.compactTitle, styles.compactTitleDone]} numberOfLines={1}>{step.title}</Text>
+          </TouchableOpacity>
+        ))}
 
         {isActive && canUpdate && (
           <PressableScale style={styles.updateBanner} onPress={update} haptic="light" disabled={revising}>
@@ -341,45 +359,36 @@ const styles = StyleSheet.create({
   progressTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   progressSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
 
-  // Hero — the 90-day journey (full-bleed)
-  heroBlock: { marginBottom: Spacing.xl, gap: Spacing.sm },
-  heroDay: { fontFamily: Typography.fonts.heading, fontSize: 30, fontWeight: '700', color: Colors.textPrimary },
+  // Hero — score-linked (score ring + plan-% arc)
+  heroBlock: { marginBottom: Spacing.xl, gap: Spacing.md },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg },
+  heroMeta: { flex: 1, gap: 4 },
+  heroDay: { fontFamily: Typography.fonts.heading, fontSize: 26, fontWeight: '700', color: Colors.textPrimary },
   heroDayTotal: { fontFamily: Typography.fonts.body, fontSize: Typography.title3.fontSize, fontWeight: '400', color: Colors.textMuted },
-  heroFootRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
   heroDone: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  heroDelta: { flexShrink: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent },
+  heroProjected: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  heroProjectedNum: { fontFamily: Typography.fonts.bodySemi, color: Colors.accent },
+  heroDelta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent },
 
-  // Roadmap (the road ahead)
-  roadList: { marginTop: Spacing.xs },
-  roadRow: { flexDirection: 'row', gap: Spacing.sm },
-  rail: { width: 32, position: 'relative' },
-  railLine: { position: 'absolute', left: 15, width: 2, backgroundColor: Colors.separator },
-  railLineTop: { top: 0, height: 24 },
-  railLineBottom: { top: 24, bottom: 0 },
-  railLineOn: { backgroundColor: Colors.accentSolid },
-  railNode: {
-    width: 20, height: 20, borderRadius: 10, marginTop: 15, alignSelf: 'center',
-    borderWidth: 2, borderColor: Colors.glassBorderLight, backgroundColor: Colors.background,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  railNodeDone: { backgroundColor: Colors.accentSolid, borderColor: Colors.accentSolid },
-  railNodeCurrent: { borderColor: Colors.accentSolid, borderWidth: 2.5 },
-  railCheck: { fontSize: 11, color: Colors.onAccent, fontWeight: '700' },
-  railDot: { width: 7, height: 7, borderRadius: 4 },
-  roadContent: { flex: 1, gap: Spacing.xs, paddingVertical: Spacing.md },
-  nowTag: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.accent, letterSpacing: 0.6 },
-  stepHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
-  stepTitle: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
-  stepTitleDone: { color: Colors.textMuted, textDecorationLine: 'line-through' },
-  weekBadge: {
-    backgroundColor: Colors.accentContainer, borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.sm, paddingVertical: 2,
-  },
-  weekBadgeDone: { backgroundColor: Colors.successContainer },
+  // Focal "this week" card
+  focalCard: { padding: Spacing.lg, marginTop: Spacing.xs, gap: Spacing.xs },
+  focalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
+  catDot: { width: 10, height: 10, borderRadius: 5 },
+  focalTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
+  focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20 },
+  focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: 2 },
+
+  // Compact up-next / done rows
+  compactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm + 2 },
+  compactDot: { width: 8, height: 8, borderRadius: 4 },
+  compactCheck: { width: 18, height: 18, borderRadius: 9, backgroundColor: Colors.accentSolid, alignItems: 'center', justifyContent: 'center' },
+  compactCheckMark: { fontSize: 10, color: Colors.onAccent, fontWeight: '700' },
+  compactTitle: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  compactTitleDone: { color: Colors.textMuted, textDecorationLine: 'line-through' },
+  compactWeek: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
+
+  weekBadge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2, alignSelf: 'flex-start' },
   weekText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.accent },
-  weekTextDone: { color: Colors.success },
-  stepDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19, marginTop: 2 },
-  impactValue: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: Spacing.xs },
   updateBanner: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.md, marginTop: Spacing.lg,
