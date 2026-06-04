@@ -101,6 +101,17 @@ export const FinalAnalysisSchema = AIRawOutputSchema.extend({
 
 // ─── Action plan schemas ─────────────────────────────────────────
 
+// Optional machine-measurable target for a step — lets the Active Plan track
+// progress deterministically (see docs/active-plan-design.md). Optional for now:
+// the action-plan edge fn doesn't emit it yet (Phase 2), so existing responses
+// still validate.
+export const StepTargetSchema = z.object({
+  kind: z.enum(['debt_paydown', 'build_efund', 'cut_spend', 'grow_income', 'habit']),
+  amount: z.number().optional(),
+  account: z.string().max(40).optional(),
+  metric: z.string().max(40).optional(),
+});
+
 export const ActionPlanStepSchema = z.object({
   week: z.string().max(20),
   title: z.string().max(80),
@@ -108,6 +119,7 @@ export const ActionPlanStepSchema = z.object({
   category: z.enum(['savings', 'debt', 'income', 'mindset']),
   impact: z.string().max(200),
   confidence: z.enum(['low', 'medium', 'high']),
+  target: StepTargetSchema.optional(),
 });
 
 export const ActionPlanRequestSchema = z.object({

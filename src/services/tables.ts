@@ -11,6 +11,7 @@ export const TABLES = {
   user_subscriptions: 'user_subscriptions',
   referrals: 'referrals',
   payments: 'payments',
+  active_plans: 'active_plans',
 } as const;
 
 export const BUCKETS = {
