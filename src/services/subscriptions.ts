@@ -79,3 +79,52 @@ export function hasAccessTo(tierOrStatus: SubscriptionTier | string | null | und
 export function isSubscriptionPremium(tier: SubscriptionTier): boolean {
   return tier === 'action_plan' || tier === 'deep_dive';
 }
+
+// ─── 3-day free access (the trial) ──────────────────────────────────────────
+// New users get TRIAL_DURATION_DAYS of full free access to everything, granted
+// app-side off the account's creation time (NOT an Apple/RevenueCat intro offer).
+// After it expires it's a hard paywall — no permanent free tier. We derive the
+// window from `created_at` (server-set, so it can't be moved by the client clock)
+// rather than persisting a separate trial row.
+
+export const TRIAL_DURATION_DAYS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface TrialStatus {
+  active: boolean;
+  daysLeft: number; // whole days remaining (ceil), 0 once expired
+  endsAt: Date | null;
+}
+
+/** Derive the 3-day free-access window from the account's creation timestamp. */
+export function getTrialStatus(createdAt: string | null | undefined, now: Date = new Date()): TrialStatus {
+  if (!createdAt) return { active: false, daysLeft: 0, endsAt: null };
+  const created = new Date(createdAt);
+  if (isNaN(created.getTime())) return { active: false, daysLeft: 0, endsAt: null };
+  const endsAt = new Date(created.getTime() + TRIAL_DURATION_DAYS * DAY_MS);
+  const msLeft = endsAt.getTime() - now.getTime();
+  if (msLeft <= 0) return { active: false, daysLeft: 0, endsAt };
+  return { active: true, daysLeft: Math.ceil(msLeft / DAY_MS), endsAt };
+}
+
+/**
+ * Feature-level access gate. Full access during the trial window; otherwise the
+ * owned subscription tier decides. The trial-aware replacement for a bare
+ * `hasAccessTo` at every gated feature.
+ */
+export function canAccess(
+  tier: SubscriptionTier | string | null | undefined,
+  required: 'action_plan' | 'deep_dive',
+  trialActive: boolean,
+): boolean {
+  return trialActive || hasAccessTo(tier, required);
+}
+
+/**
+ * App-level gate: may the user use the app's core paid surface at all (running a
+ * roast, the plan, the tools)? True during the trial or with any paid plan —
+ * false once the trial expires with no subscription (the hard paywall).
+ */
+export function canUseApp(tier: SubscriptionTier, trialActive: boolean): boolean {
+  return trialActive || isSubscriptionPremium(tier);
+}

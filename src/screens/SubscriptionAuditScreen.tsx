@@ -13,7 +13,7 @@ import { getSubscriptions, saveSubscription, deleteSubscription } from '@/servic
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
-import { getSubscription, hasAccessTo } from '@/services/subscriptions';
+import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -37,7 +37,7 @@ export default function SubscriptionAuditScreen() {
   useEffect(() => {
     (async () => {
       const { tier } = await getSubscription(user?.id ?? '');
-      if (hasAccessTo(tier, 'action_plan')) {
+      if (canAccess(tier, 'action_plan', getTrialStatus(user?.created_at).active)) {
         setAuthorized(true);
       } else {
         navigation.dispatch(StackActions.replace('Paywall'));

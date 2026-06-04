@@ -30,7 +30,7 @@ import Toast from '@/components/Toast';
 
 import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis, shareToFeed } from '@/services/claudeApi';
-import { getSubscription, hasAccessTo } from '@/services/subscriptions';
+import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
 
 type Props = {
@@ -152,7 +152,8 @@ export default function ResultsScreen({ navigation, route }: Props) {
   };
 
   const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
-  const canDeepDive = hasAccessTo(purchaseTier, 'deep_dive');
+  const trialActive = getTrialStatus(user?.created_at).active;
+  const canDeepDive = canAccess(purchaseTier, 'deep_dive', trialActive);
   const hasDebt = (analysis.debtTotal ?? 0) > 0;
 
   // Key metrics — vector icons, "N/A" rows hidden so it never looks unfinished.
@@ -227,7 +228,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
 
         {/* Lead with the action — Plan CTA + share/track — before the deep report */}
         <View style={styles.actionsGroup}>
-          {hasAccessTo(purchaseTier, 'action_plan') ? (
+          {canAccess(purchaseTier, 'action_plan', trialActive) ? (
             <NeonButton
               label="View 90-Day Action Plan"
               onPress={async () => {

@@ -14,7 +14,7 @@ import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import ConfidenceBadge from '@/components/ConfidenceBadge';
 import { useAuth } from '@/context/AuthContext';
-import { getSubscription, hasAccessTo } from '@/services/subscriptions';
+import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -124,7 +124,7 @@ export default function ActionPlanScreen({ route }: Props) {
   useEffect(() => {
     (async () => {
       const { tier } = await getSubscription(user?.id ?? '');
-      if (hasAccessTo(tier, 'action_plan')) {
+      if (canAccess(tier, 'action_plan', getTrialStatus(user?.created_at).active)) {
         setAuthorized(true);
       } else {
         navigation.replace('Paywall');

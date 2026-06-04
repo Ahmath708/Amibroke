@@ -12,7 +12,7 @@ import GlassCard from '@/components/GlassCard';
 import SeverityPill from '@/components/SeverityPill';
 import SelectableChip from '@/components/SelectableChip';
 import LoadingState from '@/components/LoadingState';
-import { getSubscription, hasAccessTo } from '@/services/subscriptions';
+import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
@@ -41,7 +41,7 @@ export default function DebtPayoffScreen({ route }: Props) {
   useEffect(() => {
     (async () => {
       const { tier } = await getSubscription(user?.id ?? '');
-      if (hasAccessTo(tier, 'deep_dive')) {
+      if (canAccess(tier, 'deep_dive', getTrialStatus(user?.created_at).active)) {
         setAuthorized(true);
       } else {
         navigation.replace('Paywall');

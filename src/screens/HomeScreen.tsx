@@ -27,6 +27,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ContextValues, CTX_COLUMNS, valuesFromProfile } from '@/components/FinancialContextForm';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useSubscription } from '@/hooks/useSubscription';
+import { FEATURES } from '@/config/features';
 import { trackFunnelStep } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
@@ -71,7 +72,7 @@ const PLACEHOLDERS = [
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user, supabase } = useAuth();
-  const { tier } = useSubscription();
+  const { tier, canUseApp } = useSubscription();
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
@@ -168,6 +169,13 @@ export default function HomeScreen({ navigation }: Props) {
   const handleAnalyze = () => {
     if (!input.trim()) {
       inputRef.current?.focus();
+      return;
+    }
+    // Hard paywall: once the 3-day free access expires with no plan, running a
+    // roast is gated too (not just the premium tools). Flagged off until the
+    // server-side check ships — see FEATURES.PAYWALL_ENFORCEMENT.
+    if (FEATURES.PAYWALL_ENFORCEMENT && !canUseApp) {
+      navigation.navigate('Paywall');
       return;
     }
     trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone });
