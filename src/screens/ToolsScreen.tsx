@@ -27,9 +27,9 @@ type Props = { navigation: TabScreenNav<'Tools'> };
 // Premium features — gated by tier. `action: 'latest' | 'debt'` are analysis-scoped
 // (open the latest analysis); `nav` items are standalone screens.
 const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'latest' | 'debt' }[] = [
-  { icon: ClipboardDocumentListIcon, label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'latest' },
-  { icon: ArrowTrendingDownIcon,     label: 'Debt Payoff',          sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
   { icon: MagnifyingGlassIcon,       label: 'Subscription Audit',   sub: 'Find recurring money leaks',      requires: 'action_plan', nav: 'SubscriptionAudit' },
+  { icon: ArrowTrendingDownIcon,     label: 'Debt Payoff',          sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
+  { icon: ClipboardDocumentListIcon, label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'latest' },
   { icon: BeakerIcon,                label: 'Scenario Simulator',   sub: 'Model "what if" money moves',     requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },
 ];
 
@@ -126,7 +126,7 @@ export default function ToolsScreen({ navigation }: Props) {
                         : <ChevronRightIcon size={16} color={Colors.textSecondary} />)
                     : <LockClosedIcon size={15} color={Colors.textMuted} />}
                 </View>
-                <View>
+                <View style={styles.tileText}>
                   <Text style={[styles.label, !unlocked && styles.labelLocked]} numberOfLines={2}>{tool.label}</Text>
                   <Text style={styles.sub} numberOfLines={1}>{!unlocked ? 'Subscribe to unlock' : tool.sub}</Text>
                 </View>
@@ -149,16 +149,17 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   tile: {
     width: '48%',
-    minHeight: 128,
     backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.glassBorderLight,
     padding: Spacing.md,
     marginBottom: Spacing.md,
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // text sinks to the bottom when a row-mate is taller
   },
   tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tileText: { marginTop: Spacing.lg }, // breathing room between the icon and the title
+
   iconBadge: { width: 36, height: 36, borderRadius: Radius.sm, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
   iconBadgeLocked: { backgroundColor: Colors.backgroundSecondary },
   label: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
