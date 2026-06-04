@@ -1,17 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import { scoreGradient } from '@/utils/scoreVisual';
+import MiniScoreRing from '@/components/MiniScoreRing';
 import { formatShortDate as fmtDate } from '@/utils/format';
 import { AnalysisHistoryItem } from '@/types';
-
-const RING = 48;
-const STROKE = 4;
-const R = (RING - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
 
 interface Props {
   item: AnalysisHistoryItem;
@@ -26,34 +20,12 @@ interface Props {
  *  Shared by the History inline list and the All Analyses screen. */
 export default function AnalysisRow({ item, delta, loading, disabled, onPress }: Props) {
   const band = getScoreBand(item.score);
-  const [from, to] = scoreGradient(item.score);
   const deltaText = delta != null && delta > 0 ? `+${delta}` : delta != null && delta < 0 ? `${delta}` : '';
   const deltaColor = delta != null && delta > 0 ? Colors.success : Colors.danger;
-  const gid = `ar-${item.id}`;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={disabled} style={[styles.row, loading && { opacity: 0.6 }]}>
-      <View style={styles.ring}>
-        <Svg width={RING} height={RING}>
-          <Defs>
-            <SvgGradient id={gid} x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor={from} />
-              <Stop offset="100%" stopColor={to} />
-            </SvgGradient>
-          </Defs>
-          <Circle cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={Colors.backgroundSecondary} strokeWidth={STROKE} />
-          <Circle
-            cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={`url(#${gid})`} strokeWidth={STROKE}
-            strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - item.score / 100)} strokeLinecap="round"
-            transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-          />
-        </Svg>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <View style={styles.ringCenter}>
-            <Text style={[styles.ringNum, { color: band.color }]}>{item.score}</Text>
-          </View>
-        </View>
-      </View>
+      <MiniScoreRing score={item.score} size={48} stroke={4} numberSize={Typography.callout.fontSize} />
       <View style={styles.info}>
         <View style={styles.meta}>
           <Text style={styles.date}>{fmtDate(item.created_at)}</Text>
@@ -86,9 +58,6 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
-  ring: { width: RING, height: RING },
-  ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  ringNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700' },
   info: { flex: 1, gap: Spacing.xs },
   meta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   date: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },

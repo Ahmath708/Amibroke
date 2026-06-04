@@ -9,13 +9,12 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
 import { PlusIcon } from 'react-native-heroicons/outline';
 import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import { scoreGradient } from '@/utils/scoreVisual';
+import MiniScoreRing from '@/components/MiniScoreRing';
 import { REACTION_EMOJIS, totalReactions } from '@/utils/reactions';
 import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
@@ -40,11 +39,6 @@ function timeAgo(iso: string) {
 
 const PAGE_SIZE = 20;
 
-// Score avatar = a partial-fill band-gradient ring (arc = score%), matching History.
-const AVATAR = 44;
-const AVATAR_STROKE = 4;
-const AVATAR_R = (AVATAR - AVATAR_STROKE) / 2;
-const AVATAR_CIRC = 2 * Math.PI * AVATAR_R;
 
 export default function CommunityFeedScreen() {
   const insets = useSafeAreaInsets();
@@ -143,38 +137,11 @@ export default function CommunityFeedScreen() {
   const renderPost = ({ item: post }: { item: CommunityPost }) => {
     const band = getScoreBand(post.score); // live band — label + color always agree
     const scoreColor = band.color;
-    const [ringFrom, ringTo] = scoreGradient(post.score);
     return (
       <View style={styles.card}>
         {/* Post header */}
         <View style={styles.cardHeader}>
-          <View style={styles.scoreAvatar}>
-            <Svg width={AVATAR} height={AVATAR}>
-              <Defs>
-                <SvgGradient id={`postRing-${post.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor={ringFrom} />
-                  <Stop offset="100%" stopColor={ringTo} />
-                </SvgGradient>
-              </Defs>
-              <Circle
-                cx={AVATAR / 2} cy={AVATAR / 2} r={AVATAR_R}
-                fill="none" stroke={Colors.backgroundSecondary} strokeWidth={AVATAR_STROKE}
-              />
-              <Circle
-                cx={AVATAR / 2} cy={AVATAR / 2} r={AVATAR_R}
-                fill="none" stroke={`url(#postRing-${post.id})`} strokeWidth={AVATAR_STROKE}
-                strokeDasharray={AVATAR_CIRC}
-                strokeDashoffset={AVATAR_CIRC * (1 - post.score / 100)}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${AVATAR / 2} ${AVATAR / 2})`}
-              />
-            </Svg>
-            <View style={StyleSheet.absoluteFill} pointerEvents="none">
-              <View style={styles.scoreAvatarCenter}>
-                <Text style={[styles.scoreAvatarNum, { color: scoreColor }]}>{post.score}</Text>
-              </View>
-            </View>
-          </View>
+          <MiniScoreRing score={post.score} size={44} stroke={4} numberSize={Typography.subhead.fontSize} />
           <View style={styles.cardMeta}>
             <View style={styles.cardUserRow}>
               <Text style={styles.cardUser}>@{post.display_name}</Text>
@@ -350,9 +317,6 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  scoreAvatar: { width: AVATAR, height: AVATAR },
-  scoreAvatarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scoreAvatarNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.subhead.fontSize, fontWeight: '700' },
   cardMeta: { flex: 1, gap: Spacing.xs },
   cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   cardUser: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, fontWeight: '500' },

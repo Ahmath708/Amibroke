@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
 } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Colors, Typography, Spacing } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import { scoreGradient } from '@/utils/scoreVisual';
+import MiniScoreRing from '@/components/MiniScoreRing';
 import { AnalysisHistoryItem } from '@/types';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getMySharedAnalysisIds, shareToFeed, unshareFromFeed } from '@/services/community';
@@ -14,10 +13,6 @@ import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import NeonButton from '@/components/NeonButton';
 
-const RING = 40;
-const STROKE = 3.5;
-const R = (RING - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
 const HIT = { top: 10, bottom: 10, left: 10, right: 10 };
 
 interface Props {
@@ -118,31 +113,10 @@ export default function ShareManagerSheet({ visible, onClose, onRunAnalysis }: P
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             {analyses.map((item) => {
               const band = getScoreBand(item.score);
-              const [from, to] = scoreGradient(item.score);
               const shared = sharedIds.has(item.id);
               return (
                 <View key={item.id} style={styles.row}>
-                  <View style={styles.ring}>
-                    <Svg width={RING} height={RING}>
-                      <Defs>
-                        <SvgGradient id={`mgr-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                          <Stop offset="0%" stopColor={from} />
-                          <Stop offset="100%" stopColor={to} />
-                        </SvgGradient>
-                      </Defs>
-                      <Circle cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={Colors.backgroundSecondary} strokeWidth={STROKE} />
-                      <Circle
-                        cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={`url(#mgr-${item.id})`} strokeWidth={STROKE}
-                        strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - item.score / 100)} strokeLinecap="round"
-                        transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-                      />
-                    </Svg>
-                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                      <View style={styles.ringCenter}>
-                        <Text style={[styles.ringNum, { color: band.color }]}>{item.score}</Text>
-                      </View>
-                    </View>
-                  </View>
+                  <MiniScoreRing score={item.score} size={40} stroke={3.5} numberSize={Typography.footnote.fontSize} />
                   <View style={styles.info}>
                     <Text style={styles.date} numberOfLines={1}>
                       {fmtDate(item.created_at)} · <Text style={{ color: band.color }}>{band.label}</Text>
@@ -179,9 +153,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
   },
-  ring: { width: RING, height: RING },
-  ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  ringNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.footnote.fontSize, fontWeight: '700' },
   info: { flex: 1, gap: 2 },
   date: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary },
   snippet: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 16 },

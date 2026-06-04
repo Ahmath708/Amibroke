@@ -13,8 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import { scoreGradient } from '@/utils/scoreVisual';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import MiniScoreRing from '@/components/MiniScoreRing';
 import { Ionicons } from '@expo/vector-icons';
 import StatusPill from '@/components/StatusPill';
 import TierPill from '@/components/TierPill';
@@ -39,11 +38,6 @@ const ACCOUNT_ITEMS: { icon: string; label: string; nav: string }[] = [
   { icon: 'settings-outline', label: 'Settings', nav: 'Settings' },
 ];
 
-// Current-score ring (partial-fill, band gradient) — matches History/Community/Results.
-const CS_RING = 56;
-const CS_STROKE = 5;
-const CS_R = (CS_RING - CS_STROKE) / 2;
-const CS_CIRC = 2 * Math.PI * CS_R;
 
 export default function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -253,27 +247,7 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={styles.currentScoreDate}>{fmtDate(latestDate)}</Text>
             </View>
             <View style={styles.currentScoreRight}>
-              <View style={styles.csRing}>
-                <Svg width={CS_RING} height={CS_RING}>
-                  <Defs>
-                    <SvgGradient id="profileScoreRing" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor={scoreGradient(latestScore)[0]} />
-                      <Stop offset="100%" stopColor={scoreGradient(latestScore)[1]} />
-                    </SvgGradient>
-                  </Defs>
-                  <Circle cx={CS_RING / 2} cy={CS_RING / 2} r={CS_R} fill="none" stroke={Colors.backgroundSecondary} strokeWidth={CS_STROKE} />
-                  <Circle
-                    cx={CS_RING / 2} cy={CS_RING / 2} r={CS_R} fill="none" stroke="url(#profileScoreRing)" strokeWidth={CS_STROKE}
-                    strokeDasharray={CS_CIRC} strokeDashoffset={CS_CIRC * (1 - latestScore / 100)} strokeLinecap="round"
-                    transform={`rotate(-90 ${CS_RING / 2} ${CS_RING / 2})`}
-                  />
-                </Svg>
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <View style={styles.csRingCenter}>
-                    <Text style={[styles.csRingNum, { color: scoreColor }]}>{latestScore}</Text>
-                  </View>
-                </View>
-              </View>
+              <MiniScoreRing score={latestScore} size={56} stroke={5} numberSize={Typography.title3.fontSize} />
               <StatusPill label={getScoreBand(latestScore).label} color={scoreColor} />
             </View>
           </View>
@@ -368,9 +342,6 @@ const styles = StyleSheet.create({
   currentScoreLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   currentScoreDate: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },
   currentScoreRight: { alignItems: 'flex-end', gap: Spacing.xs },
-  csRing: { width: CS_RING, height: CS_RING },
-  csRingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  csRingNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700' },
   menuGroup: {
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
