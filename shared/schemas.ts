@@ -52,6 +52,9 @@ export const DebtItemSchema = z.object({
   urgency: z.enum(['low', 'medium', 'high', 'critical']),
   confidence: z.enum(['low', 'medium', 'high']).optional(),
   source: z.enum(['user_stated', 'inferred']).optional(),
+  // Debt kind — lets the snapshot/Debt-Payoff treat secured long-term debt (mortgage)
+  // differently from consumer debt you actually "dig out of." Optional → back-compatible.
+  kind: z.enum(['credit_card', 'student_loan', 'auto', 'mortgage', 'medical', 'personal', 'other']).optional(),
 });
 
 const CfpbResponse = z.object({

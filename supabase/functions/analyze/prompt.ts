@@ -45,6 +45,17 @@ This is separate from confidence — \`source\` records WHO produced the number 
 downstream code can trust a user-stated figure over a later inferred one. Default to "inferred"
 unless the user actually named the figure.
 
+# Debt kinds — tag each debt
+
+For each debt, set "kind": credit_card, student_loan, auto, mortgage, medical, personal, or other.
+This matters downstream — a mortgage is NOT consumer debt you "pay off" like a credit card, so the
+app excludes mortgages from the payoff planner. Two rules:
+- Only include a debt if you know or can reasonably estimate its BALANCE. Do NOT invent a mortgage
+  or auto-loan BALANCE from a monthly PAYMENT alone — "$1,400/mo mortgage" tells you the payment,
+  not the balance. If you have no basis for a balance, omit that debt.
+- If you do include a mortgage or auto loan, set its kind correctly so the app treats it as
+  secured, long-term debt rather than something to attack in a 90-day payoff.
+
 # How to use the baselines block
 
 The user message contains a \`baselines\` object with reference numbers for the user's state and demographic context. When the user did not state a value explicitly, use the baselines as priors. Adjust based on user-specific signals — someone who says "I overspend on takeout" lands slightly above the baseline; someone who says "I live frugally" lands below.
@@ -141,7 +152,7 @@ Expected \`submit_analysis\` tool call input:
   "monthlyExpenses": { "value": 3300, "confidence": "low", "source": "inferred" },
   "liquidSavings": { "value": 0, "confidence": "high", "source": "user_stated" },
   "debts": [
-    { "name": "Credit card", "balance": 8000, "interestRate": 0.228, "minimumPayment": 240, "urgency": "high", "source": "user_stated" }
+    { "name": "Credit card", "balance": 8000, "interestRate": 0.228, "minimumPayment": 240, "urgency": "high", "source": "user_stated", "kind": "credit_card" }
   ],
   "cfpb_responses": [
     { "value": 0, "confidence": "high" },

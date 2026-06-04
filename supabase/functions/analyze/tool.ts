@@ -64,8 +64,9 @@ export const submitAnalysisTool = {
             urgency: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
             confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
             source: { type: 'string', enum: ['user_stated', 'inferred'] },
+            kind: { type: 'string', enum: ['credit_card', 'student_loan', 'auto', 'mortgage', 'medical', 'personal', 'other'] },
           },
-          required: ['name', 'balance', 'interestRate', 'minimumPayment', 'urgency', 'source'],
+          required: ['name', 'balance', 'interestRate', 'minimumPayment', 'urgency', 'source', 'kind'],
         },
       },
       cfpb_responses: {

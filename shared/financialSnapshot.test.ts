@@ -1,6 +1,6 @@
 import {
   mergeIntoSnapshot, emptySnapshot, patchFromAnalysis, patchFromOnboarding,
-  fromRow, toRow, INCOME_MID, type FinancialSnapshot, type SnapshotRow,
+  fromRow, toRow, INCOME_MID, isPayoffDebt, type FinancialSnapshot, type SnapshotRow,
 } from './financialSnapshot';
 
 const NOW = '2026-06-04T00:00:00.000Z';
@@ -99,6 +99,25 @@ describe('patchFromOnboarding', () => {
   it('debt bracket "none" yields an empty debts array', () => {
     const patch = patchFromOnboarding({ debtBracket: 'none' });
     expect(patch.debts?.value).toEqual([]);
+  });
+});
+
+describe('debt kind — mortgage exclusion (Finding A)', () => {
+  it('excludes mortgages from debt_total and isPayoffDebt', () => {
+    const s = mergeIntoSnapshot(null, {
+      debts: { value: [
+        { name: 'Mortgage', balance: 220000, apr: 0.07, kind: 'mortgage' },
+        { name: 'Visa', balance: 3000, apr: 0.21, kind: 'credit_card' },
+      ], confidence: 'medium' },
+    }, 'roast', NOW);
+    expect(s.debtTotal).toBe(3000);                                  // mortgage excluded
+    const payoff = (s.debts?.value ?? []).filter(isPayoffDebt);
+    expect(payoff.map((d) => d.name)).toEqual(['Visa']);
+  });
+
+  it('patchFromAnalysis carries kind through', () => {
+    const patch = patchFromAnalysis({ debts: [{ name: 'Car', balance: 18000, kind: 'auto' }] });
+    expect(patch.debts?.value[0].kind).toBe('auto');
   });
 });
 

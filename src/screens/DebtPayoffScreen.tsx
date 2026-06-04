@@ -17,6 +17,7 @@ import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { useAuth } from '@/context/AuthContext';
 import { getSnapshot } from '@/services/financialSnapshot';
+import { isPayoffDebt } from '@shared/financialSnapshot';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import EmptyState from '@/components/EmptyState';
@@ -40,8 +41,10 @@ export default function DebtPayoffScreen({ route }: Props) {
     if (!user) return;
     getSnapshot(user.id).then((snap) => {
       const d = snap?.debts;
-      if (d && d.confidence !== 'estimated' && d.value.length > 0) {
-        setDebts(d.value.map((x) => ({
+      // Consumer debt only — mortgages aren't part of the payoff planner (Finding A).
+      const payoff = d?.value.filter(isPayoffDebt) ?? [];
+      if (d && d.confidence !== 'estimated' && payoff.length > 0) {
+        setDebts(payoff.map((x) => ({
           name: x.name, balance: x.balance, interestRate: x.apr ?? 0,
           minimumPayment: x.min_payment ?? 0, urgency: 'medium',
         })));

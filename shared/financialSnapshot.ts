@@ -12,13 +12,23 @@ const RANK: Record<Confidence, number> = { estimated: 0, low: 1, medium: 2, high
 
 export type SnapshotSource = 'onboarding' | 'roast' | 'checkin' | 'manual';
 
+export type DebtKind = 'credit_card' | 'student_loan' | 'auto' | 'mortgage' | 'medical' | 'personal' | 'other';
+
 export interface SnapshotDebt {
   id?: string;
   name: string;
   balance: number;
   apr?: number;
   min_payment?: number;
+  kind?: DebtKind;
 }
+
+/**
+ * Debts the payoff planner + the consumer `debt_total` operate on — everything EXCEPT a
+ * mortgage. A mortgage is secured, long-term debt you don't "dig out of" in a 90-day plan;
+ * leaving it in swamps avalanche/snowball and balloons DTI (see Finding A, snapshot-e2e).
+ */
+export const isPayoffDebt = (d: SnapshotDebt): boolean => d.kind !== 'mortgage';
 
 // One tracked input field: its value + where it came from + how sure we are.
 export interface ProvField<T> {
@@ -64,7 +74,8 @@ function deriveMetrics(s: FinancialSnapshot, now: string): FinancialSnapshot {
   const income = s.monthlyIncome?.value ?? 0;
   const expenses = s.monthlyExpenses?.value ?? 0;
   const liquid = s.liquidSavings?.value ?? 0;
-  const debtTotal = (s.debts?.value ?? []).reduce((sum, d) => sum + (d.balance || 0), 0);
+  // Consumer debt only — a mortgage isn't "debt to pay down" in the dig-out sense (Finding A).
+  const debtTotal = (s.debts?.value ?? []).filter(isPayoffDebt).reduce((sum, d) => sum + (d.balance || 0), 0);
   const monthlySavings = income - expenses;
   return {
     ...s,
@@ -110,7 +121,7 @@ export function mergeIntoSnapshot(
 // ─── Mapping from a roast (FinalAnalysis-shaped) ─────────────────────────────
 type Source = 'user_stated' | 'inferred';
 interface NumberWithConfidence { value: number; confidence?: Confidence; source?: Source }
-interface AnalysisDebt { name: string; balance: number; interestRate?: number; minimumPayment?: number; confidence?: Confidence; source?: Source }
+interface AnalysisDebt { name: string; balance: number; interestRate?: number; minimumPayment?: number; confidence?: Confidence; source?: Source; kind?: DebtKind }
 interface AnalysisLike {
   monthlyIncome?: NumberWithConfidence | number;
   monthlyExpenses?: NumberWithConfidence | number;
@@ -144,7 +155,7 @@ export function patchFromAnalysis(a: AnalysisLike): SnapshotPatch {
     // Debts field confidence: `stated` if the user stated any of them, else `medium`.
     const confidence: Confidence = a.debts.some((d) => d.source === 'user_stated') ? 'stated' : 'medium';
     patch.debts = {
-      value: a.debts.map((d) => ({ name: d.name, balance: d.balance, apr: d.interestRate ?? 0, min_payment: d.minimumPayment ?? 0 })),
+      value: a.debts.map((d) => ({ name: d.name, balance: d.balance, apr: d.interestRate ?? 0, min_payment: d.minimumPayment ?? 0, kind: d.kind })),
       confidence,
     };
   }
