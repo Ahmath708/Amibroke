@@ -21,6 +21,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import PremiumCard from '@/components/PremiumCard';
 import TierPill from '@/components/TierPill';
+import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 
 type Props = { navigation: TabScreenNav<'Tools'> };
 
@@ -87,8 +88,11 @@ export default function ToolsScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Tools</Text>
-          <TierPill tier={tier} />
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Tools</Text>
+            <TierPill tier={tier} />
+          </View>
+          <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
         </View>
         <Text style={styles.subtitle}>Your premium toolkit to actually fix things.</Text>
 
@@ -141,7 +145,8 @@ export default function ToolsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xs },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   title: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl },
   group: {

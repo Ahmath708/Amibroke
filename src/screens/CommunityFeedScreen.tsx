@@ -12,6 +12,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
 import { PlusIcon } from 'react-native-heroicons/outline';
+import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
@@ -267,7 +268,10 @@ export default function CommunityFeedScreen() {
         }
         ListHeaderComponent={
           <>
-            <Text style={styles.largeTitle}>Community</Text>
+            <View style={styles.headerRow}>
+              <Text style={styles.largeTitle}>Community</Text>
+              <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
+            </View>
             <Text style={styles.subtitle}>Anonymous financial roasts from the community 💸</Text>
             <View style={styles.segmentRow}>
               {(['trending', 'recent', 'lowest'] as FeedSort[]).map((t) => (
@@ -324,9 +328,10 @@ export default function CommunityFeedScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs },
   largeTitle: {
     fontFamily: Typography.fonts.heading, ...Typography.screenTitle,
-    color: Colors.textPrimary, marginBottom: Spacing.xs,
+    color: Colors.textPrimary,
   },
   subtitle: { fontFamily: Typography.fonts.body, ...Typography.subhead, color: Colors.textSecondary, marginBottom: Spacing.xl },
   segmentRow: {
