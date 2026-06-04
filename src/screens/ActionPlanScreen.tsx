@@ -291,35 +291,39 @@ export default function ActionPlanScreen({ route }: Props) {
           </View>
         ))}
 
-        {bigPicture && (
+        {/* Plan contents only exist once the plan is committed. Pre-commit = just the
+            "Start this plan" action above. */}
+        {isActive && bigPicture && (
           <GlassCard style={styles.overallMessageCard}>
             <Text style={styles.overallLabel}>The Big Picture</Text>
             <Text style={styles.overallText}>{bigPicture}</Text>
           </GlassCard>
         )}
 
-        <SectionLabel>{focalIsCurrent ? 'This Week' : 'Coming Up'}</SectionLabel>
-        {focalStep ? (
-          <GlassCard style={styles.focalCard}>
-            <View style={styles.focalTop}>
-              <View style={styles.weekBadge}><Text style={styles.weekText}>{focalStep.week}</Text></View>
-              <View style={[styles.catDot, { backgroundColor: catColor(focalStep.category) }]} />
-            </View>
-            <Text style={styles.focalTitle}>{focalStep.title}</Text>
-            <Text style={styles.focalDesc}>{focalStep.description}</Text>
-            <Text style={styles.focalImpact} numberOfLines={2}>→ {focalStep.impact}</Text>
-            {isActive && (
-              <NeonButton label="Mark this done" onPress={() => toggle(focalStep.id, false)} style={{ marginTop: Spacing.md }} />
+        {isActive && (
+          <>
+            <SectionLabel>{focalIsCurrent ? 'This Week' : 'Coming Up'}</SectionLabel>
+            {focalStep ? (
+              <GlassCard style={styles.focalCard}>
+                <View style={styles.focalTop}>
+                  <View style={styles.weekBadge}><Text style={styles.weekText}>{focalStep.week}</Text></View>
+                  <View style={[styles.catDot, { backgroundColor: catColor(focalStep.category) }]} />
+                </View>
+                <Text style={styles.focalTitle}>{focalStep.title}</Text>
+                <Text style={styles.focalDesc}>{focalStep.description}</Text>
+                <Text style={styles.focalImpact} numberOfLines={2}>→ {focalStep.impact}</Text>
+                <NeonButton label="Mark this done" onPress={() => toggle(focalStep.id, false)} style={{ marginTop: Spacing.md }} />
+              </GlassCard>
+            ) : (
+              <GlassCard style={styles.focalCard}>
+                <Text style={styles.focalTitle}>All steps done 🎉</Text>
+                <Text style={styles.focalDesc}>You ran the whole 90-day plan. Re-roast to see how far your score moved.</Text>
+              </GlassCard>
             )}
-          </GlassCard>
-        ) : (
-          <GlassCard style={styles.focalCard}>
-            <Text style={styles.focalTitle}>All steps done 🎉</Text>
-            <Text style={styles.focalDesc}>You ran the whole 90-day plan. Re-roast to see how far your score moved.</Text>
-          </GlassCard>
+          </>
         )}
 
-        {upNext.length > 0 && (
+        {isActive && upNext.length > 0 && (
           <View style={styles.block}>
             <SectionLabel>Up Next</SectionLabel>
             {upNext.map((step) => (
