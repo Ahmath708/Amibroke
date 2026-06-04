@@ -2,6 +2,7 @@
 // their check-in config (pinned goals + schedule anchor, stored on `profiles`).
 // Mocked in dev via @/config/ai.
 import { CheckIn, CheckinConfig, EMPTY_CHECKIN_CONFIG } from '@/types';
+import { TABLES } from './tables';
 import { USE_AI_MOCKS } from '@/config/ai';
 import { getSupabase } from './supabaseClient';
 
@@ -19,7 +20,7 @@ export async function saveCheckIn(userId: string, data: {
   if (!client) return null;
   try {
     const { data: result, error } = await (client as any)
-      .from('check_ins')
+      .from(TABLES.check_ins)
       .insert({ user_id: userId, ...data })
       .select('id')
       .single();
@@ -40,7 +41,7 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
   if (!client) return [];
   try {
     const { data, error } = await (client as any)
-      .from('check_ins')
+      .from(TABLES.check_ins)
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -72,7 +73,7 @@ export async function getCheckinConfig(userId: string): Promise<CheckinConfig> {
   if (!client) return EMPTY_CHECKIN_CONFIG;
   try {
     const { data, error } = await (client as any)
-      .from('profiles')
+      .from(TABLES.profiles)
       .select('checkin_config')
       .eq('id', userId)
       .maybeSingle();
@@ -90,7 +91,7 @@ export async function saveCheckinConfig(userId: string, config: CheckinConfig): 
   if (!client) return false;
   try {
     const { error } = await (client as any)
-      .from('profiles')
+      .from(TABLES.profiles)
       .update({ checkin_config: config })
       .eq('id', userId);
     if (error) throw error;

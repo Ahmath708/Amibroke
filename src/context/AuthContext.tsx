@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { TABLES } from '@/services/tables';
 import { Platform } from 'react-native';
 import { SupabaseClient, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkProfile = useCallback(async (u: User | null) => {
     if (!u) { setNeedsUsername(false); setNeedsOnboarding(false); return; }
     try {
-      const { data } = await supabase.from('profiles').select('username, onboarded').eq('id', u.id).maybeSingle();
+      const { data } = await supabase.from(TABLES.profiles).select('username, onboarded').eq('id', u.id).maybeSingle();
       const row = data as { username?: string; onboarded?: boolean } | null;
       setNeedsUsername(!row?.username);
       setNeedsOnboarding(!row?.onboarded);

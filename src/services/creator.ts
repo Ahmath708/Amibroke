@@ -1,4 +1,5 @@
 import { getSupabaseClient as getSupabase } from './supabaseClient';
+import { TABLES } from './tables';
 import { totalReactions } from '@/utils/reactions';
 import { analyzeFinancialSituation } from './ai';
 import { RoastTone } from '@/types';
@@ -28,7 +29,7 @@ export async function generateReferralCode(userId: string): Promise<string> {
   const client = getSupabase();
   if (client) {
     try {
-      await client.from('referrals').insert({
+      await client.from(TABLES.referrals).insert({
         referrer_id: userId,
         code,
         status: 'active',
@@ -47,7 +48,7 @@ export async function getCreatorStats(userId: string): Promise<CreatorStats | nu
 
   try {
     const { data: posts } = await client
-      .from('community_posts')
+      .from(TABLES.community_posts)
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -57,7 +58,7 @@ export async function getCreatorStats(userId: string): Promise<CreatorStats | nu
     const totalShares = posts?.reduce((sum, p) => sum + totalReactions(p.reactions), 0) || 0;
 
     const { data: referrals } = await client
-      .from('referrals')
+      .from(TABLES.referrals)
       .select('payout_amount')
       .eq('referrer_id', userId);
 
@@ -90,7 +91,7 @@ export async function getReferralCode(userId: string): Promise<string | null> {
 
   try {
     const { data } = await client
-      .from('referrals')
+      .from(TABLES.referrals)
       .select('code')
       .eq('referrer_id', userId)
       .eq('status', 'active')
@@ -108,7 +109,7 @@ export async function applyReferralCode(code: string, referredId: string): Promi
 
   try {
     const { data: referral } = await client
-      .from('referrals')
+      .from(TABLES.referrals)
       .select('id, referrer_id')
       .eq('code', code)
       .eq('status', 'active')
@@ -116,7 +117,7 @@ export async function applyReferralCode(code: string, referredId: string): Promi
 
     if (!referral) return false;
 
-    await client.from('referrals').update({
+    await client.from(TABLES.referrals).update({
       referred_id: referredId,
       status: 'converted',
     }).eq('id', referral.id);

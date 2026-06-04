@@ -1,6 +1,7 @@
 // Analyses CRUD — persist, list, paginate, fetch and clear the user's roasts.
 // Mocked in dev via @/config/ai (mock history fixtures).
 import { FinalAnalysis } from '@shared/types';
+import { TABLES, HISTORY_COLUMNS } from './tables';
 import { AnalysisHistoryItem } from '@/types';
 import { USE_AI_MOCKS } from '@/config/ai';
 import { getSupabase } from './supabaseClient';
@@ -10,7 +11,7 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
   if (!client) return null;
   console.log('[analyses] Saving analysis to database for user:', userId);
   try {
-    const { data, error } = await (client as any).from('analyses').insert({
+    const { data, error } = await (client as any).from(TABLES.analyses).insert({
       user_id: userId,
       input_text: input,
       score: analysis.score,
@@ -61,8 +62,8 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
   if (!client) return [];
   try {
     const { data, error } = await (client as any)
-      .from('analyses')
-      .select('id, score, score_label, summary, created_at, emotional_status, action_plan, share_captions')
+      .from(TABLES.analyses)
+      .select(HISTORY_COLUMNS)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -107,8 +108,8 @@ export async function getAnalysesPage(
   if (!client) return empty;
   try {
     let q = (client as any)
-      .from('analyses')
-      .select('id, score, score_label, summary, created_at, emotional_status, action_plan, share_captions')
+      .from(TABLES.analyses)
+      .select(HISTORY_COLUMNS)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit + 1);
@@ -134,7 +135,7 @@ export async function getAnalysisById(id: string): Promise<FinalAnalysis | null>
   if (!client) return null;
   try {
     const { data, error } = await (client as any)
-      .from('analyses')
+      .from(TABLES.analyses)
       .select('*')
       .eq('id', id)
       .single();
@@ -184,7 +185,7 @@ export async function deleteAllAnalyses(userId: string): Promise<boolean> {
   const client = getSupabase();
   if (!client) return false;
   try {
-    const { error } = await (client as any).from('analyses').delete().eq('user_id', userId);
+    const { error } = await (client as any).from(TABLES.analyses).delete().eq('user_id', userId);
     if (error) throw error;
     return true;
   } catch (error) {

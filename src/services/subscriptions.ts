@@ -1,4 +1,5 @@
 import { getSupabase } from './supabaseClient';
+import { TABLES } from './tables';
 import { getCustomerInfo, tierFromCustomerInfo, isPurchasesConfigured } from './purchases';
 
 export interface SubscriptionRecord {
@@ -51,7 +52,7 @@ export async function getSubscription(userId: string): Promise<{ tier: Subscript
   if (client) {
     try {
       const { data, error } = await (client as any)
-        .from('user_subscriptions')
+        .from(TABLES.user_subscriptions)
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();

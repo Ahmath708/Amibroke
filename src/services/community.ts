@@ -1,6 +1,7 @@
 // Community feed — keyset-paginated post listing, sharing/unsharing a roast, and
 // reactions (Supabase `community_posts` + `post_reactions` tables).
 import { CommunityPost } from '@/types';
+import { TABLES } from './tables';
 import { getSupabase } from './supabaseClient';
 import { getProfile } from './profile';
 
@@ -25,7 +26,7 @@ export async function getCommunityFeed(
   const client = getSupabase();
   if (!client) return empty;
   try {
-    let query = (client as any).from('community_posts').select('*');
+    let query = (client as any).from(TABLES.community_posts).select('*');
 
     if (sort === 'lowest') {
       query = query.order('score', { ascending: true }).order('created_at', { ascending: true });
@@ -62,7 +63,7 @@ export async function getCommunityFeed(
     if (userId && posts.length) {
       const ids = posts.map((p) => p.id);
       const { data: myReactions } = await (client as any)
-        .from('post_reactions')
+        .from(TABLES.post_reactions)
         .select('post_id, emoji')
         .eq('user_id', userId)
         .in('post_id', ids);
@@ -93,7 +94,7 @@ export async function getPostReactions(
   if (!client) return null;
   try {
     const { data, error } = await (client as any)
-      .from('community_posts')
+      .from(TABLES.community_posts)
       .select('reactions')
       .eq('id', postId)
       .maybeSingle();
@@ -102,7 +103,7 @@ export async function getPostReactions(
     let my_reactions: string[] = [];
     if (userId) {
       const { data: mine } = await (client as any)
-        .from('post_reactions')
+        .from(TABLES.post_reactions)
         .select('emoji')
         .eq('post_id', postId)
         .eq('user_id', userId);
@@ -132,7 +133,7 @@ export async function shareToFeed(
       ? `anon_${profile.username.slice(0, 8)}`
       : `anon_${userId.slice(0, 8)}`;
     const { data, error } = await (client as any)
-      .from('community_posts')
+      .from(TABLES.community_posts)
       .insert({
         user_id: userId,
         analysis_id: analysisId,
@@ -159,7 +160,7 @@ export async function getMySharedAnalysisIds(userId: string): Promise<string[]> 
   if (!client) return [];
   try {
     const { data, error } = await (client as any)
-      .from('community_posts')
+      .from(TABLES.community_posts)
       .select('analysis_id')
       .eq('user_id', userId);
     if (error) throw error;
@@ -177,7 +178,7 @@ export async function unshareFromFeed(analysisId: string, userId: string): Promi
   if (!client) return false;
   try {
     const { error } = await (client as any)
-      .from('community_posts')
+      .from(TABLES.community_posts)
       .delete()
       .eq('analysis_id', analysisId)
       .eq('user_id', userId);
@@ -194,7 +195,7 @@ export async function addReaction(postId: string, userId: string, emoji: string)
   if (!client) return false;
   try {
     const { error } = await (client as any)
-      .from('post_reactions')
+      .from(TABLES.post_reactions)
       .insert({ post_id: postId, user_id: userId, emoji });
     if (error?.code === '23505') return false;
     if (error) throw error;
@@ -211,7 +212,7 @@ export async function removeReaction(postId: string, userId: string, emoji: stri
   if (!client) return false;
   try {
     const { error } = await (client as any)
-      .from('post_reactions')
+      .from(TABLES.post_reactions)
       .delete()
       .eq('post_id', postId)
       .eq('user_id', userId)

@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { TABLES } from './tables';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { getSupabaseClient as getSupabase } from './supabaseClient';
@@ -30,14 +31,14 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       referralsResult,
       paymentsResult,
     ] = await Promise.all([
-      client.from('profiles').select('*').eq('id', userId).single(),
-      client.from('analyses').select('*').eq('user_id', userId),
-      client.from('subscriptions').select('*').eq('user_id', userId),
-      client.from('user_subscriptions').select('*').eq('user_id', userId),
-      client.from('check_ins').select('*').eq('user_id', userId),
-      client.from('community_posts').select('*').eq('user_id', userId),
-      client.from('referrals').select('*').eq('referrer_id', userId),
-      client.from('payments').select('*').eq('user_id', userId),
+      client.from(TABLES.profiles).select('*').eq('id', userId).single(),
+      client.from(TABLES.analyses).select('*').eq('user_id', userId),
+      client.from(TABLES.subscriptions).select('*').eq('user_id', userId),
+      client.from(TABLES.user_subscriptions).select('*').eq('user_id', userId),
+      client.from(TABLES.check_ins).select('*').eq('user_id', userId),
+      client.from(TABLES.community_posts).select('*').eq('user_id', userId),
+      client.from(TABLES.referrals).select('*').eq('referrer_id', userId),
+      client.from(TABLES.payments).select('*').eq('user_id', userId),
     ]);
 
     return {
@@ -126,7 +127,7 @@ export async function deleteUserData(userId: string): Promise<{ success: boolean
     }
 
     const { error: profileError } = await client
-      .from('profiles')
+      .from(TABLES.profiles)
       .delete()
       .eq('id', userId);
 
@@ -150,7 +151,7 @@ export async function anonymizeUserData(userId: string): Promise<{ success: bool
   try {
     const anonUsername = `anon_${Date.now()}`;
     const { error } = await client
-      .from('profiles')
+      .from(TABLES.profiles)
       .update({
         username: anonUsername,
         display_name: 'Anonymous User',

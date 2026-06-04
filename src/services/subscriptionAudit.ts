@@ -2,6 +2,7 @@
 // the Subscription Audit tool (Supabase `subscriptions` table). This is unrelated
 // to billing / paid tiers — see services/subscriptions.ts for that.
 import { Subscription } from '@/types';
+import { TABLES } from './tables';
 import { getSupabase } from './supabaseClient';
 
 export async function getSubscriptions(userId: string): Promise<Subscription[]> {
@@ -9,7 +10,7 @@ export async function getSubscriptions(userId: string): Promise<Subscription[]> 
   if (!client) return [];
   try {
     const { data, error } = await (client as any)
-      .from('subscriptions')
+      .from(TABLES.subscriptions)
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -33,7 +34,7 @@ export async function saveSubscription(userId: string, sub: Omit<Subscription, '
   if (!client) return null;
   try {
     const { data, error } = await (client as any)
-      .from('subscriptions')
+      .from(TABLES.subscriptions)
       .insert({ user_id: userId, ...sub })
       .select('id')
       .single();
@@ -50,7 +51,7 @@ export async function deleteSubscription(userId: string, subId: string): Promise
   if (!client) return false;
   try {
     const { error } = await (client as any)
-      .from('subscriptions')
+      .from(TABLES.subscriptions)
       .delete()
       .eq('id', subId)
       .eq('user_id', userId);

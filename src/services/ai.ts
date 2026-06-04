@@ -3,6 +3,7 @@
 // generate-captions) and validates the response against a shared Zod schema.
 // Mocked in dev via @/config/ai so the frontend never burns API credits in QA.
 import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
+import { TABLES } from './tables';
 import { FinalAnalysis, CaptionResponse, ActionPlanResponse, UserContext } from '@shared/types';
 import { RoastTone } from '@/types';
 import { USE_AI_MOCKS } from '@/config/ai';
@@ -171,7 +172,7 @@ async function runActionPlan(
   try {
     if (analysisId) {
       const { data: row } = await (client as any)
-        .from('analyses')
+        .from(TABLES.analyses)
         .select('action_plan')
         .eq('id', analysisId)
         .single();
@@ -200,7 +201,7 @@ async function runActionPlan(
 
     if (analysisId) {
       await (client as any)
-        .from('analyses')
+        .from(TABLES.analyses)
         .update({ action_plan: parsed.data })
         .eq('id', analysisId);
     }
@@ -228,7 +229,7 @@ export async function fetchOrGenerateCaptions(
   try {
     if (analysisId) {
       const { data: row } = await (client as any)
-        .from('analyses')
+        .from(TABLES.analyses)
         .select('share_captions')
         .eq('id', analysisId)
         .single();
@@ -261,7 +262,7 @@ export async function fetchOrGenerateCaptions(
 
     if (analysisId) {
       await (client as any)
-        .from('analyses')
+        .from(TABLES.analyses)
         .update({ share_captions: parsed.data })
         .eq('id', analysisId);
     }
