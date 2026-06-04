@@ -61,6 +61,10 @@ const sheetModal = {
   sheetGrabberVisible: true,
   sheetAllowedDetents: [0.9] as number[], // ~90% tall — dimmed parent peeks (~10%); grabber forced visible
   sheetCornerRadius: 24,
+  // Single detent → no scroll-to-expand. Off lets the inner ScrollView scroll on its
+  // own; otherwise the formSheet's gesture eats the scroll when the ScrollView isn't
+  // the screen's first child (RNScreens #2687/#3092 — our ScreenBackground is first).
+  sheetExpandsWhenScrolledToEdge: false,
 };
 
 // UI/navigation chrome → Heroicons (active = solid, inactive = outline). Category/
