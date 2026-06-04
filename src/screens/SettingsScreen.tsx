@@ -1,8 +1,10 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Switch,
+  View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Alert, Linking, ActivityIndicator, Animated,
 } from 'react-native';
+import Constants from 'expo-constants';
+import Toggle from '@/components/Toggle';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -153,8 +155,9 @@ export default function SettingsScreen({ navigation }: Props) {
     );
   };
 
+  // No "Profile" row here — Settings is reached *through* Profile, so linking back
+  // would be circular.
   const accountRows: SettingRow[] = [
-    { type: 'nav', label: 'Profile', icon: 'person-outline', onPress: () => navigation.navigate('Profile') },
     { type: 'nav', label: 'Subscription', icon: 'card-outline', detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
       if (!user) {
         setPendingRedirect('Paywall');
@@ -167,6 +170,10 @@ export default function SettingsScreen({ navigation }: Props) {
     }},
     ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: 'trending-up-outline', onPress: () => navigation.navigate('CreatorDashboard') }] : []),
   ];
+
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const buildNumber = Constants.expoConfig?.ios?.buildNumber;
+  const versionLabel = `Version ${appVersion}${buildNumber ? ` (${buildNumber})` : ''}`;
 
   const SECTIONS: { title: string; rows: SettingRow[] }[] = [
     {
@@ -198,7 +205,7 @@ export default function SettingsScreen({ navigation }: Props) {
       title: 'Support',
       rows: [
         { type: 'nav', label: 'Help & FAQ', icon: 'help-circle-outline', onPress: () => navigation.navigate('HelpFAQ') },
-        { type: 'nav', label: 'Privacy Policy', icon: 'lock-closed-outline', onPress: () => showLegal('privacy') },
+        { type: 'nav', label: 'Privacy Policy', icon: 'shield-checkmark-outline', onPress: () => showLegal('privacy') },
         { type: 'nav', label: 'Terms of Service', icon: 'document-text-outline', onPress: () => showLegal('terms') },
         { type: 'nav', label: 'Rate Am I Broke?', icon: 'star-outline', onPress: () => Linking.openURL('https://apps.apple.com/app/am-i-broke/id123456789') },
       ],
@@ -229,15 +236,6 @@ export default function SettingsScreen({ navigation }: Props) {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* App version header */}
-        <View style={styles.appInfo}>
-          <View style={styles.appIcon}>
-            <Text style={styles.appIconEmoji}>💸</Text>
-          </View>
-          <Text style={styles.appName}>Am I Broke?</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
-        </View>
-
         {SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -265,7 +263,7 @@ export default function SettingsScreen({ navigation }: Props) {
                       </View>
                       <View style={styles.cellRight}>
                         {row.type === 'toggle' && (
-                          <Switch
+                          <Toggle
                             value={toggles[row.key as keyof typeof toggles]}
                             onValueChange={(v) => {
                               if (row.key === 'monthlyReminder') onToggleReminder(v);
@@ -273,9 +271,6 @@ export default function SettingsScreen({ navigation }: Props) {
                               else if (row.key === 'haptics') onToggleHaptics(v);
                               else if (row.key === 'faceID') onToggleFaceID(v);
                             }}
-                            trackColor={{ false: Colors.backgroundSecondary, true: Colors.primarySolid }}
-                            thumbColor="#fff"
-                            ios_backgroundColor={Colors.backgroundSecondary}
                           />
                         )}
                         {row.type === 'action' && gdprLoading === row.label.toLowerCase().split(' ')[0] && (
@@ -302,6 +297,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
           </View>
         ))}
+        <Text style={styles.versionFooter}>{versionLabel}</Text>
       </ScrollView>
     </Animated.View>
   );
@@ -310,16 +306,13 @@ export default function SettingsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm },
-  appInfo: { alignItems: 'center', marginBottom: Spacing.xxl, paddingTop: Spacing.sm },
-  appIcon: {
-    width: 72, height: 72, borderRadius: Radius.xxl,
-    backgroundColor: Colors.primaryContainer,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.sm,
+  versionFooter: {
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.caption1.fontSize,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
   },
-  appIconEmoji: { fontSize: 32 },
-  appName: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
-  appVersion: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginTop: 2 },
   section: { marginBottom: Spacing.xxl },
   sectionTitle: {
     fontFamily: Typography.fonts.bodyMed,
