@@ -42,7 +42,7 @@ export function profileUpdateFromValues(values: ContextValues): Record<string, s
 }
 
 // Human label: money ranges get $ + en-dash; categorical → Title Case.
-function labelFor(opt: string): string {
+export function labelFor(opt: string): string {
   if (opt === 'none') return 'None';
   const money = (t: string) => `$${t}`;
   if (opt.startsWith('under_')) return `Under ${money(opt.slice(6))}`;

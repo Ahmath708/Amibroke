@@ -54,13 +54,13 @@ export default function DashboardScreen({ navigation }: Props) {
   const [firstName, setFirstName] = useState('');
   const firstLoad = useRef(true);
 
-  // Name for the greeting — display_name, else the @username (first token only).
+  // Name for the greeting — onboarding first_name, else display_name / @username (first token).
   useEffect(() => {
     if (!user) { setFirstName(''); return; }
     getProfile(user.id)
       .then((p) => {
-        const name = (p?.display_name || p?.username || '').trim();
-        const first = name ? name.split(/\s+/)[0] : '';
+        const fromName = (p?.display_name || p?.username || '').trim().split(/\s+/)[0];
+        const first = (p?.first_name?.trim()) || fromName || '';
         setFirstName(capitalize(first));
       })
       .catch(() => {});

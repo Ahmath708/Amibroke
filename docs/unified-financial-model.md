@@ -104,9 +104,24 @@ Replace "latest analysis" reads with snapshot reads:
   flavor: state, age, housing, employment) — *not* the precise ledger.
 - The **snapshot** is the merge target = the one "current state" everything reads.
 
+### 1.6 Analyze endpoint changes (Phase 2)
+The output already carries per-field confidence (`monthlyIncome/monthlyExpenses/liquidSavings`
+are `NumberWithConfidence`), so this is additive, not a rewrite:
+- **Provenance (DECIDED — option B):** add an explicit `source: 'user_stated' | 'inferred'` to
+  each key number, and give `debts` a `source`/`confidence` too (today they have none). The
+  snapshot's per-field `confidence` (`stated`/`estimated`) maps directly from this. Additive +
+  optional so cached analyses still validate.
+- **Input:** enrich the request with the snapshot's known **exact** figures; prompt treats
+  exact as ground truth (exact > bracket), marks inferred numbers `inferred`, and restates a
+  field the user says changed as `user_stated`.
+- **Merge:** a shared confident-merge fn (cross-runtime, like `planRevision`) maps the output
+  → snapshot; runs client-side (after analyze) for v1, server-side later for authority.
+- **Safety:** it's our most-used PAID endpoint — prompt/schema changes are eval-tested (rule #1)
+  before deploy; the merge *wraps* analyze, doesn't rewrite it.
+
 ---
 
-## 2. Mandatory onboarding (post-login) — seeds the snapshot
+## 2. Mandatory onboarding (post-login)
 
 Right after account creation, a **mandatory, digestible, multi-step** flow that captures
 identity + a financial baseline, so the first roast and every feature are accurate.
@@ -123,28 +138,26 @@ The current Financial Context is a single long form (overwhelming + skippable). 
 back/next. Brackets = taps (fast = high completion); precise numbers come naturally from the
 first roast's free text, so onboarding stays short.
 
-### 2.3 The steps
-1. **Name** — First + Last (new `profiles.first_name` / `last_name`). Personal; powers the
-   greeting ("Good morning, {first}") and tone.
-2. **Where you live** — state (`ctx_state`) → drives regional cost-of-living baselines.
-3. **Age** — `ctx_age_bracket`.
-4. **Housing** — renting / owning / with family / dorm / other (`ctx_living_situation`).
-5. **Employment** — full-time / part-time / self-employed / student / between jobs
-   (`ctx_employment_status`).
-6. **Income** — monthly bracket chips (mandatory) **+ an optional "enter exact $" field**.
-   Exact → stored `stated` (the bracket derived from it); bracket-only → `estimated` (midpoint).
-7. **Debt** — total bracket (`ctx_debt_bracket`); "none" short-circuits debt follow-ups.
-   (Optional exact entry, same pattern as income.)
-8. **Savings** — liquid bracket (`ctx_liquid_savings_bracket`). (Optional exact entry.)
+### 2.3 The steps (~5 grouped screens)
+Related fields are grouped to cut the screen count; each screen = chips + a progress bar +
+"Continue" disabled until answered; all mandatory.
+1. **Name** — First + Last (new `profiles.first_name` / `last_name`). Powers the greeting
+   ("Good morning, {first}") + tone.
+2. **About you** — state (`ctx_state`) + age (`ctx_age_bracket`).
+3. **Your situation** — housing (`ctx_living_situation`) + employment (`ctx_employment_status`).
+4. **Income** — monthly bracket (`ctx_income_bracket`).
+5. **Debt & savings** — total-debt bracket (`ctx_debt_bracket`; "none" skips follow-ups) +
+   liquid-savings bracket (`ctx_liquid_savings_bracket`).
 
-(Steps 2–8 are exactly the existing `CONTEXT_FIELDS`, just **mandatory** and **paginated**.)
+(Steps 2–5 are the existing `CONTEXT_FIELDS`, grouped + made mandatory. The optional **exact-$
+entry** on income/debt/savings is **Phase 2** — it needs the snapshot to store a precise value.)
 
-### 2.4 What onboarding writes
-- `profiles`: `first_name`, `last_name`, all `ctx_*`, `onboarded = true`.
-- **Seeds the snapshot**: bracket-only answers → `estimated` midpoints (income `4k_6k` →
-  ~$5,000/mo; debt `5k_15k` → ~$10,000); any exact entry → `stated` value (+ derived bracket).
-  Features get a real baseline immediately; the first roast then refines via confident merge
-  (§1.3) — overwriting estimates with stated numbers but never downgrading a stated exact entry.
+### 2.4 What onboarding writes (Phase 1)
+- `profiles`: `first_name`, `last_name`, all `ctx_*`, `onboarded = true`. **That's it for Phase
+  1 — no snapshot yet.**
+- In **Phase 2**, `financial_snapshots` is created and *seeded* from these brackets
+  (→ `estimated` midpoints), then refined by the first roast via confident-merge (§1.3).
+  Phase-1 onboarding already improves accuracy: the brackets flow into the roast prompt as today.
 
 ### 2.5 Why mandatory + brackets (not exact figures)
 - **Mandatory** → no user lands on a roast/feature with zeroed context; advice is tuned from
@@ -187,12 +200,15 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
 
 ## 5. Phasing
 
-- **Phase 1 — onboarding (ships value alone):** the staged mandatory flow (names + split
-  context) + write `profiles` + seed snapshot estimates. Immediately improves first-roast
-  accuracy + unlocks the greeting; no feature-read changes yet.
-- **Phase 2 — the snapshot as source of truth:** `financial_snapshots` table + write from
-  roast/check-in/manual; migrate **Active Plan** (staleness vs snapshot) and **Debt Payoff**
-  (read `snapshot.debts`) off "latest roast."
+- **Phase 1 — onboarding (ships value alone):** ~5 grouped mandatory steps (name + brackets) →
+  write `profiles` (`first_name`, `last_name`, `ctx_*`, `onboarded`). Unlocks the first-name
+  greeting + flows brackets into the roast prompt (better accuracy). **No snapshot, no
+  exact-entry, no feature-read changes** — all deferred to Phase 2.
+- **Phase 2 — the snapshot as source of truth:** create `financial_snapshots`; seed from the
+  Phase-1 brackets (`estimated`) + add the optional **exact-$ entry**; write from roast
+  (confident-merge with the new `source` field) + check-in/manual; migrate **Active Plan**
+  (staleness vs snapshot) and **Debt Payoff** (read `snapshot.debts`) off "latest roast";
+  **grandfather** existing users (backfill from latest analysis) + define bracket midpoints.
 - **Phase 3 — tracked features:** Debt Payoff remembers the chosen strategy + tracks paydown
   across check-ins; Dashboard/captions read the snapshot; retire the per-roast `route.params`
   hand-offs.
