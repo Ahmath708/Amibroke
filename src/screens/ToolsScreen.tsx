@@ -13,7 +13,7 @@ import { TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { getAnalysisHistory, getAnalysisById } from '@/services/claudeApi';
+import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';

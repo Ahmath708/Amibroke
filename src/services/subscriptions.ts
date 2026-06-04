@@ -1,4 +1,4 @@
-import { getSupabase } from './claudeApi';
+import { getSupabase } from './supabaseClient';
 import { getCustomerInfo, tierFromCustomerInfo, isPurchasesConfigured } from './purchases';
 
 export interface SubscriptionRecord {

@@ -1,7 +1,8 @@
 ﻿import { useState, useCallback } from 'react';
 import { FinalAnalysis } from '@shared/types';
 import { RoastTone } from '@/types';
-import { analyzeFinancialSituation, saveAnalysis } from '@/services/claudeApi';
+import { analyzeFinancialSituation } from '@/services/ai';
+import { saveAnalysis } from '@/services/analyses';
 
 interface UseAnalysisResult {
   loading: boolean;

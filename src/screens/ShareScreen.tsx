@@ -13,7 +13,7 @@ import { getScoreBand } from '@shared/scoring/bands.ts';
 import StatusPill from '@/components/StatusPill';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
-import { fetchOrGenerateCaptions } from '@/services/claudeApi';
+import { fetchOrGenerateCaptions } from '@/services/ai';
 import type { CaptionResponse } from '@shared/types';
 
 type Props = { route: RouteProp<RootStackParamList, 'Share'> };

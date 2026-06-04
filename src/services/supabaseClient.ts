@@ -47,3 +47,17 @@ export function getSupabaseClient(): SupabaseClient | null {
   }
   return client;
 }
+
+// Tests can inject a mock client; otherwise the data services use the shared
+// authenticated client above. Kept here so there's one injection point every
+// data module (ai, analyses, profile, community, …) shares.
+let testClient: SupabaseClient | null = null;
+
+export function __setSupabaseForTests(c: SupabaseClient | null) {
+  testClient = c;
+}
+
+/** The client the data services use — the injected test mock if set, else the shared client. */
+export function getSupabase(): SupabaseClient | null {
+  return testClient ?? getSupabaseClient();
+}

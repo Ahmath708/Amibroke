@@ -7,9 +7,8 @@ import { Colors, Typography, Spacing } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
 import { AnalysisHistoryItem } from '@/types';
-import {
-  getAnalysisHistory, getAnalysisById, getMySharedAnalysisIds, shareToFeed, unshareFromFeed,
-} from '@/services/claudeApi';
+import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
+import { getMySharedAnalysisIds, shareToFeed, unshareFromFeed } from '@/services/community';
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';

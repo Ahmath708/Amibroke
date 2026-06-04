@@ -6,7 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { PressableScale } from '@/components/motion';
 import { Colors } from '@/theme/colors';
 import { useAuth } from '@/context/AuthContext';
-import { getProfile } from '@/services/claudeApi';
+import { getProfile } from '@/services/profile';
 
 /**
  * The account avatar (Cash App-style top-right). Self-fetches the user's avatar so

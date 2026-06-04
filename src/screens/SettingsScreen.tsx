@@ -23,7 +23,8 @@ import { isBiometricAvailable, isLockEnabled, setLockEnabled, authenticate } fro
 import { useSubscription } from '@/hooks/useSubscription';
 import { manageSubscriptions } from '@/services/purchases';
 import { PURCHASE_PRODUCTS } from '@/types';
-import { getCheckinConfig, getCheckIns, deleteAllAnalyses } from '@/services/claudeApi';
+import { getCheckinConfig, getCheckIns } from '@/services/checkins';
+import { deleteAllAnalyses } from '@/services/analyses';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import {
   requestNotificationPermission, scheduleCheckinReminder, cancelCheckinReminders,

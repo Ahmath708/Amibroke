@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackActions, useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { Subscription } from '@/types';
-import { getSubscriptions, saveSubscription, deleteSubscription } from '@/services/claudeApi';
+import { getSubscriptions, saveSubscription, deleteSubscription } from '@/services/subscriptionAudit';
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';

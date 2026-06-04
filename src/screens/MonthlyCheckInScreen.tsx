@@ -17,10 +17,8 @@ import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import {
-  getCheckinConfig, saveCheckinConfig, getCheckIns, saveCheckIn,
-  getAnalysisHistory, getAnalysisById,
-} from '@/services/claudeApi';
+import { getCheckinConfig, saveCheckinConfig, getCheckIns, saveCheckIn } from '@/services/checkins';
+import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import { getCheckinReminderEnabled, scheduleCheckinReminder } from '@/services/notifications';

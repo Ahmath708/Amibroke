@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, AnalysisHistoryItem } from '@/types';
 import { Colors, Spacing } from '@/theme/colors';
-import { getAnalysesPage, getAnalysisById } from '@/services/claudeApi';
+import { getAnalysesPage, getAnalysisById } from '@/services/analyses';
 import { useAuth } from '@/context/AuthContext';
 import AnalysisRow from '@/components/AnalysisRow';
 import ScreenBackground from '@/components/ScreenBackground';

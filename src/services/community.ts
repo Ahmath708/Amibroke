@@ -1,0 +1,226 @@
+// Community feed — keyset-paginated post listing, sharing/unsharing a roast, and
+// reactions (Supabase `community_posts` + `post_reactions` tables).
+import { CommunityPost } from '@/types';
+import { getSupabase } from './supabaseClient';
+import { getProfile } from './profile';
+
+export type FeedSort = 'recent' | 'trending' | 'lowest';
+/** Opaque keyset cursor — the caller just stores it and passes it back. */
+export interface FeedCursor { createdAt: string; score: number; count: number; }
+export interface FeedPage { posts: CommunityPost[]; nextCursor: FeedCursor | null; hasMore: boolean; }
+
+/**
+ * One page of the community feed, ordered + keyset-paginated server-side per tab:
+ *   recent   → created_at DESC                       (created_at is the unique cursor)
+ *   lowest   → score ASC, created_at ASC             (composite — score has heavy ties)
+ *   trending → reaction_count DESC, created_at DESC  (composite — counts have heavy ties)
+ * Fetches limit+1 to detect `hasMore` with no count query. created_at is double-quoted
+ * inside the composite .or() so its timezone "+" survives URL encoding.
+ */
+export async function getCommunityFeed(
+  opts: { sort?: FeedSort; userId?: string; cursor?: FeedCursor | null; limit?: number } = {},
+): Promise<FeedPage> {
+  const { sort = 'recent', userId, cursor = null, limit = 20 } = opts;
+  const empty: FeedPage = { posts: [], nextCursor: null, hasMore: false };
+  const client = getSupabase();
+  if (!client) return empty;
+  try {
+    let query = (client as any).from('community_posts').select('*');
+
+    if (sort === 'lowest') {
+      query = query.order('score', { ascending: true }).order('created_at', { ascending: true });
+      if (cursor) query = query.or(`score.gt.${cursor.score},and(score.eq.${cursor.score},created_at.gt."${cursor.createdAt}")`);
+    } else if (sort === 'trending') {
+      query = query.order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
+      if (cursor) query = query.or(`reaction_count.lt.${cursor.count},and(reaction_count.eq.${cursor.count},created_at.lt."${cursor.createdAt}")`);
+    } else {
+      query = query.order('created_at', { ascending: false });
+      if (cursor) query = query.lt('created_at', cursor.createdAt);
+    }
+    query = query.limit(limit + 1);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const rows = data || [];
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+
+    let posts: CommunityPost[] = pageRows.map((p: any) => ({
+      id: p.id,
+      user_id: p.user_id,
+      display_name: p.display_name,
+      score: p.score,
+      score_label: p.score_label,
+      roast: p.roast,
+      summary: p.summary,
+      reactions: p.reactions || {},
+      created_at: p.created_at,
+      my_reactions: [],
+    }));
+
+    if (userId && posts.length) {
+      const ids = posts.map((p) => p.id);
+      const { data: myReactions } = await (client as any)
+        .from('post_reactions')
+        .select('post_id, emoji')
+        .eq('user_id', userId)
+        .in('post_id', ids);
+      const reactMap: Record<string, string[]> = {};
+      (myReactions || []).forEach((r: any) => { (reactMap[r.post_id] ||= []).push(r.emoji); });
+      posts = posts.map((p) => ({ ...p, my_reactions: reactMap[p.id] || [] }));
+    }
+
+    const last: any = pageRows[pageRows.length - 1];
+    const nextCursor: FeedCursor | null = hasMore && last
+      ? { createdAt: last.created_at, score: last.score, count: last.reaction_count ?? 0 }
+      : null;
+
+    return { posts, nextCursor, hasMore };
+  } catch (error) {
+    console.warn('Failed to fetch community feed:', error);
+    return empty;
+  }
+}
+
+/** Authoritative reaction state for a single post — used to patch one card after an
+ *  optimistic reaction fails, without resetting the whole paginated feed. */
+export async function getPostReactions(
+  postId: string,
+  userId?: string,
+): Promise<{ reactions: Record<string, number>; my_reactions: string[] } | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  try {
+    const { data, error } = await (client as any)
+      .from('community_posts')
+      .select('reactions')
+      .eq('id', postId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    let my_reactions: string[] = [];
+    if (userId) {
+      const { data: mine } = await (client as any)
+        .from('post_reactions')
+        .select('emoji')
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+      my_reactions = (mine || []).map((r: any) => r.emoji);
+    }
+    return { reactions: data.reactions || {}, my_reactions };
+  } catch (error) {
+    console.warn('Failed to fetch post reactions:', error);
+    return null;
+  }
+}
+
+export async function shareToFeed(
+  userId: string,
+  analysisId: string,
+  score: number,
+  scoreLabel: string,
+  roast: string,
+  summary: string,
+  shareCaptions?: any[],
+): Promise<string | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  try {
+    const profile = await getProfile(userId);
+    const displayName = profile?.username
+      ? `anon_${profile.username.slice(0, 8)}`
+      : `anon_${userId.slice(0, 8)}`;
+    const { data, error } = await (client as any)
+      .from('community_posts')
+      .insert({
+        user_id: userId,
+        analysis_id: analysisId,
+        display_name: displayName,
+        score,
+        score_label: scoreLabel,
+        roast,
+        summary,
+        share_captions: shareCaptions || null,
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+    return data.id;
+  } catch (error) {
+    console.warn('Failed to share to feed:', error);
+    return null;
+  }
+}
+
+/** Analysis IDs the user currently has live in the community feed (drives the share manager toggles). */
+export async function getMySharedAnalysisIds(userId: string): Promise<string[]> {
+  const client = getSupabase();
+  if (!client) return [];
+  try {
+    const { data, error } = await (client as any)
+      .from('community_posts')
+      .select('analysis_id')
+      .eq('user_id', userId);
+    if (error) throw error;
+    return (data || []).map((r: any) => r.analysis_id).filter(Boolean);
+  } catch (error) {
+    console.warn('Failed to fetch shared analysis ids:', error);
+    return [];
+  }
+}
+
+/** Remove the user's post for an analysis from the feed (RLS allows deleting own posts;
+ *  post_reactions cascade-delete, so reactions are lost — re-sharing starts fresh). */
+export async function unshareFromFeed(analysisId: string, userId: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await (client as any)
+      .from('community_posts')
+      .delete()
+      .eq('analysis_id', analysisId)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.warn('Failed to unshare from feed:', error);
+    return false;
+  }
+}
+
+export async function addReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await (client as any)
+      .from('post_reactions')
+      .insert({ post_id: postId, user_id: userId, emoji });
+    if (error?.code === '23505') return false;
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.warn('Failed to add reaction:', error);
+    return false;
+  }
+}
+
+export async function removeReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await (client as any)
+      .from('post_reactions')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .eq('emoji', emoji);
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.warn('Failed to remove reaction:', error);
+    return false;
+  }
+}

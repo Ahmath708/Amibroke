@@ -29,7 +29,8 @@ import ScreenBackground from '@/components/ScreenBackground';
 import Toast from '@/components/Toast';
 
 import { useAuth } from '@/context/AuthContext';
-import { saveAnalysis, shareToFeed } from '@/services/claudeApi';
+import { saveAnalysis } from '@/services/analyses';
+import { shareToFeed } from '@/services/community';
 import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
 
@@ -232,7 +233,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
             <NeonButton
               label="View 90-Day Action Plan"
               onPress={async () => {
-                const { fetchOrGenerateActionPlan } = await import('@/services/claudeApi');
+                const { fetchOrGenerateActionPlan } = await import('@/services/ai');
                 const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
                 navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage });
               }}

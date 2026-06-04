@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
-import { analyzeFinances } from '@/services/claudeApi';
+import { analyzeFinances } from '@/services/ai';
 import { useAuth } from '@/context/AuthContext';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { trackFunnelStep, trackError } from '@/services/analytics';

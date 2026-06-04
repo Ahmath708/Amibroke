@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
-import { getCheckinConfig, getCheckIns } from '@/services/claudeApi';
+import { getCheckinConfig, getCheckIns } from '@/services/checkins';
 import { CheckinConfig, CheckIn, EMPTY_CHECKIN_CONFIG } from '@/types';
 import { dueStatus } from '@/utils/checkinSchedule';
 

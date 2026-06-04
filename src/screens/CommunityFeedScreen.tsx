@@ -21,7 +21,7 @@ import StatusPill from '@/components/StatusPill';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
-import { getCommunityFeed, getPostReactions, addReaction, removeReaction, FeedSort, FeedCursor } from '@/services/claudeApi';
+import { getCommunityFeed, getPostReactions, addReaction, removeReaction, FeedSort, FeedCursor } from '@/services/community';
 import ScreenBackground from '@/components/ScreenBackground';
 import ShareManagerSheet from '@/components/ShareManagerSheet';
 import { useAuth } from '@/context/AuthContext';

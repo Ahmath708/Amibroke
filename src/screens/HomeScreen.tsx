@@ -21,7 +21,7 @@ import { getScoreBand } from '@shared/scoring/bands.ts';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
 import TypingPlaceholder from '@/components/TypingPlaceholder';
-import { getAnalysisHistory } from '@/services/claudeApi';
+import { getAnalysisHistory } from '@/services/analyses';
 import { useAuth } from '@/context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { ContextValues, CTX_COLUMNS, valuesFromProfile } from '@/components/FinancialContextForm';

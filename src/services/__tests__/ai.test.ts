@@ -1,6 +1,7 @@
 jest.mock('@/config/ai', () => ({ USE_AI_MOCKS: false }));
 
-import * as claudeApi from '@/services/claudeApi';
+import { fetchOrGenerateActionPlan } from '@/services/ai';
+import { __setSupabaseForTests } from '@/services/supabaseClient';
 
 const mockAnalysis = { score: 65, scoreLabel: 'Surviving', summary: 'test' } as any;
 const mockTone = 'savage' as const;
@@ -29,7 +30,7 @@ describe('fetchOrGenerateActionPlan', () => {
       single: jest.fn().mockResolvedValue({ data: { action_plan: null }, error: null }),
       update: jest.fn().mockReturnThis(),
     });
-    claudeApi.__setSupabaseForTests({
+    __setSupabaseForTests({
       functions: { invoke: mockInvoke },
       from: mockFrom,
     } as any);
@@ -44,7 +45,7 @@ describe('fetchOrGenerateActionPlan', () => {
       update: jest.fn().mockReturnThis(),
     });
 
-    const result = await claudeApi.fetchOrGenerateActionPlan(mockAnalysis, mockTone, 'analysis-1');
+    const result = await fetchOrGenerateActionPlan(mockAnalysis, mockTone, 'analysis-1');
 
     expect(result).toEqual(savedPlan);
     expect(mockInvoke).not.toHaveBeenCalled();
@@ -54,7 +55,7 @@ describe('fetchOrGenerateActionPlan', () => {
     const apiPlan = { overallMessage: 'Generated plan', steps: makeSteps(4) };
     mockInvoke.mockResolvedValue({ data: apiPlan, error: null });
 
-    const result = await claudeApi.fetchOrGenerateActionPlan(mockAnalysis, mockTone, 'analysis-1');
+    const result = await fetchOrGenerateActionPlan(mockAnalysis, mockTone, 'analysis-1');
 
     expect(mockInvoke).toHaveBeenCalledWith('action-plan', { body: { analysis: mockAnalysis, tone: mockTone } });
     expect(result).toEqual(apiPlan);
@@ -63,7 +64,7 @@ describe('fetchOrGenerateActionPlan', () => {
   it('returns null when the edge function errors', async () => {
     mockInvoke.mockResolvedValue({ data: null, error: { message: 'API error' } });
 
-    const result = await claudeApi.fetchOrGenerateActionPlan(mockAnalysis, mockTone);
+    const result = await fetchOrGenerateActionPlan(mockAnalysis, mockTone);
 
     expect(result).toBeNull();
   });
