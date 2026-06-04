@@ -19,10 +19,16 @@ interface Props {
   onOpenAnalysis: (id: string) => void;
 }
 
-const BAR_MAX_H = 104;
-const BAR_W = 14;
-const BAR_GAP = 3;
-const SLOT_GAP = 10;
+// Scaled up from the original (104/14/10) for readability.
+const BAR_MAX_H = 140;
+const BAR_W = 20;
+const BAR_GAP = 4;
+const SLOT_GAP = 13;
+const LABEL_SPACE = 22; // vertical room above a full-height bar for its score
+
+// Chart frame: 'anchored' = a frameless hero chart with a faint baseline under
+// the bars (vs 'card' = elevated card, 'frameless' = no surface at all).
+const FRAME: 'card' | 'frameless' | 'anchored' = 'anchored';
 
 const FILTER_LABELS: Record<Granularity, string> = { year: 'Year', month: 'Month', week: 'Week', day: 'Day' };
 // Drill target when an aggregate (collapsed) slot is tapped.
@@ -51,8 +57,8 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
     }
   };
 
-  return (
-    <GlassCard style={styles.card}>
+  const content = (
+    <>
       {/* Granularity filter */}
       <View style={styles.segment}>
         {GRANULARITIES.map((g) => {
@@ -94,11 +100,13 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
           </Text>
         </View>
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <View style={styles.chartWrap}>
+          {FRAME === 'anchored' && <View style={styles.baseline} pointerEvents="none" />}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
           {slots.map((slot, i) => (
             <View key={i} style={[styles.slot, { marginLeft: i === 0 ? 0 : slotGap }]}>
               <View style={styles.barsRow}>
@@ -115,11 +123,7 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
                         activeOpacity={0.7}
                         style={[styles.barCol, { marginLeft: j === 0 ? 0 : BAR_GAP }]}
                       >
-                        {bar.kind === 'aggregate' ? (
-                          <Text style={styles.badge}>×{bar.count}</Text>
-                        ) : (
-                          <Text style={[styles.barScore, { color }]}>{bar.score}</Text>
-                        )}
+                        <Text style={[styles.barScore, { color }]}>{bar.score}</Text>
                         <LinearGradient colors={[color, color + '55']} style={[styles.bar, { height: h }]} />
                       </TouchableOpacity>
                     );
@@ -137,15 +141,24 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
             </View>
           ))}
         </ScrollView>
+        </View>
       )}
-    </GlassCard>
+    </>
   );
+
+  if (FRAME === 'card') {
+    return <GlassCard style={styles.card}>{content}</GlassCard>;
+  }
+  return <View style={styles.cardFrameless}>{content}</View>;
 }
 
 const hit = { top: 8, bottom: 8, left: 8, right: 8 };
 
 const styles = StyleSheet.create({
   card: { padding: Spacing.lg, marginBottom: Spacing.xxl },
+  cardFrameless: { marginBottom: Spacing.xxl },
+  chartWrap: { position: 'relative' },
+  baseline: { position: 'absolute', left: 0, right: 0, top: 18 + BAR_MAX_H + LABEL_SPACE, height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator },
   segment: {
     flexDirection: 'row', backgroundColor: Colors.backgroundSecondary,
     borderRadius: Radius.md, padding: 3, marginBottom: Spacing.md,
@@ -159,17 +172,17 @@ const styles = StyleSheet.create({
   navArrow: { fontSize: 26, color: Colors.primary, fontWeight: '300', lineHeight: 28 },
   navArrowDisabled: { color: Colors.textMuted, opacity: 0.4 },
   navLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
-  emptyChart: { height: BAR_MAX_H + 40, alignItems: 'center', justifyContent: 'center' },
+  emptyChart: { height: BAR_MAX_H + 48, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'flex-end', paddingTop: 16 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'flex-end', paddingTop: 18 },
   slot: { alignItems: 'center' },
-  barsRow: { flexDirection: 'row', alignItems: 'flex-end', height: BAR_MAX_H + 14 },
+  barsRow: { flexDirection: 'row', alignItems: 'flex-end', height: BAR_MAX_H + LABEL_SPACE },
   barCol: { alignItems: 'center', justifyContent: 'flex-end' },
-  bar: { width: BAR_W, borderRadius: 5 },
-  barScore: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, fontWeight: '700', marginBottom: 3 },
-  badge: { fontFamily: Typography.fonts.bodySemi, fontSize: 8, fontWeight: '700', color: Colors.textSecondary, marginBottom: 3 },
+  bar: { width: BAR_W, borderRadius: 6 },
+  barScore: { fontFamily: Typography.fonts.bodySemi, fontSize: 13, fontWeight: '700', marginBottom: 3 },
+  badge: { fontFamily: Typography.fonts.bodySemi, fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 3 },
   emptyTick: { width: BAR_W, height: 3, borderRadius: 2, backgroundColor: Colors.separator },
-  slotLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: 10, color: Colors.textSecondary, marginTop: 6 },
-  slotSublabel: { fontFamily: Typography.fonts.body, fontSize: 9, color: Colors.textMuted, marginTop: 1 },
+  slotLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: 13, color: Colors.textSecondary, marginTop: 6 },
+  slotSublabel: { fontFamily: Typography.fonts.body, fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   slotLabelMuted: { color: Colors.textMuted, opacity: 0.5 },
 });

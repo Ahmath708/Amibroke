@@ -126,11 +126,12 @@ export function timeLabel(d: Date): string {
 const round = (n: number) => Math.round(n);
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
-/** Collapse a slot's entries to bars, applying the overflow threshold. */
+/** A day's entries → a SINGLE bar: the lone entry, or (when >1) one merged bar
+ *  at the AVERAGE score carrying a ×N count. */
 function barsFor(entries: ChartEntry[]): ChartBar[] {
   if (entries.length === 0) return [];
-  if (entries.length <= COLLAPSE_THRESHOLD) {
-    return entries.map((e) => ({ kind: 'entry', score: e.score, id: e.id }));
+  if (entries.length === 1) {
+    return [{ kind: 'entry', score: entries[0].score, id: entries[0].id }];
   }
   return [{ kind: 'aggregate', score: round(avg(entries.map((e) => e.score))), count: entries.length }];
 }
