@@ -39,6 +39,10 @@ type AuthContextType = {
   refreshProfile: () => void;
 };
 
+// DEV ONLY: force the onboarding gate on so the flow always shows (for iterating on it).
+// Never ships — gated on __DEV__. Set to false to get past onboarding into the app.
+const DEV_FORCE_ONBOARDING = __DEV__ && true;
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -58,7 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase.from(TABLES.profiles).select('username, onboarded').eq('id', u.id).maybeSingle();
       const row = data as { username?: string; onboarded?: boolean } | null;
       setNeedsUsername(!row?.username);
-      setNeedsOnboarding(!row?.onboarded);
+      // DEV ONLY: always show onboarding so the flow can be iterated. NOTE: finishing it
+      // loops you straight back here — set this false (or remove) to get into the app.
+      // Never ships (gated on __DEV__).
+      setNeedsOnboarding(DEV_FORCE_ONBOARDING ? true : !row?.onboarded);
     } catch {
       setNeedsUsername(false);
       setNeedsOnboarding(false);
