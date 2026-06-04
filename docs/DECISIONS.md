@@ -54,7 +54,8 @@ plan that locks for 90 days and is tracked against regardless of re-roasts (need
 an `active_plan` concept: which analysis + a start date + a re-roast rule).
 Conceptually nicer for a "journey," but a meaningful build (schema + flow). Chosen
 to defer; revisit when there's time. A locked plan also goes stale as finances
-change, which is the main argument for A.
+change, which is the main argument for A. **Full architecture (deterministic engine +
+commodity Claude, competitor-researched) is specced in `docs/active-plan-design.md`.**
 
 ## Subscription Product Spec (2026-05-29)
 
