@@ -182,14 +182,4 @@ const styles = StyleSheet.create({
   cta: {
     marginBottom: Spacing.lg,
   },
-  skipBtn: {
-    alignSelf: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  skipText: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.callout.fontSize,
-    color: Colors.textMuted,
-  },
 });

@@ -344,12 +344,6 @@ const styles = StyleSheet.create({
   },
   platformEmoji: { fontSize: 24 },
   platformName: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center' },
-  shareTextBox: {
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.xl,
-  },
-  shareTextContent: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
   nativeShareBtn: {
     backgroundColor: Colors.primaryContainer, borderRadius: Radius.xl,
     paddingVertical: Spacing.lg, alignItems: 'center',

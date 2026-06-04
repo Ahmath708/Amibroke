@@ -30,7 +30,6 @@ export const neonPalette = {
 
   // ── Separators ──
   separator: 'rgba(255, 255, 255, 0.10)',
-  separatorOpaque: '#2d1f30',
 
   // ── Labels (iOS label hierarchy) ──
   textPrimary: '#eeddee', // label
@@ -51,8 +50,6 @@ export const neonPalette = {
   primarySolid: A.solid,
   // Demoted: no longer co-equal brand neons. Kept as muted/semantic supports.
   secondary: '#9fb6c2', // was neon cyan — demoted to a neutral info-blue
-  secondaryContainer: 'rgba(159, 182, 194, 0.16)',
-  secondarySolid: '#6f93a3',
   tertiary: A.tint, // collapse the old hot-pink role into the accent family
   tertiaryContainer: A.container,
   tertiarySolid: A.solid,
@@ -73,11 +70,6 @@ export const neonPalette = {
 
   // ── Gradients ──
   gradientPrimary: [A.gradient[0], A.gradient[1]] as [string, string],
-  gradientScore: [A.gradient[0], A.gradient[1]] as [string, string],
-  gradientCyan: ['#00e0ff', '#0080ff'] as [string, string],
-  gradientDanger: ['#e7006e', '#ff4500'] as [string, string],
-  gradientSuccess: ['#39FF14', '#00e0ff'] as [string, string],
-  gradientDark: ['#19101c', '#1f0a2e'] as [string, string],
 };
 
 export type Palette = typeof neonPalette;

@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
   barCol: { alignItems: 'center', justifyContent: 'flex-end' },
   bar: { width: BAR_W, borderRadius: 6 },
   barScore: { fontFamily: Typography.fonts.bodySemi, fontSize: 13, fontWeight: '700', marginBottom: 3 },
-  badge: { fontFamily: Typography.fonts.bodySemi, fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 3 },
   emptyTick: { width: BAR_W, height: 3, borderRadius: 2, backgroundColor: Colors.separator },
   slotLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: 13, color: Colors.textSecondary, marginTop: 6 },
   slotSublabel: { fontFamily: Typography.fonts.body, fontSize: 11, color: Colors.textMuted, marginTop: 1 },

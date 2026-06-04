@@ -36,12 +36,6 @@ export const Typography = {
   footnote:    { fontSize: 13, fontWeight: '400' as const, letterSpacing: -0.08 },
   caption1:    { fontSize: 12, fontWeight: '400' as const, letterSpacing: 0 },
   caption2:    { fontSize: 11, fontWeight: '400' as const, letterSpacing: 0.06 },
-  // Additional screen-specific sizes
-  hero:        { fontSize: 42, fontWeight: '700' as const },
-  heroSmall:   { fontSize: 32, fontWeight: '700' as const },
-  heroLarge:   { fontSize: 56, fontWeight: '700' as const },
-  display:     { fontSize: 72, fontWeight: '700' as const, letterSpacing: -3 },
-  stepTitle:   { fontSize: 26, fontWeight: '700' as const },
   // Expressive redesign headers — oversized + TIGHT negative tracking (the Gen-Z
   // "hyper-bold anchor" look), deliberately distinct from the iOS-default positive
   // tracking above. Use as the one dominant headline per screen.
@@ -56,10 +50,8 @@ export const Spacing = {
   lg:  16,   // standard iOS margin
   xl:  20,   // content inset
   xxl: 24,
-  section: 35,
   rowHeight: 44,   // min iOS touch target
   rowHeightLg: 56,
-  tabBarHeight: 49,
 };
 
 // ── Radius ────────────────────────────────────────────────────────────────────

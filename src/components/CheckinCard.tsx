@@ -62,7 +62,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentContainer,
     alignItems: 'center', justifyContent: 'center',
   },
-  dueEmoji: { fontSize: 20 },
   dueText: { flex: 1 },
   dueTitle: { fontFamily: Typography.fonts.heading, fontSize: 16, color: Colors.textPrimary, letterSpacing: -0.2, marginBottom: 2 },
   dueBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },

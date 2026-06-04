@@ -227,7 +227,6 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5, shadowRadius: 20, elevation: 10,
   },
-  centerEmoji: {},
   stepText: {
     fontFamily: Typography.fonts.bodyMed,
     fontSize: Typography.headline.fontSize, color: Colors.textPrimary, textAlign: 'center',

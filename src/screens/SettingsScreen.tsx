@@ -339,11 +339,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   iconBadgeDanger: { backgroundColor: Colors.dangerContainer },
-  cellIcon: { fontSize: Typography.callout.fontSize },
   cellLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   cellLabelDanger: { color: Colors.danger },
   cellDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
   cellRight: { marginLeft: Spacing.sm },
-  chevronBtn: { padding: 4 },
   chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
 });

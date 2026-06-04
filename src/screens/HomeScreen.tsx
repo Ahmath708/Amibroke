@@ -390,7 +390,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   settingsBtn: { marginTop: Spacing.xs, alignItems: 'center' },
-  settingsIcon: { fontSize: Typography.title2.fontSize },
   loginHint: { fontFamily: Typography.fonts.bodyMed, fontSize: 10, color: Colors.primary, marginTop: 2 },
   pageSubtitle: {
     fontFamily: Typography.fonts.body,
@@ -424,7 +423,6 @@ const styles = StyleSheet.create({
   clearBtn: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
   micBtn: { padding: Spacing.xs },
   micBtnActive: { backgroundColor: Colors.primaryContainer, borderRadius: Radius.pill },
-  micIcon: { fontSize: Typography.subhead.fontSize },
   chipsScrollWrap: { position: 'relative', marginHorizontal: -Spacing.xl, marginBottom: Spacing.xl },
   chipsFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 36 },
   chipsContent: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },

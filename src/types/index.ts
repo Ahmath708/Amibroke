@@ -8,14 +8,6 @@ export type FinancialAnalysis = _FinalAnalysis;
 export type DebtItem = _DebtItem;
 export type ActionStep = _ActionStep;
 
-export interface HistorySnapshot {
-  id: string;
-  date: string;
-  score: number;
-  scoreLabel: string;
-  summary: string;
-}
-
 export interface AnalysisHistoryItem {
   id: string;
   score: number;

@@ -159,6 +159,5 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
   },
   rowName: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
-  rowCode: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   empty: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textMuted, textAlign: 'center', padding: Spacing.xl },
 });

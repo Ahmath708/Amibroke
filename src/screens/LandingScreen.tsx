@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,8 +16,6 @@ import { enterUp } from '@/components/motion';
 import { trackFunnelStep } from '@/services/analytics';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Landing'> };
-
-const { width } = Dimensions.get('window');
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 

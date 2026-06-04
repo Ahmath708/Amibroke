@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Share, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Animated,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';

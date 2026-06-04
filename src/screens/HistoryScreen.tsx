@@ -213,17 +213,8 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: Spacing.xl },
-  largeTitle: {
-    fontFamily: Typography.fonts.heading,
-    ...Typography.largeTitle,
-    color: Colors.textPrimary, marginBottom: Spacing.xs,
-  },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
   signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
-  versionNote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginBottom: Spacing.lg, fontStyle: 'italic' },
-  periodEmpty: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, paddingVertical: Spacing.lg, textAlign: 'center' },
-  viewAll: { alignSelf: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
-  viewAllText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.primary, fontWeight: '600' },
   newCheckinBtn: {
     marginTop: Spacing.lg, alignItems: 'center', justifyContent: 'center',
     minHeight: 44, paddingVertical: Spacing.md,
@@ -239,22 +230,11 @@ const styles = StyleSheet.create({
   rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 70 },
   historyRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
   historyInfo: { flex: 1, gap: Spacing.xs },
-  historyMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   historyDate: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
-  historyVerdict: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, fontWeight: '600', flexShrink: 1 },
-  historyDelta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
   historySummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
-  chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
   checkinEmoji: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
   },
   checkinEmojiText: { fontSize: Typography.title2.fontSize },
-  historyEmoji: { fontSize: Typography.subhead.fontSize, marginLeft: 2 },
-  historyBadges: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  historyBadge: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.primary,
-    backgroundColor: Colors.primaryContainer, paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: Radius.pill, overflow: 'hidden',
-  },
 });

@@ -332,7 +332,6 @@ export default function ProfileScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
   largeTitle: {
     fontFamily: Typography.fonts.heading,
     ...Typography.largeTitle,
@@ -388,14 +387,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryContainer,
     alignItems: 'center', justifyContent: 'center',
   },
-  menuIcon: { fontSize: Typography.subhead.fontSize },
   menuLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  menuIconBadgeLocked: { backgroundColor: Colors.backgroundSecondary },
-  toolText: { flex: 1 },
-  toolLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  toolLabelLocked: { color: Colors.textMuted },
-  lockHint: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.primary, marginTop: 2 },
-  soonTag: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, letterSpacing: 0.3 },
   menuRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   menuDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   menuChevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
