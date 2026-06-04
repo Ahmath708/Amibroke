@@ -54,6 +54,15 @@ import { TAB_BAR_HEIGHT, TAB_ROW_HEIGHT, TAB_FLOAT_MARGIN } from '@/navigation/c
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
 
+// Modern iOS sheet-style modal (RNScreens UISheetPresentationController): a swipe-down
+// sheet with a visible grabber + rounded top, so the user can see it dismisses by drag.
+const sheetModal = {
+  presentation: 'formSheet' as const,
+  sheetGrabberVisible: true,
+  sheetAllowedDetents: [1.0] as number[], // full-height sheet; grabber forced visible
+  sheetCornerRadius: 24,
+};
+
 // UI/navigation chrome → Heroicons (active = solid, inactive = outline). Category/
 // decorative icons elsewhere stay on Ionicons (Heroicons doesn't cover them).
 const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: React.ComponentType<any> }> = {
@@ -154,7 +163,7 @@ function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <IOSTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, animation: 'shift' }}
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Tools" component={ToolsScreen} />
@@ -225,9 +234,9 @@ export default function AppNavigator() {
             <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
             <Stack.Screen name="AllAnalyses" component={AllAnalysesScreen} options={{ ...sharedHeader, headerShown: true, title: 'All Roasts', animation: 'slide_from_right' }} />
             <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
-            <Stack.Screen name="Share" component={ShareScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Share Result' }} />
-            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal', ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
+            <Stack.Screen name="Share" component={ShareScreen} options={{ ...sheetModal, ...sharedHeader, headerShown: true, title: 'Share Result' }} />
+            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ ...sheetModal, headerShown: false }} />
+            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sheetModal, ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
           </>
         )}
       </Stack.Navigator>

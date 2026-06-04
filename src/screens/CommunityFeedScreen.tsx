@@ -17,7 +17,7 @@ import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
 import { REACTION_EMOJIS, totalReactions } from '@/utils/reactions';
 import StatusPill from '@/components/StatusPill';
-import LoadingState from '@/components/LoadingState';
+import Skeleton from '@/components/Skeleton';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import { getCommunityFeed, getPostReactions, addReaction, removeReaction, FeedSort, FeedCursor } from '@/services/community';
@@ -258,7 +258,11 @@ export default function CommunityFeedScreen() {
         }
         ListEmptyComponent={
           loading ? (
-            <LoadingState style={{ paddingTop: 60 }} />
+            <View style={{ gap: Spacing.md, paddingTop: Spacing.sm }}>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} width="100%" height={120} radius={Radius.lg} />
+              ))}
+            </View>
           ) : error ? (
             <ErrorState message={error} onRetry={() => loadPage(true)} />
           ) : (

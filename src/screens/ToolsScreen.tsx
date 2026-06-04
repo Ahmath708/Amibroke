@@ -20,6 +20,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import PremiumCard from '@/components/PremiumCard';
 import TierPill from '@/components/TierPill';
+import Skeleton from '@/components/Skeleton';
 import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 
 type Props = { navigation: TabScreenNav<'Tools'> };
@@ -36,7 +37,7 @@ const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requi
 export default function ToolsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { tier, hasAccess, refresh } = useSubscription();
+  const { tier, hasAccess, refresh, loading: subLoading } = useSubscription();
   const { animatedStyle } = useEntryAnimation();
   const [latestId, setLatestId] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
@@ -100,7 +101,7 @@ export default function ToolsScreen({ navigation }: Props) {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>Tools</Text>
-            <TierPill tier={tier} />
+            {subLoading ? <Skeleton width={68} height={22} radius={11} /> : <TierPill tier={tier} />}
           </View>
           <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
         </View>

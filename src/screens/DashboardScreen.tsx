@@ -26,7 +26,7 @@ import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
 import NeonButton from '@/components/NeonButton';
-import LoadingState from '@/components/LoadingState';
+import Skeleton from '@/components/Skeleton';
 import HomeScreen from '@/screens/HomeScreen';
 
 type Props = { navigation: TabScreenNav<'Home'> };
@@ -103,7 +103,20 @@ export default function DashboardScreen({ navigation }: Props) {
     return (
       <View style={styles.container}>
         <ScreenBackground variant="home" />
-        <LoadingState style={{ paddingTop: insets.top + 100 }} />
+        <View style={[styles.scroll, { paddingTop: insets.top + Spacing.lg }]}>
+          <View style={styles.header}>
+            <View style={styles.greeting}>
+              <Skeleton width={110} height={13} style={{ marginBottom: Spacing.sm }} />
+              <Skeleton width={170} height={30} radius={9} />
+            </View>
+            <Skeleton width={40} height={40} radius={20} />
+          </View>
+          <View style={{ alignItems: 'center', marginTop: Spacing.xxl }}>
+            <Skeleton width={184} height={184} radius={92} />
+            <Skeleton width={130} height={14} style={{ marginTop: Spacing.lg }} />
+          </View>
+          <Skeleton width="100%" height={56} radius={16} style={{ marginTop: Spacing.xxl }} />
+        </View>
       </View>
     );
   }

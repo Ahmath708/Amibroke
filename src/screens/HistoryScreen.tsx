@@ -14,7 +14,7 @@ import { formatShortDate as fmtDate } from '@/utils/format';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
 import GlassCard from '@/components/GlassCard';
-import LoadingState from '@/components/LoadingState';
+import Skeleton from '@/components/Skeleton';
 import ErrorState from '@/components/ErrorState';
 import EmptyState from '@/components/EmptyState';
 import SectionLabel from '@/components/SectionLabel';
@@ -113,7 +113,15 @@ export default function HistoryScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <LoadingState style={{ paddingTop: insets.top + 80 }} />
+        <ScreenBackground variant="history" />
+        <View style={[styles.scroll, { paddingTop: insets.top + 16 }]}>
+          <Skeleton width={130} height={13} style={{ marginBottom: Spacing.lg }} />
+          <Skeleton width="100%" height={160} radius={16} style={{ marginBottom: Spacing.xxl }} />
+          <Skeleton width={100} height={13} style={{ marginBottom: Spacing.md }} />
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} width="100%" height={64} radius={12} style={{ marginBottom: Spacing.sm }} />
+          ))}
+        </View>
       </View>
     );
   }
