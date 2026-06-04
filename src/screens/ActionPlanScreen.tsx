@@ -11,7 +11,7 @@ import { RootStackParamList, ActionStep } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
-import MiniScoreRing from '@/components/MiniScoreRing';
+import AnimatedProgressRing from '@/components/AnimatedProgressRing';
 import { PressableScale } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
@@ -132,6 +132,7 @@ export default function ActionPlanScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [committing, setCommitting] = useState(false);
   const [revising, setRevising] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null); // step shown in the focal card
 
   // Candidate plan shown until one is committed (the generated/passed steps).
   const previewSteps: ActionStep[] = (rawSteps && rawSteps.length > 0)
@@ -212,11 +213,14 @@ export default function ActionPlanScreen({ route }: Props) {
   const delta = plan ? planDelta(plan.start_metrics, latest) : null;
   const bigPicture = isActive ? plan!.overall_message : overallMessage;
 
-  // Coach layout: one focal "this week" step + the rest split into up-next / done.
+  // Coach layout: one focal step + the rest split into up-next / done.
   const currentStep = firstPendingIndex >= 0 ? rows[firstPendingIndex] : null;
-  const upNext = rows.filter((s, i) => s.status !== 'done' && i !== firstPendingIndex);
+  // The focal card shows the SELECTED step (default = current); falls back to current if
+  // the selection was completed or no longer exists (so it self-resets after completion).
+  const focalStep = rows.find((s) => s.id === selectedId && s.status !== 'done') ?? currentStep;
+  const focalIsCurrent = !!focalStep && focalStep.id === currentStep?.id;
+  const upNext = rows.filter((s) => s.status !== 'done' && s.id !== focalStep?.id);
   const doneSteps = rows.filter((s) => s.status === 'done');
-  const score0 = plan?.start_metrics?.score ?? 0;
 
   // Contextual revise: only surface the update affordance when the latest check-in is a
   // material change (the deterministic gate) — not as a permanent CTA.
@@ -240,12 +244,12 @@ export default function ActionPlanScreen({ route }: Props) {
           /* Active plan — score-linked hero (the app's North Star + plan completion). */
           <View style={styles.heroBlock}>
             <View style={styles.heroRow}>
-              <MiniScoreRing score={score0} size={92} stroke={9} numberSize={30} />
+              <AnimatedProgressRing pct={prog!.pct} size={92} stroke={9} />
               <View style={styles.heroMeta}>
                 <Text style={styles.heroDay}>
                   Day {Math.min(prog!.daysIn + 1, plan!.horizon_days)}<Text style={styles.heroDayTotal}> of {plan!.horizon_days}</Text>
                 </Text>
-                <Text style={styles.heroDone}>{prog!.done} of {prog!.total} done · {prog!.pct}%</Text>
+                <Text style={styles.heroDone}>{prog!.done} of {prog!.total} steps done</Text>
                 <Text style={styles.heroNudge}>Finish the plan, watch your score climb.</Text>
               </View>
             </View>
@@ -271,6 +275,22 @@ export default function ActionPlanScreen({ route }: Props) {
           </GlassCard>
         )}
 
+        {/* Status — visible up top so staleness is obvious before scrolling. */}
+        {isActive && (canUpdate ? (
+          <PressableScale style={styles.updateBanner} onPress={update} haptic="light" disabled={revising}>
+            <View style={styles.updateBannerText}>
+              <Text style={styles.updateBannerTitle}>{revising ? 'Updating your plan…' : 'Your numbers changed'}</Text>
+              <Text style={styles.updateBannerSub}>Tap to update this plan to your latest check-in.</Text>
+            </View>
+            <ChevronRightIcon size={18} color={Colors.accent} />
+          </PressableScale>
+        ) : (
+          <View style={styles.statusFresh}>
+            <Text style={styles.statusFreshCheck}>✓</Text>
+            <Text style={styles.statusFreshText}>Your plan is up to date</Text>
+          </View>
+        ))}
+
         {bigPicture && (
           <GlassCard style={styles.overallMessageCard}>
             <Text style={styles.overallLabel}>The Big Picture</Text>
@@ -278,18 +298,18 @@ export default function ActionPlanScreen({ route }: Props) {
           </GlassCard>
         )}
 
-        <SectionLabel>This Week</SectionLabel>
-        {currentStep ? (
+        <SectionLabel>{focalIsCurrent ? 'This Week' : 'Coming Up'}</SectionLabel>
+        {focalStep ? (
           <GlassCard style={styles.focalCard}>
             <View style={styles.focalTop}>
-              <View style={styles.weekBadge}><Text style={styles.weekText}>{currentStep.week}</Text></View>
-              <View style={[styles.catDot, { backgroundColor: catColor(currentStep.category) }]} />
+              <View style={styles.weekBadge}><Text style={styles.weekText}>{focalStep.week}</Text></View>
+              <View style={[styles.catDot, { backgroundColor: catColor(focalStep.category) }]} />
             </View>
-            <Text style={styles.focalTitle}>{currentStep.title}</Text>
-            <Text style={styles.focalDesc}>{currentStep.description}</Text>
-            <Text style={styles.focalImpact} numberOfLines={2}>→ {currentStep.impact}</Text>
+            <Text style={styles.focalTitle}>{focalStep.title}</Text>
+            <Text style={styles.focalDesc}>{focalStep.description}</Text>
+            <Text style={styles.focalImpact} numberOfLines={2}>→ {focalStep.impact}</Text>
             {isActive && (
-              <NeonButton label="Mark this done" onPress={() => toggle(currentStep.id, false)} style={{ marginTop: Spacing.md }} />
+              <NeonButton label="Mark this done" onPress={() => toggle(focalStep.id, false)} style={{ marginTop: Spacing.md }} />
             )}
           </GlassCard>
         ) : (
@@ -301,15 +321,18 @@ export default function ActionPlanScreen({ route }: Props) {
 
         {upNext.length > 0 && <SectionLabel>Up Next</SectionLabel>}
         {upNext.map((step) => (
-          <TouchableOpacity
-            key={step.id} style={styles.compactRow}
-            onPress={isActive ? () => toggle(step.id, false) : undefined}
-            activeOpacity={isActive ? 0.7 : 1} disabled={!isActive}
-          >
-            <View style={[styles.compactDot, { backgroundColor: catColor(step.category) }]} />
-            <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
+          <View key={step.id} style={styles.compactRow}>
+            <TouchableOpacity
+              onPress={() => isActive && toggle(step.id, false)} disabled={!isActive}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }} activeOpacity={0.6}
+            >
+              <View style={styles.openCircle} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.compactTextHit} onPress={() => setSelectedId(step.id)} activeOpacity={0.7}>
+              <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
+            </TouchableOpacity>
             <Text style={styles.compactWeek}>{step.week}</Text>
-          </TouchableOpacity>
+          </View>
         ))}
 
         {doneSteps.length > 0 && <SectionLabel>Done</SectionLabel>}
@@ -323,16 +346,6 @@ export default function ActionPlanScreen({ route }: Props) {
             <Text style={[styles.compactTitle, styles.compactTitleDone]} numberOfLines={1}>{step.title}</Text>
           </TouchableOpacity>
         ))}
-
-        {isActive && canUpdate && (
-          <PressableScale style={styles.updateBanner} onPress={update} haptic="light" disabled={revising}>
-            <View style={styles.updateBannerText}>
-              <Text style={styles.updateBannerTitle}>{revising ? 'Updating your plan…' : 'Your numbers changed'}</Text>
-              <Text style={styles.updateBannerSub}>Update this plan to match your latest check-in.</Text>
-            </View>
-            <ChevronRightIcon size={18} color={Colors.accent} />
-          </PressableScale>
-        )}
 
         {isActive && (
           <TouchableOpacity onPress={restart} activeOpacity={0.7}>
@@ -372,14 +385,20 @@ const styles = StyleSheet.create({
   focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20 },
   focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: 2 },
 
-  // Compact up-next / done rows
+  // Compact up-next / done rows. Up Next: tap the ○ to complete, tap the row to view.
   compactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm + 2 },
-  compactDot: { width: 8, height: 8, borderRadius: 4 },
+  openCircle: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: Colors.accent, backgroundColor: 'transparent' },
+  compactTextHit: { flex: 1 },
   compactCheck: { width: 18, height: 18, borderRadius: 9, backgroundColor: Colors.accentSolid, alignItems: 'center', justifyContent: 'center' },
   compactCheckMark: { fontSize: 10, color: Colors.onAccent, fontWeight: '700' },
   compactTitle: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   compactTitleDone: { color: Colors.textMuted, textDecorationLine: 'line-through' },
   compactWeek: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
+
+  // Two-state status (top)
+  statusFresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.lg },
+  statusFreshCheck: { fontSize: Typography.footnote.fontSize, color: Colors.success, fontWeight: '700' },
+  statusFreshText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
 
   weekBadge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2, alignSelf: 'flex-start' },
   weekText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.accent },

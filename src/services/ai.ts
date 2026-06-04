@@ -169,14 +169,9 @@ export async function revisePlanPatch(
 ): Promise<RevisionPatch | null> {
   if (USE_AI_MOCKS) {
     await new Promise((r) => setTimeout(r, 500));
-    const firstPending = currentSteps.find((s) => s.status === 'pending');
-    return {
-      keep: currentSteps.filter((s) => s.id !== firstPending?.id).map((s) => s.id),
-      drop: [],
-      modify: firstPending ? [{ id: firstPending.id, title: `${firstPending.title} (updated)`, description: 'Adjusted to your latest numbers.' }] : [],
-      add: [],
-      overallMessage: 'Mock revision — tuned your plan to the latest check-in.',
-    };
+    // No-op patch: keep every step, change nothing. The flow just re-syncs the plan to
+    // the latest numbers (status → "up to date"); real Claude does genuine revisions.
+    return { keep: currentSteps.map((s) => s.id), drop: [], modify: [], add: [], overallMessage: '' };
   }
   const client = getSupabase();
   if (!client) return null;

@@ -38,6 +38,10 @@ export interface ActivePlan {
   overall_message: string | null;
   steps: ActivePlanStep[];
   start_metrics: PlanStartMetrics | null;
+  /** Metrics the plan currently REFLECTS (set at commit, re-set on revise). Staleness =
+   *  the latest snapshot differs materially from this. Falls back to start_metrics.
+   *  NOTE: prototype-only in dev/mock; prod persistence needs a DB column. */
+  synced_metrics?: PlanStartMetrics | null;
 }
 
 // ─── Deterministic progress (pure — no DB/LLM) ──────────────────────────────
@@ -94,7 +98,7 @@ export function isMaterialChange(start: PlanStartMetrics | null, now: RevisionSn
 export function shouldRevisePlan(plan: ActivePlan | null, now: RevisionSnapshot | null): { revise: boolean; reason: string } {
   if (!plan) return { revise: false, reason: 'no active plan — never auto-generate or call revise' };
   if (plan.status !== 'active') return { revise: false, reason: `plan status is ${plan.status}` };
-  if (!isMaterialChange(plan.start_metrics, now)) return { revise: false, reason: 'change below materiality threshold' };
+  if (!isMaterialChange(plan.synced_metrics ?? plan.start_metrics, now)) return { revise: false, reason: 'change below materiality threshold' };
   return { revise: true, reason: 'material change since the plan started' };
 }
 
@@ -143,7 +147,7 @@ export async function startPlan(
     mockPlan = {
       id: 'mock-plan', source_analysis_id: sourceAnalysisId, started_at: new Date().toISOString(),
       horizon_days: 90, status: 'active', version: 1, overall_message: overallMessage ?? null,
-      steps: planSteps, start_metrics,
+      steps: planSteps, start_metrics, synced_metrics: start_metrics,
     };
     return mockPlan;
   }
@@ -219,8 +223,10 @@ export async function reviseActivePlan(
   const revised: ActivePlan = {
     ...plan,
     steps: steps as unknown as ActivePlanStep[],
-    overall_message: patch.overallMessage ?? plan.overall_message,
+    // Keep the existing Big Picture when the patch message is empty (e.g. a no-op revision).
+    overall_message: patch.overallMessage?.trim() ? patch.overallMessage : plan.overall_message,
     version: plan.version + 1,
+    synced_metrics: snapshot, // the plan now reflects this snapshot → status flips to "up to date"
   };
 
   if (USE_AI_MOCKS) { mockPlan = revised; return { revised: true, reason: gate.reason, plan: revised }; }
