@@ -33,26 +33,33 @@ A single per-user record of the **current** numbers — distinct from `analyses`
 history) and `check_ins` (the progress time-series).
 
 ### 1.1 Shape
+Each **input** field carries its own provenance, so writes can MERGE confidently (never
+clobber a stated value with an estimate; never zero a field a roast was silent on — see §1.3).
+`value` is the **exact** number when known.
 ```
 financial_snapshot (one row per user)
   user_id
-  monthly_income        number        // precise current figures
-  monthly_expenses      number
-  monthly_savings       number        // income − expenses (derived, stored for reads)
-  liquid_savings        number
-  debts                 jsonb[]        // [{ id, name, balance, apr, min_payment }]
-  debt_total            number
-  // derived metrics (stored so features don't recompute):
-  savings_rate          number
-  emergency_fund_months number
-  debt_to_income        number
-  score                 number | null  // last roast's health score
-  // provenance — per snapshot, the most-recent authoritative write:
-  source                'onboarding' | 'roast' | 'checkin' | 'manual'
-  source_analysis_id    uuid | null
-  confidence            'estimated' | 'stated'   // onboarding=estimated, roast=stated
-  updated_at            timestamptz
+  // Input fields — { value, confidence: 'estimated'|'stated', source, source_analysis_id, updated_at }
+  monthly_income        Field<number>
+  monthly_expenses      Field<number>
+  liquid_savings        Field<number>
+  debts                 Field<[{ id, name, balance, apr, min_payment }]>
+  // Derived (recomputed on every write, stored so features don't recompute):
+  monthly_savings, savings_rate, emergency_fund_months, debt_to_income, debt_total
+  score                 number | null   // last roast's health score
 ```
+`source ∈ 'onboarding' | 'roast' | 'checkin' | 'manual'`. `confidence`: onboarding bracket →
+`estimated`; an exact entry or a roast-extracted figure → `stated`.
+
+**Exact-when-known, bracket as fallback.** The snapshot stores the **exact** figure; the
+coarse **bracket** lives on `profiles.ctx_*`. Whenever an exact value is set (onboarding's
+optional exact entry, or a roast that yields a precise number), we set the exact value **and
+re-derive the bracket** so the two never drift. The AI prompt **prefers the exact figure and
+falls back to the bracket** — accuracy scales with what the user gave us. (Generalizes to
+income, debt, and savings.)
+
+*(Storage of per-field provenance — JSONB per field vs parallel columns — is an open
+decision, §6.)*
 
 ### 1.2 Where it lives
 A new `financial_snapshots` table (one row/user, upserted), RLS own-row — `debts` as JSONB,
@@ -62,17 +69,23 @@ the metric set bloat the profile row and muddle "identity/personalization" with 
 ### 1.3 Write paths (who updates it)
 - **Onboarding** → seeds it once (coarse, `confidence: 'estimated'`) from the bracket answers
   (see §2). So the *first* roast and all features start from a real baseline, not zeros.
-- **Each roast** → overwrites with precise numbers from the `FinalAnalysis`
-  (`confidence: 'stated'`, `source: 'roast'`, `source_analysis_id`). A roast is a *full*
-  re-statement → it replaces.
-- **Each check-in** → *patches* only the fields the check-in touched (income/expenses/debt/
-  savings) + recomputes derived metrics; `source: 'checkin'`. A check-in is a *delta* → patch,
-  don't replace.
+- **Each roast** → **confidence-aware merge, NOT a blind overwrite.** For each field the roast
+  has signal for, update it only if its confidence ≥ the existing field's (a `stated` value is
+  never downgraded by an `estimated` one). Fields the roast is **silent on are kept** — a roast
+  about spending must not zero the user's debts. An *explicit* statement that a field changed
+  ("I paid off the card") is `stated` and updates it, including to 0. A roast that yields a
+  precise figure also re-derives the bracket (§1.1).
+- **Each check-in** → *patches* only the fields it touched (income/expenses/debt/savings) +
+  recomputes derived metrics; `source: 'checkin'`, `confidence: 'stated'`.
 - **Manual edit** (the Financial Context screen, or a future "edit my numbers") → patch.
 
-Reconciliation rule: **most-recent authoritative write wins per field**; a roast replaces the
-whole snapshot, a check-in/manual patches named fields. `updated_at` + `source` make every
-value traceable.
+Reconciliation rule: **per field, the higher-confidence + more-recent write wins; never
+downgrade `stated` → `estimated`; never overwrite a field with "no signal."** `updated_at` +
+`source` per field make every value traceable.
+
+Trade-off (accepted): confident-merge can retain a field that *silently* changed (e.g. debt
+cleared but unmentioned). Mitigated by check-ins, the edit surface, and the Active Plan's
+"your numbers changed?" prompt — and any explicit mention overrides immediately.
 
 ### 1.4 Read paths (who consumes it)
 Replace "latest analysis" reads with snapshot reads:
@@ -118,17 +131,20 @@ first roast's free text, so onboarding stays short.
 4. **Housing** — renting / owning / with family / dorm / other (`ctx_living_situation`).
 5. **Employment** — full-time / part-time / self-employed / student / between jobs
    (`ctx_employment_status`).
-6. **Income** — monthly bracket (`ctx_income_bracket`).
+6. **Income** — monthly bracket chips (mandatory) **+ an optional "enter exact $" field**.
+   Exact → stored `stated` (the bracket derived from it); bracket-only → `estimated` (midpoint).
 7. **Debt** — total bracket (`ctx_debt_bracket`); "none" short-circuits debt follow-ups.
-8. **Savings** — liquid bracket (`ctx_liquid_savings_bracket`).
+   (Optional exact entry, same pattern as income.)
+8. **Savings** — liquid bracket (`ctx_liquid_savings_bracket`). (Optional exact entry.)
 
 (Steps 2–8 are exactly the existing `CONTEXT_FIELDS`, just **mandatory** and **paginated**.)
 
 ### 2.4 What onboarding writes
 - `profiles`: `first_name`, `last_name`, all `ctx_*`, `onboarded = true`.
-- **Seeds the snapshot** (`source: 'onboarding'`, `confidence: 'estimated'`): brackets →
-  midpoint estimates (e.g. income `4k_6k` → ~$5,000/mo; debt `5k_15k` → ~$10,000). These give
-  features a real starting baseline; the first roast then overwrites with `'stated'` precision.
+- **Seeds the snapshot**: bracket-only answers → `estimated` midpoints (income `4k_6k` →
+  ~$5,000/mo; debt `5k_15k` → ~$10,000); any exact entry → `stated` value (+ derived bracket).
+  Features get a real baseline immediately; the first roast then refines via confident merge
+  (§1.3) — overwriting estimates with stated numbers but never downgrading a stated exact entry.
 
 ### 2.5 Why mandatory + brackets (not exact figures)
 - **Mandatory** → no user lands on a roast/feature with zeroed context; advice is tuned from
@@ -188,14 +204,18 @@ and the onboarding pagination. Bracket→estimate and the prompt personalization
 
 ## 6. Open decisions (resolve before building)
 
-- **Snapshot storage:** dedicated table (recommended) vs `profiles` columns.
-- **Bracket → number estimates:** midpoints, or store the bracket + a derived estimate? How is
-  `confidence: 'estimated'` surfaced to the user ("based on your rough estimates")?
+- **Snapshot storage:** dedicated table (recommended) vs `profiles` columns; and **per-field
+  provenance** layout — one JSONB object per field vs parallel columns
+  (`monthly_income`, `monthly_income_confidence`, `monthly_income_source`, …).
+- **Bracket → number estimates:** midpoint choice, and how `estimated` confidence is surfaced
+  ("based on your rough estimate"). Exact entries override the estimate + re-derive the bracket.
 - **Onboarding length:** 8 steps may still feel long — combine any (e.g. age+housing)? Which
   fields are truly mandatory vs "skip for now" (the spec says all mandatory)?
 - **Names:** required (per spec). Confirm display rules (first-name greeting; full name where?).
 - **Grandfathering:** auto-onboard existing users from history, or require the flow once?
-- **Reconciliation conflicts:** exact per-field "most-recent-source-wins" rules; does a roast
-  ever *not* fully replace (e.g. it omitted debts the user has)?
+- **Reconciliation (decided: confident merge, §1.3):** remaining edge — detecting that a field
+  *should* drop when it silently changed (e.g. debt cleared but unmentioned) without an
+  explicit statement. Lean on check-ins + the "your numbers changed?" prompt + the edit surface.
+  Also: how confidently must a roast "extract" a field before it counts as `stated`?
 - **Re-onboard / edit:** the Financial Context screen becomes "edit my profile + numbers" that
   patches the snapshot — confirm that's the single edit surface.
