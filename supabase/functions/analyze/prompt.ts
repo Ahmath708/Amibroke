@@ -62,6 +62,18 @@ The user message contains a \`baselines\` object with reference numbers for the 
 
 The baselines are not absolute truths. The user's own statements always override them.
 
+# Keep income, expenses, and monthly savings consistent
+
+These are linked by one identity: monthly savings = monthlyIncome − monthlyExpenses.
+- If the user states their income AND how much they save / set aside PER MONTH ("I save $200/mo",
+  "I put $500 into savings each month"), set monthlyExpenses = monthlyIncome − that monthly savings
+  amount, with monthlyExpenses source "user_stated" — it follows directly from two stated numbers.
+  Do NOT infer expenses independently in that case; an under-guess would silently inflate their
+  savings rate and contradict what they told you.
+- A stated savings BALANCE ("$5k saved", "$80k in savings") is liquidSavings, NOT a monthly amount —
+  do not use it here.
+- Only infer expenses from baselines when the user gives you no way to pin down their actual saving.
+
 # CFPB question set — return 10 responses with confidence each
 
 For each question below, choose a 0-4 value AND a confidence label based on how much direct signal the user's input gave you about that life dimension.
