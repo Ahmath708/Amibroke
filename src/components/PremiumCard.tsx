@@ -1,25 +1,27 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronRightIcon } from 'react-native-heroicons/outline';
+import { WrenchScrewdriverIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 interface Props {
   onPress: () => void;
   style?: ViewStyle;
-  /** 'go' = free→premium upsell; 'upgrade' = action_plan→Deep Dive. */
+  /** 'go' = free→first paid tier; 'upgrade' = action_plan→Deep Dive. */
   variant?: 'go' | 'upgrade';
 }
 
+// Benefit-led, not "Go Premium" (there's no "Premium" plan — tiers are Action
+// Plan / Deep Dive). Frames the upsell as the fix for the roast.
 const COPY = {
-  go: { title: '💎 Go Premium', body: 'Unlock your Action Plan, debt tools & deep-dive insights.' },
-  upgrade: { title: '💎 Upgrade to Deep Dive', body: 'Add the scenario simulator, debt comparison & PDF report.' },
+  go: { title: 'Fix your finances', body: 'Your 90-day plan, debt payoff & deep-dive insights.' },
+  upgrade: { title: 'Upgrade to Deep Dive', body: 'Scenario simulator, debt comparison & PDF report.' },
 };
 
 /**
- * Premium upsell banner — the screen's one accent moment: an elevated surface
- * with a subtle accent wash + a bold accent title (follows the swappable accent).
+ * Upsell banner — the screen's one accent moment: elevated surface + subtle
+ * accent wash, a wrench badge ("fix"), and a benefit-led accent title.
  */
 export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
   const copy = COPY[variant];
@@ -31,6 +33,9 @@ export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.banner}
       >
+        <View style={styles.iconBadge}>
+          <WrenchScrewdriverIcon size={18} color={Colors.accent} />
+        </View>
         <View style={styles.textWrap}>
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.body}>{copy.body}</Text>
@@ -43,10 +48,15 @@ export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
 
 const styles = StyleSheet.create({
   banner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     borderRadius: Radius.lg, padding: Spacing.lg,
     backgroundColor: Colors.surfaceElevated, // elevated base under the accent wash
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+  },
+  iconBadge: {
+    width: 40, height: 40, borderRadius: Radius.md,
+    backgroundColor: Colors.accentContainer,
+    alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md,
   },
   textWrap: { flex: 1, marginRight: Spacing.sm },
   title: { fontFamily: Typography.fonts.heading, fontSize: 18, color: Colors.accent, letterSpacing: -0.3, marginBottom: Spacing.xs },

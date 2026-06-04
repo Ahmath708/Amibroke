@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View, StyleSheet, ViewStyle } from 'react-native';
-import { ChevronRightIcon } from 'react-native-heroicons/outline';
+import { ChevronRightIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
@@ -28,7 +28,7 @@ export default function CheckinCard({ onPress, style }: Props) {
     return (
       <PressableScale onPress={onPress} haptic="light" style={style}>
         <View style={styles.dueCard}>
-          <View style={styles.iconBadge}><Text style={styles.dueEmoji}>📅</Text></View>
+          <View style={styles.iconBadge}><CalendarIcon size={20} color={Colors.accent} /></View>
           <View style={styles.dueText}>
             <Text style={styles.dueTitle}>Your {monthName} check-in is ready</Text>
             <Text style={styles.dueBody}>Update your numbers and see your progress.</Text>

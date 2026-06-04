@@ -1,13 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Image,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { PressableScale, enterUp } from '@/components/motion';
 import Svg, { Polyline } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
-  UserIcon, ArrowUpIcon, ArrowDownIcon, ArrowLongRightIcon, ChevronRightIcon, WrenchScrewdriverIcon,
+  ArrowUpIcon, ArrowDownIcon, ArrowLongRightIcon, ChevronRightIcon, WrenchScrewdriverIcon,
 } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,11 +15,12 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { getAnalysisHistory, getAnalysisById, getProfile } from '@/services/claudeApi';
+import { getAnalysisHistory, getAnalysisById } from '@/services/claudeApi';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import StatusPill from '@/components/StatusPill';
 import ScoreRing from '@/components/ScoreRing';
+import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
 import NeonButton from '@/components/NeonButton';
@@ -39,7 +39,6 @@ export default function DashboardScreen({ navigation }: Props) {
   const { tier } = useSubscription();
 
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const firstLoad = useRef(true);
@@ -48,11 +47,7 @@ export default function DashboardScreen({ navigation }: Props) {
     if (!user) { setLoading(false); return; }
     if (!silent) setLoading(true);
     try {
-      const [profile, hist] = await Promise.all([
-        getProfile(user.id),
-        getAnalysisHistory(user.id),
-      ]);
-      setAvatarUri(profile?.avatar_url ?? null);
+      const hist = await getAnalysisHistory(user.id);
       setHistory(hist ?? []);
     } catch {
       // keep whatever we had
@@ -127,13 +122,7 @@ export default function DashboardScreen({ navigation }: Props) {
         {/* Header: wordmark + avatar → Profile */}
         <ReAnimated.View entering={enterUp(0)} style={styles.header}>
           <Text style={styles.wordmark}>Am I Broke?</Text>
-          <PressableScale onPress={() => navigation.navigate('Profile')} haptic="light">
-            <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
-              {avatarUri
-                ? <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-                : <UserIcon size={18} color={Colors.onAccent} />}
-            </LinearGradient>
-          </PressableScale>
+          <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
         </ReAnimated.View>
 
         {/* Score hero — focal glow on the home score; tap to reopen your latest roast */}
