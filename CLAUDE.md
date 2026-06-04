@@ -64,7 +64,7 @@ src/
   context/AuthContext    Supabase client, session, OAuth (PKCE), RevenueCat identity sync
   hooks/                 useAnalysis, useSubscription, useVoiceInput, useShare, useDebtStrategy…
   services/              Data/IO layer (see below)
-  config/                ai.ts (mocks flag), features.ts (flags), scoring.ts (weights/bands)
+  config/                ai.ts (mocks flag), features.ts (flags) — scoring lives in shared/scoring/
   theme/colors.ts        Design tokens: Colors, Typography, Spacing, Radius
   types/index.ts         App-wide types incl. RootStackParamList & PURCHASE_PRODUCTS
   __fixtures__/          Sample data for dev mocks
@@ -92,7 +92,7 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
 - `subscriptions.ts` — tier/entitlement logic; reads RevenueCat (DB `user_subscriptions` as mirror)
 - `purchases.ts` — RevenueCat SDK wrapper (configure/login/offerings/purchase/restore/manage). **Guarded:** no key → app runs as free tier
 - `analytics.ts` — PostHog init + event helpers
-- `scoring.ts` / `moderation.ts` / `gdpr.ts` / `creator.ts` / `offlineCache.ts`
+- `moderation.ts` / `gdpr.ts` / `creator.ts` / `offlineCache.ts`
 
 ### `supabase/functions/` (Deno)
 - `analyze` — generate the financial analysis (Claude/Groq)
@@ -113,6 +113,39 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
 - **File references in chat:** use clickable markdown links, e.g. `[file.ts:42](src/file.ts#L42)`.
 - **`tsconfig` excludes** `supabase/` and `tools/` (they're Deno/Node, not RN) — typecheck the
   app with `npx tsc --noEmit`.
+
+## Reuse & modularity rules (don't re-invent what exists)
+
+These are non-negotiable — they encode real mistakes found in audits. **Before writing a
+component, hook, util, or data call, grep for an existing one.** Specifically:
+
+1. **Reuse the existing primitives — never re-implement these:**
+   - Score ring → `components/ScoreRing.tsx` (don't hand-roll SVG `Circle`/dashoffset ring math).
+   - Subscription / entitlement gating → `useSubscription().hasAccess(cap)` / `.canUseApp`. Do **not**
+     call `getSubscription` + `canAccess` + `getTrialStatus` directly in a screen.
+   - Tappable rows/buttons → `components/motion/PressableScale` (press spring + haptic +
+     reduce-motion), not bare `TouchableOpacity`.
+   - Toggle → `components/Toggle.tsx`, never the RN `<Switch>`. Section headers → `SectionLabel`.
+   - Count-up numbers / entrance animations → `components/motion/*`.
+2. **Theme tokens only — no hardcoded values.** Colors/spacing/font-size/radius come from
+   `@/theme/colors`. Use the **`accent*`** token family for the brand accent (not the legacy
+   `primary*` aliases). Score-band labels/thresholds/colors come from `shared/scoring/bands.ts`
+   (`getScoreBand`) — never re-encode the 40/60/80 cutoffs or band hex anywhere else.
+3. **Motion via the system.** Use `components/motion/*` + `theme/motion.ts` tokens
+   (`Durations`/`Easings`/`Springs`). No inline `ms`/`bezier` literals, no hand-rolled `Animated`.
+4. **Data access only through services.** Screens/components must not touch Supabase tables
+   directly (`supabase.from('…')`). Go through the service modules (`ai`, `analyses`, `profile`,
+   `community`, `checkins`, `subscriptionAudit`). Every service uses the shared **`getSupabase()`**
+   from `supabaseClient.ts` (test-injectable) — never `getSupabaseClient` directly, never
+   `createClient`. All LLM/edge-function calls go through `services/ai.ts` (correct body shape:
+   `freeText` + `userContext` + `tone`) — never re-invoke `analyze`/`action-plan` elsewhere.
+5. **Modularize; keep the view layer thin.** One file = one concern (the 945-line `claudeApi.ts`
+   kitchen sink was split for this reason — don't recreate it). Financial/business logic belongs in
+   `shared/` or a service, not a screen. **Anything duplicated ≥ 3× (logic, JSX, or a literal)
+   gets extracted** into a shared util/hook/component/constant.
+6. **Leave it cleaner.** When you touch a file, delete its dead imports / unused `StyleSheet` keys /
+   dead exports rather than adding alongside them. Centralize reused literals (route names, table
+   names, brand strings, prices from `PURCHASE_PRODUCTS`) — one-off UI copy can stay inline.
 
 ## Testing
 
