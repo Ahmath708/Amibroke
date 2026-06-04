@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
 } from 'react-native';
@@ -15,7 +15,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { getAnalysisHistory, getAnalysisById } from '@/services/claudeApi';
+import { getAnalysisHistory, getAnalysisById, getProfile } from '@/services/claudeApi';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import StatusPill from '@/components/StatusPill';
@@ -33,6 +33,14 @@ type Props = { navigation: TabScreenNav<'Home'> };
 const SPARK_W = 140;
 const SPARK_H = 40;
 
+// Time-of-day greeting for the home header (warmer than a static wordmark).
+function timeGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -41,7 +49,20 @@ export default function DashboardScreen({ navigation }: Props) {
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
+  const [firstName, setFirstName] = useState('');
   const firstLoad = useRef(true);
+
+  // Name for the greeting — display_name, else the @username (first token only).
+  useEffect(() => {
+    if (!user) { setFirstName(''); return; }
+    getProfile(user.id)
+      .then((p) => {
+        const name = (p?.display_name || p?.username || '').trim();
+        const first = name ? name.split(/\s+/)[0] : '';
+        setFirstName(first ? first.charAt(0).toUpperCase() + first.slice(1) : '');
+      })
+      .catch(() => {});
+  }, [user]);
 
   const load = useCallback(async (silent = false) => {
     if (!user) { setLoading(false); return; }
@@ -119,9 +140,11 @@ export default function DashboardScreen({ navigation }: Props) {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.sm, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header: wordmark + avatar → Profile */}
+        {/* Header: time-aware greeting + avatar → Profile */}
         <ReAnimated.View entering={enterUp(0)} style={styles.header}>
-          <Text style={styles.wordmark}>Am I Broke?</Text>
+          <Text style={styles.wordmark} numberOfLines={2}>
+            {firstName ? `${timeGreeting()}, ${firstName}` : timeGreeting()}
+          </Text>
           <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
         </ReAnimated.View>
 
@@ -217,7 +240,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
-  wordmark: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
+  wordmark: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary, flex: 1, marginRight: Spacing.md },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarImg: { width: 38, height: 38, borderRadius: 19 },
   hero: { alignItems: 'center', marginBottom: Spacing.xl },
