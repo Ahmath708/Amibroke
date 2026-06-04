@@ -14,7 +14,7 @@ import {
   UserGroupIcon as CommunitySolid,
 } from 'react-native-heroicons/solid';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList, MainTabsParamList } from '@/types';
 import { Colors, Typography } from '@/theme/colors';
@@ -70,7 +70,7 @@ const PILL_RADIUS = 16;
 
 // A single icon-only tab. The active icon brightens + springs up a touch; the
 // sliding sub-pill (rendered once in the row) is what reads the focus.
-function TabBarButton({ route, focused, reduce, onPress }: any) {
+function TabBarButton({ route, focused, reduce, onPress }: { route: { name: string }; focused: boolean; reduce: boolean; onPress: () => void }) {
   const icons = TAB_ICONS[route.name];
   const scale = useSharedValue(1);
   useEffect(() => {
@@ -95,7 +95,7 @@ function TabBarButton({ route, focused, reduce, onPress }: any) {
   );
 }
 
-function IOSTabBar({ state, navigation }: any) {
+function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const reduce = useReducedMotion();
   const [rowWidth, setRowWidth] = useState(0);
@@ -128,7 +128,7 @@ function IOSTabBar({ state, navigation }: any) {
             onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}
           >
             <Animated.View pointerEvents="none" style={[tabStyles.pill, pillStyle]} />
-            {state.routes.map((route: any, index: number) => (
+            {state.routes.map((route, index) => (
               <TabBarButton
                 key={route.key}
                 route={route}
