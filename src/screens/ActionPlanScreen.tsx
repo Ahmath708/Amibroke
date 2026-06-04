@@ -35,14 +35,14 @@ const DEFAULT_STEPS: ActionStep[] = [
 ];
 
 const CATEGORY_CONFIG: Record<string, { bg: string; color: string }> = {
-  savings: { bg: 'rgba(52,199,89,0.15)', color: '#34C759' },
-  debt: { bg: 'rgba(255,69,58,0.15)', color: '#FF453A' },
-  income: { bg: 'rgba(0,122,255,0.15)', color: '#007AFF' },
-  mindset: { bg: 'rgba(175,82,222,0.15)', color: '#AF52DE' },
+  savings: { bg: Colors.successContainer, color: Colors.success },
+  debt: { bg: Colors.dangerContainer, color: Colors.danger },
+  income: { bg: Colors.infoContainer, color: Colors.info },
+  mindset: { bg: Colors.accentContainer, color: Colors.accent },
 };
 
 function catBg(cat: string): string {
-  return CATEGORY_CONFIG[cat]?.bg ?? 'rgba(255,255,255,0.07)';
+  return CATEGORY_CONFIG[cat]?.bg ?? Colors.glassBackground;
 }
 
 function generatePersonalizedSteps(analysis: any): ActionStep[] {

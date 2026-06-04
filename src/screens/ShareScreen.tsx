@@ -9,6 +9,7 @@ import { RouteProp, useNavigation } from '@react-navigation/native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { BRAND } from '@/config/brand';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import StatusPill from '@/components/StatusPill';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
@@ -53,7 +54,7 @@ export default function ShareScreen({ route }: Props) {
 
   const shareText = captionResponse?.captions?.[0]
     ? captionResponse.captions[0]
-    : `I scored ${analysis.score}/100 on Am I Broke? — "${analysis.roast}" Try it: aibroke.app`;
+    : `I scored ${analysis.score}/100 on Am I Broke? — "${analysis.roast}" Try it: ${BRAND.domain}`;
 
   const handleCopyCaption = async (text: string) => {
     try {
@@ -109,7 +110,7 @@ export default function ShareScreen({ route }: Props) {
   };
 
   const handleCopyLink = () => {
-    Alert.alert('Link Copied', 'Share this link: aibroke.app');
+    Alert.alert('Link Copied', `Share this link: ${BRAND.domain}`);
   };
 
   const PLATFORMS = [
@@ -213,7 +214,7 @@ export default function ShareScreen({ route }: Props) {
             </View>
 
             <View style={styles.shareCardFooter}>
-              <Text style={[styles.shareCardFooterText, { color: cardSubtextColor }]}>aibroke.app</Text>
+              <Text style={[styles.shareCardFooterText, { color: cardSubtextColor }]}>{BRAND.domain}</Text>
               <Text style={[styles.shareCardFooterDisclaimer, { color: cardSubtextColor }]}>Educational purposes only</Text>
             </View>
           </LinearGradient>

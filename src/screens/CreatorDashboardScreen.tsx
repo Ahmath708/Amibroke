@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { BRAND } from '@/config/brand';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
 import LoadingState from '@/components/LoadingState';
@@ -63,7 +64,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
   const handleShareCode = async () => {
     if (!referralCode) return;
     await Share.share({
-      message: `Roast your finances with Am I Broke! Use my code ${referralCode} for a personalized AI roast 🔥 aibroke.app`,
+      message: `Roast your finances with Am I Broke! Use my code ${referralCode} for a personalized AI roast 🔥 ${BRAND.domain}`,
     });
   };
 

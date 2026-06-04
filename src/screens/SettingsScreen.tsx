@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { FEATURES } from '@/config/features';
+import { BRAND } from '@/config/brand';
 import ScreenBackground from '@/components/ScreenBackground';
 import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
@@ -208,7 +209,7 @@ export default function SettingsScreen({ navigation }: Props) {
         { type: 'nav', label: 'Help & FAQ', icon: 'help-circle-outline', onPress: () => navigation.navigate('HelpFAQ') },
         { type: 'nav', label: 'Privacy Policy', icon: 'shield-checkmark-outline', onPress: () => showLegal('privacy') },
         { type: 'nav', label: 'Terms of Service', icon: 'document-text-outline', onPress: () => showLegal('terms') },
-        { type: 'nav', label: 'Rate Am I Broke?', icon: 'star-outline', onPress: () => Linking.openURL('https://apps.apple.com/app/am-i-broke/id123456789') },
+        { type: 'nav', label: 'Rate Am I Broke?', icon: 'star-outline', onPress: () => Linking.openURL(BRAND.appStoreUrl) },
       ],
     },
     {
