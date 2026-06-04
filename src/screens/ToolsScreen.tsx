@@ -118,7 +118,7 @@ export default function ToolsScreen({ navigation }: Props) {
               <PressableScale key={tool.label} style={styles.tile} onPress={onPress} haptic="light" disabled={opening}>
                 <View style={styles.tileTop}>
                   <View style={[styles.iconBadge, !unlocked && styles.iconBadgeLocked]}>
-                    <ToolIcon size={20} color={unlocked ? Colors.primary : Colors.textMuted} />
+                    <ToolIcon size={20} color={unlocked ? Colors.accent : Colors.textMuted} />
                   </View>
                   {unlocked
                     ? (tool.soon
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   tileText: { marginTop: Spacing.lg }, // breathing room between the icon and the title
 
-  iconBadge: { width: 36, height: 36, borderRadius: Radius.sm, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  iconBadge: { width: 36, height: 36, borderRadius: Radius.sm, backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center' },
   iconBadgeLocked: { backgroundColor: Colors.backgroundSecondary },
   label: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   labelLocked: { color: Colors.textMuted },

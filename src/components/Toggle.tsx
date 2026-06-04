@@ -33,7 +33,7 @@ export default function Toggle({ value, onValueChange, disabled }: Props) {
   }, [value, reduce]);
 
   const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(p.value, [0, 1], [Colors.backgroundSecondary, Colors.tint]),
+    backgroundColor: interpolateColor(p.value, [0, 1], [Colors.backgroundSecondary, Colors.accent]),
   }));
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: p.value * TRAVEL }],

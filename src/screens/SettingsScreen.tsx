@@ -252,7 +252,7 @@ export default function SettingsScreen({ navigation }: Props) {
                           <Ionicons
                             name={row.icon as any}
                             size={18}
-                            color={row.type === 'action' && row.destructive ? Colors.danger : Colors.primary}
+                            color={row.type === 'action' && row.destructive ? Colors.danger : Colors.accent}
                           />
                         </View>
                         <View>
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   cellLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: Spacing.md },
   iconBadge: {
     width: 32, height: 32, borderRadius: Radius.sm,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.accentContainer,
     alignItems: 'center', justifyContent: 'center',
   },
   iconBadgeDanger: { backgroundColor: Colors.dangerContainer },

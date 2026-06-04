@@ -20,7 +20,7 @@ interface Props {
  *  context options, goal selector, amount picker). Active = primary border +
  *  primaryContainer fill, label → primary/medium. */
 export default function SelectableChip({ label, active, onPress, icon, size = 'md', style, maxLines }: Props) {
-  const accent = active ? Colors.primary : Colors.textSecondary;
+  const accent = active ? Colors.accent : Colors.textSecondary;
   return (
     <PressableScale style={[styles.chip, active && styles.chipActive, style]} onPress={onPress} haptic="light">
       {icon ? <Ionicons name={icon} size={size === 'sm' ? 14 : 16} color={accent} /> : null}
@@ -39,8 +39,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     borderWidth: 1.5, borderColor: Colors.glassBorder,
   },
-  chipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
+  chipActive: { borderColor: Colors.accent, backgroundColor: Colors.accentContainer },
   text: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   textSm: { fontSize: Typography.caption1.fontSize },
-  textActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  textActive: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
 });

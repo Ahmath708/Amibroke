@@ -98,7 +98,7 @@ export default function AllAnalysesScreen() {
           )
         }
         ListFooterComponent={
-          loadingMore ? <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} /> : null
+          loadingMore ? <ActivityIndicator color={Colors.accent} style={{ marginVertical: Spacing.xl }} /> : null
         }
       />
     </View>

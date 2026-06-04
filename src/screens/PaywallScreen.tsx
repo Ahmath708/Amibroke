@@ -321,10 +321,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: Spacing.xs,
     position: 'relative',
   },
-  planCardFeatured: { borderColor: Colors.primary, borderWidth: 1.5 },
-  planCardActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
+  planCardFeatured: { borderColor: Colors.accent, borderWidth: 1.5 },
+  planCardActive: { borderColor: Colors.accent, backgroundColor: Colors.accentContainer },
   planBadge: {
-    backgroundColor: Colors.primary, borderRadius: Radius.pill,
+    backgroundColor: Colors.accent, borderRadius: Radius.pill,
     paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1, marginBottom: Spacing.xs,
   },
   planBadgeText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, color: Colors.onAccent, fontWeight: '700', letterSpacing: 0.5 },

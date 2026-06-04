@@ -81,7 +81,7 @@ export default function ShareScreen({ route }: Props) {
           activeOpacity={0.7} 
           style={{ padding: Spacing.xs, marginLeft: 8 }}
         >
-          <Text style={{ fontSize: 24, color: Colors.primary, fontWeight: '300' }}>‹</Text>
+          <Text style={{ fontSize: 24, color: Colors.accent, fontWeight: '300' }}>‹</Text>
         </TouchableOpacity>
       ),
     });
@@ -117,7 +117,7 @@ export default function ShareScreen({ route }: Props) {
     { name: 'TikTok', emoji: '📱', color: '#010101', action: handleShare },
     { name: 'Instagram', emoji: '📸', color: '#E1306C', action: handleShare },
     { name: 'Twitter/X', emoji: '🐦', color: '#1DA1F2', action: handleShare },
-    { name: 'Copy Link', emoji: '🔗', color: Colors.primarySolid, action: handleCopyLink },
+    { name: 'Copy Link', emoji: '🔗', color: Colors.accentSolid, action: handleCopyLink },
   ];
 
   const isDark = theme === 'dark';
@@ -252,7 +252,7 @@ export default function ShareScreen({ route }: Props) {
         <SectionLabel>Share Caption</SectionLabel>
         {captionsLoading ? (
           <View style={styles.captionsLoadingBox}>
-            <ActivityIndicator size="small" color={Colors.primary} />
+            <ActivityIndicator size="small" color={Colors.accent} />
             <Text style={styles.captionsLoadingText}>Generating captions...</Text>
           </View>
         ) : captionsError || !captionResponse ? (
@@ -297,9 +297,9 @@ const styles = StyleSheet.create({
   formatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
   formatToggle: { flexDirection: 'row', backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.md, padding: 2, gap: 0 },
   formatBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs + 2, borderRadius: Radius.sm },
-  formatBtnActive: { backgroundColor: Colors.primaryContainer },
+  formatBtnActive: { backgroundColor: Colors.accentContainer },
   formatBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
-  formatBtnTextActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  formatBtnTextActive: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
   shareCard: {
     borderRadius: Radius.xl, padding: Spacing.xxl, marginBottom: Spacing.md,
     alignItems: 'center', gap: Spacing.md, justifyContent: 'space-between',
@@ -331,12 +331,12 @@ const styles = StyleSheet.create({
   shareCardFooterText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize },
   shareCardFooterDisclaimer: { fontFamily: Typography.fonts.body, fontSize: 9, marginTop: 2 },
   exportBtn: {
-    backgroundColor: Colors.primaryContainer, borderRadius: Radius.xl,
+    backgroundColor: Colors.accentContainer, borderRadius: Radius.xl,
     paddingVertical: Spacing.lg, alignItems: 'center', marginBottom: Spacing.xl,
     borderWidth: 1.5, borderColor: Colors.glassBorderLight,
   },
   exportBtnDisabled: { opacity: 0.5 },
-  exportBtnText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.primary, fontWeight: '600' },
+  exportBtnText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent, fontWeight: '600' },
   platformGrid: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xxl },
   platformBtn: {
     flex: 1, backgroundColor: Colors.surfaceElevated,
@@ -346,11 +346,11 @@ const styles = StyleSheet.create({
   platformEmoji: { fontSize: 24 },
   platformName: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center' },
   nativeShareBtn: {
-    backgroundColor: Colors.primaryContainer, borderRadius: Radius.xl,
+    backgroundColor: Colors.accentContainer, borderRadius: Radius.xl,
     paddingVertical: Spacing.lg, alignItems: 'center',
     borderWidth: 1.5, borderColor: Colors.glassBorderLight,
   },
-  nativeShareText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.primary, fontWeight: '600' },
+  nativeShareText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent, fontWeight: '600' },
   captionsLoadingBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl },
   captionsLoadingText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textMuted },
   captionRetryBtn: { backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight },
@@ -358,5 +358,5 @@ const styles = StyleSheet.create({
   captionList: { gap: Spacing.sm, marginBottom: Spacing.xl },
   captionItem: { backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight },
   captionItemText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  captionItemCopy: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.primary, marginTop: Spacing.xs, textAlign: 'right' },
+  captionItemCopy: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.accent, marginTop: Spacing.xs, textAlign: 'right' },
 });

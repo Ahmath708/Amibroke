@@ -66,13 +66,13 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
           <View style={styles.badges}>
             {item.has_action_plan && (
               <View style={styles.badge}>
-                <Ionicons name="clipboard-outline" size={12} color={Colors.primary} />
+                <Ionicons name="clipboard-outline" size={12} color={Colors.accent} />
                 <Text style={styles.badgeText}>Plan</Text>
               </View>
             )}
             {item.has_captions && (
               <View style={styles.badge}>
-                <Ionicons name="images-outline" size={12} color={Colors.primary} />
+                <Ionicons name="images-outline" size={12} color={Colors.accent} />
                 <Text style={styles.badgeText}>Captions</Text>
               </View>
             )}
@@ -99,9 +99,9 @@ const styles = StyleSheet.create({
   badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: Colors.primaryContainer, paddingHorizontal: 7, paddingVertical: 2,
+    backgroundColor: Colors.accentContainer, paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: Radius.pill,
   },
-  badgeText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.primary },
+  badgeText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.accent },
   chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
 });

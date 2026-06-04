@@ -63,7 +63,7 @@ export default function TypingPlaceholder({
     <View style={[styles.container, style]}>
       <Text style={[styles.text, textStyle]}>
         {displayText}
-        <Text style={[styles.cursor, textStyle, { color: Colors.primary, opacity: isPaused ? 0.3 : 1 }]}>|</Text>
+        <Text style={[styles.cursor, textStyle, { color: Colors.accent, opacity: isPaused ? 0.3 : 1 }]}>|</Text>
       </Text>
     </View>
   );
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   cursor: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.subhead.fontSize,
-    color: Colors.primary,
+    color: Colors.accent,
     fontWeight: '300',
   },
 });

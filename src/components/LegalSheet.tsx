@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.headingSemi, fontSize: 17, color: Colors.textPrimary,
   },
   closeBtn: { position: 'absolute', right: Spacing.lg, bottom: Spacing.sm },
-  closeText: { fontSize: Typography.title2.fontSize, color: Colors.tint, fontWeight: '400' },
+  closeText: { fontSize: Typography.title2.fontSize, color: Colors.accent, fontWeight: '400' },
   body: { flex: 1 },
 });

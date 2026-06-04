@@ -89,7 +89,7 @@ function TabBarButton({ route, focused, reduce, onPress }: { route: { name: stri
       accessibilityState={{ selected: focused }}
     >
       <Animated.View style={iconStyle}>
-        <TabIcon size={24} color={focused ? Colors.tint : Colors.textSecondary} style={{ opacity: focused ? 1 : 0.6 }} />
+        <TabIcon size={24} color={focused ? Colors.accent : Colors.textSecondary} style={{ opacity: focused ? 1 : 0.6 }} />
       </Animated.View>
     </TouchableOpacity>
   );
@@ -165,7 +165,7 @@ function MainTabs() {
 
 const sharedHeader = {
   headerStyle: { backgroundColor: Colors.background },
-  headerTintColor: Colors.tint,
+  headerTintColor: Colors.accent,
   headerTitleStyle: {
     fontFamily: Typography.fonts.headingSemi,
     fontSize: 17,

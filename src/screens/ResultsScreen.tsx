@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     backgroundColor: Colors.backgroundSecondary,
   },
-  lockedCtaTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.primary },
+  lockedCtaTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent },
   lockedCtaSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
   budgetDetail: { paddingLeft: Spacing.lg, paddingBottom: Spacing.sm, gap: 1 },
   budgetDetailText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 17 },

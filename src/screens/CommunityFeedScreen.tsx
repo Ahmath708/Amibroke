@@ -262,8 +262,8 @@ export default function CommunityFeedScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primarySolid]}
+            tintColor={Colors.accent}
+            colors={[Colors.accentSolid]}
           />
         }
         ListHeaderComponent={
@@ -299,7 +299,7 @@ export default function CommunityFeedScreen() {
           )
         }
         ListFooterComponent={
-          loadingMore ? <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} /> : null
+          loadingMore ? <ActivityIndicator color={Colors.accent} style={{ marginVertical: Spacing.xl }} /> : null
         }
       />
 
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     padding: 3, marginBottom: Spacing.xl, gap: 2,
   },
   segment: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: Radius.sm, borderWidth: 1, borderColor: 'transparent' },
-  segmentActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
+  segmentActive: { backgroundColor: Colors.accentContainer, borderColor: Colors.accent },
   segmentText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   segmentTextActive: { color: Colors.textPrimary, fontFamily: Typography.fonts.bodyMed },
   card: {
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
   cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   cardUser: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   youBadge: {
-    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.primary,
-    backgroundColor: Colors.primaryContainer, paddingHorizontal: 6, paddingVertical: 1,
+    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.accent,
+    backgroundColor: Colors.accentContainer, paddingHorizontal: 6, paddingVertical: 1,
     borderRadius: Radius.pill, overflow: 'hidden',
   },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -375,10 +375,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 6,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  reactBtnActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
+  reactBtnActive: { backgroundColor: Colors.accentContainer, borderColor: Colors.accent },
   reactEmoji: { fontSize: Typography.callout.fontSize },
   reactCount: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  reactCountActive: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  reactCountActive: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
   reactAddBtn: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.backgroundSecondary,
@@ -393,14 +393,14 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
   pickerEmoji: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: Radius.sm },
-  pickerEmojiActive: { backgroundColor: Colors.primaryContainer },
+  pickerEmojiActive: { backgroundColor: Colors.accentContainer },
   pickerEmojiText: { fontSize: Typography.title3.fontSize },
   fab: { position: 'absolute', right: Spacing.xl },
   fabInner: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
     paddingLeft: Spacing.md, paddingRight: Spacing.lg, paddingVertical: Spacing.sm + 2,
     borderRadius: Radius.pill,
-    shadowColor: Colors.primarySolid, shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 10,
+    shadowColor: Colors.accentSolid, shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 10,
   },
   fabText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: '#fff', fontWeight: '600' },
 });

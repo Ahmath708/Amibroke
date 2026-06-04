@@ -42,7 +42,7 @@ export default function FinancialContextScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="home" />
       {!initial ? (
-        <View style={styles.loading}><ActivityIndicator color={Colors.primary} /></View>
+        <View style={styles.loading}><ActivityIndicator color={Colors.accent} /></View>
       ) : (
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingTop: Spacing.lg, paddingBottom: insets.bottom + Spacing.xxl }]}

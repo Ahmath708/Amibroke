@@ -143,7 +143,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
         <View style={styles.ringWrap}>
           <Animated.View style={[styles.ring, { transform: [{ rotate }] }]}>
             <LinearGradient
-              colors={[Colors.primarySolid, 'transparent']}
+              colors={[Colors.accentSolid, 'transparent']}
               style={styles.ringGradient}
               start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
             />
@@ -163,7 +163,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
                 ) : error ? (
                   <ExclamationTriangleIcon size={36} color={Colors.warning} />
                 ) : (
-                  <Ionicons name={STEPS[stepIndex].icon} size={36} color={Colors.primary} />
+                  <Ionicons name={STEPS[stepIndex].icon} size={36} color={Colors.accent} />
                 )}
               </Animated.View>
             </Animated.View>
@@ -223,8 +223,8 @@ const styles = StyleSheet.create({
     width: 96, height: 96, borderRadius: 48,
     backgroundColor: Colors.surfaceElevated,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: Colors.primaryContainer,
-    shadowColor: Colors.primarySolid, shadowOffset: { width: 0, height: 0 },
+    borderWidth: 2, borderColor: Colors.accentContainer,
+    shadowColor: Colors.accentSolid, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5, shadowRadius: 20, elevation: 10,
   },
   stepText: {
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%', borderRadius: 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
   },
   hint: {
     fontFamily: Typography.fonts.body,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     paddingVertical: Spacing.md,
     borderRadius: Radius.lg,
     marginTop: Spacing.md,
@@ -281,5 +281,5 @@ const styles = StyleSheet.create({
     fontSize: Typography.callout.fontSize, color: Colors.textPrimary, textAlign: 'center',
   },
   backBtn: { position: 'absolute', top: 0, left: 16, zIndex: 10, padding: Spacing.sm },
-  backBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
+  backBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.accent },
 });

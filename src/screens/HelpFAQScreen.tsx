@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   faqChevron: {
     fontFamily: Typography.fonts.headingMed,
     fontSize: Typography.title3.fontSize,
-    color: Colors.primary,
+    color: Colors.accent,
     width: 24,
     textAlign: 'center',
   },

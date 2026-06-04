@@ -24,7 +24,7 @@ const CONFIG: Record<Variant, { bg: string; color: string }> = {
   warning: { bg: Colors.warningContainer, color: Colors.warning },
   danger:  { bg: Colors.dangerContainer,  color: Colors.danger  },
   info:    { bg: Colors.infoContainer,    color: Colors.secondary },
-  premium: { bg: Colors.primaryContainer, color: Colors.primary },
+  premium: { bg: Colors.accentContainer, color: Colors.accent },
   muted:   { bg: 'rgba(255,255,255,0.07)', color: Colors.textSecondary },
 };
 

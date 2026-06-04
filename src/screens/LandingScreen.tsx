@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   valueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   valueIcon: {
     width: 44, height: 44, borderRadius: Radius.lg,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.accentContainer,
     alignItems: 'center', justifyContent: 'center',
   },
   valueEmoji: { fontSize: Typography.title2.fontSize },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   socialProofAccent: {
     fontFamily: Typography.fonts.headingSemi,
-    color: Colors.primary,
+    color: Colors.accent,
     fontWeight: '700',
   },
   socialProofDot: { color: Colors.textMuted },

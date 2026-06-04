@@ -301,7 +301,7 @@ export default function ProfileScreen({ navigation }: Props) {
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuIconBadge}>
-                    <Ionicons name={item.icon as any} size={18} color={Colors.primary} />
+                    <Ionicons name={item.icon as any} size={18} color={Colors.accent} />
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
                   <View style={styles.menuRight}>
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   avatarEmoji: { fontSize: Typography.title2.fontSize },
   nameInput: {
     fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600',
-    borderBottomWidth: 1, borderBottomColor: Colors.primary, paddingVertical: 0, minWidth: 120,
+    borderBottomWidth: 1, borderBottomColor: Colors.accent, paddingVertical: 0, minWidth: 120,
   },
   avatarInfo: { flex: 1, gap: Spacing.xs },
   username: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600' },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   menuCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: Spacing.md, minHeight: 50 },
   menuIconBadge: {
     width: 32, height: 32, borderRadius: Radius.sm,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.accentContainer,
     alignItems: 'center', justifyContent: 'center',
   },
   menuLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },

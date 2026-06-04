@@ -291,13 +291,13 @@ const styles = StyleSheet.create({
   addActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md, marginTop: Spacing.xs },
   cancelBtn: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs },
   addBtn: {
-    backgroundColor: Colors.primaryContainer, borderRadius: Radius.md,
+    backgroundColor: Colors.accentContainer, borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
   },
-  addBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, fontWeight: '600' },
+  addBtnText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent, fontWeight: '600' },
   addRow: {
     alignItems: 'center', paddingVertical: Spacing.md, marginBottom: Spacing.lg,
     borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, borderStyle: 'dashed',
   },
-  addRowText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.tint, fontWeight: '500' },
+  addRowText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent, fontWeight: '500' },
 });

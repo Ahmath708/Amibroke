@@ -59,7 +59,7 @@ export default function BiometricLockGate({ children }: { children: React.ReactN
       {gated && (
         <View style={styles.overlay}>
           <View style={styles.lockIcon}>
-            <Ionicons name="lock-closed" size={36} color={Colors.primary} />
+            <Ionicons name="lock-closed" size={36} color={Colors.accent} />
           </View>
           {locked && (
             <>
@@ -85,15 +85,15 @@ const styles = StyleSheet.create({
   },
   lockIcon: {
     width: 72, height: 72, borderRadius: Radius.xxl,
-    backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
   title: { fontFamily: Typography.fonts.heading, fontSize: Typography.title2.fontSize, fontWeight: '700', color: Colors.textPrimary },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
   unlockBtn: {
     marginTop: Spacing.lg, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    borderRadius: Radius.pill, backgroundColor: Colors.primaryContainer,
-    borderWidth: 1, borderColor: Colors.primary,
+    borderRadius: Radius.pill, backgroundColor: Colors.accentContainer,
+    borderWidth: 1, borderColor: Colors.accent,
   },
-  unlockText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.primary, fontWeight: '600' },
+  unlockText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent, fontWeight: '600' },
 });

@@ -29,6 +29,6 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 48, marginBottom: 16 },
   title: { fontFamily: Typography.fonts.heading, fontSize: 20, color: Colors.textPrimary, fontWeight: '700', marginBottom: 8 },
   body: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.xl },
-  retryBtn: { marginTop: 20, paddingHorizontal: 28, paddingVertical: 12, backgroundColor: Colors.primaryContainer, borderRadius: Radius.md },
-  retryText: { fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.primary, fontWeight: '600' },
+  retryBtn: { marginTop: 20, paddingHorizontal: 28, paddingVertical: 12, backgroundColor: Colors.accentContainer, borderRadius: Radius.md },
+  retryText: { fontFamily: Typography.fonts.bodyMed, fontSize: 15, color: Colors.accent, fontWeight: '600' },
 });

@@ -153,7 +153,7 @@ export default function ShareManagerSheet({ visible, onClose, onRunAnalysis }: P
                     value={shared}
                     onValueChange={(v) => onToggle(item, v)}
                     disabled={pending.has(item.id)}
-                    trackColor={{ true: Colors.primarySolid, false: Colors.backgroundSecondary }}
+                    trackColor={{ true: Colors.accentSolid, false: Colors.backgroundSecondary }}
                     thumbColor="#fff"
                     ios_backgroundColor={Colors.backgroundSecondary}
                   />
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: Typography.fonts.heading, fontSize: Typography.title2.fontSize, fontWeight: '700', color: Colors.textPrimary },
-  done: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.primary, fontWeight: '600' },
+  done: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent, fontWeight: '600' },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginTop: Spacing.xs, marginBottom: Spacing.lg },
   empty: { flex: 1, alignItems: 'center', paddingTop: 40 },
   scroll: { paddingBottom: Spacing.xxl },

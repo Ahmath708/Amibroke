@@ -121,12 +121,12 @@ export default function App() {
         theme={{
           dark: true,
           colors: {
-            primary: Colors.primary,
+            primary: Colors.accent,
             background: Colors.background,
             card: Colors.surface,
             text: Colors.textPrimary,
             border: 'rgba(255,255,255,0.1)',
-            notification: Colors.primary,
+            notification: Colors.accent,
           },
           fonts: {
             regular: { fontFamily: 'Inter_400Regular', fontWeight: '400' },

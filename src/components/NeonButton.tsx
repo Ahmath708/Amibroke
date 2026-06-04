@@ -74,7 +74,7 @@ export default function NeonButton({
         style={[styles.secondaryBtn, { height: heights[size] }, style]}
       >
         {loading
-          ? <ActivityIndicator color={Colors.primary} />
+          ? <ActivityIndicator color={Colors.accent} />
           : <View style={styles.inner}>
               {icon ? <Text style={styles.icon}>{icon}</Text> : null}
               <Text style={[styles.secondaryLabel, { fontSize: fontSizes[size] }]}>{label}</Text>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     borderWidth: 1.5,
     borderColor: Colors.glassBorderLight,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.accentContainer,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -151,13 +151,13 @@ const styles = StyleSheet.create({
   },
   secondaryLabel: {
     fontFamily: Typography.fonts.bodySemi,
-    color: Colors.primary,
+    color: Colors.accent,
     fontWeight: '600',
   },
 
   tintedBtn: {
     borderRadius: Radius.xl,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.accentContainer,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   tintedLabel: {
     fontFamily: Typography.fonts.bodyMed,
-    color: Colors.primary,
+    color: Colors.accent,
     fontWeight: '500',
   },
 
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
 
   plainLabel: {
     fontFamily: Typography.fonts.body,
-    color: Colors.tint,
+    color: Colors.accent,
     textAlign: 'center',
     paddingVertical: Spacing.sm + 2,
   },

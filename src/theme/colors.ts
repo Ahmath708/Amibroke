@@ -71,5 +71,5 @@ export const Radius = {
 export const TierColors = {
   free:        Colors.textSecondary,  // neutral gray
   action_plan: Colors.secondary,      // neon cyan
-  deep_dive:   Colors.primary,        // electric purple
+  deep_dive:   Colors.accent,        // electric purple
 } as const;

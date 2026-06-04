@@ -107,7 +107,7 @@ export default function LoginScreen({ navigation, route }: Props) {
       {/* Top bar — back chevron dismisses to Landing */}
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
         <TouchableOpacity onPress={dismiss} hitSlop={HIT} style={styles.backBtn} accessibilityLabel="Back">
-          <ChevronLeftIcon size={28} color={Colors.tint} />
+          <ChevronLeftIcon size={28} color={Colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md, padding: Spacing.xs, marginBottom: Spacing.sm,
   },
   segment: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm, borderWidth: 1, borderColor: 'transparent' },
-  segmentActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
+  segmentActive: { backgroundColor: Colors.accentContainer, borderColor: Colors.accent },
   segmentText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
   segmentTextActive: { color: Colors.textPrimary, fontFamily: Typography.fonts.bodyMed },
   oauthBtn: {
@@ -314,11 +314,11 @@ const styles = StyleSheet.create({
   passwordInput: { marginRight: Spacing.sm },
   cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.sm },
-  forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.tint },
+  forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.accent },
   termsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md, paddingHorizontal: Spacing.xs },
   checkbox: { width: 22, height: 22, borderRadius: Radius.xs, borderWidth: 2, borderColor: Colors.glassBorderLight, alignItems: 'center', justifyContent: 'center' },
-  checkboxActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  checkboxActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   checkmark: { fontSize: 14, color: Colors.background, fontWeight: '700' },
   termsText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 18 },
-  legalLink: { color: Colors.tint, textDecorationLine: 'underline' },
+  legalLink: { color: Colors.accent, textDecorationLine: 'underline' },
 });

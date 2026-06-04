@@ -8,7 +8,7 @@ interface Props {
   style?: any;
 }
 
-export default function LoadingState({ size = 'large', color = Colors.primary, style }: Props) {
+export default function LoadingState({ size = 'large', color = Colors.accent, style }: Props) {
   return (
     <View style={[styles.center, style]}>
       <ActivityIndicator size={size} color={color} />

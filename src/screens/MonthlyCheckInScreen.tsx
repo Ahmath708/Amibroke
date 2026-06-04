@@ -271,7 +271,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                       <Ionicons
                         name={on ? 'checkmark-circle' : 'ellipse-outline'}
                         size={24}
-                        color={on ? Colors.primary : Colors.textMuted}
+                        color={on ? Colors.accent : Colors.textMuted}
                       />
                       <View style={styles.pickInfo}>
                         <Text style={styles.pickLabel}>{g.label}</Text>
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   pickBaseline: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: 1 },
   targetWrap: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   targetLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
-  targetInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, minWidth: 38, textAlign: 'right' },
+  targetInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent, minWidth: 38, textAlign: 'right' },
   targetUnit: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   // progress
   progRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 12 },
@@ -453,9 +453,9 @@ const styles = StyleSheet.create({
   // mood
   moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs },
   moodBtn: { width: 54, height: 54, borderRadius: 27, backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  moodBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
+  moodBtnActive: { borderColor: Colors.accent, backgroundColor: Colors.accentContainer },
   moodEmoji: { fontSize: Typography.title2.fontSize },
-  moodLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.primary, textAlign: 'center', marginBottom: Spacing.md },
+  moodLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent, textAlign: 'center', marginBottom: Spacing.md },
   noteCard: { padding: Spacing.md, marginTop: Spacing.md, marginBottom: Spacing.lg },
   noteInput: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minHeight: 70, lineHeight: 22 },
   editLink: { alignItems: 'center', paddingVertical: Spacing.md },
@@ -463,6 +463,6 @@ const styles = StyleSheet.create({
   // saved
   savedEmoji: { fontSize: 44, textAlign: 'center', marginBottom: Spacing.sm },
   upsell: { padding: Spacing.lg, marginBottom: Spacing.lg },
-  upsellTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.primary, marginBottom: Spacing.xs },
+  upsellTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.accent, marginBottom: Spacing.xs },
   upsellBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19 },
 });

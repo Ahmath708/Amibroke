@@ -44,10 +44,6 @@ export const neonPalette = {
   accentContainer: A.container,
   onAccent: A.on,
 
-  // ── Brand (legacy aliases → resolve to the signature accent) ──
-  primary: A.tint,
-  primaryContainer: A.container,
-  primarySolid: A.solid,
   // Demoted: no longer co-equal brand neons. Kept as muted/semantic supports.
   secondary: '#9fb6c2', // was neon cyan — demoted to a neutral info-blue
   tertiary: A.tint, // collapse the old hot-pink role into the accent family
@@ -64,9 +60,6 @@ export const neonPalette = {
   dangerContainer: 'rgba(255, 69, 58, 0.16)',
   info: '#9fb6c2',
   infoContainer: 'rgba(159, 182, 194, 0.16)',
-
-  // ── Tints (iOS tintColor → the signature accent) ──
-  tint: A.tint,
 
   // ── Gradients ──
   gradientPrimary: [A.gradient[0], A.gradient[1]] as [string, string],

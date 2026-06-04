@@ -82,7 +82,7 @@ export default function DebtPayoffScreen({ route }: Props) {
             <Text style={styles.summaryLabel}>Payoff Time</Text>
           </GlassCard>
           <GlassCard style={styles.summaryCard}>
-            <Text style={[styles.summaryNum, { color: Colors.primary }]}>{fmt(interestSaved)}</Text>
+            <Text style={[styles.summaryNum, { color: Colors.accent }]}>{fmt(interestSaved)}</Text>
             <Text style={styles.summaryLabel}>Interest Saved</Text>
           </GlassCard>
         </View>
@@ -193,9 +193,9 @@ const styles = StyleSheet.create({
   debtRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
   debtPriority: {
     width: 28, height: 28, borderRadius: Radius.lg,
-    backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',
   },
-  debtPriorityNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.footnote.fontSize, fontWeight: '700', color: Colors.primary },
+  debtPriorityNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.footnote.fontSize, fontWeight: '700', color: Colors.accent },
   debtInfo: { flex: 1, gap: Spacing.xs },
   debtHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
   debtName: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },

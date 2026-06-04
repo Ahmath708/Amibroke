@@ -211,7 +211,7 @@ export default function DashboardScreen({ navigation }: Props) {
         <ReAnimated.View entering={enterUp(5)}>
         {tier === 'deep_dive' ? (
           <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
-            <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.primary} /></View>
+            <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.accent} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.toolsTitle}>Your plan & tools</Text>
               <Text style={styles.toolsSub}>Action plan · debt payoff · scenarios</Text>
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   tileStat: { fontFamily: Typography.fonts.heading, fontSize: 40, color: Colors.textPrimary, letterSpacing: -1.5, marginTop: Spacing.xs },
   tileSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   toolsCard: { ...card, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.lg },
-  toolsIcon: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  toolsIcon: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center' },
   toolsTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   toolsSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },
 });

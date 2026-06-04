@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary, textAlign: 'center', lineHeight: 22,
   },
   button: {
-    backgroundColor: Colors.primary, paddingVertical: Spacing.md,
+    backgroundColor: Colors.accent, paddingVertical: Spacing.md,
     paddingHorizontal: 32, borderRadius: Radius.lg, marginTop: Spacing.md,
   },
   buttonText: {

@@ -136,8 +136,8 @@ export default function HistoryScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primarySolid]}
+            tintColor={Colors.accent}
+            colors={[Colors.accentSolid]}
           />
         }
       >
@@ -211,14 +211,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: Spacing.xl },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
-  signInLink: { color: Colors.primary, fontFamily: Typography.fonts.bodyMed },
+  signInLink: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
   newCheckinBtn: {
     marginTop: Spacing.lg, alignItems: 'center', justifyContent: 'center',
     minHeight: 44, paddingVertical: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.primary,
-    backgroundColor: Colors.primaryContainer,
+    borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.accent,
+    backgroundColor: Colors.accentContainer,
   },
-  newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.primary },
+  newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent },
   historyGroup: {
     backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg, overflow: 'hidden',
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   historySummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
   checkinEmoji: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',
   },
   checkinEmojiText: { fontSize: Typography.title2.fontSize },
 });
