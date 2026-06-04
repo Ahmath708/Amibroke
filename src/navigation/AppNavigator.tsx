@@ -59,7 +59,7 @@ const Tab = createBottomTabNavigator<MainTabsParamList>();
 const sheetModal = {
   presentation: 'formSheet' as const,
   sheetGrabberVisible: true,
-  sheetAllowedDetents: [1.0] as number[], // full-height sheet; grabber forced visible
+  sheetAllowedDetents: [0.9] as number[], // ~90% tall — dimmed parent peeks (~10%); grabber forced visible
   sheetCornerRadius: 24,
 };
 
@@ -236,7 +236,7 @@ export default function AppNavigator() {
             <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
             <Stack.Screen name="Share" component={ShareScreen} options={{ ...sheetModal, ...sharedHeader, headerShown: true, title: 'Share Result' }} />
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ ...sheetModal, headerShown: false }} />
-            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sheetModal, ...sharedHeader, headerShown: true, title: 'Monthly Check-In' }} />
+            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sheetModal, headerShown: false }} />
           </>
         )}
       </Stack.Navigator>
