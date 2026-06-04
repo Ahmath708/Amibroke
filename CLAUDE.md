@@ -28,6 +28,14 @@ a 0–100 financial health score, a spending breakdown, and (paid) a 90-day acti
 payoff strategy, and scenario simulator. Handles **sensitive financial data** — treat security
 and correctness as first-class.
 
+**Monetization (as of 2026-06-03):** new users get **3 days of full free access** to everything.
+After that it's a **hard paywall — there is NO permanent free tier**: using the app at all (roast,
+score, breakdown, plan, debt tools, scenario simulator, deep-dive) requires a paid plan — **Action
+Plan** (~$4.99/mo) or **Deep Dive** (~$9.99/mo, supersedes Action Plan). **No per-subscription free
+trial** — the 3-day access is granted app-side on signup, NOT an Apple/RevenueCat introductory offer.
+(The 3-day-access *enforcement* — granting access + hard-gating after expiry — is NOT yet implemented;
+the paywall UI/copy + docs reflect the model, the entitlement logic is the remaining work.)
+
 ## Tech stack
 
 - **App:** Expo SDK 55, React Native 0.83.6, React 19.2.0, TypeScript 5.9 (`strict`), New

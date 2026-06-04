@@ -1,8 +1,12 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert,
+  View, Text, StyleSheet, ScrollView, Animated, Alert,
 } from 'react-native';
+import {
+  SparklesIcon, CalendarIcon, CreditCardIcon, ChartBarIcon, LockClosedIcon, XMarkIcon,
+} from 'react-native-heroicons/outline';
 import SectionLabel from '@/components/SectionLabel';
+import { PressableScale } from '@/components/motion';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,24 +23,26 @@ import { getCurrentOffering, packageForTier, purchasePackage, restorePurchases, 
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Paywall'> };
 
-const FREE_FEATURES = [
-  { icon: '💯', label: 'Financial Health Score (0–100)' },
-  { icon: '🍩', label: 'Spending Breakdown Chart' },
-  { icon: '🔥', label: 'AI Roast One-Liner' },
-  { icon: '🖼️', label: 'Shareable Result Card' },
+type IconCmp = React.ComponentType<{ size?: number; color?: string }>;
+// Locked features previewed on the paywall. Heroicons (no emoji) for a premium read.
+const PREVIEW: { Icon: IconCmp; title: string; desc: string; state: 'locked' | 'soon' }[] = [
+  { Icon: CalendarIcon, title: 'Your 90-Day Action Plan', desc: 'Week-by-week roadmap with specific dollar targets', state: 'locked' },
+  { Icon: CreditCardIcon, title: 'Debt Payoff Strategy', desc: "See how much interest you're burning and when you'll be free", state: 'locked' },
+  { Icon: ChartBarIcon, title: 'Scenario Simulator', desc: 'What if you got a raise? Cut DoorDash? Find out instantly', state: 'soon' },
 ];
 
 // Cell state: true = included, false = not included, 'soon' = built but not shipped yet.
+// No "Free" column — after the 3-day access it's a hard paywall (no permanent free tier).
 type CompareCell = boolean | 'soon';
-const COMPARE: { feature: string; free: CompareCell; ap: CompareCell; dd: CompareCell }[] = [
-  { feature: 'AI Roast & Health Score', free: true, ap: true, dd: true },
-  { feature: '90-Day Step-by-Step Plan', free: false, ap: true, dd: true },
-  { feature: 'Weekly Goals with Dollar Amounts', free: false, ap: true, dd: true },
-  { feature: 'Subscription Audit', free: false, ap: true, dd: true },
-  { feature: 'Prioritized Fix List', free: false, ap: true, dd: true },
-  { feature: 'Scenario Simulator', free: false, ap: false, dd: 'soon' },
-  { feature: 'Debt Payoff Planner', free: false, ap: false, dd: true },
-  { feature: 'Downloadable PDF Report', free: false, ap: false, dd: true },
+const COMPARE: { feature: string; ap: CompareCell; dd: CompareCell }[] = [
+  { feature: 'AI Roast & Health Score', ap: true, dd: true },
+  { feature: '90-Day Step-by-Step Plan', ap: true, dd: true },
+  { feature: 'Weekly Goals with Dollar Amounts', ap: true, dd: true },
+  { feature: 'Subscription Audit', ap: true, dd: true },
+  { feature: 'Prioritized Fix List', ap: true, dd: true },
+  { feature: 'Scenario Simulator', ap: false, dd: 'soon' },
+  { feature: 'Debt Payoff Planner', ap: false, dd: true },
+  { feature: 'Downloadable PDF Report', ap: false, dd: true },
 ];
 
 function CompareMark({ v }: { v: CompareCell }) {
@@ -69,13 +75,13 @@ export default function PaywallScreen({ navigation }: Props) {
   const deepDive = PURCHASE_PRODUCTS.deep_dive!;
 
   // The CTA reflects what the user already owns. Deep Dive supersedes Action Plan,
-  // so on Deep Dive the Action Plan option is a no-op (disabled), not a downgrade.
-  // The selected plan is baked into the label so it's obvious at the tap point.
+  // so on Deep Dive the Action Plan option is a no-op (disabled). No trial — new
+  // users get 3 days of free access automatically; this is the plain subscribe.
   const cta = (() => {
     if (owned === selected) return { label: 'Current Plan', disabled: true };
     if (owned === 'deep_dive') return { label: 'Included in Deep Dive', disabled: true };
     if (owned === 'action_plan' && selected === 'deep_dive') return { label: 'Upgrade to Deep Dive', disabled: false };
-    return { label: 'Start 7-Day Free Trial', disabled: false };
+    return { label: `Unlock ${product?.label ?? 'plan'}`, disabled: false };
   })();
 
   // Prefer RevenueCat's localized, store-accurate price; fall back to static
@@ -132,9 +138,9 @@ export default function PaywallScreen({ navigation }: Props) {
       <View style={[styles.handleRow, { marginTop: insets.top > 0 ? 8 : 16 }]}>
         <View style={styles.handle} />
       </View>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
-        <Text style={styles.closeText}>✕</Text>
-      </TouchableOpacity>
+      <PressableScale onPress={() => navigation.goBack()} haptic="light" style={styles.closeBtn}>
+        <XMarkIcon size={22} color={Colors.textSecondary} />
+      </PressableScale>
 
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
@@ -142,73 +148,55 @@ export default function PaywallScreen({ navigation }: Props) {
       >
         <View style={styles.hero}>
           <LinearGradient colors={Colors.gradientPrimary} style={styles.heroIcon}>
-            <Text style={styles.heroEmoji}>💎</Text>
+            <SparklesIcon size={30} color={Colors.onAccent} />
           </LinearGradient>
           <Text style={styles.heroTitle}>Your financial wake-up call is ready.</Text>
           <Text style={styles.heroSub}>
             You've seen the score. Now get the exact roadmap to fix it — before another paycheck disappears.
           </Text>
           <View style={styles.heroUrgency}>
-            <Text style={styles.heroUrgencyDot}>●</Text>
-            <Text style={styles.heroUrgencyText}>7-day free trial · Cancel anytime</Text>
+            <View style={styles.heroUrgencyDot} />
+            <Text style={styles.heroUrgencyText}>Cancel anytime · Auto-renews monthly</Text>
           </View>
         </View>
 
-        {/* Free tier summary */}
-        <View style={styles.freeBox}>
-          <Text style={styles.freeTitle}>Free — Unlimited Access</Text>
-          <View style={styles.freeFeatureList}>
-            {FREE_FEATURES.map((f) => (
-              <View key={f.label} style={styles.freeFeatureRow}>
-                <Text style={styles.freeFeatureIcon}>{f.icon}</Text>
-                <Text style={styles.freeFeatureLabel}>{f.label}</Text>
-              </View>
-            ))}
-          </View>
+        {/* 3-day free access — honest about the limit (no permanent free tier) */}
+        <View style={styles.trialBox}>
+          <Text style={styles.trialTitle}>3 days free, then choose a plan</Text>
+          <Text style={styles.trialBody}>
+            New users get full access to everything for 3 days. After that, Action Plan or Deep Dive
+            keeps your roasts, plan & tools.
+          </Text>
         </View>
 
-        {/* Preview locked content */}
+        {/* Preview locked content — consistent elevated cards (no per-card neon) */}
         <SectionLabel>Preview What's Inside</SectionLabel>
         <View style={styles.previewList}>
-          <LinearGradient colors={['rgba(189,0,255,0.2)', 'rgba(0,224,255,0.08)']} style={styles.previewCard}>
-            <Text style={styles.previewIcon}>🗓️</Text>
-            <View style={styles.previewContent}>
-              <Text style={styles.previewTitle}>Your 90-Day Action Plan</Text>
-              <Text style={styles.previewDesc}>Week-by-week roadmap with specific dollar targets</Text>
+          {PREVIEW.map(({ Icon, title, desc, state }) => (
+            <View key={title} style={styles.previewCard}>
+              <View style={styles.previewBadge}>
+                <Icon size={20} color={Colors.accent} />
+              </View>
+              <View style={styles.previewContent}>
+                <Text style={styles.previewTitle}>{title}</Text>
+                <Text style={styles.previewDesc}>{desc}</Text>
+              </View>
+              {state === 'soon' ? (
+                <View style={styles.previewSoon}><Text style={styles.previewSoonText}>SOON</Text></View>
+              ) : (
+                <View style={styles.previewLock}><LockClosedIcon size={15} color={Colors.textMuted} /></View>
+              )}
             </View>
-            <View style={styles.previewLock}>
-              <Text style={styles.previewLockIcon}>🔒</Text>
-            </View>
-          </LinearGradient>
-          <LinearGradient colors={['rgba(231,0,110,0.2)', 'rgba(189,0,255,0.08)']} style={styles.previewCard}>
-            <Text style={styles.previewIcon}>💳</Text>
-            <View style={styles.previewContent}>
-              <Text style={styles.previewTitle}>Debt Payoff Strategy</Text>
-              <Text style={styles.previewDesc}>See how much interest you're burning and when you'll be free</Text>
-            </View>
-            <View style={styles.previewLock}>
-              <Text style={styles.previewLockIcon}>🔒</Text>
-            </View>
-          </LinearGradient>
-          <LinearGradient colors={['rgba(0,224,255,0.2)', 'rgba(57,255,20,0.08)']} style={styles.previewCard}>
-            <Text style={styles.previewIcon}>📊</Text>
-            <View style={styles.previewContent}>
-              <Text style={styles.previewTitle}>Scenario Simulator</Text>
-              <Text style={styles.previewDesc}>What if you got a raise? Cut DoorDash? Find out instantly</Text>
-            </View>
-            <View style={styles.previewSoon}>
-              <Text style={styles.previewSoonText}>SOON</Text>
-            </View>
-          </LinearGradient>
+          ))}
         </View>
 
         {/* Product picker */}
-        <SectionLabel>Choose Your Upgrade</SectionLabel>
+        <SectionLabel>Choose Your Plan</SectionLabel>
         <View style={styles.planRow}>
-          <TouchableOpacity
+          <PressableScale
             style={[styles.planCard, selected === 'action_plan' && styles.planCardActive]}
             onPress={() => setSelected('action_plan')}
-            activeOpacity={0.8}
+            haptic="light"
           >
             {owned === 'action_plan' && (
               <View style={styles.planBadge}><Text style={styles.planBadgeText}>CURRENT</Text></View>
@@ -216,12 +204,12 @@ export default function PaywallScreen({ navigation }: Props) {
             <Text style={styles.planName}>{actionPlan.label}</Text>
             <Text style={styles.planPrice}>{priceLabel('action_plan', actionPlan.price)}</Text>
             <Text style={styles.planDesc}>per month</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             style={[styles.planCard, styles.planCardFeatured, selected === 'deep_dive' && styles.planCardActive]}
             onPress={() => setSelected('deep_dive')}
-            activeOpacity={0.8}
+            haptic="light"
           >
             <View style={styles.planBadge}>
               <Text style={styles.planBadgeText}>{owned === 'deep_dive' ? 'CURRENT' : 'BEST VALUE'}</Text>
@@ -229,7 +217,7 @@ export default function PaywallScreen({ navigation }: Props) {
             <Text style={styles.planName}>{deepDive.label}</Text>
             <Text style={styles.planPrice}>{priceLabel('deep_dive', deepDive.price)}</Text>
             <Text style={styles.planDesc}>per month</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* Feature comparison */}
@@ -237,16 +225,14 @@ export default function PaywallScreen({ navigation }: Props) {
         <View style={styles.compareGroup}>
           <View style={styles.compareHeader}>
             <Text style={styles.compareHeaderFeature}>Feature</Text>
-            <Text style={styles.compareHeaderTier}>Free</Text>
-            <Text style={[styles.compareHeaderTier, selected === 'action_plan' && styles.compareHeaderTierActive]}>AP</Text>
-            <Text style={[styles.compareHeaderTier, selected === 'deep_dive' && styles.compareHeaderTierActive]}>DD</Text>
+            <Text style={[styles.compareHeaderTier, selected === 'action_plan' && styles.compareHeaderTierActive]}>{'Action\nPlan'}</Text>
+            <Text style={[styles.compareHeaderTier, selected === 'deep_dive' && styles.compareHeaderTierActive]}>{'Deep\nDive'}</Text>
           </View>
           {COMPARE.map((row, i) => (
             <React.Fragment key={row.feature}>
               {i > 0 && <View style={styles.compareSep} />}
               <View style={styles.compareRow}>
                 <Text style={styles.compareFeature}>{row.feature}</Text>
-                <CompareMark v={row.free} />
                 <CompareMark v={row.ap} />
                 <CompareMark v={row.dd} />
               </View>
@@ -270,14 +256,13 @@ export default function PaywallScreen({ navigation }: Props) {
           />
         )}
 
-        <TouchableOpacity onPress={handleRestore} disabled={restoring} style={styles.restoreBtn}>
+        <PressableScale onPress={handleRestore} disabled={restoring} haptic="light" style={styles.restoreBtn}>
           <Text style={styles.restoreText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         <Text style={styles.legal}>
-          {product!.label} is {priceLabel(selected, product!.price)}/month after a 7-day free
-          trial. Auto-renews monthly; cancel anytime in your App Store settings. Payment is
-          charged to your Apple ID.
+          {product!.label} is {priceLabel(selected, product!.price)}/month. Auto-renews monthly;
+          cancel anytime in your App Store settings. Payment is charged to your Apple ID.
         </Text>
       </ScrollView>
     </Animated.View>
@@ -289,47 +274,45 @@ const styles = StyleSheet.create({
   handleRow: { alignItems: 'center', marginBottom: Spacing.sm },
   handle: { width: 36, height: 5, borderRadius: Radius.pill, backgroundColor: Colors.separator },
   closeBtn: { position: 'absolute', top: Spacing.xl, right: Spacing.xl, zIndex: 10, padding: Spacing.sm },
-  closeText: { fontSize: Typography.headline.fontSize, color: Colors.textSecondary },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm },
   hero: { alignItems: 'center', marginBottom: Spacing.xl, marginTop: Spacing.xs },
   heroIcon: { width: 72, height: 72, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
-  heroEmoji: { fontSize: 32 },
   heroTitle: {
+    ...Typography.screenTitle,
     fontFamily: Typography.fonts.heading,
-    fontSize: Typography.title2.fontSize, fontWeight: '700',
     color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.sm,
   },
   heroSub: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textAlign: 'center', maxWidth: 300, lineHeight: 22 },
   heroUrgency: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.md },
-  heroUrgencyDot: { fontSize: 8, color: Colors.success },
+  heroUrgencyDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success },
   heroUrgencyText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
   previewList: { gap: Spacing.sm, marginBottom: Spacing.xl },
   previewCard: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     borderRadius: Radius.lg, padding: Spacing.md,
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  previewIcon: { fontSize: Typography.title2.fontSize },
+  previewBadge: {
+    width: 40, height: 40, borderRadius: Radius.md,
+    backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',
+  },
   previewContent: { flex: 1 },
-  previewTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  previewTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   previewDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
   previewLock: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center' },
-  previewLockIcon: { fontSize: Typography.subhead.fontSize },
   previewSoon: {
     paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1, borderRadius: Radius.pill,
     backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.warning,
   },
   previewSoonText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, color: Colors.warning },
-  freeBox: {
+  trialBox: {
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     padding: Spacing.lg, marginBottom: Spacing.xl,
   },
-  freeTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.sm },
-  freeFeatureList: { gap: Spacing.xs },
-  freeFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  freeFeatureIcon: { fontSize: Typography.subhead.fontSize },
-  freeFeatureLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
+  trialTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.xs },
+  trialBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
   planRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl },
   planCard: {
     flex: 1, backgroundColor: Colors.surfaceElevated,
@@ -344,7 +327,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: Radius.pill,
     paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1, marginBottom: Spacing.xs,
   },
-  planBadgeText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, color: Colors.background, fontWeight: '700', letterSpacing: 0.5 },
+  planBadgeText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, color: Colors.onAccent, fontWeight: '700', letterSpacing: 0.5 },
   planName: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
   planPrice: { fontFamily: Typography.fonts.heading, fontSize: Typography.title2.fontSize, fontWeight: '700', color: Colors.textPrimary },
   planDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
@@ -353,10 +336,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     marginBottom: Spacing.xl,
   },
-  compareHeader: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.primaryContainer },
+  compareHeader: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.accentContainer },
   compareHeaderFeature: { flex: 2.5, fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   compareHeaderTier: { flex: 1, textAlign: 'center', fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
-  compareHeaderTierActive: { color: Colors.primary },
+  compareHeaderTierActive: { color: Colors.accent },
   compareSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.md },
   compareRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm + 2, minHeight: 40 },
   compareFeature: { flex: 2.5, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },

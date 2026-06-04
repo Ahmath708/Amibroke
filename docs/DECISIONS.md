@@ -1,5 +1,31 @@
 # Decisions & Iteration Log
 
+## Monetization: 3-day free access (2026-06-03) — supersedes the 7-day trial
+
+Shift from a per-subscription **7-day free trial** to a **3-day app-granted full access** model:
+
+- **New users get 3 days of full access** to everything automatically on signup.
+- After 3 days it's a **hard paywall — NO permanent free tier**. Using the app at all (roast, score,
+  breakdown, plan, debt tools, etc.) requires a subscription: `action_plan` ($4.99/mo) or `deep_dive`
+  ($9.99/mo) — **no free trial on the plans** (plain monthly subscribe).
+- The 3-day access is **app-side** (granted on signup, gated after expiry), NOT an Apple/RevenueCat
+  introductory offer. App Store products carry no intro trial.
+- **Status (enforcement, 2026-06-03):** the **app-side** gate is implemented. The 3-day window is
+  derived from the account's server-set `created_at` (no separate trial row, not client-tamperable) via
+  `getTrialStatus` in `services/subscriptions.ts`; `canAccess(tier, required, trialActive)` and
+  `canUseApp(tier, trialActive)` are the trial-aware gates, surfaced through `useSubscription`
+  (`trialActive` / `trialDaysLeft` / `canUseApp`). The premium-tool/feature gates (Tools, Action Plan,
+  Debt Payoff, Subscription Audit, Results) are wired to it and unit-tested. The **core roast gate**
+  (blocking analysis itself once the trial expires) lives in `HomeScreen.handleAnalyze` behind
+  `FEATURES.PAYWALL_ENFORCEMENT` (env `EXPO_PUBLIC_PAYWALL_ENFORCEMENT`), **default off** so QA isn't
+  gated by an aged dev account and so it can't ship ahead of the server check.
+- **Remaining:** **server-side enforcement** — the `analyze` / `action-plan` edge functions must apply
+  the same trial + entitlement rule (client gates are bypassable; this is the security-critical piece),
+  then flip `PAYWALL_ENFORCEMENT` on. Also decide how pre-existing accounts (created >3 days before
+  launch) are treated.
+
+This supersedes the **"Trial: 7-day free trial"** line in the 2026-05-29 spec below.
+
 ## Subscription Product Spec (2026-05-29)
 
 Decided via Step 3 of 528_BACKEND_FINAL:

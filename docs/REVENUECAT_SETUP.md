@@ -1,14 +1,18 @@
 # RevenueCat / In-App Purchase Setup
 
 The app's subscription billing was migrated from Stripe to **Apple In-App Purchase via
-RevenueCat** (auto-renewable subscriptions, 7-day free trial). The **code is scaffolded
-and compiles**, but it cannot be tested or shipped until the external setup below is done.
-Until then the app runs normally and treats everyone as **free tier** (RevenueCat init is
-guarded on the API key).
+RevenueCat** (auto-renewable subscriptions). The **code is scaffolded and compiles**, but it
+cannot be tested or shipped until the external setup below is done. Until then the app runs
+normally and treats everyone as **free tier** (RevenueCat init is guarded on the API key).
+
+> **Trial model (2026-06-03):** there is **NO per-subscription Apple/RevenueCat free trial**.
+> New users get a **3-day full free access granted app-side** on signup; after it expires they
+> subscribe to a plain monthly plan. So the App Store products below have **no introductory
+> free-trial offer**. (The app-side 3-day grant/gating is not yet implemented.)
 
 ## Product model
-- `action_plan` — auto-renewable subscription, ~$4.99/mo, 7-day free trial
-- `deep_dive` — auto-renewable subscription, ~$9.99/mo, 7-day free trial (supersedes action_plan)
+- `action_plan` — auto-renewable subscription, ~$4.99/mo (no intro trial)
+- `deep_dive` — auto-renewable subscription, ~$9.99/mo, supersedes action_plan (no intro trial)
 
 ## 1. Apple Developer Program (hard blocker)
 - Enroll in the Apple Developer Program ($99/yr). Nothing below works without it.
@@ -20,7 +24,8 @@ guarded on the API key).
 - Add two **Auto-Renewable Subscriptions** with product IDs, e.g.:
   - `com.aibroke.app.action_plan.monthly`
   - `com.aibroke.app.deep_dive.monthly`
-- Set pricing and add a **7-day free trial** introductory offer to each.
+- Set pricing. **Do NOT add an introductory free-trial offer** — the 3-day free access is
+  granted app-side, not via an Apple intro offer.
 
 ## 3. RevenueCat dashboard
 - Create a project; add the **iOS app** with the App Store **shared secret**.
@@ -71,7 +76,7 @@ testers, TestFlight, release.
 ## 5b. Free local StoreKit testing (alternative — real StoreKit, no $99)
 
 The repo ships a StoreKit config at **`storekit/AmIBroke.products.storekit`** (two
-auto-renewable subs with 7-day trials, product IDs `com.aibroke.app.action_plan.monthly` /
+auto-renewable subs — drop the 7-day intro offers when revising it; product IDs `com.aibroke.app.action_plan.monthly` /
 `com.aibroke.app.deep_dive.monthly`). This lets you exercise subscribe / cancel / restore and
 entitlement-gating on the **simulator** without a paid Apple account.
 
