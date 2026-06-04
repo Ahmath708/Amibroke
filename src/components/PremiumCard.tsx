@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { WrenchScrewdriverIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
+import { SparklesIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
@@ -21,7 +21,8 @@ const COPY = {
 
 /**
  * Upsell banner — the screen's one accent moment: elevated surface + subtle
- * accent wash, a wrench badge ("fix"), and a benefit-led accent title.
+ * accent wash, a sparkles badge (the wrench reads as "Tools" elsewhere), and a
+ * benefit-led accent title.
  */
 export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
   const copy = COPY[variant];
@@ -34,7 +35,7 @@ export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
         style={styles.banner}
       >
         <View style={styles.iconBadge}>
-          <WrenchScrewdriverIcon size={18} color={Colors.accent} />
+          <SparklesIcon size={18} color={Colors.accent} />
         </View>
         <View style={styles.textWrap}>
           <Text style={styles.title}>{copy.title}</Text>

@@ -159,7 +159,10 @@ export default function DashboardScreen({ navigation }: Props) {
         {/* Bento row: a wider Trend tile + a Roasts-count stat tile (varied weights) */}
         <ReAnimated.View entering={enterUp(4)} style={styles.bentoRow}>
           <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.trendTile]}>
-            <Text style={styles.tileLabel}>Trend</Text>
+            <View style={styles.tileHeader}>
+              <Text style={styles.tileLabel}>Trend</Text>
+              <ChevronRightIcon size={16} color={Colors.textSecondary} />
+            </View>
             <Svg width={SPARK_W} height={SPARK_H}>
               <Polyline points={points} fill="none" stroke={band.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
             </Svg>
@@ -170,7 +173,10 @@ export default function DashboardScreen({ navigation }: Props) {
             </View>
           </PressableScale>
           <PressableScale haptic="light" onPress={() => navigation.navigate('AllAnalyses')} style={[styles.bentoTile, styles.statTile]}>
-            <Text style={styles.tileLabel}>Roasts</Text>
+            <View style={styles.tileHeader}>
+              <Text style={styles.tileLabel}>Roasts</Text>
+              <ChevronRightIcon size={16} color={Colors.textSecondary} />
+            </View>
             <Text style={styles.tileStat}>{history.length}</Text>
             <Text style={styles.tileSub}>so far</Text>
           </PressableScale>
@@ -230,7 +236,8 @@ const styles = StyleSheet.create({
   bentoTile: { ...card, padding: Spacing.lg },
   trendTile: { flex: 1.4, justifyContent: 'space-between' },
   statTile: { flex: 1, justifyContent: 'space-between' },
-  tileLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm },
+  tileHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  tileLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
   tileStat: { fontFamily: Typography.fonts.heading, fontSize: 40, color: Colors.textPrimary, letterSpacing: -1.5, marginTop: Spacing.xs },
   tileSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   toolsCard: { ...card, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.lg },

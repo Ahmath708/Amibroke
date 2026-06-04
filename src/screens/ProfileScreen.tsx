@@ -27,7 +27,6 @@ import { manageSubscriptions } from '@/services/purchases';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
-import PremiumCard from '@/components/PremiumCard';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
@@ -230,15 +229,6 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
         </View>
 
-        {/* Upgrade CTA — separate from avatar card */}
-        {user && purchaseTier !== 'deep_dive' && (
-          <PremiumCard
-            variant={purchaseTier === 'action_plan' ? 'upgrade' : 'go'}
-            onPress={() => navigation.navigate('Paywall')}
-            style={styles.upgradeCta}
-          />
-        )}
-
         {/* Stats row */}
 {user && (
   <View style={styles.statsRow}>
@@ -363,7 +353,6 @@ const styles = StyleSheet.create({
   },
   avatarInfo: { flex: 1, gap: Spacing.xs },
   username: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600' },
-  upgradeCta: { marginBottom: Spacing.lg },
   statsRow: {
     flexDirection: 'row',
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg,

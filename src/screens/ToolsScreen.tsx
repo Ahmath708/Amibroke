@@ -13,7 +13,6 @@ import { TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { hasAccessTo } from '@/services/subscriptions';
 import { getAnalysisHistory, getAnalysisById } from '@/services/claudeApi';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
@@ -37,7 +36,7 @@ const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requi
 export default function ToolsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { tier, refresh } = useSubscription();
+  const { tier, hasAccess, refresh } = useSubscription();
   const { animatedStyle } = useEntryAnimation();
   const [latestId, setLatestId] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
@@ -106,9 +105,9 @@ export default function ToolsScreen({ navigation }: Props) {
         )}
 
         <SectionLabel>Premium Tools</SectionLabel>
-        <View style={styles.group}>
-          {TOOLS.map((tool, i) => {
-            const unlocked = hasAccessTo(tier, tool.requires);
+        <View style={styles.grid}>
+          {TOOLS.map((tool) => {
+            const unlocked = hasAccess(tool.requires);
             const onPress = !unlocked
               ? () => navigation.navigate('Paywall')
               : tool.action
@@ -116,24 +115,22 @@ export default function ToolsScreen({ navigation }: Props) {
                 : () => (navigation.navigate as any)(tool.nav);
             const ToolIcon = tool.icon;
             return (
-              <React.Fragment key={tool.label}>
-                {i > 0 && <View style={styles.sep} />}
-                <PressableScale style={styles.cell} onPress={onPress} haptic="light" disabled={opening}>
+              <PressableScale key={tool.label} style={styles.tile} onPress={onPress} haptic="light" disabled={opening}>
+                <View style={styles.tileTop}>
                   <View style={[styles.iconBadge, !unlocked && styles.iconBadgeLocked]}>
-                    <ToolIcon size={18} color={unlocked ? Colors.primary : Colors.textMuted} />
+                    <ToolIcon size={20} color={unlocked ? Colors.primary : Colors.textMuted} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.label, !unlocked && styles.labelLocked]}>{tool.label}</Text>
-                    <Text style={styles.sub}>{!unlocked ? 'Subscribe to unlock' : tool.sub}</Text>
-                  </View>
-                  <View style={styles.right}>
-                    {unlocked && tool.soon ? <Text style={styles.soon}>Soon</Text> : null}
-                    {unlocked
-                      ? <ChevronRightIcon size={16} color={Colors.textSecondary} />
-                      : <LockClosedIcon size={15} color={Colors.textMuted} />}
-                  </View>
-                </PressableScale>
-              </React.Fragment>
+                  {unlocked
+                    ? (tool.soon
+                        ? <Text style={styles.soon}>Soon</Text>
+                        : <ChevronRightIcon size={16} color={Colors.textSecondary} />)
+                    : <LockClosedIcon size={15} color={Colors.textMuted} />}
+                </View>
+                <View>
+                  <Text style={[styles.label, !unlocked && styles.labelLocked]} numberOfLines={2}>{tool.label}</Text>
+                  <Text style={styles.sub} numberOfLines={1}>{!unlocked ? 'Subscribe to unlock' : tool.sub}</Text>
+                </View>
+              </PressableScale>
             );
           })}
         </View>
@@ -149,17 +146,23 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   title: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl },
-  group: {
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  tile: {
+    width: '48%',
+    minHeight: 128,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.glassBorderLight,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    justifyContent: 'space-between',
   },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.rowHeightLg },
-  cell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: Spacing.md, minHeight: 60 },
-  iconBadge: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  iconBadge: { width: 36, height: 36, borderRadius: Radius.sm, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
   iconBadgeLocked: { backgroundColor: Colors.backgroundSecondary },
   label: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   labelLocked: { color: Colors.textMuted },
   sub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   soon: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, letterSpacing: 0.3 },
 });
