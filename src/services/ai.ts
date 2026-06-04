@@ -8,6 +8,7 @@ import { FinalAnalysis, CaptionResponse, ActionPlanResponse, UserContext } from 
 import { RoastTone } from '@/types';
 import { USE_AI_MOCKS } from '@/config/ai';
 import { getSupabase } from './supabaseClient';
+import type { RevisionPatch, RevisionStep } from '@shared/planRevision';
 
 export function isFinancialAnalysis(x: unknown): x is FinalAnalysis {
   return FinalAnalysisSchema.safeParse(x).success;
@@ -154,6 +155,45 @@ export function fetchOrGenerateActionPlan(
   const p = runActionPlan(analysis, tone, analysisId).finally(() => actionPlanInFlight.delete(analysisId));
   actionPlanInFlight.set(analysisId, p);
   return p;
+}
+
+// Active Plan revision (Phase 2) — ask revise-plan for a PATCH against the current
+// steps. The deterministic apply (shared/planRevision.applyPatch) runs in the service
+// that calls this. Mocked in dev so the flow runs on the sim without burning credits.
+export async function revisePlanPatch(
+  currentSteps: RevisionStep[],
+  change: string,
+  startSnapshot: Record<string, number>,
+  currentSnapshot: Record<string, number>,
+  tone: RoastTone,
+): Promise<RevisionPatch | null> {
+  if (USE_AI_MOCKS) {
+    await new Promise((r) => setTimeout(r, 500));
+    const firstPending = currentSteps.find((s) => s.status === 'pending');
+    return {
+      keep: currentSteps.filter((s) => s.id !== firstPending?.id).map((s) => s.id),
+      drop: [],
+      modify: firstPending ? [{ id: firstPending.id, title: `${firstPending.title} (updated)`, description: 'Adjusted to your latest numbers.' }] : [],
+      add: [],
+      overallMessage: 'Mock revision — tuned your plan to the latest check-in.',
+    };
+  }
+  const client = getSupabase();
+  if (!client) return null;
+  try {
+    const { data, error } = await client.functions.invoke('revise-plan', {
+      body: { currentSteps, change, startSnapshot, currentSnapshot, tone, mode: 'patch' },
+    });
+    if (error) { console.error('[ai] revisePlanPatch error:', error); return null; }
+    if (!data || !Array.isArray(data.keep) || !Array.isArray(data.add) || typeof data.overallMessage !== 'string') {
+      console.warn('[ai] revisePlanPatch malformed response');
+      return null;
+    }
+    return data as RevisionPatch;
+  } catch (e) {
+    console.error('[ai] revisePlanPatch exception:', e);
+    return null;
+  }
 }
 
 async function runActionPlan(

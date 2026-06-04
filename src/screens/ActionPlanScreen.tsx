@@ -16,7 +16,8 @@ import ConfidenceBadge from '@/components/ConfidenceBadge';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useAuth } from '@/context/AuthContext';
 import {
-  getActivePlan, startPlan, setStepStatus, abandonPlan, planProgress, planDelta, type ActivePlan,
+  getActivePlan, startPlan, setStepStatus, abandonPlan, reviseActivePlan, planProgress, planDelta,
+  type ActivePlan, type PlanStartMetrics,
 } from '@/services/activePlan';
 import { getCheckIns } from '@/services/checkins';
 import { formatCurrency } from '@/utils/format';
@@ -127,6 +128,7 @@ export default function ActionPlanScreen({ route }: Props) {
   const [latest, setLatest] = useState<{ debt: number | null; savings: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [committing, setCommitting] = useState(false);
+  const [revising, setRevising] = useState(false);
 
   // Candidate plan shown until one is committed (the generated/passed steps).
   const previewSteps: ActionStep[] = (rawSteps && rawSteps.length > 0)
@@ -171,6 +173,27 @@ export default function ActionPlanScreen({ route }: Props) {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Restart', style: 'destructive', onPress: async () => { await abandonPlan(plan.id); setPlan(null); } },
     ]);
+  };
+
+  // Revise the active plan from the latest check-in numbers (gated by materiality).
+  const update = async () => {
+    if (!plan || revising) return;
+    setRevising(true);
+    try {
+      const start = plan.start_metrics;
+      const snap: PlanStartMetrics = {
+        debtTotal: latest?.debt ?? start?.debtTotal ?? 0,
+        liquidSavings: latest?.savings ?? start?.liquidSavings ?? 0,
+        monthlyIncome: start?.monthlyIncome ?? 0,
+        monthlySavings: start?.monthlySavings ?? 0,
+        score: start?.score ?? 0,
+      };
+      const res = await reviseActivePlan(plan, 'Updating from my latest check-in.', snap, 'savage');
+      if (res.revised) setPlan(res.plan);
+      else Alert.alert('Plan unchanged', res.reason);
+    } finally {
+      setRevising(false);
+    }
   };
 
   if (loading) return <LoadingState />;
@@ -286,9 +309,17 @@ export default function ActionPlanScreen({ route }: Props) {
         </View>
 
         {isActive && (
-          <TouchableOpacity onPress={restart} activeOpacity={0.7}>
-            <Text style={styles.restartLink}>Restart plan</Text>
-          </TouchableOpacity>
+          <>
+            <NeonButton
+              label={revising ? 'Updating…' : 'Update from latest check-in'}
+              onPress={update}
+              disabled={revising}
+              style={{ marginTop: Spacing.xs }}
+            />
+            <TouchableOpacity onPress={restart} activeOpacity={0.7}>
+              <Text style={styles.restartLink}>Restart plan</Text>
+            </TouchableOpacity>
+          </>
         )}
 
         <Disclaimer style={styles.disclaimer} />

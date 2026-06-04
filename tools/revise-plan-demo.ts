@@ -16,6 +16,7 @@ import fs from 'fs';
 import path from 'path';
 import { recordApiCall, getCounterState } from './lib/call-counter';
 import { ActionPlanResponseSchema } from '../shared/schemas';
+import { applyPatch, SINGULAR_KINDS, type StepKind, type RevisionStep, type RevisionPatch } from '../shared/planRevision';
 
 // ── minimal .env loader (just ANTHROPIC_API_KEY) ──────────────────────────────
 (function loadEnv() {
@@ -83,7 +84,6 @@ NEVER pretend to be a licensed advisor, guarantee outcomes, or mention self-harm
 
 // ── Test cases (each = 1 Anthropic call; add more to "build upon it") ──────────
 type Snapshot = { score: number; debtTotal: number; monthlyIncome: number; monthlySavings: number; liquidSavings: number };
-type StepKind = 'debt_paydown' | 'build_efund' | 'cut_spend' | 'grow_income' | 'habit';
 type PlanStep = { week: string; title: string; description: string; category: string; impact: string; confidence: string; target?: { kind?: StepKind; amount?: number } };
 type Case = {
   id: string;
@@ -314,15 +314,10 @@ function userJsonFor(tc: Case) {
 
 type CaseResult = { id: string; zodOk: boolean; passed: number; total: number };
 
-// ─── Patch mode (hybrid) ──────────────────────────────────────────────────────
+// ─── Patch mode (hybrid) — applyPatch/types now live in shared/planRevision.ts ──
 type StepStatus = 'done' | 'pending' | 'skipped';
-type CurStep = PlanStep & { id: string; status: StepStatus };
-type Patch = { keep: string[]; drop: string[]; modify: (Partial<PlanStep> & { id: string })[]; add: PlanStep[]; overallMessage: string };
-
-// Singular kinds: at most one ACTIVE step each (you don't run two emergency funds, or
-// two generic debt-payoff steps). In production debt_paydown would be keyed by account
-// so multiple debts are allowed; here there's one debt, so kind alone is the key.
-const SINGULAR_KINDS = new Set<StepKind>(['build_efund', 'debt_paydown']);
+type CurStep = RevisionStep;        // alias to the shared engine's step shape
+type Patch = RevisionPatch;
 
 // Demo shim: label each existing step with a target.kind. In production the kind is
 // stored on the step at generation (the StepTarget schema field); here we infer it.
@@ -341,95 +336,6 @@ function currentStepsFor(tc: Case): CurStep[] {
   const done = tc.completedSteps.map((s, i) => tag(s, `s${i}`, 'done'));
   const pending = tc.remainingSteps.map((s, i) => tag(s, `s${done.length + i}`, 'pending'));
   return [...done, ...pending];
-}
-
-// THE deterministic apply engine — the half of the architecture our code owns.
-// It records the model's structural defects (informational), then REPAIRS them so
-// the output is always a valid, identity-preserving 4-6 step plan:
-//   • resolve overlapping op-sets by precedence modify > keep > drop (never lose content)
-//   • never drop a completed ('done') step
-//   • default-keep any unclassified step
-//   • trim to ≤6 by removing excess ADDED steps first (then trailing pending), never completed
-//   • backfill to ≥4 by restoring dropped steps
-function applyPatch(current: CurStep[], patch: Patch): { steps: CurStep[]; modelIssues: string[]; repairs: string[] } {
-  const modelIssues: string[] = [];
-  const repairs: string[] = [];
-  const byId = new Map(current.map((s) => [s.id, s]));
-  const inKeep = new Set(patch.keep ?? []);
-  const inDrop = new Set(patch.drop ?? []);
-  const modById = new Map((patch.modify ?? []).map((m) => [m.id, m]));
-
-  // Record raw model defects (what the LLM got wrong — we'll absorb these).
-  for (const id of [...inKeep, ...inDrop, ...modById.keys()]) if (!byId.has(id)) modelIssues.push(`hallucinated id ${id}`);
-  for (const s of current) {
-    const n = (inKeep.has(s.id) ? 1 : 0) + (inDrop.has(s.id) ? 1 : 0) + (modById.has(s.id) ? 1 : 0);
-    if (n === 0) modelIssues.push(`unclassified ${s.id}`);
-    if (n > 1) modelIssues.push(`${s.id} in ${n} op-sets`);
-  }
-  for (const id of inDrop) if (byId.get(id)?.status === 'done') modelIssues.push(`tried to drop completed ${id}`);
-
-  // Classify each CURRENT step by precedence: modify > keep > drop.
-  const retained: CurStep[] = [];
-  for (const s of current) {
-    const mod = modById.get(s.id);
-    if (mod) { const { id: _omit, ...fields } = mod; retained.push({ ...s, ...fields }); }
-    else if (inKeep.has(s.id)) retained.push(s);
-    else if (inDrop.has(s.id)) {
-      if (s.status === 'done') { retained.push(s); repairs.push(`kept completed ${s.id} the model dropped`); }
-      // otherwise genuinely dropped
-    } else { retained.push(s); repairs.push(`kept unclassified ${s.id}`); }
-  }
-  if (modelIssues.some((i) => i.includes('op-sets'))) repairs.push('resolved op-set overlap by precedence modify>keep>drop');
-
-  let next = current.length;
-  const added: CurStep[] = (patch.add ?? []).map((a) => ({ ...a, id: `s${next++}`, status: 'pending' as StepStatus }));
-  let result = [...retained, ...added];
-
-  // Trim to ≤6: drop excess ADDED first, then trailing pending; never completed.
-  if (result.length > 6) {
-    const removable = Math.min(result.length - 6, added.length);
-    if (removable > 0) { result = [...retained, ...added.slice(0, added.length - removable)]; repairs.push(`trimmed ${removable} excess added step(s) to cap at 6`); }
-    while (result.length > 6) {
-      const fromEnd = [...result].reverse().findIndex((s) => s.status !== 'done');
-      if (fromEnd === -1) break;
-      const idx = result.length - 1 - fromEnd;
-      repairs.push(`trimmed pending step ${result[idx].id} to cap at 6`);
-      result.splice(idx, 1);
-    }
-  }
-  // Backfill to ≥4: restore dropped steps.
-  if (result.length < 4) {
-    const have = new Set(result.map((s) => s.id));
-    for (const id of inDrop) {
-      if (result.length >= 4) break;
-      const s = byId.get(id);
-      if (s && !have.has(id)) { result.push(s); have.add(id); repairs.push(`restored dropped ${id} to reach 4`); }
-    }
-  }
-
-  // De-dup by singular kind: when the model adds a VARIATION of a goal that an active
-  // step already covers (the credit_debt/credit_debts case) instead of modifying in
-  // place, fold the later step's content onto the FIRST step's id+status and drop the
-  // duplicate. Identity preserved; the intended revision is recovered; no double entry.
-  const kindOf = (s: CurStep) => s.target?.kind;
-  const firstByKind = new Map<StepKind, number>();
-  const folded: CurStep[] = [];
-  for (const s of result) {
-    const k = kindOf(s);
-    if (s.status !== 'done' && k && SINGULAR_KINDS.has(k) && firstByKind.has(k)) {
-      const i = firstByKind.get(k)!;
-      const keeper = folded[i];
-      folded[i] = { ...keeper, week: s.week, title: s.title, description: s.description, impact: s.impact, category: s.category, confidence: s.confidence, target: s.target ?? keeper.target };
-      modelIssues.push(`duplicate '${k}' intent: ${s.id} should have been a modify of ${keeper.id}`);
-      repairs.push(`folded duplicate '${k}' step ${s.id} into ${keeper.id} (recovered the intended modify)`);
-      continue;
-    }
-    if (s.status !== 'done' && k && SINGULAR_KINDS.has(k)) firstByKind.set(k, folded.length);
-    folded.push(s);
-  }
-  result = folded;
-
-  return { steps: result, modelIssues, repairs };
 }
 
 // Deterministic proof that the dedup catches the model's worst case (no API call):
@@ -524,7 +430,7 @@ async function runCasePatch(tc: Case, raw: boolean): Promise<CaseResult> {
   console.log(`  add:    ${(patch.add ?? []).length} new step(s)`);
 
   // ── Deterministic apply + repair (our code) ──
-  const { steps, modelIssues, repairs } = applyPatch(current, patch);
+  const { steps, modelIssues, repairs } = applyPatch(current, patch, { snapshot: { debtTotal: tc.currentSnapshot.debtTotal } });
   if (modelIssues.length) console.log(`  model patch defects (absorbed): ${modelIssues.join('; ')}`);
   if (repairs.length) console.log(`  repairs applied: ${repairs.join('; ')}`);
   printSteps('APPLIED + REPAIRED result (id · status):', steps.map((s) => ({ ...s, week: `${s.id}·${s.status} ${s.week}` })) as PlanStep[]);

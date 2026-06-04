@@ -7,7 +7,9 @@
 import { withClient } from './supabaseClient';
 import { TABLES } from './tables';
 import { USE_AI_MOCKS } from '@/config/ai';
-import type { ActionStep } from '@/types';
+import { revisePlanPatch } from './ai';
+import { applyPatch } from '@shared/planRevision';
+import type { ActionStep, RoastTone } from '@/types';
 import type { FinalAnalysis } from '@shared/types';
 
 export type StepStatus = 'pending' | 'done' | 'skipped';
@@ -186,4 +188,49 @@ export async function abandonPlan(planId: string): Promise<boolean> {
     if (error) throw error;
     return true;
   });
+}
+
+export interface ReviseResult { revised: boolean; reason: string; plan: ActivePlan; }
+
+/** Revise the active plan to a new snapshot. Gated by shouldRevisePlan (never fires
+ *  without a committed plan or for an immaterial change), then: ask for a patch →
+ *  apply deterministically (shared engine, snapshot reality-checked) → persist
+ *  version+1. Fail-soft: any failure leaves the current plan untouched. */
+export async function reviseActivePlan(
+  plan: ActivePlan,
+  change: string,
+  snapshot: PlanStartMetrics,
+  tone: RoastTone,
+): Promise<ReviseResult> {
+  const gate = shouldRevisePlan(plan, snapshot);
+  if (!gate.revise) return { revised: false, reason: gate.reason, plan };
+
+  const start = plan.start_metrics ?? snapshot;
+  const patch = await revisePlanPatch(
+    plan.steps as unknown as Parameters<typeof applyPatch>[0],
+    change,
+    { debtTotal: start.debtTotal, liquidSavings: start.liquidSavings, monthlyIncome: start.monthlyIncome, monthlySavings: start.monthlySavings, score: start.score },
+    { debtTotal: snapshot.debtTotal, liquidSavings: snapshot.liquidSavings, monthlyIncome: snapshot.monthlyIncome, monthlySavings: snapshot.monthlySavings, score: snapshot.score },
+    tone,
+  );
+  if (!patch) return { revised: false, reason: 'revision call failed — plan unchanged', plan };
+
+  const { steps } = applyPatch(plan.steps as any, patch, { snapshot: { debtTotal: snapshot.debtTotal } });
+  const revised: ActivePlan = {
+    ...plan,
+    steps: steps as unknown as ActivePlanStep[],
+    overall_message: patch.overallMessage ?? plan.overall_message,
+    version: plan.version + 1,
+  };
+
+  if (USE_AI_MOCKS) { mockPlan = revised; return { revised: true, reason: gate.reason, plan: revised }; }
+  const persisted = await withClient<ActivePlan | null>('revise plan', null, async (client) => {
+    const { data, error } = await (client as any).from(TABLES.active_plans)
+      .update({ steps: revised.steps, overall_message: revised.overall_message, version: revised.version, updated_at: new Date().toISOString() })
+      .eq('id', plan.id).select('*').single();
+    if (error) throw error;
+    return data as ActivePlan;
+  });
+  // Fail-soft: if the DB write failed, return the in-memory revised plan rather than corrupting state.
+  return { revised: true, reason: gate.reason, plan: persisted ?? revised };
 }
