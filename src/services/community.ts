@@ -2,7 +2,7 @@
 // reactions (Supabase `community_posts` + `post_reactions` tables).
 import { CommunityPost } from '@/types';
 import { TABLES } from './tables';
-import { getSupabase } from './supabaseClient';
+import { withClient } from './supabaseClient';
 import { getProfile } from './profile';
 
 export type FeedSort = 'recent' | 'trending' | 'lowest';
@@ -23,9 +23,7 @@ export async function getCommunityFeed(
 ): Promise<FeedPage> {
   const { sort = 'recent', userId, cursor = null, limit = 20 } = opts;
   const empty: FeedPage = { posts: [], nextCursor: null, hasMore: false };
-  const client = getSupabase();
-  if (!client) return empty;
-  try {
+  return withClient('fetch community feed', empty, async (client) => {
     let query = (client as any).from(TABLES.community_posts).select('*');
 
     if (sort === 'lowest') {
@@ -78,10 +76,7 @@ export async function getCommunityFeed(
       : null;
 
     return { posts, nextCursor, hasMore };
-  } catch (error) {
-    console.warn('Failed to fetch community feed:', error);
-    return empty;
-  }
+  });
 }
 
 /** Authoritative reaction state for a single post — used to patch one card after an
@@ -90,9 +85,7 @@ export async function getPostReactions(
   postId: string,
   userId?: string,
 ): Promise<{ reactions: Record<string, number>; my_reactions: string[] } | null> {
-  const client = getSupabase();
-  if (!client) return null;
-  try {
+  return withClient<{ reactions: Record<string, number>; my_reactions: string[] } | null>('fetch post reactions', null, async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.community_posts)
       .select('reactions')
@@ -110,10 +103,7 @@ export async function getPostReactions(
       my_reactions = (mine || []).map((r: any) => r.emoji);
     }
     return { reactions: data.reactions || {}, my_reactions };
-  } catch (error) {
-    console.warn('Failed to fetch post reactions:', error);
-    return null;
-  }
+  });
 }
 
 export async function shareToFeed(
@@ -125,9 +115,7 @@ export async function shareToFeed(
   summary: string,
   shareCaptions?: any[],
 ): Promise<string | null> {
-  const client = getSupabase();
-  if (!client) return null;
-  try {
+  return withClient('share to feed', null, async (client) => {
     const profile = await getProfile(userId);
     const displayName = profile?.username
       ? `anon_${profile.username.slice(0, 8)}`
@@ -148,35 +136,25 @@ export async function shareToFeed(
       .single();
     if (error) throw error;
     return data.id;
-  } catch (error) {
-    console.warn('Failed to share to feed:', error);
-    return null;
-  }
+  });
 }
 
 /** Analysis IDs the user currently has live in the community feed (drives the share manager toggles). */
 export async function getMySharedAnalysisIds(userId: string): Promise<string[]> {
-  const client = getSupabase();
-  if (!client) return [];
-  try {
+  return withClient('fetch shared analysis ids', [], async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.community_posts)
       .select('analysis_id')
       .eq('user_id', userId);
     if (error) throw error;
     return (data || []).map((r: any) => r.analysis_id).filter(Boolean);
-  } catch (error) {
-    console.warn('Failed to fetch shared analysis ids:', error);
-    return [];
-  }
+  });
 }
 
 /** Remove the user's post for an analysis from the feed (RLS allows deleting own posts;
  *  post_reactions cascade-delete, so reactions are lost — re-sharing starts fresh). */
 export async function unshareFromFeed(analysisId: string, userId: string): Promise<boolean> {
-  const client = getSupabase();
-  if (!client) return false;
-  try {
+  return withClient('unshare from feed', false, async (client) => {
     const { error } = await (client as any)
       .from(TABLES.community_posts)
       .delete()
@@ -184,33 +162,22 @@ export async function unshareFromFeed(analysisId: string, userId: string): Promi
       .eq('user_id', userId);
     if (error) throw error;
     return true;
-  } catch (error) {
-    console.warn('Failed to unshare from feed:', error);
-    return false;
-  }
+  });
 }
 
 export async function addReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
-  const client = getSupabase();
-  if (!client) return false;
-  try {
+  return withClient('add reaction', false, async (client) => {
     const { error } = await (client as any)
       .from(TABLES.post_reactions)
       .insert({ post_id: postId, user_id: userId, emoji });
-    if (error?.code === '23505') return false;
+    if (error?.code === '23505') return false; // already reacted — not an error
     if (error) throw error;
-
     return true;
-  } catch (error) {
-    console.warn('Failed to add reaction:', error);
-    return false;
-  }
+  });
 }
 
 export async function removeReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
-  const client = getSupabase();
-  if (!client) return false;
-  try {
+  return withClient('remove reaction', false, async (client) => {
     const { error } = await (client as any)
       .from(TABLES.post_reactions)
       .delete()
@@ -218,10 +185,6 @@ export async function removeReaction(postId: string, userId: string, emoji: stri
       .eq('user_id', userId)
       .eq('emoji', emoji);
     if (error) throw error;
-
     return true;
-  } catch (error) {
-    console.warn('Failed to remove reaction:', error);
-    return false;
-  }
+  });
 }

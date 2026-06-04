@@ -3,12 +3,10 @@
 // to billing / paid tiers — see services/subscriptions.ts for that.
 import { Subscription } from '@/types';
 import { TABLES } from './tables';
-import { getSupabase } from './supabaseClient';
+import { withClient } from './supabaseClient';
 
 export async function getSubscriptions(userId: string): Promise<Subscription[]> {
-  const client = getSupabase();
-  if (!client) return [];
-  try {
+  return withClient('fetch subscriptions', [], async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.subscriptions)
       .select('*')
@@ -23,16 +21,11 @@ export async function getSubscriptions(userId: string): Promise<Subscription[]> 
       category: s.category || '',
       last_used: s.last_used || '',
     }));
-  } catch (error) {
-    console.warn('Failed to fetch subscriptions:', error);
-    return [];
-  }
+  });
 }
 
 export async function saveSubscription(userId: string, sub: Omit<Subscription, 'id'>): Promise<string | null> {
-  const client = getSupabase();
-  if (!client) return null;
-  try {
+  return withClient('save subscription', null, async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.subscriptions)
       .insert({ user_id: userId, ...sub })
@@ -40,16 +33,11 @@ export async function saveSubscription(userId: string, sub: Omit<Subscription, '
       .single();
     if (error) throw error;
     return data.id;
-  } catch (error) {
-    console.warn('Failed to save subscription:', error);
-    return null;
-  }
+  });
 }
 
 export async function deleteSubscription(userId: string, subId: string): Promise<boolean> {
-  const client = getSupabase();
-  if (!client) return false;
-  try {
+  return withClient('delete subscription', false, async (client) => {
     const { error } = await (client as any)
       .from(TABLES.subscriptions)
       .delete()
@@ -57,8 +45,5 @@ export async function deleteSubscription(userId: string, subId: string): Promise
       .eq('user_id', userId);
     if (error) throw error;
     return true;
-  } catch (error) {
-    console.warn('Failed to delete subscription:', error);
-    return false;
-  }
+  });
 }

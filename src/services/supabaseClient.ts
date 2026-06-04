@@ -61,3 +61,24 @@ export function __setSupabaseForTests(c: SupabaseClient | null) {
 export function getSupabase(): SupabaseClient | null {
   return testClient ?? getSupabaseClient();
 }
+
+/**
+ * Run a Supabase query with the standard guard + try/catch the data services
+ * all repeated by hand: returns `fallback` if the client is unavailable, runs
+ * `fn` otherwise, and returns `fallback` (logging `[db] <label> failed`) if it
+ * throws. Collapses the ~20 copies of that boilerplate into one place.
+ */
+export async function withClient<T>(
+  label: string,
+  fallback: T,
+  fn: (client: SupabaseClient) => Promise<T>,
+): Promise<T> {
+  const client = getSupabase();
+  if (!client) return fallback;
+  try {
+    return await fn(client);
+  } catch (e) {
+    console.warn(`[db] ${label} failed:`, e);
+    return fallback;
+  }
+}

@@ -4,7 +4,7 @@
 import { CheckIn, CheckinConfig, EMPTY_CHECKIN_CONFIG } from '@/types';
 import { TABLES } from './tables';
 import { USE_AI_MOCKS } from '@/config/ai';
-import { getSupabase } from './supabaseClient';
+import { withClient } from './supabaseClient';
 
 export async function saveCheckIn(userId: string, data: {
   mood: number;
@@ -16,9 +16,7 @@ export async function saveCheckIn(userId: string, data: {
   metrics?: Record<string, number>;
 }): Promise<string | null> {
   if (USE_AI_MOCKS) return 'mock-checkin-id';
-  const client = getSupabase();
-  if (!client) return null;
-  try {
+  return withClient('save check-in', null, async (client) => {
     const { data: result, error } = await (client as any)
       .from(TABLES.check_ins)
       .insert({ user_id: userId, ...data })
@@ -26,10 +24,7 @@ export async function saveCheckIn(userId: string, data: {
       .single();
     if (error) throw error;
     return result.id;
-  } catch (error) {
-    console.warn('Failed to save check-in:', error);
-    return null;
-  }
+  });
 }
 
 export async function getCheckIns(userId: string): Promise<CheckIn[]> {
@@ -37,9 +32,7 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
     const { MOCK_CHECKINS } = require('@/__fixtures__/mockHistory');
     return MOCK_CHECKINS;
   }
-  const client = getSupabase();
-  if (!client) return [];
-  try {
+  return withClient('fetch check-ins', [], async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.check_ins)
       .select('*')
@@ -57,10 +50,7 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
       created_at: c.created_at,
       metrics: c.metrics ?? null,
     }));
-  } catch (error) {
-    console.warn('Failed to fetch check-ins:', error);
-    return [];
-  }
+  });
 }
 
 /** Read the user's monthly check-in config (pinned goals + schedule anchor). */
@@ -69,9 +59,7 @@ export async function getCheckinConfig(userId: string): Promise<CheckinConfig> {
     const { MOCK_CHECKIN_CONFIG } = require('@/__fixtures__/mockHistory');
     return MOCK_CHECKIN_CONFIG;
   }
-  const client = getSupabase();
-  if (!client) return EMPTY_CHECKIN_CONFIG;
-  try {
+  return withClient('fetch check-in config', EMPTY_CHECKIN_CONFIG, async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.profiles)
       .select('checkin_config')
@@ -79,25 +67,17 @@ export async function getCheckinConfig(userId: string): Promise<CheckinConfig> {
       .maybeSingle();
     if (error) throw error;
     return (data?.checkin_config as CheckinConfig) ?? EMPTY_CHECKIN_CONFIG;
-  } catch (error) {
-    console.warn('Failed to fetch check-in config:', error);
-    return EMPTY_CHECKIN_CONFIG;
-  }
+  });
 }
 
 export async function saveCheckinConfig(userId: string, config: CheckinConfig): Promise<boolean> {
   if (USE_AI_MOCKS) return true;
-  const client = getSupabase();
-  if (!client) return false;
-  try {
+  return withClient('save check-in config', false, async (client) => {
     const { error } = await (client as any)
       .from(TABLES.profiles)
       .update({ checkin_config: config })
       .eq('id', userId);
     if (error) throw error;
     return true;
-  } catch (error) {
-    console.warn('Failed to save check-in config:', error);
-    return false;
-  }
+  });
 }

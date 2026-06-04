@@ -4,13 +4,10 @@ import { FinalAnalysis } from '@shared/types';
 import { TABLES, HISTORY_COLUMNS } from './tables';
 import { AnalysisHistoryItem } from '@/types';
 import { USE_AI_MOCKS } from '@/config/ai';
-import { getSupabase } from './supabaseClient';
+import { withClient } from './supabaseClient';
 
 export async function saveAnalysis(userId: string, input: string, analysis: FinalAnalysis): Promise<string | null> {
-  const client = getSupabase();
-  if (!client) return null;
-  console.log('[analyses] Saving analysis to database for user:', userId);
-  try {
+  return withClient('save analysis', null, async (client) => {
     const { data, error } = await (client as any).from(TABLES.analyses).insert({
       user_id: userId,
       input_text: input,
@@ -40,17 +37,9 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
       emotional_status: analysis.emotionalStatus,
       mentioned_spending: analysis.mentionedSpending,
     }).select('id').single();
-
-    if (error) {
-      console.error('[analyses] Database save error:', error.message, error.details);
-      throw error;
-    }
-    console.log('[analyses] Analysis saved successfully, ID:', data.id);
+    if (error) throw error;
     return data.id;
-  } catch (error) {
-    console.warn('Failed to save analysis:', error);
-    return null;
-  }
+  });
 }
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
@@ -58,9 +47,7 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
     const { MOCK_HISTORY } = require('@/__fixtures__/mockHistory');
     return MOCK_HISTORY;
   }
-  const client = getSupabase();
-  if (!client) return [];
-  try {
+  return withClient('fetch history', [], async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.analyses)
       .select(HISTORY_COLUMNS)
@@ -68,10 +55,7 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []).map(mapAnalysisRow);
-  } catch (error) {
-    console.warn('Failed to fetch history:', error);
-    return [];
-  }
+  });
 }
 
 export interface AnalysesPage { items: AnalysisHistoryItem[]; nextCursor: string | null; hasMore: boolean; }
@@ -104,9 +88,7 @@ export async function getAnalysesPage(
     return { items, nextCursor: items.length ? items[items.length - 1].created_at : null, hasMore };
   }
   const empty: AnalysesPage = { items: [], nextCursor: null, hasMore: false };
-  const client = getSupabase();
-  if (!client) return empty;
-  try {
+  return withClient('fetch analyses page', empty, async (client) => {
     let q = (client as any)
       .from(TABLES.analyses)
       .select(HISTORY_COLUMNS)
@@ -120,10 +102,7 @@ export async function getAnalysesPage(
     const hasMore = rows.length > limit;
     const items = (hasMore ? rows.slice(0, limit) : rows).map(mapAnalysisRow);
     return { items, nextCursor: items.length ? items[items.length - 1].created_at : null, hasMore };
-  } catch (error) {
-    console.warn('Failed to fetch analyses page:', error);
-    return empty;
-  }
+  });
 }
 
 export async function getAnalysisById(id: string): Promise<FinalAnalysis | null> {
@@ -131,9 +110,7 @@ export async function getAnalysisById(id: string): Promise<FinalAnalysis | null>
     const { getMockAnalysisById } = require('@/__fixtures__/mockHistory');
     return getMockAnalysisById(id);
   }
-  const client = getSupabase();
-  if (!client) return null;
-  try {
+  return withClient<FinalAnalysis | null>('fetch analysis by id', null, async (client) => {
     const { data, error } = await (client as any)
       .from(TABLES.analyses)
       .select('*')
@@ -173,23 +150,15 @@ export async function getAnalysisById(id: string): Promise<FinalAnalysis | null>
       emotionalStatus: data.emotional_status ?? null,
       mentionedSpending: data.mentioned_spending ?? [],
     };
-  } catch (err) {
-    console.warn('Failed to fetch analysis by id:', err);
-    return null;
-  }
+  });
 }
 
 /** Delete all of the user's analyses (Settings → Clear Analysis History).
  *  RLS allows deleting own rows; community_posts.analysis_id is ON DELETE SET NULL. */
 export async function deleteAllAnalyses(userId: string): Promise<boolean> {
-  const client = getSupabase();
-  if (!client) return false;
-  try {
+  return withClient('clear analyses', false, async (client) => {
     const { error } = await (client as any).from(TABLES.analyses).delete().eq('user_id', userId);
     if (error) throw error;
     return true;
-  } catch (error) {
-    console.warn('Failed to clear analyses:', error);
-    return false;
-  }
+  });
 }
