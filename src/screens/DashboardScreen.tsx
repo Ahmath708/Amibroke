@@ -29,7 +29,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import StatusPill from '@/components/StatusPill';
 import ScoreRing from '@/components/ScoreRing';
 import NeonButton from '@/components/NeonButton';
-import ProfileAvatarButton from '@/components/ProfileAvatarButton';
+import NotificationBell from '@/components/NotificationBell';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
 import Skeleton from '@/components/Skeleton';
@@ -169,7 +169,7 @@ export default function DashboardScreen({ navigation }: Props) {
                 <Text style={styles.greetingName} numberOfLines={1}>{timeGreeting()}</Text>
               )}
             </View>
-            <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
+            <NotificationBell />
           </ReAnimated.View>
 
           <ReAnimated.View entering={enterUp(1)} style={styles.emptyHero}>
@@ -248,7 +248,7 @@ export default function DashboardScreen({ navigation }: Props) {
               <Text style={styles.greetingName} numberOfLines={1}>{timeGreeting()}</Text>
             )}
           </View>
-          <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
+          <NotificationBell />
         </ReAnimated.View>
 
         {/* Score hero — focal glow on the home score; tap to reopen your latest roast */}

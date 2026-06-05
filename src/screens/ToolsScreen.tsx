@@ -21,7 +21,7 @@ import SectionLabel from '@/components/SectionLabel';
 import PremiumCard from '@/components/PremiumCard';
 import TierPill from '@/components/TierPill';
 import Skeleton from '@/components/Skeleton';
-import ProfileAvatarButton from '@/components/ProfileAvatarButton';
+import NotificationBell from '@/components/NotificationBell';
 
 type Props = { navigation: TabScreenNav<'Tools'> };
 
@@ -103,7 +103,7 @@ export default function ToolsScreen({ navigation }: Props) {
             <Text style={styles.title}>Tools</Text>
             {subLoading ? <Skeleton width={68} height={22} radius={11} /> : <TierPill tier={tier} />}
           </View>
-          <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
+          <NotificationBell />
         </View>
         <Text style={styles.subtitle}>Your premium toolkit to actually fix things.</Text>
 

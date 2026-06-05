@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
-import ProfileAvatarButton from '@/components/ProfileAvatarButton';
+import NotificationBell from '@/components/NotificationBell';
 import Fab from '@/components/Fab';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
@@ -236,7 +236,7 @@ export default function CommunityFeedScreen() {
           <>
             <View style={styles.headerRow}>
               <Text style={styles.largeTitle}>Community</Text>
-              <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
+              <NotificationBell />
             </View>
             <Text style={styles.subtitle}>Anonymous financial roasts from the community 💸</Text>
             <View style={styles.segmentRow}>
