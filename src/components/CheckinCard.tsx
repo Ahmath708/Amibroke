@@ -18,7 +18,7 @@ interface Props {
  *  Neutral elevated surface (the accent moment is reserved for the premium card),
  *  with an accent-tinted icon badge + chevron for a contained pop. */
 export default function CheckinCard({ onPress, style }: Props) {
-  const { loading, configured, due, dueDate } = useCheckinStatus();
+  const { loading, configured, due, dueDate, streak } = useCheckinStatus();
   if (loading || !configured) return null;
 
   const dateLabel = dueDate ? `${MONTHS_SHORT[dueDate.getMonth()]} ${dueDate.getDate()}` : '';
@@ -31,7 +31,7 @@ export default function CheckinCard({ onPress, style }: Props) {
           <View style={styles.iconBadge}><CalendarIcon size={20} color={Colors.accent} /></View>
           <View style={styles.dueText}>
             <Text style={styles.dueTitle}>Your {monthName} check-in is ready</Text>
-            <Text style={styles.dueBody}>Update your numbers and see your progress.</Text>
+            <Text style={styles.dueBody}>{streak > 1 ? `Keep your ${streak}-month streak alive 🔥` : 'Check in on how you’re feeling + what’s changed.'}</Text>
           </View>
           <ChevronRightIcon size={18} color={Colors.accent} />
         </View>
@@ -42,8 +42,8 @@ export default function CheckinCard({ onPress, style }: Props) {
   return (
     <PressableScale onPress={onPress} haptic="light" style={style}>
       <View style={styles.compact}>
-        <Text style={styles.compactIcon}>✅</Text>
-        <Text style={styles.compactText}>Tracking monthly{dateLabel ? ` · Next check-in ${dateLabel}` : ''}</Text>
+        <Text style={styles.compactIcon}>{streak > 1 ? '🔥' : '✅'}</Text>
+        <Text style={styles.compactText}>{streak > 1 ? `${streak}-month streak` : 'Tracking monthly'}{dateLabel ? ` · Next ${dateLabel}` : ''}</Text>
         <ChevronRightIcon size={16} color={Colors.textMuted} />
       </View>
     </PressableScale>

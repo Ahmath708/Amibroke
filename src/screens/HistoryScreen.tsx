@@ -196,6 +196,9 @@ export default function HistoryScreen() {
                                 "{c.notes}"
                               </Text>
                             ) : null}
+                            {c.reflection ? (
+                              <Text style={styles.checkinReflection} numberOfLines={3}>{c.reflection}</Text>
+                            ) : null}
                           </View>
                         </View>
                       </React.Fragment>
@@ -237,6 +240,7 @@ const styles = StyleSheet.create({
   historyInfo: { flex: 1, gap: Spacing.xs },
   historyDate: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
   historySummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
+  checkinReflection: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.accent, lineHeight: 18, marginTop: Spacing.xs / 2, fontStyle: 'italic' },
   checkinEmoji: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',

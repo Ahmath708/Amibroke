@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getCheckinConfig, getCheckIns } from '@/services/checkins';
 import { CheckinConfig, CheckIn, EMPTY_CHECKIN_CONFIG } from '@/types';
 import { dueStatus } from '@/utils/checkinSchedule';
+import { currentStreak } from '@shared/checkinCadence';
 
 export interface CheckinStatus {
   loading: boolean;
@@ -13,11 +14,12 @@ export interface CheckinStatus {
   lastCheckIn: CheckIn | null;
   checkIns: CheckIn[];      // newest first
   config: CheckinConfig;
+  streak: number;           // consecutive monthly windows with a check-in
 }
 
 const INITIAL: CheckinStatus = {
   loading: true, configured: false, due: false, dueDate: null,
-  lastCheckIn: null, checkIns: [], config: EMPTY_CHECKIN_CONFIG,
+  lastCheckIn: null, checkIns: [], config: EMPTY_CHECKIN_CONFIG, streak: 0,
 };
 
 /**
@@ -46,6 +48,7 @@ export function useCheckinStatus(): CheckinStatus {
       lastCheckIn: last,
       checkIns,
       config,
+      streak: currentStreak(checkIns.map((c) => c.created_at), new Date()),
     });
   }, [user]);
 
