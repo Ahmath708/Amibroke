@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
@@ -23,7 +23,6 @@ import type { SnapshotPatch } from '@shared/financialSnapshot';
 import { checkinReflection } from '@/services/ai';
 import { currentStreak, daysUntilNextCheckin } from '@shared/checkinCadence';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import { getCheckinReminderEnabled, scheduleCheckinReminder } from '@/services/notifications';
 import {
@@ -56,7 +55,6 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { hasAccess } = useSubscription();
-  const { animatedStyle } = useEntryAnimation();
 
   const [mode, setMode] = useState<Mode>('loading');
   const [config, setConfig] = useState<CheckinConfig>(EMPTY_CHECKIN_CONFIG);
@@ -88,6 +86,8 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       const [cfg, checkins, history] = await Promise.all([
         getCheckinConfig(user.id), getCheckIns(user.id), getAnalysisHistory(user.id),
       ]);
+      // Retire the generic total-debt metric goal — debt is tracked per-debt now (kind: 'debt').
+      cfg.goals = cfg.goals.filter((g) => g.key !== 'debtTotal');
       setConfig(cfg);
       setLastCheckIn(checkins[0] ?? null);
       setCheckins(checkins);
@@ -201,7 +201,6 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       income: keys.some((k) => ['monthlyIncome', 'monthlySavings', 'savingsRate'].includes(k)),
       expenses: keys.some((k) => ['monthlyExpenses', 'monthlySavings', 'savingsRate', 'emergencyFundMonths'].includes(k)),
       savings: keys.some((k) => ['liquidSavings', 'emergencyFundMonths'].includes(k)),
-      totalDebt: keys.includes('debtTotal'),
     };
   })();
 
@@ -245,7 +244,6 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       income: needs.income ? b.income : undefined,
       expenses: needs.expenses ? b.expenses : undefined,
       savings: needs.savings ? b.savings : undefined,
-      debt: needs.totalDebt ? b.totalDebt : undefined,
       metrics,
       reflection: refl || undefined,
     });
@@ -279,7 +277,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       .map((g) => `${g.label}: ${formatGoalValue(g.unit, g.baseline)} → ${formatGoalValue(g.unit, computeGoalCurrent(g, b))}`)
       .join('; ');
     const situationText =
-      `Monthly check-in update. Income $${b.income}/mo, expenses $${b.expenses}/mo, savings $${b.savings}, total debt $${b.totalDebt}. ` +
+      `Monthly check-in update. Income $${b.income}/mo, expenses $${b.expenses}/mo, savings $${b.savings}. ` +
       `Tracked goals — ${movement}. Mood: ${mood !== null ? MOODS[mood] : 'n/a'}. Note: ${note || 'none'}.`;
     navigation.replace('Processing', { userInput: situationText });
   };
@@ -297,9 +295,10 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     ? 'Check-in open' : `Next check-in in ${daysUntilNextCheckin(checkinDates, now)}d`;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <View style={styles.container}>
       <ScreenBackground variant="checkin" />
       <ScrollView
+        style={styles.scroller}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -394,9 +393,8 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
               {needs.income && <BaseInput label="Monthly Income" value={base.income} onChange={(v) => setBase((p) => ({ ...p, income: v }))} first />}
               {needs.expenses && <BaseInput label="Monthly Expenses" value={base.expenses} onChange={(v) => setBase((p) => ({ ...p, expenses: v }))} first={!needs.income} />}
               {needs.savings && <BaseInput label="Savings Balance" value={base.savings} onChange={(v) => setBase((p) => ({ ...p, savings: v }))} first={!needs.income && !needs.expenses} />}
-              {needs.totalDebt && <BaseInput label="Total Debt" value={base.totalDebt} onChange={(v) => setBase((p) => ({ ...p, totalDebt: v }))} first={!needs.income && !needs.expenses && !needs.savings} />}
               {config.goals.filter((g) => g.kind === 'debt').map((g, i) => (
-                <BaseInput key={g.id} label={g.label} value={debtInputs[g.key] ?? ''} onChange={(v) => setDebtInputs((p) => ({ ...p, [g.key]: v }))} first={!needs.income && !needs.expenses && !needs.savings && !needs.totalDebt && i === 0} />
+                <BaseInput key={g.id} label={g.label} value={debtInputs[g.key] ?? ''} onChange={(v) => setDebtInputs((p) => ({ ...p, [g.key]: v }))} first={!needs.income && !needs.expenses && !needs.savings && i === 0} />
               ))}
             </View>
 
@@ -461,7 +459,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
           </View>
         )}
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -490,7 +488,8 @@ function BaseInput({ label, value, onChange, first }: { label: string; value: st
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  scroller: { flex: 1 },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xxl },
   title: { fontFamily: Typography.fonts.heading, fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 6 },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl, lineHeight: 22 },
   formGroup: { backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, marginBottom: Spacing.lg },

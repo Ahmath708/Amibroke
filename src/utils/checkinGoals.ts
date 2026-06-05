@@ -30,15 +30,15 @@ export const METRIC_META: Record<MetricKey, MetricMeta> = {
 };
 
 /** Default metrics suggested for tracking (most actionable first). */
-export const SUGGESTED_METRICS: MetricKey[] = ['debtTotal', 'liquidSavings', 'emergencyFundMonths', 'savingsRate'];
+export const SUGGESTED_METRICS: MetricKey[] = ['liquidSavings', 'emergencyFundMonths', 'savingsRate'];
 
 /**
  * Metrics a check-in can actually update from simple base inputs (income, expenses,
- * savings, total debt). Excludes debt-to-income, which needs monthly debt service
- * the check-in doesn't collect.
+ * savings). Debt is tracked per-debt (kind: 'debt'), not as a generic total — so `debtTotal`
+ * and `debtToIncome` (needs monthly debt service) are intentionally excluded.
  */
 export const TRACKABLE_METRICS: MetricKey[] = [
-  'liquidSavings', 'debtTotal', 'monthlyIncome', 'monthlyExpenses',
+  'liquidSavings', 'monthlyIncome', 'monthlyExpenses',
   'monthlySavings', 'savingsRate', 'emergencyFundMonths',
 ];
 
