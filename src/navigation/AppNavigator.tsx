@@ -174,7 +174,7 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
 // The center "Roast" tab is a real destination — it renders the roast composer (HomeScreen) as
 // the tab content, just like the other tabs.
 function RoastTab({ navigation }: { navigation: any }) {
-  return <HomeScreen navigation={navigation} />;
+  return <HomeScreen navigation={navigation} asTab />;
 }
 
 function MainTabs() {

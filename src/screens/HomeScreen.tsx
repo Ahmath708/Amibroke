@@ -44,7 +44,10 @@ const MAX_INPUT_CHARS = 4000;
 // when there are 0 analyses) and as the pushed "Analyze" route ("New roast"). Typed
 // to the root stack so both call sites work; the stack header replaces the in-screen
 // title when pushed (navigation.canGoBack()).
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
+// `asTab` = rendered as the Roast tab (show the in-screen header); the pushed "Analyze" route
+// leaves it false so the stack header ("New Roast") shows instead. (canGoBack() is unreliable here:
+// switching to the Roast tab from another tab makes it true.)
+type Props = { navigation: NativeStackNavigationProp<RootStackParamList>; asTab?: boolean };
 
 const CHIPS = [
   'I spend more than I earn 😬',
@@ -72,7 +75,7 @@ const PLACEHOLDERS = [
   'I have 3 credit cards and no idea how much I owe...',
 ];
 
-export default function HomeScreen({ navigation }: Props) {
+export default function HomeScreen({ navigation, asTab = false }: Props) {
   const insets = useSafeAreaInsets();
   const { user, supabase } = useAuth();
   const { tier, canUseApp } = useSubscription();
@@ -209,14 +212,14 @@ export default function HomeScreen({ navigation }: Props) {
       <ScreenBackground variant="home" />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: navigation.canGoBack() ? Spacing.lg : insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: asTab ? insets.top + Spacing.lg : Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
           {/* Large Title header — only as the first-run Home tab; when pushed as the
               "Analyze" route, the stack header ("New Roast") replaces it. */}
-          {!navigation.canGoBack() && (
+          {asTab && (
             <View style={styles.pageHeader}>
               <Text style={styles.pageLargeTitle}>Roast Me</Text>
               <NotificationBell />
