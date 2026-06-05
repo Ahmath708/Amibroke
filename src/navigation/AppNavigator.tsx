@@ -97,8 +97,7 @@ function TabBarButton({ route, focused, reduce, onPress }: { route: { name: stri
   }, [focused, reduce]);
   const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  // Roast blends in with the other icons (it's still an action — IOSTabBar opens the composer
-  // on press instead of switching tabs — but it doesn't stand out visually).
+  // Roast is a normal tab now (flame icon, focusable, gets the pill like the others).
   const icons = TAB_ICONS[route.name];
   const TabIcon = focused ? icons.active : icons.inactive;
   return (
@@ -157,12 +156,6 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
                 focused={state.index === index}
                 reduce={reduce}
                 onPress={() => {
-                  // Roast is an action, not a tab — open the composer (bubbles up to the root stack).
-                  if (route.name === 'Roast') {
-                    Haptics.selectionAsync();
-                    (navigation as any).navigate('Analyze');
-                    return;
-                  }
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                   if (state.index !== index && !event.defaultPrevented) {
                     Haptics.selectionAsync();
@@ -178,9 +171,11 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-// The center "Roast" tab is a button, not a destination — tapping it opens the composer
-// (see IOSTabBar), so this placeholder never actually renders.
-function RoastPlaceholder() { return null; }
+// The center "Roast" tab is a real destination — it renders the roast composer (HomeScreen) as
+// the tab content, just like the other tabs.
+function RoastTab({ navigation }: { navigation: any }) {
+  return <HomeScreen navigation={navigation} />;
+}
 
 function MainTabs() {
   return (
@@ -190,7 +185,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Tools" component={ToolsScreen} />
-      <Tab.Screen name="Roast" component={RoastPlaceholder} />
+      <Tab.Screen name="Roast" component={RoastTab} />
       <Tab.Screen name="Community" component={CommunityFeedScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
