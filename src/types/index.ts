@@ -52,6 +52,8 @@ export interface CheckIn {
   created_at: string;
   /** Per-event values for pinned goals, keyed by TrackedGoal.id. */
   metrics?: Record<string, number> | null;
+  /** The Haiku "coach's note" generated for this check-in (unified financial model §7). */
+  reflection?: string | null;
 }
 
 // ─── Monthly check-in: pinned-goal tracking ───
@@ -140,7 +142,7 @@ export type RootStackParamList = {
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
-  ActionPlan: { steps: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string };
+  ActionPlan: { steps?: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string };
   DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;

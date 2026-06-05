@@ -14,6 +14,7 @@ export async function saveCheckIn(userId: string, data: {
   savings?: number;
   debt?: number;
   metrics?: Record<string, number>;
+  reflection?: string;  // the Haiku "coach's note" for this check-in (00023)
 }): Promise<string | null> {
   if (USE_AI_MOCKS) return 'mock-checkin-id';
   return withClient('save check-in', null, async (client) => {
@@ -49,6 +50,7 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
       debt: c.debt ? parseFloat(c.debt) : null,
       created_at: c.created_at,
       metrics: c.metrics ?? null,
+      reflection: c.reflection ?? null,
     }));
   });
 }

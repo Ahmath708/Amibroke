@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList, CheckinConfig, TrackedGoal, CheckIn, EMPTY_CHECKIN_CONFIG, MetricKey } from '@/types';
+import { RootStackParamList, CheckinConfig, TrackedGoal, CheckIn, EMPTY_CHECKIN_CONFIG, MetricKey, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
@@ -18,8 +18,10 @@ import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getCheckinConfig, saveCheckinConfig, getCheckIns, saveCheckIn } from '@/services/checkins';
-import { mergeSnapshot } from '@/services/financialSnapshot';
+import { mergeSnapshot, updateSnapshotDebts } from '@/services/financialSnapshot';
 import type { SnapshotPatch } from '@shared/financialSnapshot';
+import { checkinReflection } from '@/services/ai';
+import { currentStreak, daysUntilNextCheckin } from '@shared/checkinCadence';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { nextReminderDate } from '@/utils/checkinSchedule';
@@ -73,6 +75,13 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // reframe state — the full check-in series (for the streak), the user's roast voice, and the
+  // post-submit reward (delta recap + the Haiku reflection).
+  const [checkins, setCheckins] = useState<CheckIn[]>([]);
+  const [roastTone, setRoastTone] = useState<RoastTone>('savage');
+  const [reflection, setReflection] = useState<string | null>(null);
+  const [deltaText, setDeltaText] = useState('');
+
   useEffect(() => {
     (async () => {
       if (!user) { setMode('no-analysis'); return; }
@@ -81,13 +90,18 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       ]);
       setConfig(cfg);
       setLastCheckIn(checkins[0] ?? null);
+      setCheckins(checkins);
 
       // Candidates come from the latest analysis; anchor from the earliest.
       let anchor = cfg.firstAnalyzeAt;
       if (history.length > 0) {
         if (!anchor) anchor = history[history.length - 1].created_at;
         const latest = await getAnalysisById(history[0].id);
-        if (latest) setCandidates(goalCandidatesFromAnalysis(latest, { analysisId: history[0].id }));
+        if (latest) {
+          setCandidates(goalCandidatesFromAnalysis(latest, { analysisId: history[0].id }));
+          // The reflection matches the user's most-recent roast voice (default savage).
+          setRoastTone(((latest as any).tone as RoastTone) ?? 'savage');
+        }
       }
       setFirstAnalyzeAt(anchor);
 
@@ -201,7 +215,30 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     const b = currentBase();
     const metrics: Record<string, number> = {};
     config.goals.forEach((g) => { metrics[g.id] = computeGoalCurrent(g, b); });
+
+    // Delta since last check-in (from stored goal metrics) — drives the reward recap + the
+    // reflection. Passed to Haiku as a pre-interpreted string so it never parses signs.
+    let debtPaidDown = 0, savingsGained = 0;
+    config.goals.forEach((g) => {
+      const current = computeGoalCurrent(g, b);
+      const prev = lastCheckIn?.metrics?.[g.id] ?? g.baseline;
+      if (g.kind === 'debt') debtPaidDown += Math.max(0, prev - current);
+      else if (g.key === 'liquidSavings') savingsGained += current - prev;
+    });
+    const dParts: string[] = [];
+    if (debtPaidDown > 0) dParts.push(`paid down $${Math.round(debtPaidDown).toLocaleString()} of debt`);
+    if (savingsGained > 0) dParts.push(`saved $${Math.round(savingsGained).toLocaleString()}`);
+    else if (savingsGained < 0) dParts.push(`savings dipped $${Math.round(-savingsGained).toLocaleString()}`);
+    const deltaStr = dParts.join(' and ') || 'held about steady';
+    setDeltaText(deltaStr);
+
     setSaving(true);
+    // The Haiku "coach's note" — matches the roast voice; non-fatal (null → no note in the reward).
+    const refl = await checkinReflection({
+      mood: MOOD_LABELS[mood ?? 2], note: note || undefined, delta: deltaStr, tone: roastTone,
+    }).catch(() => null);
+    setReflection(refl);
+
     const ok = await saveCheckIn(user.id, {
       mood: mood ?? 2,
       notes: note || undefined,
@@ -210,12 +247,12 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       savings: needs.savings ? b.savings : undefined,
       debt: needs.totalDebt ? b.totalDebt : undefined,
       metrics,
+      reflection: refl || undefined,
     });
     setSaving(false);
     if (ok === null) { Alert.alert('Error', 'Failed to save your check-in.'); return; }
-    // Keep the unified snapshot current from the check-in figures (Phase 2b). Scalars only,
-    // marked `stated` — a check-in debt total can't itemize, so debt stays roast-driven
-    // (avoids clobbering Debt Payoff's per-debt APRs). Non-fatal.
+
+    // Update the unified snapshot: scalars (stated) + per-debt balances by name (Chunk B). Non-fatal.
     const patch: SnapshotPatch = {};
     if (needs.income && b.income > 0) patch.monthlyIncome = { value: b.income, confidence: 'stated' };
     if (needs.expenses && b.expenses > 0) patch.monthlyExpenses = { value: b.expenses, confidence: 'stated' };
@@ -223,6 +260,12 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     if (patch.monthlyIncome || patch.monthlyExpenses || patch.liquidSavings) {
       mergeSnapshot(user.id, patch, 'checkin').catch((e) => console.warn('[snapshot] check-in merge failed:', e));
     }
+    const debtUpdates: Record<string, number> = {};
+    config.goals.filter((g) => g.kind === 'debt').forEach((g) => { debtUpdates[g.label] = num(debtInputs[g.key]); });
+    if (Object.keys(debtUpdates).length > 0) {
+      updateSnapshotDebts(user.id, debtUpdates).catch((e) => console.warn('[snapshot] check-in debt update failed:', e));
+    }
+
     // Move the reminder to next month's anchor now that this period is done.
     if (await getCheckinReminderEnabled()) {
       await scheduleCheckinReminder(nextReminderDate(firstAnalyzeAt ? new Date(firstAnalyzeAt) : null, new Date(), new Date()));
@@ -246,6 +289,12 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
 
   const now = new Date();
   const monthLabel = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  // Soft-monthly: the streak + a nudge (never a gate — the screen is always reachable).
+  const checkinDates = checkins.map((c) => c.created_at);
+  const streak = currentStreak(checkinDates, now);
+  const savedStreak = currentStreak([...checkinDates, now.toISOString()], now); // includes the just-saved one
+  const dueText = daysUntilNextCheckin(checkinDates, now) === 0
+    ? 'Check-in open' : `Next check-in in ${daysUntilNextCheckin(checkinDates, now)}d`;
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -315,9 +364,32 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
         {mode === 'checkin' && (
           <>
             <Text style={styles.title}>{monthLabel} Check-In</Text>
-            <Text style={styles.subtitle}>Update your numbers — we'll show how you're tracking against your goals.</Text>
+            <View style={styles.headMeta}>
+              {streak > 0 && <Text style={styles.streakChip}>🔥 {streak}-mo streak</Text>}
+              <Text style={styles.nudge}>{dueText}</Text>
+            </View>
 
-            <SectionLabel style={{ marginTop: Spacing.md }}>This Month's Figures</SectionLabel>
+            {/* Pulse leads — how you're feeling + an optional note. */}
+            <SectionLabel style={{ marginTop: Spacing.md }}>How's money feeling this month?</SectionLabel>
+            <View style={styles.moodRow}>
+              {MOODS.map((m, i) => (
+                <TouchableOpacity key={i} style={[styles.moodBtn, mood === i && styles.moodBtnActive]} onPress={() => setMood(i)} activeOpacity={0.7}>
+                  <Text style={styles.moodEmoji}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {mood !== null && <Text style={styles.moodLabel}>{MOOD_LABELS[mood]}</Text>}
+            <GlassCard variant="inset" style={styles.noteCard}>
+              <AppTextInput
+                style={styles.noteInput}
+                placeholder={'What’s on your mind about money? (optional)'}
+                placeholderTextColor={Colors.textMuted}
+                multiline value={note} onChangeText={setNote} textAlignVertical="top"
+              />
+            </GlassCard>
+
+            {/* Refresh — update what's changed (prefilled with last month's values). */}
+            <SectionLabel style={{ marginTop: Spacing.md }}>Update what's changed</SectionLabel>
             <View style={styles.formGroup}>
               {needs.income && <BaseInput label="Monthly Income" value={base.income} onChange={(v) => setBase((p) => ({ ...p, income: v }))} first />}
               {needs.expenses && <BaseInput label="Monthly Expenses" value={base.expenses} onChange={(v) => setBase((p) => ({ ...p, expenses: v }))} first={!needs.income} />}
@@ -353,26 +425,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
               })}
             </View>
 
-            <SectionLabel style={{ marginTop: Spacing.md }}>How are you feeling?</SectionLabel>
-            <View style={styles.moodRow}>
-              {MOODS.map((m, i) => (
-                <TouchableOpacity key={i} style={[styles.moodBtn, mood === i && styles.moodBtnActive]} onPress={() => setMood(i)} activeOpacity={0.7}>
-                  <Text style={styles.moodEmoji}>{m}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {mood !== null && <Text style={styles.moodLabel}>{MOOD_LABELS[mood]}</Text>}
-
-            <GlassCard variant="inset" style={styles.noteCard}>
-              <AppTextInput
-                style={styles.noteInput}
-                placeholder={'Optional note — anything unusual this month?'}
-                placeholderTextColor={Colors.textMuted}
-                multiline value={note} onChangeText={setNote} textAlignVertical="top"
-              />
-            </GlassCard>
-
-            <NeonButton label={saving ? 'Saving…' : 'Save check-in'} onPress={submitCheckin} loading={saving} />
+            <NeonButton label={saving ? 'Saving…' : 'Complete check-in'} onPress={submitCheckin} loading={saving} />
             <TouchableOpacity onPress={() => { setSelectedIds(new Set(config.goals.map((g) => g.id))); setMode('setup'); }} style={styles.editLink}>
               <Text style={styles.editLinkText}>Edit what I track</Text>
             </TouchableOpacity>
@@ -381,29 +434,30 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
 
         {mode === 'saved' && (
           <View style={{ paddingTop: Spacing.xl }}>
-            <Text style={styles.savedEmoji}>✅</Text>
-            <Text style={styles.title}>Check-in saved</Text>
-            <Text style={styles.subtitle}>Your progress is logged and your trend is updated.</Text>
+            <Text style={styles.savedEmoji}>{savedStreak > 1 ? '🔥' : '✅'}</Text>
+            <Text style={styles.title}>{savedStreak > 1 ? `${savedStreak}-month streak!` : 'Check-in logged'}</Text>
+            <Text style={styles.subtitle}>Since last time, you {deltaText}.</Text>
 
-            {hasAccess('action_plan') ? (
-              <>
-                <NeonButton label="Get your AI re-score 🚀" onPress={runReScore} />
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editLink}>
-                  <Text style={styles.editLinkText}>Done</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <GlassCard style={styles.upsell}>
-                  <Text style={styles.upsellTitle}>💎 Want your new score?</Text>
-                  <Text style={styles.upsellBody}>Upgrade to get a fresh AI analysis that interprets your progress and updates your score.</Text>
-                </GlassCard>
-                <NeonButton label="See plans" onPress={() => navigation.navigate('Paywall')} />
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editLink}>
-                  <Text style={styles.editLinkText}>Done</Text>
-                </TouchableOpacity>
-              </>
+            {reflection && (
+              <GlassCard variant="inset" style={styles.reflectionCard}>
+                <Text style={styles.reflectionText}>{reflection}</Text>
+              </GlassCard>
             )}
+
+            {/* Handoff to the plan — the snapshot's updated, so don't re-render progress here. */}
+            <NeonButton label="See your updated plan" onPress={() => navigation.navigate('ActionPlan', {})} />
+            {hasAccess('action_plan') ? (
+              <TouchableOpacity onPress={runReScore} style={styles.editLink}>
+                <Text style={styles.editLinkText}>Get a fresh AI re-score 🚀</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => navigation.navigate('Paywall')} style={styles.editLink}>
+                <Text style={styles.editLinkText}>💎 Unlock an AI re-score</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editLink}>
+              <Text style={styles.editLinkText}>Done</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -472,9 +526,12 @@ const styles = StyleSheet.create({
   noteInput: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minHeight: 70, lineHeight: 22 },
   editLink: { alignItems: 'center', paddingVertical: Spacing.md },
   editLinkText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },
-  // saved
+  // header meta (streak + soft-monthly nudge)
+  headMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 2, marginBottom: Spacing.sm },
+  streakChip: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
+  nudge: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
+  // saved / reward
   savedEmoji: { fontSize: 44, textAlign: 'center', marginBottom: Spacing.sm },
-  upsell: { padding: Spacing.lg, marginBottom: Spacing.lg },
-  upsellTitle: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.callout.fontSize, color: Colors.accent, marginBottom: Spacing.xs },
-  upsellBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 19 },
+  reflectionCard: { padding: Spacing.lg, marginBottom: Spacing.lg },
+  reflectionText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, lineHeight: 22, textAlign: 'center' },
 });
