@@ -6,6 +6,7 @@
 // migration is pushed (mirrors services/activePlan).
 import { withClient } from './supabaseClient';
 import { TABLES } from './tables';
+import { getAnalysisById } from './analyses';
 import { USE_AI_MOCKS } from '@/config/ai';
 import {
   mergeIntoSnapshot, applyDebtUpdates, fromRow, toRow, patchFromAnalysis, patchFromOnboarding,
@@ -24,6 +25,34 @@ export async function getSnapshot(userId: string): Promise<FinancialSnapshot | n
     if (error) throw error;
     return data ? fromRow(data as SnapshotRow) : null;
   });
+}
+
+/**
+ * Build the freeText for a snapshot-driven "refresh" (re-score) — no re-typing. Reconstructs the
+ * current numbers from the snapshot + a progress delta vs the latest roast's basis, so the LLM
+ * re-rates the score AND the roast reacts to the change. The caller runs it through `analyze`
+ * (paywall-gated like any roast). Returns null when there's no snapshot to refresh from.
+ */
+export async function buildRescoreInput(userId: string, latestAnalysisId?: string): Promise<string | null> {
+  const [snap, latest] = await Promise.all([
+    getSnapshot(userId),
+    latestAnalysisId ? getAnalysisById(latestAnalysisId) : Promise.resolve(null),
+  ]);
+  if (!snap) return null;
+  const income = Math.round(snap.monthlyIncome?.value ?? 0);
+  const debt = Math.round(snap.debtTotal);
+  const savings = Math.round(snap.liquidSavings?.value ?? 0);
+  const parts: string[] = [];
+  if (latest) {
+    const dDebt = Math.round((latest.debtTotal ?? debt) - debt);                       // + = paid down
+    const dSave = Math.round(savings - (latest.liquidSavings?.value ?? savings));
+    if (dDebt >= 1) parts.push(`paid down $${dDebt.toLocaleString()} in debt`);
+    else if (dDebt <= -1) parts.push(`debt went up $${(-dDebt).toLocaleString()}`);
+    if (dSave >= 1) parts.push(`saved $${dSave.toLocaleString()}`);
+    else if (dSave <= -1) parts.push(`savings dropped $${(-dSave).toLocaleString()}`);
+  }
+  const delta = parts.length ? ` Since my last roast I ${parts.join(' and ')}.` : '';
+  return `Updated check-in on my finances. Right now: about $${income.toLocaleString()}/mo income, $${debt.toLocaleString()} in total debt, and $${savings.toLocaleString()} in savings.${delta}`;
 }
 
 /** Confident-merge a patch into the user's snapshot and persist it. Returns the new snapshot. */

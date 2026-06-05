@@ -10,15 +10,19 @@ import {
 } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { AnalysisHistoryItem, TabScreenNav } from '@/types';
+import { AnalysisHistoryItem, TabScreenNav, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getProfile } from '@/services/profile';
-import { getSnapshot } from '@/services/financialSnapshot';
+import { getSnapshot, buildRescoreInput } from '@/services/financialSnapshot';
 import type { FinancialSnapshot } from '@shared/financialSnapshot';
+import { getActivePlan, shouldRevisePlan, type ActivePlan } from '@/services/activePlan';
+import { useCheckinStatus } from '@/hooks/useCheckinStatus';
+import StaleBadge from '@/components/StaleBadge';
+import { FEATURES } from '@/config/features';
 import { capitalize } from '@/utils/string';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -56,10 +60,13 @@ function fmtMoney(n: number): string {
 export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { tier } = useSubscription();
+  const { tier, canUseApp } = useSubscription();
+  const { lastCheckIn } = useCheckinStatus();
 
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [snapshot, setSnapshot] = useState<FinancialSnapshot | null>(null);
+  const [plan, setPlan] = useState<ActivePlan | null>(null);
+  const [tone, setTone] = useState<RoastTone>('savage');
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -73,6 +80,7 @@ export default function DashboardScreen({ navigation }: Props) {
         const fromName = (p?.display_name || p?.username || '').trim().split(/\s+/)[0];
         const first = (p?.first_name?.trim()) || fromName || '';
         setFirstName(capitalize(first));
+        setTone((p?.preferred_tone as RoastTone) ?? 'savage'); // for the refresh re-score
       })
       .catch(() => {});
   }, [user]);
@@ -81,9 +89,10 @@ export default function DashboardScreen({ navigation }: Props) {
     if (!user) { setLoading(false); return; }
     if (!silent) setLoading(true);
     try {
-      const [hist, snap] = await Promise.all([getAnalysisHistory(user.id), getSnapshot(user.id)]);
+      const [hist, snap, p] = await Promise.all([getAnalysisHistory(user.id), getSnapshot(user.id), getActivePlan(user.id)]);
       setHistory(hist ?? []);
       setSnapshot(snap);
+      setPlan(p);
     } catch {
       // keep whatever we had
     } finally {
@@ -110,6 +119,15 @@ export default function DashboardScreen({ navigation }: Props) {
       setOpening(false);
     }
   }, [opening, navigation]);
+
+  // Snapshot-driven re-score: reconstruct the input (no re-typing), run analyze. Paywall-gated
+  // like any roast — expired-free users land on the Paywall, exactly as if they tried to roast.
+  const onRescore = useCallback(async () => {
+    if (!user) return;
+    if (FEATURES.PAYWALL_ENFORCEMENT && !canUseApp) { (navigation.navigate as any)('Paywall'); return; }
+    const input = await buildRescoreInput(user.id, history[0]?.id);
+    if (input) (navigation.navigate as any)('Processing', { userInput: input, tone });
+  }, [user, canUseApp, navigation, tone, history]);
 
   if (loading) {
     return (
@@ -159,6 +177,14 @@ export default function DashboardScreen({ navigation }: Props) {
     savings: snapshot?.liquidSavings?.confidence === 'estimated',
   };
   const anyEst = est.income || est.savings;
+
+  // Stale-state: the score is stale when you've checked in since your last roast; the plan reuses
+  // the existing value-aware shouldRevisePlan (gated to a material change).
+  const scoreStale = !!lastCheckIn && new Date(lastCheckIn.created_at) > new Date(latest.created_at);
+  const revSnap = snapshot
+    ? { debtTotal: snapshot.debtTotal, liquidSavings: snapshot.liquidSavings?.value ?? null, monthlyIncome: snapshot.monthlyIncome?.value ?? null, score: snapshot.score }
+    : null;
+  const planStale = !!plan && shouldRevisePlan(plan, revSnap).revise;
 
   // Chronological scores for the sparkline (oldest → newest), last 8.
   const series = [...history].slice(0, 8).reverse().map((h) => h.score);
@@ -218,9 +244,19 @@ export default function DashboardScreen({ navigation }: Props) {
           </PressableScale>
         </ReAnimated.View>
 
+        {/* Score staleness — tap to re-score from the snapshot (no re-typing); paywall-gated */}
+        {scoreStale && (
+          <ReAnimated.View entering={enterUp(2)}>
+            <PressableScale onPress={onRescore} haptic="light" style={styles.staleBanner}>
+              <StaleBadge label="Score may be out of date" />
+              <Text style={styles.refreshCta}>Refresh ↻</Text>
+            </PressableScale>
+          </ReAnimated.View>
+        )}
+
         {/* Your finances — the snapshot behind the score (unified financial model read path) */}
         {hasFinances && (
-          <ReAnimated.View entering={enterUp(2)}>
+          <ReAnimated.View entering={enterUp(3)}>
             <View style={styles.financeCard}>
               <View style={styles.tileHeader}>
                 <Text style={styles.tileLabel}>Your Finances</Text>
@@ -281,7 +317,10 @@ export default function DashboardScreen({ navigation }: Props) {
           <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
             <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.accent} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.toolsTitle}>Your plan & tools</Text>
+              <View style={styles.toolsTitleRow}>
+                <Text style={styles.toolsTitle}>Your plan & tools</Text>
+                {planStale && <StaleBadge label="Update" />}
+              </View>
               <Text style={styles.toolsSub}>Action plan · debt payoff · scenarios</Text>
             </View>
             <ChevronRightIcon size={18} color={Colors.textSecondary} />
@@ -328,6 +367,10 @@ const styles = StyleSheet.create({
   financeVal: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, letterSpacing: -0.5 },
   financeLbl: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   estFootnote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.sm, fontStyle: 'italic' },
+  // Stale-state
+  staleBanner: { ...card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, marginBottom: Spacing.lg },
+  refreshCta: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
+  toolsTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   trendNums: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   trendEnd: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
   // Bento tiles (varied-weight 2-col row)
