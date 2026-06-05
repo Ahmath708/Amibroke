@@ -17,6 +17,8 @@ import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { useAuth } from '@/context/AuthContext';
 import { getSnapshot } from '@/services/financialSnapshot';
+import { getProfile, updateProfile } from '@/services/profile';
+import { getCheckIns, getCheckinConfig } from '@/services/checkins';
 import { isPayoffDebt } from '@shared/financialSnapshot';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
@@ -29,6 +31,7 @@ type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
 type Strategy = 'avalanche' | 'snowball';
 
 const fmtDuration = (m: number) => (m < 24 ? `${m} mo` : `${(m / 12).toFixed(1)} yr`);
+const fmtMonth = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
 export default function DebtPayoffScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
@@ -54,7 +57,28 @@ export default function DebtPayoffScreen({ route }: Props) {
   const { authorized, loading } = useRequireEntitlement('deep_dive');
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);
+  const [paidDown, setPaidDown] = useState<{ amount: number; since: string } | null>(null);
   const { animatedStyle } = useEntryAnimation();
+
+  // Sticky strategy (profiles.debt_strategy) + paydown progress from check-in history.
+  useEffect(() => {
+    if (!user) return;
+    // select('*') stays resilient if debt_strategy isn't migrated yet.
+    getProfile(user.id).then((p) => { if (p?.debt_strategy) setStrategy(p.debt_strategy as Strategy); }).catch(() => {});
+    Promise.all([getCheckIns(user.id), getCheckinConfig(user.id)]).then(([cis, cfg]) => {
+      const debtIds = cfg.goals.filter((g) => g.kind === 'debt').map((g) => g.id);
+      if (debtIds.length === 0 || cis.length < 2) return; // need ≥2 check-ins for a trend
+      const sumAt = (ci: (typeof cis)[number]) => debtIds.reduce((s, id) => s + (ci.metrics?.[id] ?? 0), 0);
+      const sorted = [...cis].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+      const amount = sumAt(sorted[0]) - sumAt(sorted[sorted.length - 1]); // positive = paid down
+      if (Math.abs(amount) >= 1) setPaidDown({ amount, since: sorted[0].created_at });
+    }).catch(() => {});
+  }, [user]);
+
+  const selectStrategy = (s: Strategy) => {
+    setStrategy(s);
+    if (user) updateProfile(user.id, { debt_strategy: s }).catch(() => {}); // sticky
+  };
 
   if (loading) return <LoadingState />;
   if (!authorized) return null;
@@ -107,6 +131,18 @@ export default function DebtPayoffScreen({ route }: Props) {
           </GlassCard>
         </View>
 
+        {/* Paydown progress — from per-debt check-in history (unified financial model §7) */}
+        {paidDown && (
+          <GlassCard style={styles.progressCard}>
+            <Text style={styles.progressIcon}>{paidDown.amount >= 0 ? '🔥' : '⚠️'}</Text>
+            <Text style={styles.progressText}>
+              {paidDown.amount >= 0
+                ? `You've paid down ${fmt(paidDown.amount)} since ${fmtMonth(paidDown.since)} — keep going.`
+                : `Debt is up ${fmt(-paidDown.amount)} since ${fmtMonth(paidDown.since)} — let's turn it around.`}
+            </Text>
+          </GlassCard>
+        )}
+
         {/* Strategy toggle */}
         <SectionLabel>Strategy</SectionLabel>
         <View style={styles.segmentRow}>
@@ -114,7 +150,7 @@ export default function DebtPayoffScreen({ route }: Props) {
             <TouchableOpacity
               key={s}
               style={[styles.segment, strategy === s && styles.segmentActive]}
-              onPress={() => setStrategy(s)}
+              onPress={() => selectStrategy(s)}
               activeOpacity={0.7}
             >
               <View style={styles.segmentInner}>
@@ -193,6 +229,9 @@ const styles = StyleSheet.create({
   summaryNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
   summaryLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
+  progressCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, marginTop: -Spacing.md, marginBottom: Spacing.xxl },
+  progressIcon: { fontSize: 20 },
+  progressText: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, lineHeight: 18 },
   segmentInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   segmentRow: {
     flexDirection: 'row', backgroundColor: Colors.backgroundSecondary,
