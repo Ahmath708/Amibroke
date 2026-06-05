@@ -17,6 +17,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getProfile } from '@/services/profile';
+import { getSnapshot } from '@/services/financialSnapshot';
+import type { FinancialSnapshot } from '@shared/financialSnapshot';
 import { capitalize } from '@/utils/string';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -43,12 +45,19 @@ function timeGreeting(): string {
   return 'Good evening';
 }
 
+// Compact money for the snapshot tiles: $0 · $250 · $5.2k · $12k.
+function fmtMoney(n: number): string {
+  if (n >= 1000) return `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
+  return `$${Math.round(n)}`;
+}
+
 export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { tier } = useSubscription();
 
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
+  const [snapshot, setSnapshot] = useState<FinancialSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -70,8 +79,9 @@ export default function DashboardScreen({ navigation }: Props) {
     if (!user) { setLoading(false); return; }
     if (!silent) setLoading(true);
     try {
-      const hist = await getAnalysisHistory(user.id);
+      const [hist, snap] = await Promise.all([getAnalysisHistory(user.id), getSnapshot(user.id)]);
       setHistory(hist ?? []);
+      setSnapshot(snap);
     } catch {
       // keep whatever we had
     } finally {
@@ -133,6 +143,14 @@ export default function DashboardScreen({ navigation }: Props) {
   const band = getScoreBand(latest.score);
   const delta = prev ? latest.score - prev.score : null;
 
+  // Snapshot figures behind the score (the unified financial snapshot — read-only here).
+  const fin = {
+    income: snapshot?.monthlyIncome?.value ?? 0,
+    debt: snapshot?.debtTotal ?? 0,
+    savings: snapshot?.liquidSavings?.value ?? 0,
+  };
+  const hasFinances = fin.income > 0 || fin.debt > 0 || fin.savings > 0;
+
   // Chronological scores for the sparkline (oldest → newest), last 8.
   const series = [...history].slice(0, 8).reverse().map((h) => h.score);
   const sMin = Math.min(...series), sMax = Math.max(...series);
@@ -191,18 +209,43 @@ export default function DashboardScreen({ navigation }: Props) {
           </PressableScale>
         </ReAnimated.View>
 
+        {/* Your finances — the snapshot behind the score (unified financial model read path) */}
+        {hasFinances && (
+          <ReAnimated.View entering={enterUp(2)}>
+            <View style={styles.financeCard}>
+              <View style={styles.tileHeader}>
+                <Text style={styles.tileLabel}>Your Finances</Text>
+              </View>
+              <View style={styles.financeRow}>
+                <View style={styles.financeStat}>
+                  <Text style={styles.financeVal}>{fmtMoney(fin.income)}</Text>
+                  <Text style={styles.financeLbl}>Income/mo</Text>
+                </View>
+                <View style={styles.financeStat}>
+                  <Text style={[styles.financeVal, { color: fin.debt > 0 ? Colors.danger : Colors.success }]}>{fmtMoney(fin.debt)}</Text>
+                  <Text style={styles.financeLbl}>Debt</Text>
+                </View>
+                <View style={styles.financeStat}>
+                  <Text style={styles.financeVal}>{fmtMoney(fin.savings)}</Text>
+                  <Text style={styles.financeLbl}>Savings</Text>
+                </View>
+              </View>
+            </View>
+          </ReAnimated.View>
+        )}
+
         {/* Primary CTA */}
-        <ReAnimated.View entering={enterUp(2)}>
+        <ReAnimated.View entering={enterUp(3)}>
           <NeonButton label="New roast" onPress={() => navigation.navigate('Analyze')} style={styles.cta} />
         </ReAnimated.View>
 
         {/* Check-in nudge — renders itself only when a check-in is due */}
-        <ReAnimated.View entering={enterUp(3)}>
+        <ReAnimated.View entering={enterUp(4)}>
           <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.lg }} />
         </ReAnimated.View>
 
         {/* Bento row: a wider Trend tile + a Roasts-count stat tile (varied weights) */}
-        <ReAnimated.View entering={enterUp(4)} style={styles.bentoRow}>
+        <ReAnimated.View entering={enterUp(5)} style={styles.bentoRow}>
           <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.trendTile]}>
             <View style={styles.tileHeader}>
               <Text style={styles.tileLabel}>Trend</Text>
@@ -228,7 +271,7 @@ export default function DashboardScreen({ navigation }: Props) {
         </ReAnimated.View>
 
         {/* Premium card */}
-        <ReAnimated.View entering={enterUp(5)}>
+        <ReAnimated.View entering={enterUp(6)}>
         {tier === 'deep_dive' ? (
           <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
             <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.accent} /></View>
@@ -271,6 +314,12 @@ const styles = StyleSheet.create({
   deltaText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize },
   checkedDate: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   cta: { marginBottom: Spacing.lg },
+  // Your-finances snapshot card
+  financeCard: { ...card, padding: Spacing.lg, marginBottom: Spacing.lg },
+  financeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
+  financeStat: { flex: 1 },
+  financeVal: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, letterSpacing: -0.5 },
+  financeLbl: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   trendNums: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   trendEnd: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
   // Bento tiles (varied-weight 2-col row)
