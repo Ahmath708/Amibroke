@@ -210,11 +210,13 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
 
 ---
 
-## 4. Migration — all pushed
+## 4. Migration
 
-- `profiles`: `first_name` / `last_name` (00020 ✅) + `monthly_income` (00021 ✅).
+- `profiles`: `first_name` / `last_name` (00020 ✅) + `monthly_income` (00021 ✅) +
+  `preferred_tone` (00024 — sticky roast voice; ⏳ **NOT pushed yet** — run `supabase db push`).
 - `financial_snapshots` table + RLS + **eager grandfather backfill** from each user's most-recent
   `analyses` row (00022 ✅). One read path; no "if-no-snapshot" fallback code.
+- `check_ins.reflection TEXT` (00023 ✅ — persists the Haiku reflection for the timeline).
 - Debt `kind` + per-number `source` are **optional schema fields** (no migration — JSONB/`debts[]`).
 - Reuses the existing `onboarded` flag + `needsOnboarding` gate.
 
@@ -244,8 +246,10 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
 - **E2E stress test ✅** `tools/snapshot-e2e.ts` drove 6 real cases through seed → roast → merge →
   payoff → plan, calling Anthropic directly. Surfaced + fixed Findings A & B (§6).
 - **Onboarding debt-drop ✅** (2026-06-05) — debt removed from onboarding (§2.3).
-- **Check-in reframe — NEXT** (direction TBD, §7): personalized, plan/goal-tied, emotion-led,
-  per-debt → snapshot. Closes the deferred check-in→debt gap.
+- **Check-in reframe ✅** (2026-06-05, §7) — soft-monthly emotional ritual: pulse-led flow,
+  per-debt → snapshot, Haiku reflection, streak, journey timeline. Closes the check-in→debt gap.
+- **Sticky roast voice ✅** — `profiles.preferred_tone` (00024, ⏳ push pending) is the single
+  source of truth for tone; the HomeScreen selector + Settings write it; the reflection reads it.
 - **Phase 3 — tracked features:** Debt Payoff remembers the chosen strategy + tracks paydown
   across check-ins; Dashboard/captions read the snapshot; retire per-roast `route.params`
   hand-offs; move the merge server-side for authority; manual edit surface; derived-metric
@@ -273,6 +277,9 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
   the stated ~4%). Fixed: the prompt reconciles `expenses = income − stated savings`, and the
   snapshot asserts `savingsRate` only when income+expenses are known, else 0. Live.
 - **Onboarding debt-drop:** debt removed from onboarding (§2.3) — the first roast itemizes it.
+- **Sticky roast voice:** tone is a persisted **profile preference** (`preferred_tone`), the single
+  source of truth read by the reflection (and available to analyze) — not the latest roast's tone
+  (which was never persisted, so the reflection had silently always used savage).
 
 **Remaining (Phase 3 / later):**
 - **Silent-drop edge:** a field that changed but went unmentioned — lean on check-ins + edit surface.
@@ -315,7 +322,16 @@ the check-in into a money journal + a visible streak — a core retention/emotio
 the **snapshot only** (time-series stays clean, snapshot stays fresh). **No schema change except**
 `check_ins.reflection TEXT` (00023 — persist the reflection for the timeline).
 
-**Build chunks:** **A** cadence+streak (`shared/checkinCadence`, tested) · **B** per-debt→snapshot
-(`applyDebtUpdates`, match by name v1) · **C** `checkin-reflection` Haiku edge fn (static
-`prompt.ts`, mocked in dev) · **D** the UI reframe (pulse-led flow) · **E** countdown/nudge
-surfacing · **F** the journey/timeline view.
+**Build chunks — all SHIPPED (2026-06-05):** **A** cadence+streak (`shared/checkinCadence`) ·
+**B** per-debt→snapshot (`applyDebtUpdates`, match by name) · **C** `checkin-reflection` Haiku edge
+fn (static `prompt.ts`; tuned — voice-by-qualities openers, hard ≤160 chars, delta-sign clarity,
+emotional-safety floor; `max_tokens` 60) · **D** the UI reframe (pulse-led flow) · **E** streak on
+the Home `CheckinCard` · **F** the journey/timeline (reflection per entry in History).
+
+**Presentation.** The check-in is a **standard pushed screen** (header + `slide_from_right`) like
+Trend/Roasts — an earlier formSheet attempt let the sheet gesture eat the scroll. A later
+"grab-screen" polish pass may revisit a sheet.
+
+**Tone source.** The reflection matches the user's **sticky `profiles.preferred_tone`** (not the
+latest analysis — tone was never persisted there, so that path always fell back to savage). Set
+from the HomeScreen selector (sticky) or **Settings → App → Roast Voice**.
