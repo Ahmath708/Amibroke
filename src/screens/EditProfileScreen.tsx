@@ -10,6 +10,8 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import NeonButton from '@/components/NeonButton';
+import GlassCard from '@/components/GlassCard';
+import { LockClosedIcon } from 'react-native-heroicons/outline';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'EditProfile'> };
 
@@ -26,7 +28,12 @@ export default function EditProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user, supabase } = useAuth();
   // Google/OAuth users don't manage email + password in-app — only email/password accounts do.
-  const isEmailUser = user?.app_metadata?.provider === 'email';
+  // For OAuth users we still show the section, but locked, naming the provider so they know why.
+  const provider = (user?.app_metadata?.provider as string) || '';
+  const isEmailUser = provider === 'email';
+  const providerLabel = provider && provider !== 'email'
+    ? provider.charAt(0).toUpperCase() + provider.slice(1)
+    : 'your sign-in provider';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -117,9 +124,9 @@ export default function EditProfileScreen({ navigation }: Props) {
         </View>
         <NeonButton label={savingProfile ? 'Saving…' : 'Save'} onPress={saveProfile} loading={savingProfile} style={styles.cta} />
 
-        {isEmailUser && (
+        <SectionLabel style={{ marginTop: Spacing.xxl }}>Sign-in</SectionLabel>
+        {isEmailUser ? (
           <>
-            <SectionLabel style={{ marginTop: Spacing.xxl }}>Sign-in</SectionLabel>
             <Text style={styles.sectionHint}>Enter your current password to change your email or password.</Text>
             <View style={styles.group}>
               <Field label="Current password" value={currentPassword} onChangeText={setCurrentPassword} placeholder="••••••••" secureTextEntry autoCapitalize="none" />
@@ -136,6 +143,17 @@ export default function EditProfileScreen({ navigation }: Props) {
             </View>
             <NeonButton label="Update password" onPress={changePassword} loading={busy} variant="secondary" style={styles.cta} />
           </>
+        ) : (
+          <GlassCard style={styles.lockedCard}>
+            <View style={styles.lockedHead}>
+              <LockClosedIcon size={16} color={Colors.textSecondary} />
+              <Text style={styles.lockedTitle}>Managed by {providerLabel}</Text>
+            </View>
+            <Text style={styles.lockedBody}>
+              You sign in with {providerLabel}, so your email and password are handled there. To change them, update your {providerLabel} account.
+            </Text>
+            {!!user?.email && <Text style={styles.lockedEmail}>{user.email}</Text>}
+          </GlassCard>
         )}
       </ScrollView>
     </View>
@@ -154,4 +172,9 @@ const styles = StyleSheet.create({
   fieldInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, paddingVertical: 4 },
   cta: { marginBottom: Spacing.sm },
   sectionHint: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.sm, lineHeight: 18 },
+  lockedCard: { padding: Spacing.lg, marginBottom: Spacing.md },
+  lockedHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.xs },
+  lockedTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
+  lockedBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
+  lockedEmail: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, marginTop: Spacing.sm },
 });
