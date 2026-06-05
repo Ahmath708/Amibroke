@@ -1,9 +1,9 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
-import { ChevronRightIcon } from 'react-native-heroicons/outline';
+import { ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -106,35 +106,35 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
   return steps;
 }
 
-// Expanded plan card. The impact (→) line caps at 2 lines with a "Read more" toggle that reveals
-// the full text only when it actually overflows (measured once unclamped, then clamped).
+// Expanded plan card. The payoff (→ impact) stays visible — it's the hook — while the longer
+// how-to description tucks behind a chevron disclosure with a smooth height animation. Tap
+// anywhere on the content to expand/collapse.
 function FocalCard({ step, isActive, onDone }: {
   step: { week: string; title: string; description: string; impact: string };
   isActive: boolean;
   onDone: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [overflow, setOverflow] = useState(false);
+  const toggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((v) => !v);
+  };
   return (
     <GlassCard style={styles.focalCard}>
-      <View style={styles.focalTop}>
-        <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
-      </View>
-      <Text style={styles.focalTitle}>{step.title}</Text>
-      <Text style={styles.focalDesc}>{step.description}</Text>
-      <Text
-        style={styles.focalImpact}
-        numberOfLines={expanded || !overflow ? undefined : 2}
-        onTextLayout={(e) => { if (!overflow && e.nativeEvent.lines.length > 2) setOverflow(true); }}
-      >
-        → {step.impact}
-      </Text>
-      {overflow && (
-        <TouchableOpacity onPress={() => setExpanded((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.readMoreHit}>
-          <Text style={styles.readMore}>{expanded ? 'Read less' : 'Read more'}</Text>
-        </TouchableOpacity>
-      )}
-      {isActive && <NeonButton label="Mark this done" onPress={onDone} style={{ marginTop: Spacing.md }} />}
+      <TouchableOpacity activeOpacity={0.85} onPress={toggle}>
+        <View style={styles.focalTop}>
+          <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
+        </View>
+        <Text style={styles.focalTitle}>{step.title}</Text>
+        <Text style={styles.focalImpact}>→ {step.impact}</Text>
+        {expanded && <Text style={styles.focalDesc}>{step.description}</Text>}
+        <View style={styles.discloseRow}>
+          {expanded
+            ? <ChevronUpIcon size={18} color={Colors.textSecondary} />
+            : <ChevronDownIcon size={18} color={Colors.textSecondary} />}
+        </View>
+      </TouchableOpacity>
+      {isActive && <NeonButton label="Mark this done" onPress={onDone} style={{ marginTop: Spacing.sm }} />}
     </GlassCard>
   );
 }
@@ -428,12 +428,11 @@ const styles = StyleSheet.create({
 
   // Focal "this week" card
   focalCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.xs },
-  focalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
+  focalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   focalTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
-  focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: 2 },
-  readMoreHit: { alignSelf: 'flex-start', marginTop: 6 },
-  readMore: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
+  focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: Spacing.sm },
+  focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20, marginTop: Spacing.sm },
+  discloseRow: { alignItems: 'center', marginTop: Spacing.sm },
 
   // Compact up-next / done rows. Up Next: tap the ○ to complete, tap the row to view.
   compactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm + 2 },
