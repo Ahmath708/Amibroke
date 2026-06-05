@@ -1,7 +1,9 @@
 # Unified Financial Model + Mandatory Onboarding — Design
 
-Status: **design only, not implemented.** Companion to `docs/active-plan-design.md` and
-`docs/DECISIONS.md`. Drafted 2026-06-04.
+Status: **Phases 1–2 shipped & stress-validated.** Onboarding (debt-free), the snapshot,
+confident-merge, option-B provenance, and Findings A/B are live. **Remaining:** the check-in
+reframe (§7) and Phase 3. Companion to `docs/active-plan-design.md`. Drafted 2026-06-04, updated
+2026-06-05.
 
 ## 0. Why
 
@@ -47,7 +49,7 @@ financial_snapshots (one row per user)
   monthly_income, monthly_expenses, monthly_savings, liquid_savings,
   debt_total, savings_rate, emergency_fund_months, debt_to_income   numeric
   score                 numeric | null            // last roast's health score
-  debts                 jsonb                     // [{ id, name, balance, apr, min_payment }]
+  debts                 jsonb                     // [{ id, name, balance, apr, min_payment, kind }]
   // Per-field provenance — { value, source, confidence, updated_at } keyed by field:
   provenance            jsonb
   updated_at            timestamptz
@@ -69,6 +71,18 @@ optional exact entry, or a roast that yields a precise number), we set the exact
 re-derive the bracket** so the two never drift. The AI prompt **prefers the exact figure and
 falls back to the bracket** — accuracy scales with what the user gave us.
 
+**Derived-metric determinism (Finding B, shipped).** `monthlySavings` / `savingsRate` are
+asserted ONLY when income AND expenses are both known (stated/high — expenses count as known when
+reconciled from a stated monthly-savings figure: the analyze prompt sets `expenses = income −
+stated savings`). When expenses are merely inferred there is no deterministic basis, so they
+default to **0** rather than fabricate a rate (under-claim > over-claim).
+
+**Debt is a kind-tagged collection (Finding A, shipped).** Each debt carries
+`kind ∈ credit_card | student_loan | auto | mortgage | medical | personal | other`. Mortgages are
+excluded from `debt_total`, DTI, and Debt Payoff via `isPayoffDebt` — a mortgage isn't consumer
+debt you "dig out of," and the analyze prompt won't fabricate a mortgage/auto *balance* from a
+*payment*.
+
 ### 1.2 Where it lives
 A new `financial_snapshots` table (one row/user, upserted), RLS own-row — `debts` as JSONB,
 metrics as columns. (Considered: columns on `profiles`; rejected — `debts[]` + provenance +
@@ -83,8 +97,9 @@ the metric set bloat the profile row and muddle "identity/personalization" with 
   about spending must not zero the user's debts. An *explicit* statement that a field changed
   ("I paid off the card") is `stated` and updates it, including to 0. A roast that yields a
   precise figure also re-derives the bracket (§1.1).
-- **Each check-in** → *patches* only the fields it touched (income/expenses/debt/savings) +
-  recomputes derived metrics; `source: 'checkin'`, `confidence: 'stated'`.
+- **Each check-in** → *patches* the **scalar** fields it touched (income/expenses/savings) as
+  `stated`; recomputes derived metrics. **Debt is deferred to the check-in reframe (§7)** — a
+  check-in *total* can't itemize without clobbering per-debt APRs; per-debt tracking is the fix.
 - **Manual edit** (the Financial Context screen, or a future "edit my numbers") → patch.
 
 Reconciliation rule: **per field, the higher-confidence + more-recent write wins; never
@@ -146,32 +161,32 @@ The current Financial Context is a single long form (overwhelming + skippable). 
 back/next. Brackets = taps (fast = high completion); precise numbers come naturally from the
 first roast's free text, so onboarding stays short.
 
-### 2.3 The steps (~5 grouped screens)
-Related fields are grouped to cut the screen count; each screen = chips + a progress bar +
-"Continue" disabled until answered; all mandatory.
-1. **Name** — First + Last (new `profiles.first_name` / `last_name`). Powers the greeting
-   ("Good morning, {first}") + tone.
+### 2.3 The steps (5 screens) — SHIPPED
+A trust-first intro, then grouped chip steps; progress bar; "Continue" disabled until answered;
+no skip.
+0. **Intro** — "First, your money profile" + 3 benefit/trust rows ("Set it up").
+1. **Name** — First + Last (`profiles.first_name` / `last_name`). Powers the greeting + tone.
 2. **About you** — state (`ctx_state`) + age (`ctx_age_bracket`).
 3. **Your situation** — housing (`ctx_living_situation`) + employment (`ctx_employment_status`).
-4. **Income** — monthly bracket (`ctx_income_bracket`).
-5. **Debt & savings** — total-debt bracket (`ctx_debt_bracket`; "none" skips follow-ups) +
-   liquid-savings bracket (`ctx_liquid_savings_bracket`).
+4. **Income** — monthly bracket (`ctx_income_bracket`) **+ optional exact-$ entry** (number-only).
+5. **Savings** — liquid-savings bracket (`ctx_liquid_savings_bracket`).
 
-(Steps 2–5 are the existing `CONTEXT_FIELDS`, grouped + made mandatory. The optional **exact-$
-entry** on income/debt/savings is **Phase 2** — it needs the snapshot to store a precise value.)
+**Debt is NOT collected at onboarding** (decided 2026-06-05). Debt is a multi-entity, kind-tagged
+concept; a generic total bracket produced a throwaway placeholder and couldn't carry a `kind`. The
+**first roast itemizes debts** (name/balance/APR/kind) instead — far richer, and it keeps
+onboarding short. Income/savings stay as brackets (they're scalars).
 
-### 2.4 What onboarding writes (Phase 1)
-- `profiles`: `first_name`, `last_name`, all `ctx_*`, `onboarded = true`. **That's it for Phase
-  1 — no snapshot yet.**
-- In **Phase 2**, `financial_snapshots` is created and *seeded* from these brackets
-  (→ `estimated` midpoints), then refined by the first roast via confident-merge (§1.3).
-  Phase-1 onboarding already improves accuracy: the brackets flow into the roast prompt as today.
+### 2.4 What onboarding writes — SHIPPED
+- `profiles`: `first_name`, `last_name`, `ctx_*` (income/savings/state/age/housing/employment),
+  `onboarded = true`. Exact income → `monthly_income`.
+- **Seeds the snapshot** (income + savings only, via `patchFromOnboarding`): exact → `stated`,
+  bracket → `estimated` midpoint. **No debt is seeded** (no synthetic placeholder). The first
+  roast then refines via confident-merge (§1.3).
 
 ### 2.5 Why mandatory + brackets (not exact figures)
-- **Mandatory** → no user lands on a roast/feature with zeroed context; advice is tuned from
-  the first interaction (the user's stated goal).
-- **Brackets, not exact** → fast (low friction = completion), and enough to *seed* accuracy.
-  The free-text first roast captures exact numbers without an extra form.
+- **Mandatory** → no user lands on a roast/feature with zeroed context.
+- **Brackets (+ optional exact)** → fast (taps = high completion); the free-text first roast
+  captures exact figures + itemized debts without a longer form.
 
 ---
 
@@ -195,53 +210,46 @@ Check-in  ── patches snapshot (changed figures) ──┘   + writes check_i
 
 ---
 
-## 4. Migration
+## 4. Migration — all pushed
 
-- `profiles`: `first_name` / `last_name` (00020, done) + `monthly_income` (00021).
-- New `financial_snapshots` table (RLS own-row); one row/user, upsert.
-- **Grandfathering (DECIDED, #4 — eager backfill):** the Phase-2a migration runs
-  `INSERT … SELECT` to create a snapshot row for **every** existing user, populated from their
-  **most-recent `analyses` row** (their best-known current numbers), falling back to
-  `profiles` brackets + `monthly_income` for users who've never roasted. So features get one
-  read path and no "if-no-snapshot" fallback code. The analysis→snapshot mapping it needs is
-  the **same** one the live roast-write uses (write once, reuse).
-- Reuse the existing `onboarded` flag + `needsOnboarding` gate.
+- `profiles`: `first_name` / `last_name` (00020 ✅) + `monthly_income` (00021 ✅).
+- `financial_snapshots` table + RLS + **eager grandfather backfill** from each user's most-recent
+  `analyses` row (00022 ✅). One read path; no "if-no-snapshot" fallback code.
+- Debt `kind` + per-number `source` are **optional schema fields** (no migration — JSONB/`debts[]`).
+- Reuses the existing `onboarded` flag + `needsOnboarding` gate.
 
-**Bracket → number midpoints (DECIDED, #3)** — used to seed `estimated` values when no exact
-figure is given:
-| income | $ | debt | $ | savings | $ |
-|---|---|---|---|---|---|
-| under_2k | 1,500 | none | 0 | none | 0 |
-| 2k_4k | 3,000 | under_5k | 2,500 | under_500 | 250 |
-| 4k_6k | 5,000 | 5k_15k | 10,000 | 500_2k | 1,250 |
-| 6k_10k | 8,000 | 15k_50k | 30,000 | 2k_10k | 6,000 |
-| over_10k | 12,000 | over_50k | 65,000 | 10k_50k | 30,000 |
-| | | | | over_50k | 65,000 |
+**Bracket → number midpoints** — used to seed `estimated` values when no exact figure is given
+(income + savings only; **no debt** — onboarding doesn't collect it):
+| income | $ | savings | $ |
+|---|---|---|---|
+| under_2k | 1,500 | none | 0 |
+| 2k_4k | 3,000 | under_500 | 250 |
+| 4k_6k | 5,000 | 500_2k | 1,250 |
+| 6k_10k | 8,000 | 2k_10k | 6,000 |
+| over_10k | 12,000 | 10k_50k | 30,000 |
+| | | over_50k | 65,000 |
 
 ---
 
 ## 5. Phasing
 
-- **Phase 1 — onboarding (ships value alone):** ~5 grouped mandatory steps (name + brackets) →
-  write `profiles` (`first_name`, `last_name`, `ctx_*`, `onboarded`). Unlocks the first-name
-  greeting + flows brackets into the roast prompt (better accuracy). **No snapshot, no
-  exact-entry, no feature-read changes** — all deferred to Phase 2.
-- **Phase 2a — snapshot foundation (no paid-endpoint change):** create `financial_snapshots` +
-  eager backfill (§4); seed from onboarding (brackets via the §4 midpoints + exact income);
-  write from each roast using the **existing** analyze confidence (mapped onto the §1.1 ladder)
-  via the **client-side** merge (a `shared/` fn — DECIDED, #5); migrate **Active Plan**
-  (staleness vs snapshot) + **Debt Payoff** (read `snapshot.debts`) off "latest roast". Delivers
-  the unified read model with no change to the paid `analyze` endpoint.
-- **Phase 2b — provenance precision:** the analyze **option-B** change (`source: user_stated |
-  inferred` per number + `debts` confidence) → **eval-tested (rule #1) + deployed**; the full
-  confident-merge using it + check-in patch writes. (The merge later moves server-side for
-  authority — a hardening step, not a rewrite, since it lives in `shared/`.)
+- **Phase 1 — onboarding ✅** mandatory staged flow (intro + name + brackets) → `profiles`;
+  first-name greeting; brackets into the roast prompt.
+- **Phase 2a — snapshot foundation ✅** `financial_snapshots` + eager backfill; seed from
+  onboarding; client-side confident-merge (`shared/financialSnapshot`); Active Plan staleness +
+  Debt Payoff now read the snapshot. 17 unit tests.
+- **Phase 2b — provenance precision ✅** analyze option-B (`source` per number + `debts`) deployed,
+  **eval 13/13**; merge consumes `source`; check-in writes scalars. Prompt moved to a static
+  `prompt.ts` (the `.txt` deploy landmine — see CLAUDE.md gotcha).
+- **E2E stress test ✅** `tools/snapshot-e2e.ts` drove 6 real cases through seed → roast → merge →
+  payoff → plan, calling Anthropic directly. Surfaced + fixed Findings A & B (§6).
+- **Onboarding debt-drop ✅** (2026-06-05) — debt removed from onboarding (§2.3).
+- **Check-in reframe — NEXT** (direction TBD, §7): personalized, plan/goal-tied, emotion-led,
+  per-debt → snapshot. Closes the deferred check-in→debt gap.
 - **Phase 3 — tracked features:** Debt Payoff remembers the chosen strategy + tracks paydown
-  across check-ins; Dashboard/captions read the snapshot; retire the per-roast `route.params`
-  hand-offs.
-
-The only genuinely new engineering is the `financial_snapshots` table + its write/read wiring
-and the onboarding pagination. Bracket→estimate and the prompt personalization already exist.
+  across check-ins; Dashboard/captions read the snapshot; retire per-roast `route.params`
+  hand-offs; move the merge server-side for authority; manual edit surface; derived-metric
+  "estimated" badges; real-DB run with mocks off.
 
 ---
 
@@ -257,11 +265,57 @@ and the onboarding pagination. Bracket→estimate and the prompt personalization
 - **#5 Merge placement** — client-side `shared/` fn for v1; server-side later as hardening (§1.6).
 - Onboarding: ~5 grouped mandatory steps; first/last name; greeting uses `first_name` (Phase 1, done).
 
-**Remaining (mostly Phase 2b / later):**
-- **Extraction → `stated` threshold:** how confidently must a roast "extract" a field to count
-  as `stated` (vs `inferred`)? A prompt/eval question for the option-B change.
-- **Silent-drop edge:** a field that changed but went unmentioned (e.g. debt cleared) — lean on
-  check-ins + the "your numbers changed?" prompt + the edit surface.
-- **Surfacing `estimated`:** how/whether to tell the user a value is a rough estimate.
-- **Edit surface:** confirm the Financial Context screen becomes "edit my profile + numbers"
-  that patches the snapshot (the single manual-edit path).
+**Findings from E2E stress testing (resolved 2026-06-05):**
+- **Finding A — debt `kind`:** secured debt (mortgage/auto *inferred from monthly payments*)
+  polluted `debt_total`/DTI/payoff (DTI 410%, a 206-mo mortgage "payoff"). Fixed: `kind` field;
+  mortgages excluded via `isPayoffDebt`; prompt won't fabricate a balance from a payment. Live.
+- **Finding B — savings determinism:** inferred expenses produced a phantom savings rate (37% vs
+  the stated ~4%). Fixed: the prompt reconciles `expenses = income − stated savings`, and the
+  snapshot asserts `savingsRate` only when income+expenses are known, else 0. Live.
+- **Onboarding debt-drop:** debt removed from onboarding (§2.3) — the first roast itemizes it.
+
+**Remaining (Phase 3 / later):**
+- **Silent-drop edge:** a field that changed but went unmentioned — lean on check-ins + edit surface.
+- **Surfacing `estimated`:** derived-metric "estimated" badges in the UI.
+- **Edit surface:** Financial Context → "edit my numbers" that patches the snapshot.
+- **Server-side merge** for authority; **real-DB run** with mocks off.
+
+---
+
+## 7. Check-in reframe (DECIDED — soft-monthly emotional ritual)
+
+The **Coach (Active Plan)** is the always-on **progress/plan** hub (% ring, steps, delta,
+momentum, staleness gate). To avoid duplicating it, the check-in is what the Coach *isn't*: a
+**periodic, emotion-led ritual** that keeps the snapshot honest and builds a journey.
+
+**Cadence — soft monthly (never block).**
+- Numbers + feelings are updatable **anytime** (data freshness; never wall an eager/anxious user).
+- The **official** check-in (advances the streak + writes the canonical `check_ins` row) is **once
+  per monthly window**. The countdown is a *nudge* ("next check-in in N days"), not a gate.
+- Streak = consecutive monthly windows with an official check-in.
+
+**The flow (pulse-led):**
+1. **Pulse** — mood + optional note (the soul; leads).
+2. **Refresh** — targeted, prefilled, skippable updates to tracked goals + **per-debt balances**
+   (→ `snapshot.debts` by identity, closing the check-in→debt gap). No generic total-debt field.
+3. **Reward** — "what moved since last time" (deterministic delta) + the streak + a personalized
+   **reflection** (see LLM).
+4. **Handoff** — to the refreshed Coach ("your plan's updated") + optional re-score.
+
+**LLM (model routing).** Core is deterministic + reuses `analyze` (re-score) and `revise-plan`
+(plan revision) — both existing **Sonnet** flows. The **one new pass** is the reflection: a short,
+empathetic reaction to `{mood, note, delta, planStatus, tone}` → **Haiku** (`claude-haiku-4-5`),
+gated to fire only on signal (a note or a meaningful delta), else a template. ~$0.001/check-in.
+
+**History / journey.** `check_ins` already retains every check-in; the soft gate makes it one
+clean entry per window. A **timeline view** (date · mood · what-moved · note · reflection) turns
+the check-in into a money journal + a visible streak — a core retention/emotional hook.
+
+**Data model.** `check_ins` = the official ritual log (one row/window). Live number updates write
+the **snapshot only** (time-series stays clean, snapshot stays fresh). **No schema change except**
+`check_ins.reflection TEXT` (00023 — persist the reflection for the timeline).
+
+**Build chunks:** **A** cadence+streak (`shared/checkinCadence`, tested) · **B** per-debt→snapshot
+(`applyDebtUpdates`, match by name v1) · **C** `checkin-reflection` Haiku edge fn (static
+`prompt.ts`, mocked in dev) · **D** the UI reframe (pulse-led flow) · **E** countdown/nudge
+surfacing · **F** the journey/timeline view.

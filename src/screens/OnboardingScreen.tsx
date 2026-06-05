@@ -48,7 +48,7 @@ export default function OnboardingScreen() {
     !!sel.state && !!sel.ageBracket,
     !!sel.livingSituation && !!sel.employmentStatus,
     !!sel.incomeBracket || parseIncome(incomeExact) != null, // a bracket OR an exact amount
-    !!sel.debtBracket && !!sel.liquidSavingsBracket,
+    !!sel.liquidSavingsBracket, // debt is NOT collected here — the first roast itemizes it
   ][step];
 
   const finish = async () => {
@@ -72,9 +72,9 @@ export default function OnboardingScreen() {
           if (error) console.warn('[onboarding] monthly_income not persisted (push migration 00021):', error.message);
         }
         // Seed the unified snapshot (Phase 2a). Non-fatal — table may be unpushed (00022).
+        // No debt — onboarding doesn't collect it; the first roast itemizes debts (kind/APR).
         await seedSnapshotFromOnboarding(user.id, {
           incomeBracket: ctx.incomeBracket,
-          debtBracket: ctx.debtBracket,
           liquidSavingsBracket: ctx.liquidSavingsBracket,
         }, exact);
       }
@@ -161,8 +161,7 @@ export default function OnboardingScreen() {
                 </Step>
               )}
               {step === 4 && (
-                <Step title="Debt & savings" subtitle="Last piece — then we're in.">
-                  <ChipField label="Total debt" fieldKey="debtBracket" sel={sel} pick={pick} />
+                <Step title="Savings" subtitle="Last piece — then we're in.">
                   <ChipField label="Liquid savings" fieldKey="liquidSavingsBracket" sel={sel} pick={pick} />
                 </Step>
               )}

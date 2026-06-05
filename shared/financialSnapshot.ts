@@ -168,14 +168,15 @@ export function patchFromAnalysis(a: AnalysisLike): SnapshotPatch {
   return patch;
 }
 
-// ─── Mapping from onboarding (brackets → estimated midpoints, exact → stated) ──
+// ─── Mapping from onboarding (income/savings brackets → estimated midpoints, exact → stated) ──
+// NOTE: onboarding does NOT collect debt — debt is a multi-entity, kind-tagged concept that the
+// first roast itemizes (name/balance/APR/kind). So we never seed a synthetic debt here.
 export const INCOME_MID: Record<string, number> = { under_2k: 1500, '2k_4k': 3000, '4k_6k': 5000, '6k_10k': 8000, over_10k: 12000 };
-export const DEBT_MID: Record<string, number> = { none: 0, under_5k: 2500, '5k_15k': 10000, '15k_50k': 30000, over_50k: 65000 };
 export const SAVINGS_MID: Record<string, number> = { none: 0, under_500: 250, '500_2k': 1250, '2k_10k': 6000, '10k_50k': 30000, over_50k: 65000 };
 
-/** Onboarding answers → snapshot patch. Exact income is `stated`; brackets are `estimated`. */
+/** Onboarding answers → snapshot patch (income + savings only). Exact income `stated`, else `estimated`. */
 export function patchFromOnboarding(
-  ctx: { incomeBracket?: string; debtBracket?: string; liquidSavingsBracket?: string },
+  ctx: { incomeBracket?: string; liquidSavingsBracket?: string },
   exactIncome?: number | null,
 ): SnapshotPatch {
   const patch: SnapshotPatch = {};
@@ -186,13 +187,6 @@ export function patchFromOnboarding(
   }
   if (ctx.liquidSavingsBracket && ctx.liquidSavingsBracket in SAVINGS_MID) {
     patch.liquidSavings = { value: SAVINGS_MID[ctx.liquidSavingsBracket], confidence: 'estimated' };
-  }
-  if (ctx.debtBracket && ctx.debtBracket in DEBT_MID) {
-    const total = DEBT_MID[ctx.debtBracket];
-    patch.debts = {
-      value: total > 0 ? [{ name: 'Debt (estimated)', balance: total, apr: 0, min_payment: 0 }] : [],
-      confidence: 'estimated',
-    };
   }
   return patch;
 }

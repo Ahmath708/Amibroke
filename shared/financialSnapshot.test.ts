@@ -105,9 +105,8 @@ describe('patchFromAnalysis', () => {
 
 describe('patchFromOnboarding', () => {
   it('uses bracket midpoints (estimated) when no exact value', () => {
-    const patch = patchFromOnboarding({ incomeBracket: '4k_6k', debtBracket: '5k_15k', liquidSavingsBracket: 'none' });
+    const patch = patchFromOnboarding({ incomeBracket: '4k_6k', liquidSavingsBracket: 'none' });
     expect(patch.monthlyIncome).toEqual({ value: INCOME_MID['4k_6k'], confidence: 'estimated' });
-    expect(patch.debts?.value[0].balance).toBe(10000);
     expect(patch.liquidSavings?.value).toBe(0);
   });
 
@@ -116,9 +115,9 @@ describe('patchFromOnboarding', () => {
     expect(patch.monthlyIncome).toEqual({ value: 4800, confidence: 'stated' });
   });
 
-  it('debt bracket "none" yields an empty debts array', () => {
-    const patch = patchFromOnboarding({ debtBracket: 'none' });
-    expect(patch.debts?.value).toEqual([]);
+  it('never seeds debt — onboarding does not collect it (first roast itemizes)', () => {
+    const patch = patchFromOnboarding({ incomeBracket: '4k_6k', liquidSavingsBracket: '2k_10k' });
+    expect(patch.debts).toBeUndefined();
   });
 });
 
