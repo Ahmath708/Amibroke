@@ -39,9 +39,10 @@ type AuthContextType = {
   refreshProfile: () => void;
 };
 
-// DEV ONLY: force the onboarding gate on so the flow always shows (for iterating on it).
-// Never ships — gated on __DEV__. Set to false to get past onboarding into the app.
-const DEV_FORCE_ONBOARDING = __DEV__ && true;
+// DEV ONLY: when true, forces the onboarding gate on so the flow always shows (for iterating).
+// Currently OFF — gate uses the real `onboarded` flag. Re-enable (`&& true`) during the
+// onboarding refinement pass. Never ships — gated on __DEV__.
+const DEV_FORCE_ONBOARDING = __DEV__ && false;
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
