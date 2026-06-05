@@ -44,17 +44,6 @@ const DEFAULT_STEPS: ActionStep[] = [
 ];
 
 // Category → the color of its slim left stripe (replaces the old exposed text chips).
-const CATEGORY_COLOR: Record<string, string> = {
-  savings: Colors.success,
-  debt: Colors.danger,
-  income: Colors.info,
-  mindset: Colors.accentSolid,
-};
-
-function catColor(cat?: string): string {
-  return (cat && CATEGORY_COLOR[cat]) || Colors.accentSolid;
-}
-
 function generatePersonalizedSteps(analysis: any): ActionStep[] {
   const steps: ActionStep[] = [];
   let weekNum = 1;
@@ -243,7 +232,6 @@ export default function ActionPlanScreen({ route }: Props) {
     <GlassCard style={styles.focalCard}>
       <View style={styles.focalTop}>
         <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
-        <View style={[styles.catDot, { backgroundColor: catColor(step.category) }]} />
       </View>
       <Text style={styles.focalTitle}>{step.title}</Text>
       <Text style={styles.focalDesc}>{step.description}</Text>
@@ -415,7 +403,6 @@ const styles = StyleSheet.create({
   // Focal "this week" card
   focalCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.xs },
   focalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
-  catDot: { width: 10, height: 10, borderRadius: 5 },
   focalTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
   focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20 },
   focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: 2 },
@@ -435,8 +422,8 @@ const styles = StyleSheet.create({
   statusFreshCheck: { fontSize: Typography.footnote.fontSize, color: Colors.success, fontWeight: '700' },
   statusFreshText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
 
-  weekBadge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2, alignSelf: 'flex-start' },
-  weekText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.accent },
+  weekBadge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 5, minWidth: 34, alignItems: 'center', alignSelf: 'flex-start' },
+  weekText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent },
   updateBanner: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl,
