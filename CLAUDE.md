@@ -74,7 +74,8 @@ shared/                  Framework-agnostic financial logic shared by app + edge
   schemas.ts             Zod schemas (FinalAnalysisSchema, etc.)
   calculations.ts        Pure financial math
 supabase/
-  migrations/            00001–00014, applied via `supabase db push`
+  migrations/            00001–00025, applied via `supabase db push` (00022 financial_snapshots,
+                         00023 check_ins.reflection, 00024 preferred_tone, 00025 debt_strategy)
   functions/             Deno edge functions (see below)
 tools/                   Dev / test / ops scripts — NOT bundled into the app (`tsconfig` excludes it)
   eval/                  LLM eval harness: fixtures, runners, Zod assertions, cycle results in results/ (PAID — rule #1)
@@ -88,18 +89,52 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
 ```
 
 ### `src/services/` (the IO layer)
-- `claudeApi.ts` — main client→edge-function calls (analyze, action plan, captions) + analyses CRUD
+- `ai.ts` — all client→edge-function calls: `analyzeFinancialSituation`, `fetchOrGenerateActionPlan`,
+  `revisePlanPatch`, `fetchOrGenerateCaptions`, `checkinReflection`. Body shape is always
+  `freeText` + `userContext` + `tone` — never re-invoke `analyze`/`action-plan` elsewhere
+- `financialSnapshot.ts` — read/write the unified per-user snapshot + `buildRescoreInput`
+  (reconstructs analyze input from the snapshot for paywall-gated re-scoring)
+- `analyses.ts` / `profile.ts` / `checkins.ts` / `community.ts` / `subscriptionAudit.ts` — CRUD per domain
 - `subscriptions.ts` — tier/entitlement logic; reads RevenueCat (DB `user_subscriptions` as mirror)
 - `purchases.ts` — RevenueCat SDK wrapper (configure/login/offerings/purchase/restore/manage). **Guarded:** no key → app runs as free tier
 - `analytics.ts` — PostHog init + event helpers
-- `moderation.ts` / `gdpr.ts` / `creator.ts` / `offlineCache.ts`
+- `gdpr.ts` / `creator.ts` / `notifications.ts` / `biometric.ts` / `activePlan.ts` / `tables.ts`
 
-### `supabase/functions/` (Deno)
-- `analyze` — generate the financial analysis (Claude/Groq)
+> The old 945-line `claudeApi.ts` kitchen sink was split — don't recreate it. There is no
+> `moderation.ts` / `offlineCache.ts`.
+
+### `supabase/functions/` (Deno) — six deployed/active
+- `analyze` — generate the financial analysis (Claude tool-use, Groq fallback)
 - `action-plan` — generate the 90-day plan (paid feature)
+- `revise-plan` — patch/iterate an existing plan
 - `generate-captions` — shareable caption generation
+- `checkin-reflection` — short Haiku reflection for the monthly check-in (persisted to `check_ins.reflection`)
 - `revenuecat-webhook` — sync IAP entitlement events → `user_subscriptions`
-- `_shared/` — CORS, rate-limit, JSON helpers (`cors.ts`)
+- `_shared/` — CORS (`cors.ts`), rate-limit, entitlement helpers
+
+> The Stripe-era `create-payment-intent` / `confirm` / `verify` functions were ghosts and are
+> gone — the app uses RevenueCat.
+
+### Core systems (the unified model)
+- **Financial snapshot** — one per-user `financial_snapshots` row (migration 00022) is the source
+  of truth for *current* financial state, distinct from `analyses` (immutable roast history) and
+  `check_ins` (progress time-series). Written by onboarding (estimated), each roast
+  (confident-merge), and each check-in/manual edit; read by Dashboard, Debt Payoff, Action Plan,
+  Results, and stale-state. The merge engine is `shared/financialSnapshot.ts` — a field updates
+  only when incoming confidence ≥ stored (ladder `estimated < low < medium < high < stated`); a
+  field the writer is silent on is kept; a mortgage is excluded from payoff debt + `debt_total`.
+  See `docs/unified-financial-model.md`.
+- **Mandatory staged onboarding** (post-login, no skip) writes profile names + `ctx_*`
+  income/savings/debt brackets and seeds the snapshot.
+- **Monthly check-in reframe** — a soft-monthly emotional ritual (mood/note → refresh per-debt
+  figures → reward screen with delta + streak + AI reflection → handoff). `checkin-reflection`
+  (Haiku) writes `check_ins.reflection` (00023). Streak on the home card; journey timeline in History.
+- **Sticky preferences** — `profiles.preferred_tone` (00024) is the single source of truth for
+  roast voice (HomeScreen selector + Settings → Roast Voice; read by analyze + check-in
+  reflection). `profiles.debt_strategy` (00025) stickies avalanche/snowball on Debt Payoff.
+- **Stale-state** — shared `StaleBadge`; the Dashboard shows a "score may be out of date" banner
+  and re-scores from the snapshot via `buildRescoreInput` (no re-typing, paywall-gated); a
+  plan-stale "Update" badge does the same for the action plan.
 
 ## Conventions
 
@@ -181,7 +216,8 @@ client-side.
   reads a file that isn't in the bundle, so the worker **crashes on boot** (`WORKER_ERROR`, ~120ms,
   before the LLM). This bit us on revise-plan and again on analyze. Every prompt now lives in a
   `prompt.ts` (`export const SYSTEM_PROMPT = \`…\``) imported by the function's `index.ts`
-  (analyze / action-plan / generate-captions / revise-plan). **Never re-introduce a `.txt` prompt
+  (analyze / action-plan / generate-captions / checkin-reflection), or inline in `index.ts`
+  (revise-plan) — either way it's a statically-bundled module. **Never re-introduce a `.txt` prompt
   read.** Note a redeploy of an *unchanged* function with this pattern also crashes — the landmine
   is the deploy, not the edit.
 

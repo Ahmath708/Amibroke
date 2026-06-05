@@ -1,357 +1,310 @@
-# 💸 Am I Broke? — Expo React Native App
+# 💸 Am I Broke?
 
-A viral Gen Z fintech app built with Expo + TypeScript. Drop your financial situation in plain English and get an AI-powered roast + financial health score instantly.
+A Gen Z personal-finance app built with **Expo + TypeScript** (iOS-first). Describe your finances
+in plain English and get an AI-powered roast, a 0–100 financial health score, a spending
+breakdown, and — on a paid plan — a 90-day action plan, debt-payoff strategy, and scenario
+simulator. Handles **sensitive financial data**; security and correctness are first-class.
+
+> New to this repo? Read **[CLAUDE.md](CLAUDE.md)** first — it's the curated working guide
+> (critical rules, conventions, reuse rules, gotchas).
 
 ---
 
-## 🚀 Quick Start
+## What the app does
 
-### 1. Install dependencies
+The product is built around one idea: **the user has a single, live "current financial state"**,
+and every feature reads from it.
+
+- **Roast + score** — paste a free-text description of your money situation, pick a roast voice,
+  and get back a roast, a CFPB-methodology health score (0–100), deterministic metrics (savings
+  rate, DTI, emergency-fund months), and a spending breakdown.
+- **Mandatory onboarding** — a short staged flow after first login seeds your profile (names) and
+  income/savings/debt brackets so advice is accurate from day one.
+- **Financial snapshot** — onboarding, each roast, and each monthly check-in write into one
+  per-user snapshot via a confident-merge engine. The Dashboard, Debt Payoff, Action Plan, and
+  Results all read from it.
+- **Monthly check-in** — a soft-monthly emotional ritual (mood/note → refresh your debts &
+  figures → a reward screen with your delta, streak, and a short AI reflection). The journey
+  timeline lives in History.
+- **Stale-state nudges** — when your snapshot drifts from your last score, the Dashboard shows a
+  "score may be out of date" banner and can re-score from the snapshot (no re-typing).
+
+---
+
+## Tech stack
+
+- **App:** Expo SDK 55, React Native 0.83.6, React 19.2.0, TypeScript 5.9 (`strict`), New
+  Architecture enabled. Metro bundler. Entry: `App.tsx` → `src/navigation/AppNavigator.tsx`.
+- **Navigation:** React Navigation v7 — native-stack + bottom-tabs. Tabs are **Home
+  (`DashboardScreen`) · Tools · Community**; the analyze input (`HomeScreen`) is pushed as the
+  **"New Roast"** (`Analyze`) route.
+- **State:** React Context (`AuthContext`) + hooks. Local persistence via AsyncStorage.
+- **Backend:** Supabase — Postgres (SQL migrations + RLS) and **Deno edge functions**. All LLM
+  work (Anthropic Claude + Groq fallback) runs server-side in edge functions, keyed by Supabase
+  secrets.
+- **Payments:** RevenueCat In-App Purchase (`react-native-purchases`) — Apple IAP, not Stripe.
+- **Auth:** Supabase Auth; Apple + Google OAuth via PKCE (`expo-auth-session`); deep-link scheme
+  `amibroke://`.
+- **Analytics:** PostHog. **Validation:** Zod. **Animation:** Reanimated v4. **Voice:** `expo-audio`.
+
+---
+
+## Quick start
+
+### 1. Install
 ```bash
 npm install
 ```
 
-### 2. Set up environment
-Copy `.env.example` to `.env` and fill in your Supabase credentials:
+### 2. Environment
+Copy `.env.example` → `.env` and fill in the `EXPO_PUBLIC_*` client vars (Supabase URL/anon key,
+PostHog, RevenueCat). See **[Environment](#environment)** below.
 ```bash
 cp .env.example .env
 ```
 
-### 3. Deploy Supabase backend
+### 3. Run (iOS simulator)
 ```bash
-# Install Supabase CLI if you haven't
-npm install -g supabase
-supabase login
-
-# Link your project
-supabase link --project-ref <your-ref>
-
-# Set the API keys as secrets (required for analysis)
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-supabase secrets set GROQ_API_KEY=gsk-...
-# Billing is RevenueCat (Apple/Google IAP) — the webhook just needs a shared secret
-supabase secrets set REVENUECAT_WEBHOOK_AUTH=<long-random-string>
-
-# Deploy all edge functions
-supabase functions deploy analyze
-supabase functions deploy action-plan
-supabase functions deploy generate-captions
-supabase functions deploy revenuecat-webhook
-
-# Apply database migrations
-supabase db push
+npm run ios:sim      # builds the iphonesimulator SDK + launches (USE THIS — see gotcha below)
 ```
+> ⚠️ Use `npm run ios:sim` (which runs `tools/run-sim.sh`), **not** `expo run:ios`. Under Xcode 26
+> + Expo SDK 55, `expo run:ios` mis-resolves the destination to a device/Mac target and fails with
+> a code-signing error. `run-sim.sh` builds the simulator SDK directly and installs/launches via
+> `simctl`, sidestepping the device picker.
 
-### 4. Start the app
+Metro only (to switch sims with `shift+i`):
 ```bash
 npx expo start
 ```
-Then press `i` for iOS simulator, `a` for Android, or scan QR with Expo Go.
+
+### 4. Backend (Supabase)
+See **[Deploying the backend](#deploying-the-backend)**.
+
+> **AI mocks are ON in dev by default** (`src/config/ai.ts` → `USE_AI_MOCKS = __DEV__ && true`) so
+> the frontend never burns API credits during QA. Mocks never ship to prod (`__DEV__` is false in
+> release builds). Flip them off deliberately, and read **CLAUDE.md → Critical rules** first.
 
 ---
 
-## 📱 Screens (24 total)
-
-| Screen | Route | Description |
-|--------|-------|-------------|
-| Splash | `Splash` | Animated intro |
-| Onboarding | `Onboarding` | 3-slide intro |
-| Login/Signup | `Login` | Apple/Google/email auth + terms agreement |
-| Username Setup | `UsernameSetup` | Post-signup username picker (3–24 chars, a-z/0-9/_) |
-| Home | `Home` | Financial input, suggestions, tone selector |
-| AI Processing | `Processing` | Animated analysis with 30s timeout |
-| Results | `Results` | Score ring, roast, spending breakdown, insights |
-| 90-Day Action Plan | `ActionPlan` | Checkable weekly goals |
-| Debt Payoff | `DebtPayoff` | Avalanche/snowball calculator |
-| Share Card | `Share` | Shareable result card + 3 AI-generated captions (tap-to-copy) |
-| Paywall | `Paywall` | Premium upsell ($4.99/$9.99/month) |
-| History | `History` (tab) | Past analyses + score chart + check-ins |
-| Community | `Community` (tab) | Anonymized roast feed with reactions |
-| Profile | `Profile` (tab) | Stats, avatar, quick menu |
-| Settings | `Settings` | Toggles, GDPR, sign out |
-| Scenario Simulator | `ScenarioSimulator` | What-if financial scenarios |
-| Subscription Audit | `SubscriptionAudit` | Track & cut unused subs (premium) |
-| Monthly Check-In | `MonthlyCheckIn` | Mood + update tracker (premium) |
-| Creator Dashboard | `CreatorDashboard` | Referral analytics (feature-flagged) |
-| Privacy Policy | `PrivacyPolicy` | Legal + data handling |
-| Terms of Service | `TermsOfService` | Usage terms |
-| Help & FAQ | `HelpFAQ` | Frequently asked questions |
-
----
-
-## 🎨 Design System
-
-**Theme:** Cinematic Honesty — iOS HIG-flavored dark mode  
-**Background:** `#19101c` Deep Wine  
-**Primary:** `#ecb2ff` Electric Purple  
-**Secondary:** `#b9f1ff` Neon Cyan  
-**Fonts:** Space Grotesk (headings) · Inter (body)  
-**Style:** Glassmorphism · Neon blooms · Dark mode first
-
----
-
-## 🧠 AI Integration
-
-Uses **Claude Sonnet 4** (`claude-sonnet-4-20250514`) via Anthropic API with **tool-use** for guaranteed structured output. All three endpoints have an automatic **Groq fallback** (Llama 3.3 70B) when Claude is unavailable.
-
-The AI analyzes plain-English financial descriptions and returns structured JSON with:
-- Financial health score (0–100) computed via **official CFPB scoring methodology (published lookup table)**
-- Confidence-weighted scoring (low/medium/high per response attenuate the score)
-- Deterministic server-side metrics (savings rate, DTI, emergency fund months)
-- CFPB Financial Well-Being Scale (10 questions, scored via CFPB methodology)
-- Personalized roast/reality check (5 tone modes)
-- Key financial insights, top problems, and positive behaviors
-- Mentioned spending categories (user-stated only, never fabricated)
-
-### Architecture
-
-The backend was rebuilt to separate AI judgment from deterministic math:
-
-1. **AI does**: extract numbers, judge tone, infer CFPB responses, assign confidence, generate share captions
-2. **Code does**: compute CFPB score, savings rate, DTI, emergency fund months, score bands, cache results
-
-### Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `POST /analyze` | Main analysis — uses Anthropic tool-use, validates input, computes derived metrics + CFPB score (3 iteration cycles, 100%) |
-| `POST /action-plan` | 90-day plan generation — separate endpoint (3 iteration cycles: confidence anchoring + number anchoring, 100%) |
-| `POST /generate-captions` | Share-card caption generation — 3 distinct TikTok-native captions, temperature 0.8 (3 iteration cycles: structural uniqueness + min 100-char, 100%) |
-| `POST /revenuecat-webhook` | Inbound RevenueCat webhook — auth via shared secret; syncs IAP entitlement events into `user_subscriptions` |
-
-All three AI endpoints have:
-- **Groq fallback** — automatic failover to Llama 3.3 70B when Claude is unavailable
-- **Rate limiting** — Postgres-backed fixed-window limiter (30 req/hour/IP, env-tunable)
-- **Upstream safety** — 30s fetch timeout via AbortController, max 3 retries, clear error stages
-- **CI/CD** — GitHub Actions workflow (`.github/workflows/ci.yml`) runs typecheck → test → deploy on main
-- **Deploy script** — `tools/deploy-all.sh` deploys all 6 functions + runs migrations
-- **Pre-commit hook** — `.githooks/pre-commit` runs `npx tsc --noEmit`
-- **Staging** — Separate Supabase project (`zgrfgzjnhkellqgqfque`) for pre-production testing
-
-### Prompt System
-
-Each function reads its system prompt from `prompts/system.txt` via `Deno.readTextFileSync()` at module init. Prompts include `cache_control: { type: 'ephemeral' }` on the Anthropic system block for ~90% input-token reuse. The `system.txt` file is the single source of truth — edit it and redeploy. (The `.txt` extension works because Supabase Edge Function deployments bundle all assets in the function directory.)
-
-### Client Persistence
-
-To avoid re-billing on re-views, the client caches results:
-- **Captions** — cached in `analyses.share_captions` (JSONB) via `fetchOrGenerateCaptions()`
-- **Action plans** — cached in `analyses.action_plan` (JSONB) via `fetchOrGenerateActionPlan()`
-
-Both write only on success, return the cached value on subsequent visits, and fall back gracefully on error.
-
-### Testing Infrastructure
-
-| Tool | Purpose |
-|------|---------|
-| `tools/eval/lib/harness.ts` | Shared eval library — runSuite() with cost prompts, raw-output logging, SUMMARY.md |
-| `tools/eval/runner.analyze.ts` | Analyze runner — 13 fixtures across 5 groups (vague/partial/detailed/edge/CFPB) |
-| `tools/eval/runner.action-plan.ts` | Action-plan runner — 11 fixtures (8 original + 3 edge: score 0, score 100, multi-debt) |
-| `tools/eval/runner.captions.ts` | Captions runner — 8 fixtures (6 original + 2 edge: score 0, score 100) |
-| `tools/eval/assertions.ts` | Zod schema validation, confidence checks, forbidden strings (word-boundary regex), plan consistency |
-| `tools/eval/results/` | Run output: per-cycle JSON (full raw responses) + SUMMARY.md — 9 cycles across 6 suites |
-| `tools/lib/call-counter.ts` | Shared 40-call session hard cap across all testing scripts |
-| `tools/eval/test-backend-final.ts` | 16 E2E tests — auth hardening, community feed, subscriptions against production Supabase |
-| `tools/manual-test.ts` | Human-review testing with `--input <name>` and `--save` flags |
-
-All edge functions return structured errors with failure stage (`parse_error`, `rate_limited`, `upstream_timeout`, `upstream_unavailable`, `claude_api_error`, `groq_api_error`, `validation_error`, `tool_use_missing`) so the client can display specific error messages.
-
-### Rate Limiting
-
-Postgres-backed fixed-window rate limiter shared across all three endpoints:
-- **Table:** `api_rate_limits` (bucket_key + window_start composite PK)
-- **Logic:** `check_rate_limit(p_key, p_max, p_window_seconds)` RPC — self-prunes stale windows
-- **Defaults:** 30 requests/hour/IP/endpoint (env-tunable via `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`)
-- **Bypass:** Set `RATE_LIMIT_ENABLED=false` for local testing
-- **Fail-open:** RPC errors log a warning and allow the request (switchable to fail-closed)
-- **Separation:** Pure logic in `rateLimitLogic.ts` (testable without Deno), IO in `rateLimit.ts`
-
----
-
-## 🛡️ Auth Hardening
-
-Three fixes from the production audit:
-1. **Collision-safe signup** — `profiles.username` is now nullable, auto-set to `NULL` on signup. Two users with the same email prefix no longer crash.
-2. **Username gate** — Community posting requires a non-null username (RLS-enforced). Users must call `set_username` RPC before posting.
-3. **set_username RPC** — Validates length (3–24), charset (a-z, 0-9, underscore), uniqueness. Returns JSON envelope with error codes: `not_authenticated`, `invalid_length`, `invalid_charset`, `taken`.
-
-## 👥 Community Feed Hardening
-
-1. **1:1 posts per analysis** — UNIQUE constraint prevents duplicate sharing.
-2. **Emoji whitelist** — Only 🔥 😭 💀 💯 😂 are accepted server-side (CHECK constraint).
-3. **Trigger-based reaction counts** — `post_reactions` INSERT/DELETE triggers recompute `community_posts.reactions` via COUNT(*). Manual increment/decrement RPCs removed — counts can never drift.
-
----
-
-## 📦 Tech Stack
-
-- **Expo** ~54.0.0
-- **React Native** 0.81.5
-- **TypeScript** ~5.9
-- **Zod** — response validation
-- **React Navigation** v7 (Native Stack + Bottom Tabs)
-- **Supabase** — Auth, Edge Functions, Database (Postgres)
-- **Anthropic Claude** — AI analysis
-- **Groq (Llama)** — AI fallback
-- **RevenueCat** — In-App Purchase subscriptions (Apple App Store / Google Play)
-- **PostHog** — Analytics
-- **expo-linear-gradient** — gradients
-- **expo-blur** — glassmorphism
-- **expo-haptics** — tactile feedback
-- **react-native-svg** — score ring chart
-- **react-native-reanimated** — animations
-- **@expo-google-fonts** — Space Grotesk + Inter
-
----
-
-## 💰 Monetization
-
-Monthly auto-renewable subscriptions via **RevenueCat** (Apple In-App Purchase):
-- **Action Plan** — $4.99/month (90-day roadmap, weekly goals, debt strategy)
-- **Deep Dive** — $9.99/month (scenario simulator, avalanche vs snowball, PDF report)
-- **7-day free trial** — Configured as an App Store introductory offer
-- **Manage / cancel** — Apple's native subscription management (Settings → Manage Subscription)
-- **Restore Purchases** — required by App Review; available on the paywall
-- **Creator Referral System** — Earn per signup
-
-RevenueCat's on-device `customerInfo` is the source of truth for entitlements. The `user_subscriptions` table is a server-side mirror, written only by the `revenuecat-webhook` (service role, no client access). Billing was migrated from Stripe to RevenueCat in May 2026 — see `docs/REVENUECAT_SETUP.md` for the full setup and free-tier StoreKit testing guide.
-
----
-
-## 🗂 Project Structure
+## Repository structure
 
 ```
-AmIBroke/
-├── App.tsx                    # Root entry point
-├── app.json                   # Expo config
-├── package.json
-├── tsconfig.json
-├── babel.config.js
-├── .env.example
-├── .github/workflows/ci.yml   # CI/CD pipeline (typecheck → test → deploy)
-├── .githooks/pre-commit       # TypeScript check hook (npx tsc --noEmit)
-├── CLAUDE.md                  # AI safety rules
-├── docs/                      # Project documentation
-│   ├── TESTING.md             # Eval methodology, fixture conventions, pre-commit, CI/CD
-│   ├── DECISIONS.md           # Architecture decisions + subscription product spec
-│   ├── REVENUECAT_SETUP.md    # RevenueCat setup + free-tier StoreKit testing
-│   └── 531_NEXT_STEPS.md      # Latest next-steps / iteration plan
-├── shared/                    # Shared types & logic (frontend + backend)
-│   ├── types.ts               # TypeScript types (inferred from Zod)
-│   ├── schemas.ts             # Zod schemas (request, AI output, caption, final response)
-│   ├── index.ts               # Re-exports everything
-│   ├── calculations.ts        # Deterministic financial math
-│   ├── calculations.test.ts
-│   ├── baselines/             # State + national reference data
-│   │   ├── national.ts        # Country-wide defaults (CC APR, student loan rate)
-│   │   ├── states.ts          # Per-state rows (50 states + DC, cited sources)
-│   │   └── index.ts           # getBaselines(state) helper
-│   └── scoring/               # CFPB scoring module
-│       ├── cfpb_irt.ts        # Official CFPB graded-response scorer
-│       ├── bands.ts           # Score → label/color (Fragile/Surviving/Stable/Thriving)
-│       ├── index.ts           # computeFinalScore() with confidence attenuation
-│       └── __tests__/
-│           └── cfpb.test.ts
-├── supabase/
-│   ├── config.toml
-│   ├── migrations/            # 14 SQL migrations (00001–00014)
-│   └── functions/
-│       ├── _shared/           # Shared edge function utilities
-│       │   ├── cors.ts        # CORS headers + OPTIONS handler
-│       │   ├── rateLimit.ts   # Postgres-backed rate limiter (IO via supabase-js)
-│       │   ├── rateLimitLogic.ts  # Pure logic: bucket key, limit resolution, bypass
-│       │   └── client.ts      # Shared Claude client (no cache_control)
-│       ├── analyze/           # Main analysis endpoint
-│       │   ├── index.ts       # Handler: validate → call AI → compute → return
-│       │   ├── prompts/system.txt  # System prompt (single source of truth)
-│       │   ├── tool.ts        # submit_analysis tool JSON Schema
-│       │   └── getBaselinesForRequest.ts
-│       ├── action-plan/       # 90-day plan endpoint
-│       │   ├── index.ts
-│       │   ├── prompts/system.txt
-│       │   └── tool.ts
-│       ├── generate-captions/ # Share-card caption generator
-│       │   ├── index.ts       # Temperature 0.8, tool-use, Groq fallback
-│       │   ├── prompts/system.txt
-│       │   └── tool.ts        # submit_captions tool JSON Schema
-│       └── revenuecat-webhook/        # Inbound RevenueCat webhook → user_subscriptions
-│           └── index.ts
-├── tools/                   # Dev / test / deploy scripts (not bundled into the app)
-│   ├── lib/
-│   │   └── call-counter.ts    # 40-call session hard cap
-│   ├── eval/
-│   │   ├── lib/
-│   │   │   └── harness.ts     # Shared runSuite() — cost prompts, raw output, SUMMARY.md
-│   │   ├── runner.analyze.ts  # Analyze runner (13 fixtures, score extraction)
-│   │   ├── runner.action-plan.ts  # Action-plan runner (wired, fixtures in 528)
-│   │   ├── runner.captions.ts # Captions runner (8 fixtures)
-│   │   ├── fixtures.analyze.ts    # 13 analyze test cases (5 groups)
-│   │   ├── fixtures.captions.ts   # 8 caption test cases (all tones + scores)
-│   │   ├── assertions.ts      # assertAnalyze, assertCaptions, assertActionPlan
-│   │   ├── results/           # Raw output per run (JSON) + SUMMARY.md
-│   │   └── test-backend-final.ts  # 16 E2E tests: auth, community, subscriptions
-│   ├── deploy-all.sh          # Deploy all 6 functions + migrations
-│   ├── manual-test.ts         # Human-review test tool
-│   ├── test-snapshots/
-│   │   ├── inputs/            # 5 starter input fixtures (JSON)
-│   │   ├── outputs/           # Saved AI responses (committed)
-│   │   └── REVIEW.md          # Manual review ratings
-│   └── test_anthropic.ts      # DEPRECATED
-├── src/
-│   ├── __fixtures__/          # Sample data for dev preview
-│   │   └── sampleAnalysis.ts  # SAMPLE_ANALYSIS, SAMPLE_ACTION_PLAN, SAMPLE_CAPTIONS
-│   ├── components/            # Reusable UI primitives
-│   │   ├── GlassCard.tsx
-│   │   ├── NeonButton.tsx
-│   │   ├── ScoreRing.tsx
-│   │   ├── StatusPill.tsx
-│   │   ├── ConfidenceBadge.tsx # Per-field confidence indicator (low/medium/high)
-│   │   ├── LoadingState.tsx
-│   │   ├── EmptyState.tsx
-│   │   ├── ErrorState.tsx
-│   │   ├── ErrorBoundary.tsx
-│   │   ├── Disclaimer.tsx
-│   │   ├── Toast.tsx
-│   │   └── TypingPlaceholder.tsx
-│   ├── navigation/
-│   │   └── AppNavigator.tsx   # Stack + Bottom Tab navigator
-│   ├── screens/               # 24 screens
-│   │   └── UsernameSetupScreen.tsx  # Post-signup username picker
-│   ├── context/
-│   │   └── AuthContext.tsx    # Supabase auth state
-│   ├── hooks/                 # 8 custom hooks
-│   │   └── useSubscription.ts # RevenueCat subscription/entitlement state
-│   ├── services/              # API + business logic
-│   │   ├── subscriptions.ts   # Server-side subscription entitlement (user_subscriptions)
-│   │   ├── claudeApi.ts       # Claude AI integration + dev mock guards
-│   ├── lib/
-│   │   └── validations.ts     # Zod schemas
-│   ├── config/
-│   │   ├── features.ts        # Feature flags
-│   │   ├── scoring.ts         # Score weights + bands
-│   │   └── ai.ts              # DEV-ONLY AI mock flag (USE_AI_MOCKS)
-│   ├── theme/
-│   │   └── colors.ts          # iOS HIG design tokens
-│   └── types/
-│       └── index.ts           # TypeScript interfaces
+App.tsx                  Root: fonts, providers (Auth), RevenueCat init, navigation
+src/
+  navigation/            AppNavigator — all routes; RootStackParamList in src/types
+  screens/               ~27 screens (Dashboard, Home, Results, Paywall, ActionPlan, DebtPayoff,
+                         MonthlyCheckIn, Onboarding, Tools, Community, History, …)
+  components/            Reusable UI (NeonButton, GlassCard, ScoreRing, ScreenBackground,
+                         StaleBadge, Fab, motion/*, …)
+  context/AuthContext    Supabase client, session, OAuth (PKCE), RevenueCat identity sync
+  hooks/                 useAnalysis, useSubscription, useCheckinStatus, useRequireEntitlement,
+                         useVoiceInput, useShare, …
+  services/              Data/IO layer (see below)
+  config/                ai.ts (mocks flag), features.ts (flags)
+  theme/colors.ts        Design tokens: Colors, Typography, Spacing, Radius
+  types/index.ts         App-wide types incl. RootStackParamList & PURCHASE_PRODUCTS
+  __fixtures__/          Sample data for dev mocks
+shared/                  Framework-agnostic logic shared by app + edge functions
+  financialSnapshot.ts   The unified snapshot + confident-merge engine
+  entitlement.ts         3-day-access / subscription trial-window math (one source for app + edge)
+  scoring/               CFPB / IRT scoring (cfpb_irt, bands, index)
+  baselines/             National & per-state spending baselines
+  schemas.ts             Zod schemas (FinalAnalysisSchema, etc.)
+  calculations.ts        Pure financial math
+  checkinCadence.ts / planRevision.ts
+supabase/
+  migrations/            00001–00025, applied via `supabase db push`
+  functions/             Deno edge functions (see below)
+tools/                   Dev / test / ops scripts — NOT bundled into the app
+docs/                    Project docs (see docs/ section)
 ```
+
+### `src/services/` (the IO layer)
+Screens never touch Supabase tables directly — they go through services, which all share the
+single `getSupabase()` client from `supabaseClient.ts`.
+- `ai.ts` — all client→edge-function calls: `analyzeFinancialSituation`, `fetchOrGenerateActionPlan`,
+  `fetchOrGenerateCaptions`, `revisePlanPatch`, `checkinReflection`
+- `financialSnapshot.ts` — read/write the per-user snapshot + `buildRescoreInput` (reconstructs
+  analyze input from the snapshot for paywall-gated re-scoring)
+- `analyses.ts` / `profile.ts` / `checkins.ts` / `community.ts` / `subscriptionAudit.ts`
+- `subscriptions.ts` — tier/entitlement logic (reads RevenueCat; DB `user_subscriptions` is a mirror)
+- `purchases.ts` — RevenueCat SDK wrapper. Guarded: no key → app runs as free tier
+- `analytics.ts` / `gdpr.ts` / `creator.ts` / `notifications.ts` / `biometric.ts`
+
+### `supabase/functions/` (Deno edge functions)
+Six functions are deployed/active:
+- `analyze` — generate the financial analysis (Claude tool-use, Groq fallback)
+- `action-plan` — generate the 90-day plan (paid feature)
+- `revise-plan` — patch/iterate an existing plan
+- `generate-captions` — shareable caption generation
+- `checkin-reflection` — short Haiku reflection for the monthly check-in (persisted to
+  `check_ins.reflection`)
+- `revenuecat-webhook` — sync IAP entitlement events → `user_subscriptions`
+- `_shared/` — CORS, rate-limit, entitlement helpers
+
+> The Stripe-era `create-payment-intent` / `confirm` / `verify` functions were ghosts and are
+> gone — the app uses RevenueCat.
 
 ---
 
-## 🔐 Environment Variables
+## Core systems
+
+### Unified financial snapshot
+A single per-user `financial_snapshots` row (migration **00022**) is the source of truth for the
+user's **current** financial state — distinct from `analyses` (immutable roast history) and
+`check_ins` (the progress time-series). It stores flat derived-metric columns (what features
+read) + a `provenance` JSONB (per-field `{value, source, confidence, updatedAt}`) + a `debts`
+JSONB.
+
+It's written by **onboarding** (estimated), each **roast** (confident-merge), and each
+**check-in** / manual edit, and read by the Dashboard, Debt Payoff, Action Plan, Results, and the
+stale-state system. The merge engine lives in `shared/financialSnapshot.ts`: a field only updates
+when the incoming confidence is ≥ the stored one (confidence ladder
+`estimated < low < medium < high < stated`), and a field the writer is silent on is kept. A
+mortgage is excluded from payoff debt + `debt_total` (it's not "dig-out" debt). See
+**[docs/unified-financial-model.md](docs/unified-financial-model.md)**.
+
+### Mandatory staged onboarding
+After first login, a short staged flow (names → about you → situation → income → debt & savings)
+writes `profiles` (names + `ctx_*` brackets + `onboarded`) and seeds the snapshot. Income can be
+given as an exact monthly figure (optional) or a bracket. No skip.
+
+### Monthly check-in (the reframe)
+A soft-monthly emotional ritual, pulse-led: mood/note → refresh per-debt figures → a reward
+screen (delta + streak + AI reflection) → handoff. The `checkin-reflection` edge function (Haiku)
+writes a short reflection persisted to `check_ins.reflection` (migration **00023**). Streak shows
+on the home card; the journey timeline lives in History.
+
+### Sticky roast voice + debt strategy
+`profiles.preferred_tone` (migration **00024**) is the single source of truth for tone — set from
+the HomeScreen selector (sticky) and Settings → Roast Voice; read by `analyze` and the check-in
+reflection. `profiles.debt_strategy` (migration **00025**) stickies the avalanche/snowball choice
+on the Debt Payoff screen, which also shows paydown progress derived from check-in history.
+
+### Stale-state system
+A shared `StaleBadge` component. When the snapshot drifts from the last scored roast, the
+Dashboard shows a "score may be out of date" banner and can **re-score from the snapshot** —
+`buildRescoreInput` reconstructs the analyze input so the user doesn't re-type (paywall-gated). A
+plan-stale "Update" badge does the same for the action plan.
+
+### Scoring (CFPB)
+The backend separates AI judgment from deterministic math: the AI extracts numbers, judges tone,
+infers CFPB responses, and assigns confidence; **code** computes the CFPB score, savings rate,
+DTI, emergency-fund months, and score bands. Scoring lives in `shared/scoring/` (`cfpb_irt.ts`,
+`bands.ts`, `index.ts`) and is shared by app + edge functions. Score-band labels/thresholds/colors
+come from `shared/scoring/bands.ts` (`getScoreBand`) — never re-encoded elsewhere.
+
+### Edge-function safety
+All AI endpoints have a **Groq (Llama 3.3 70B) fallback**, a Postgres-backed fixed-window **rate
+limiter** (`_shared/rateLimit.ts`), a 30s upstream timeout + retries, and return structured errors
+with a failure `stage` (`parse_error`, `rate_limited`, `upstream_timeout`,
+`upstream_unavailable`, `validation_error`, …) so the client shows specific messages.
+
+> **Prompts are static TS imports, never runtime `.txt` reads.** Each function's prompt lives in a
+> `prompt.ts` (`export const SYSTEM_PROMPT = …`). A `Deno.readTextFileSync` of a non-imported
+> `.txt` isn't in the eszip deploy bundle and crashes the worker on boot. Never re-introduce a
+> `.txt` prompt read.
+
+---
+
+## Monetization
+
+New users get **3 days of full free access** to everything. After that it's a **hard paywall —
+there is NO permanent free tier**: using the app at all requires a paid plan.
+
+- **Action Plan** — ~$4.99/mo (90-day plan, debt tools)
+- **Deep Dive** — ~$9.99/mo (supersedes Action Plan; scenario simulator, deep-dive)
+
+The 3-day access is **app-side** (granted on signup from the server-set `created_at`, hard-gated
+after expiry) — **not** an Apple/RevenueCat introductory offer; there's no per-subscription free
+trial. RevenueCat's on-device `customerInfo` is the source of truth for entitlements;
+`user_subscriptions` is a server-side mirror written only by the `revenuecat-webhook`. The
+trial-window math is shared via `shared/entitlement.ts` (app) and
+`supabase/functions/_shared/entitlement.ts` (edge). See
+**[docs/DECISIONS.md](docs/DECISIONS.md)** and **[docs/REVENUECAT_SETUP.md](docs/REVENUECAT_SETUP.md)**.
+
+---
+
+## Deploying the backend
+
+```bash
+# Install + log in once
+npm install -g supabase
+supabase login
+supabase link --project-ref zefhsplmgxefmpdqbbvv
+
+# Edge-function secrets (server-side; never bundled client-side)
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase secrets set GROQ_API_KEY=gsk-...
+supabase secrets set REVENUECAT_WEBHOOK_AUTH=<long-random-string>
+
+# Deploy all 6 edge functions + run migrations
+bash tools/deploy-all.sh
+
+# …or individually:
+supabase functions deploy analyze
+supabase db push
+```
+
+`tools/deploy-all.sh` deploys **analyze, action-plan, generate-captions, checkin-reflection,
+revise-plan, revenuecat-webhook** and then runs `supabase migration up --linked`.
+
+> The Supabase project is coworker-owned (free tier), ref `zefhsplmgxefmpdqbbvv`. A separate
+> **AmIBroke-staging** project (`zgrfgzjnhkellqgqfque`) exists. The hosted DB can lag the migration
+> files — a runtime `PGRST204 "column not found"` means a migration wasn't applied remotely.
+
+---
+
+## Migrations
+
+`supabase/migrations/00001` → **00025**, applied via `supabase db push`. Recent, high-value:
+
+| # | What |
+|---|------|
+| 00022 | `financial_snapshots` — the unified snapshot table |
+| 00023 | `check_ins.reflection` — persisted Haiku check-in reflection |
+| 00024 | `profiles.preferred_tone` — sticky roast voice (default `savage`) |
+| 00025 | `profiles.debt_strategy` — sticky avalanche/snowball (default `avalanche`) |
+
+---
+
+## Environment
+
+Client vars (`EXPO_PUBLIC_*`, in `.env` — see `.env.example`):
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `EXPO_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous key |
-| `EXPO_PUBLIC_POSTHOG_KEY` | No | PostHog analytics key |
-| `EXPO_PUBLIC_REVENUECAT_IOS_KEY` | No | RevenueCat public iOS SDK key (`appl_...`) |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
+| `EXPO_PUBLIC_POSTHOG_API_KEY` | No | PostHog analytics key |
+| `EXPO_PUBLIC_POSTHOG_HOST` | No | PostHog host (default US cloud) |
+| `EXPO_PUBLIC_REVENUECAT_IOS_KEY` | No | RevenueCat iOS SDK key (`appl_…`, or `test_…` in dev) |
 | `EXPO_PUBLIC_FEATURE_CREATOR_DASHBOARD` | No | Enable creator tools |
 
-**Supabase secrets** (set via CLI, not in `.env`):
-- `ANTHROPIC_API_KEY` — Claude API key (required)
-- `GROQ_API_KEY` — Groq API key for fallback (recommended)
-- `RATE_LIMIT_MAX` — Max requests per window (default: 30)
-- `RATE_LIMIT_WINDOW_SECONDS` — Window duration (default: 3600)
-- `RATE_LIMIT_ENABLED` — Set `false` to bypass rate limiter locally
-- `REVENUECAT_WEBHOOK_AUTH` — Shared secret the `revenuecat-webhook` checks on the `Authorization` header
+**Server secrets** (via `supabase secrets set`, never in `.env`): `ANTHROPIC_API_KEY`,
+`GROQ_API_KEY`, `REVENUECAT_WEBHOOK_AUTH`, rate-limit tunables (`RATE_LIMIT_MAX_REQUESTS` /
+`RATE_LIMIT_WINDOW_MS`), and the service-role key.
+
+---
+
+## Testing
+
+```bash
+npm test                  # jest (jest-expo preset)
+npm run test:purchases    # RevenueCat IAP unit test
+npx tsc --noEmit          # typecheck the app (fastest correctness signal)
+```
+Tests live in `src/**/__tests__/` and `shared/*.test.ts`. `tsconfig` excludes `supabase/` and
+`tools/` (Deno/Node, not RN). The `tools/eval/*` LLM eval harness and `tools/manual-test.ts` call
+paid APIs — see **CLAUDE.md → Critical rules**.
+
+---
+
+## Docs
+
+- **[CLAUDE.md](CLAUDE.md)** — curated working guide (rules, conventions, reuse rules, gotchas)
+- **[docs/unified-financial-model.md](docs/unified-financial-model.md)** — the snapshot + onboarding + check-in design
+- **[docs/DECISIONS.md](docs/DECISIONS.md)** — architecture decisions + monetization spec
+- **[docs/REVENUECAT_SETUP.md](docs/REVENUECAT_SETUP.md)** — RevenueCat setup + free-tier StoreKit testing
+- **[docs/TESTING.md](docs/TESTING.md)** — eval methodology + fixtures
+- **[docs/active-plan-design.md](docs/active-plan-design.md)** — Model B persistent plan (design-only / parked)
