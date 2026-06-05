@@ -106,6 +106,39 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
   return steps;
 }
 
+// Expanded plan card. The impact (→) line caps at 2 lines with a "Read more" toggle that reveals
+// the full text only when it actually overflows (measured once unclamped, then clamped).
+function FocalCard({ step, isActive, onDone }: {
+  step: { week: string; title: string; description: string; impact: string };
+  isActive: boolean;
+  onDone: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflow, setOverflow] = useState(false);
+  return (
+    <GlassCard style={styles.focalCard}>
+      <View style={styles.focalTop}>
+        <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
+      </View>
+      <Text style={styles.focalTitle}>{step.title}</Text>
+      <Text style={styles.focalDesc}>{step.description}</Text>
+      <Text
+        style={styles.focalImpact}
+        numberOfLines={expanded || !overflow ? undefined : 2}
+        onTextLayout={(e) => { if (!overflow && e.nativeEvent.lines.length > 2) setOverflow(true); }}
+      >
+        → {step.impact}
+      </Text>
+      {overflow && (
+        <TouchableOpacity onPress={() => setExpanded((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.readMoreHit}>
+          <Text style={styles.readMore}>{expanded ? 'Read less' : 'Read more'}</Text>
+        </TouchableOpacity>
+      )}
+      {isActive && <NeonButton label="Mark this done" onPress={onDone} style={{ marginTop: Spacing.md }} />}
+    </GlassCard>
+  );
+}
+
 export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -227,17 +260,10 @@ export default function ActionPlanScreen({ route }: Props) {
   } : null;
   const canUpdate = !!plan && !!snap && shouldRevisePlan(plan, snap).revise;
 
-  // Expanded focal card (This Week current, or the selected Coming Up step).
+  // Expanded focal card (This Week current, or the selected future step). Keyed by step.id so the
+  // Read-more state resets when the focal step changes.
   const renderFocal = (step: (typeof rows)[number]) => (
-    <GlassCard style={styles.focalCard}>
-      <View style={styles.focalTop}>
-        <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
-      </View>
-      <Text style={styles.focalTitle}>{step.title}</Text>
-      <Text style={styles.focalDesc}>{step.description}</Text>
-      <Text style={styles.focalImpact} numberOfLines={2}>→ {step.impact}</Text>
-      {isActive && <NeonButton label="Mark this done" onPress={() => toggle(step.id, false)} style={{ marginTop: Spacing.md }} />}
-    </GlassCard>
+    <FocalCard key={step.id} step={step} isActive={isActive} onDone={() => toggle(step.id, false)} />
   );
 
   // Minimized step row (collapsed This Week + Up Next): tap ○ to complete, tap the row to focus it.
@@ -406,6 +432,8 @@ const styles = StyleSheet.create({
   focalTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary },
   focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20 },
   focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: 2 },
+  readMoreHit: { alignSelf: 'flex-start', marginTop: 6 },
+  readMore: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
 
   // Compact up-next / done rows. Up Next: tap the ○ to complete, tap the row to view.
   compactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm + 2 },
