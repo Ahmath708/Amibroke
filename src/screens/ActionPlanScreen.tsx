@@ -350,18 +350,12 @@ export default function ActionPlanScreen({ route }: Props) {
               </GlassCard>
             )}
 
-            {/* Coming Up — the selected future step, expanded (only when you've tapped a future card). */}
-            {!focalIsCurrent && focalStep && (
-              <View style={styles.block}>
-                <SectionLabel>Coming Up</SectionLabel>
-                {renderFocal(focalStep)}
-              </View>
-            )}
-
-            {/* Up Next — the remaining future steps, minimized; hidden when there are none. */}
-            {upNext.length > 0 && (
+            {/* Up Next — the future steps in one section. The one you tap expands in place at the
+                top; the rest stay minimized. (No separate "Coming Up" — it was redundant.) */}
+            {(upNext.length > 0 || (!focalIsCurrent && !!focalStep)) && (
               <View style={styles.block}>
                 <SectionLabel>Up Next</SectionLabel>
+                {!focalIsCurrent && focalStep && renderFocal(focalStep)}
                 {upNext.map(renderCompact)}
               </View>
             )}
