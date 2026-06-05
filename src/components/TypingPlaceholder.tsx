@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
-import { Text, StyleSheet, View } from 'react-native';
-import { Colors, Typography, Spacing } from '@/theme/colors';
+import React, { useState, useEffect, useRef } from 'react';
+import { Text, StyleSheet, View, Animated, Easing } from 'react-native';
+import { Colors, Typography } from '@/theme/colors';
 
 interface TypingPlaceholderProps {
   placeholders: string[];
@@ -8,7 +8,7 @@ interface TypingPlaceholderProps {
   deletingSpeed?: number;
   pauseDuration?: number;
   style?: object;
-  /** Override the text/cursor font metrics (e.g. to match the host TextInput exactly). */
+  /** Override the text font metrics (e.g. to match the host TextInput exactly). */
   textStyle?: object;
 }
 
@@ -24,15 +24,25 @@ export default function TypingPlaceholder({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [caretOn, setCaretOn] = useState(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Blinking caret — matches the real TextInput's caret (color + blink), so the hand-off from the
-  // animated placeholder to a focused input is seamless.
+  // Caret position, measured from the last line of the (possibly wrapped) text so the bar sits at
+  // the end of the typed text, not the end of the block.
+  const [caret, setCaret] = useState({ x: 0, y: 0, h: 24 });
+  const caretOpacity = useRef(new Animated.Value(1)).current;
+
+  // Native-style caret: a thin bar that holds solid, fades out, holds off, fades in (~1.06s — the
+  // macOS/iOS caret blink rate).
   useEffect(() => {
-    const id = setInterval(() => setCaretOn((v) => !v), 500);
-    return () => clearInterval(id);
-  }, []);
+    const loop = Animated.loop(Animated.sequence([
+      Animated.delay(420),
+      Animated.timing(caretOpacity, { toValue: 0, duration: 160, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.delay(320),
+      Animated.timing(caretOpacity, { toValue: 1, duration: 160, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [caretOpacity]);
 
   useEffect(() => {
     const currentPlaceholder = placeholders[currentIndex];
@@ -67,32 +77,37 @@ export default function TypingPlaceholder({
     };
   }, [displayText, isDeleting, isPaused, currentIndex, placeholders, typingSpeed, deletingSpeed, pauseDuration]);
 
+  const caretH = caret.h; // the native caret spans the full line height — match it
   return (
     <View style={[styles.container, style]}>
-      <Text style={[styles.text, textStyle]}>
-        {displayText}
-        <Text style={[styles.cursor, textStyle, { opacity: caretOn ? 1 : 0 }]}>|</Text>
+      <Text
+        style={[styles.text, textStyle]}
+        onTextLayout={(e) => {
+          const lines = e.nativeEvent.lines;
+          if (lines.length) {
+            const last = lines[lines.length - 1];
+            setCaret({ x: last.x + last.width, y: last.y, h: last.height });
+          }
+        }}
+      >
+        {displayText || ' '}
       </Text>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.caret, { left: caret.x, top: caret.y + (caret.h - caretH) / 2, height: caretH, opacity: caretOpacity }]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    minHeight: 24,
-  },
+  container: { position: 'relative', minHeight: 24 },
   text: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.subhead.fontSize,
     color: Colors.textMuted,
     fontStyle: 'italic',
   },
-  cursor: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.subhead.fontSize,
-    color: Colors.accentSolid, // matches AppTextInput's caret (CARET = accentSolid)
-    fontWeight: '300',
-  },
+  // Caret bar — width/color match AppTextInput's native caret (CARET = accentSolid).
+  caret: { position: 'absolute', width: 2, borderRadius: 1, backgroundColor: Colors.accentSolid },
 });
