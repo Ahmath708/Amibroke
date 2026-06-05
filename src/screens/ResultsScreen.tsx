@@ -369,7 +369,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
               canDeepDive ? (
                 <NeonButton
                   label="View Debt Payoff Plan"
-                  onPress={() => navigation.navigate('DebtPayoff', { debts: analysis.debts ?? [], monthlyIncome: income })}
+                  onPress={() => navigation.navigate('DebtPayoff')}
                   variant="secondary"
                   style={styles.debtsCta}
                 />

@@ -143,7 +143,7 @@ export type RootStackParamList = {
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
   ActionPlan: { steps?: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string };
-  DebtPayoff: { debts: DebtItem[]; monthlyIncome: number };
+  DebtPayoff: undefined; // reads the unified snapshot (Phase 3 — no per-roast param hand-off)
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
   AllAnalyses: undefined;

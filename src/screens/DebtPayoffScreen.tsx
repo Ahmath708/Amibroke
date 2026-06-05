@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RouteProp, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, DebtItem } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -26,20 +26,18 @@ import EmptyState from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { simulateDebtPayoff } from '@shared/calculations.ts';
 
-type Props = { route: RouteProp<RootStackParamList, 'DebtPayoff'> };
-
 type Strategy = 'avalanche' | 'snowball';
 
 const fmtDuration = (m: number) => (m < 24 ? `${m} mo` : `${(m / 12).toFixed(1)} yr`);
 const fmtMonth = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-export default function DebtPayoffScreen({ route }: Props) {
+export default function DebtPayoffScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
   const { user } = useAuth();
-  // Source of truth = the unified snapshot (Phase 2a); fall back to the route's latest-roast
-  // debts. Estimated onboarding placeholders are ignored (no APR/min → useless for payoff).
-  const [debts, setDebts] = useState<DebtItem[]>(route.params?.debts ?? []);
+  // Source of truth = the unified snapshot (no per-roast param hand-off). Estimated onboarding
+  // placeholders are ignored (no APR/min → useless for payoff).
+  const [debts, setDebts] = useState<DebtItem[]>([]);
   useEffect(() => {
     if (!user) return;
     getSnapshot(user.id).then((snap) => {
