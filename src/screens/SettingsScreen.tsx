@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Linking, ActivityIndicator, Animated,
+  TouchableOpacity, Alert, Linking, ActivityIndicator, Animated, ActionSheetIOS,
 } from 'react-native';
 import Constants from 'expo-constants';
 import Toggle from '@/components/Toggle';
@@ -9,7 +9,7 @@ import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '@/types';
+import { RootStackParamList, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { FEATURES } from '@/config/features';
 import { BRAND } from '@/config/brand';
@@ -25,6 +25,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { manageSubscriptions } from '@/services/purchases';
 import { PURCHASE_PRODUCTS } from '@/types';
 import { getCheckinConfig, getCheckIns } from '@/services/checkins';
+import { getProfile, updateProfile } from '@/services/profile';
 import { deleteAllAnalyses } from '@/services/analyses';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import {
@@ -39,6 +40,15 @@ type SettingRow =
   | { type: 'action'; label: string; icon: string; detail?: string; destructive?: boolean; onPress: () => void }
   | { type: 'nav'; label: string; icon: string; detail?: string; onPress: () => void };
 
+// The user's roast voice (profiles.preferred_tone). Labels mirror the HomeScreen tone selector.
+const TONE_OPTIONS: { key: RoastTone; label: string }[] = [
+  { key: 'savage', label: 'Savage' },
+  { key: 'gentle', label: 'Gentle' },
+  { key: 'therapist', label: 'Therapist' },
+  { key: 'older_sibling', label: 'Big Sibling' },
+  { key: 'finance_bro', label: 'Finance Bro' },
+];
+
 export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { signOut, user } = useAuth();
@@ -51,6 +61,7 @@ export default function SettingsScreen({ navigation }: Props) {
     faceID: false,
   });
   const [gdprLoading, setGdprLoading] = useState<string | null>(null);
+  const [tone, setTone] = useState<RoastTone>('savage');
   const { animatedStyle } = useEntryAnimation();
 
   // Reflect persisted / OS state on mount.
@@ -59,7 +70,22 @@ export default function SettingsScreen({ navigation }: Props) {
     isLockEnabled().then((on) => setToggles((p) => ({ ...p, faceID: on })));
     Notifications.getPermissionsAsync().then((s) => setToggles((p) => ({ ...p, notifications: s.granted }))).catch(() => {});
     setToggles((p) => ({ ...p, haptics: getHapticsEnabled() }));
-  }, []);
+    if (user) getProfile(user.id).then((p) => { if (p?.preferred_tone) setTone(p.preferred_tone); }).catch(() => {});
+  }, [user]);
+
+  // Roast voice — the sticky tone preference, also settable from the HomeScreen selector.
+  const onChangeTone = () => {
+    const labels = TONE_OPTIONS.map((t) => t.label);
+    ActionSheetIOS.showActionSheetWithOptions(
+      { title: 'Your roast voice', options: [...labels, 'Cancel'], cancelButtonIndex: labels.length },
+      (i) => {
+        if (i < 0 || i >= labels.length) return;
+        const key = TONE_OPTIONS[i].key;
+        setTone(key);
+        if (user) updateProfile(user.id, { preferred_tone: key }).catch(() => {});
+      },
+    );
+  };
 
   // Push Notifications: iOS can't revoke permission in-app, so reflect the real
   // permission and route to iOS Settings to change it.
@@ -198,6 +224,7 @@ export default function SettingsScreen({ navigation }: Props) {
     {
       title: 'App',
       rows: [
+        { type: 'nav', label: 'Roast Voice', icon: 'sparkles-outline', detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
         { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: 'pulse-outline' },
         { type: 'nav', label: 'Monthly Check-In', icon: 'clipboard-outline', onPress: () => navigation.navigate('MonthlyCheckIn') },
         { type: 'nav', label: 'Subscription Audit', icon: 'search-outline', onPress: () => navigation.navigate('SubscriptionAudit') },

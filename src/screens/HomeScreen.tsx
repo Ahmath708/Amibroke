@@ -29,6 +29,7 @@ import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
 import { trackFunnelStep } from '@/services/analytics';
+import { getProfile, updateProfile } from '@/services/profile';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
@@ -115,6 +116,11 @@ export default function HomeScreen({ navigation }: Props) {
           try {
             const { data } = await supabase.from('profiles').select(CTX_COLUMNS).eq('id', user.id).maybeSingle();
             if (active) setProfileContext(valuesFromProfile(data as Record<string, unknown> | null));
+          } catch { /* ignore */ }
+          try {
+            // select('*') stays resilient if preferred_tone isn't migrated yet (avoids PGRST204).
+            const prof = await getProfile(user.id);
+            if (active && prof?.preferred_tone) setSelectedTone(prof.preferred_tone as RoastTone); // seed the sticky voice
           } catch { /* ignore */ }
         })();
       }
@@ -328,7 +334,10 @@ export default function HomeScreen({ navigation }: Props) {
                 label={tone.label}
                 icon={tone.icon}
                 active={selectedTone === tone.key}
-                onPress={() => setSelectedTone(tone.key)}
+                onPress={() => {
+                  setSelectedTone(tone.key);
+                  if (user) updateProfile(user.id, { preferred_tone: tone.key }).catch(() => {}); // sticky
+                }}
               />
             ))}
           </View>

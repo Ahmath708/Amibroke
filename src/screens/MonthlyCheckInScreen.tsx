@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
@@ -23,6 +23,8 @@ import type { SnapshotPatch } from '@shared/financialSnapshot';
 import { checkinReflection } from '@/services/ai';
 import { currentStreak, daysUntilNextCheckin } from '@shared/checkinCadence';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
+import { getProfile } from '@/services/profile';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import { getCheckinReminderEnabled, scheduleCheckinReminder } from '@/services/notifications';
 import {
@@ -55,6 +57,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { hasAccess } = useSubscription();
+  const { animatedStyle } = useEntryAnimation();
 
   const [mode, setMode] = useState<Mode>('loading');
   const [config, setConfig] = useState<CheckinConfig>(EMPTY_CHECKIN_CONFIG);
@@ -83,9 +86,11 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   useEffect(() => {
     (async () => {
       if (!user) { setMode('no-analysis'); return; }
-      const [cfg, checkins, history] = await Promise.all([
-        getCheckinConfig(user.id), getCheckIns(user.id), getAnalysisHistory(user.id),
+      const [cfg, checkins, history, profile] = await Promise.all([
+        getCheckinConfig(user.id), getCheckIns(user.id), getAnalysisHistory(user.id), getProfile(user.id),
       ]);
+      // The reflection matches the user's chosen roast voice (profiles.preferred_tone; default savage).
+      setRoastTone((profile?.preferred_tone as RoastTone) ?? 'savage');
       // Retire the generic total-debt metric goal — debt is tracked per-debt now (kind: 'debt').
       cfg.goals = cfg.goals.filter((g) => g.key !== 'debtTotal');
       setConfig(cfg);
@@ -97,11 +102,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       if (history.length > 0) {
         if (!anchor) anchor = history[history.length - 1].created_at;
         const latest = await getAnalysisById(history[0].id);
-        if (latest) {
-          setCandidates(goalCandidatesFromAnalysis(latest, { analysisId: history[0].id }));
-          // The reflection matches the user's most-recent roast voice (default savage).
-          setRoastTone(((latest as any).tone as RoastTone) ?? 'savage');
-        }
+        if (latest) setCandidates(goalCandidatesFromAnalysis(latest, { analysisId: history[0].id }));
       }
       setFirstAnalyzeAt(anchor);
 
@@ -295,10 +296,9 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     ? 'Check-in open' : `Next check-in in ${daysUntilNextCheckin(checkinDates, now)}d`;
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, animatedStyle]}>
       <ScreenBackground variant="checkin" />
       <ScrollView
-        style={styles.scroller}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -459,7 +459,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
           </View>
         )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -488,8 +488,7 @@ function BaseInput({ label, value, onChange, first }: { label: string; value: st
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroller: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xxl },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   title: { fontFamily: Typography.fonts.heading, fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 6 },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl, lineHeight: 22 },
   formGroup: { backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, marginBottom: Spacing.lg },

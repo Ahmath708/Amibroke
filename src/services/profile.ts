@@ -15,7 +15,7 @@ export async function getProfile(userId: string): Promise<any> {
   });
 }
 
-export async function updateProfile(userId: string, updates: { username?: string; display_name?: string; avatar_url?: string }): Promise<boolean> {
+export async function updateProfile(userId: string, updates: { username?: string; display_name?: string; avatar_url?: string; preferred_tone?: string }): Promise<boolean> {
   return withClient('update profile', false, async (client) => {
     const { error } = await (client as any)
       .from(TABLES.profiles)

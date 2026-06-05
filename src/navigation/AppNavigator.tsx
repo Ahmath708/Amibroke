@@ -240,7 +240,7 @@ export default function AppNavigator() {
             <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
             <Stack.Screen name="Share" component={ShareScreen} options={{ ...sheetModal, ...sharedHeader, headerShown: true, title: 'Share Result' }} />
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ ...sheetModal, headerShown: false }} />
-            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sheetModal, headerShown: false }} />
+            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sharedHeader, headerShown: true, title: 'Monthly Check-In', animation: 'slide_from_right' }} />
           </>
         )}
       </Stack.Navigator>
