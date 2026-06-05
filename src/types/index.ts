@@ -117,7 +117,9 @@ export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: num
 export type MainTabsParamList = {
   Home: undefined;
   Tools: undefined;
+  Roast: undefined;     // center create button — opens the composer, never a dwell screen
   Community: undefined;
+  Profile: undefined;
 };
 
 // Navigation prop for a bottom-tab screen that can also push root-stack screens.
@@ -137,7 +139,6 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Analyze: undefined;           // the "New roast" input (also the first-run Home)
   History: undefined;           // pushed from the dashboard trend / "View all"
-  Profile: undefined;           // pushed from the dashboard avatar button
   Processing: { userInput: string; tone?: RoastTone; userContext?: Record<string, unknown> };
   Results: { analysis: FinancialAnalysis; userInput: string };
   Share: { analysis: FinancialAnalysis };

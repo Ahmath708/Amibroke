@@ -7,11 +7,14 @@ import {
   HomeIcon as HomeOutline,
   Squares2X2Icon as ToolsOutline,
   UserGroupIcon as CommunityOutline,
+  UserIcon as ProfileOutline,
 } from 'react-native-heroicons/outline';
 import {
   HomeIcon as HomeSolid,
   Squares2X2Icon as ToolsSolid,
   UserGroupIcon as CommunitySolid,
+  UserIcon as ProfileSolid,
+  FireIcon,
 } from 'react-native-heroicons/solid';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -73,6 +76,7 @@ const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: Re
   Home:      { active: HomeSolid,      inactive: HomeOutline },
   Tools:     { active: ToolsSolid,     inactive: ToolsOutline },
   Community: { active: CommunitySolid, inactive: CommunityOutline },
+  Profile:   { active: ProfileSolid,   inactive: ProfileOutline },
 };
 
 // Active-indicator pill — a wide, rounded-rectangular magenta sub-pill that slides
@@ -84,14 +88,32 @@ const PILL_RADIUS = 16;
 // A single icon-only tab. The active icon brightens + springs up a touch; the
 // sliding sub-pill (rendered once in the row) is what reads the focus.
 function TabBarButton({ route, focused, reduce, onPress }: { route: { name: string }; focused: boolean; reduce: boolean; onPress: () => void }) {
-  const icons = TAB_ICONS[route.name];
   const scale = useSharedValue(1);
   useEffect(() => {
     scale.value = reduce ? 1 : withSpring(focused ? 1.1 : 1, Springs.gentle);
   }, [focused, reduce]);
   const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const TabIcon = focused ? icons.active : icons.inactive;
 
+  // Center "Roast" slot — a distinct accent create button (an action, not a dwell-tab); it
+  // opens the composer rather than switching tabs, so it never reads as focused.
+  if (route.name === 'Roast') {
+    return (
+      <TouchableOpacity
+        style={tabStyles.tabItem}
+        onPress={onPress}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="New roast"
+      >
+        <View style={tabStyles.centerButton}>
+          <FireIcon size={24} color={Colors.onAccent} />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  const icons = TAB_ICONS[route.name];
+  const TabIcon = focused ? icons.active : icons.inactive;
   return (
     <TouchableOpacity
       style={tabStyles.tabItem}
@@ -148,6 +170,12 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
                 focused={state.index === index}
                 reduce={reduce}
                 onPress={() => {
+                  // Roast is an action, not a tab — open the composer (bubbles up to the root stack).
+                  if (route.name === 'Roast') {
+                    Haptics.selectionAsync();
+                    (navigation as any).navigate('Analyze');
+                    return;
+                  }
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                   if (state.index !== index && !event.defaultPrevented) {
                     Haptics.selectionAsync();
@@ -163,6 +191,10 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+// The center "Roast" tab is a button, not a destination — tapping it opens the composer
+// (see IOSTabBar), so this placeholder never actually renders.
+function RoastPlaceholder() { return null; }
+
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -171,7 +203,9 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Tools" component={ToolsScreen} />
+      <Tab.Screen name="Roast" component={RoastPlaceholder} />
       <Tab.Screen name="Community" component={CommunityFeedScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -226,7 +260,6 @@ export default function AppNavigator() {
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
             <Stack.Screen name="Analyze" component={HomeScreen} options={{ ...sharedHeader, headerShown: true, title: 'New Roast', animation: 'slide_from_right' }} />
             <Stack.Screen name="History" component={HistoryScreen} options={{ ...sharedHeader, headerShown: true, title: 'Trend', animation: 'slide_from_right' }} />
-            <Stack.Screen name="Profile" component={ProfileScreen} options={{ ...sharedHeader, headerShown: true, title: 'Profile', animation: 'slide_from_right' }} />
             <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
             <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
@@ -285,6 +318,14 @@ const tabStyles = StyleSheet.create({
     height: TAB_ROW_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Center "Roast" create button — a raised accent circle (the brand action).
+  centerButton: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: Colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.accentSolid, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
   // Wide rounded-rectangular magenta sub-pill (width is set per-slot at runtime).
   pill: {
