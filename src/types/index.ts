@@ -150,6 +150,7 @@ export type RootStackParamList = {
   AllAnalyses: undefined;
   FinancialContext: undefined;
   Settings: undefined;
+  EditProfile: undefined;
   Notifications: undefined;
   HelpFAQ: undefined;
   MonthlyCheckIn: { setup?: boolean } | undefined;
