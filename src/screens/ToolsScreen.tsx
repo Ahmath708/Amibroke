@@ -28,7 +28,7 @@ type Props = { navigation: TabScreenNav<'Tools'> };
 // Premium features — gated by tier. `action: 'latest' | 'debt'` are analysis-scoped
 // (open the latest analysis); `nav` items are standalone screens.
 const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'plan' | 'debt' }[] = [
-  { icon: MagnifyingGlassIcon,       label: 'Subscription Audit',   sub: 'Find recurring money leaks',      requires: 'action_plan', nav: 'SubscriptionAudit' },
+  { icon: MagnifyingGlassIcon,       label: 'Subscription Audit',   sub: 'Track subscriptions & spot waste', requires: 'action_plan', nav: 'SubscriptionAudit' },
   { icon: ArrowTrendingDownIcon,     label: 'Debt Payoff',          sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
   { icon: ClipboardDocumentListIcon, label: '90-Day Action Plan',  sub: 'Week-by-week roadmap with goals', requires: 'action_plan', action: 'plan' },
   { icon: BeakerIcon,                label: 'Scenario Simulator',   sub: 'Model "what if" money moves',     requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },

@@ -7,6 +7,7 @@
 import { withClient } from './supabaseClient';
 import { TABLES } from './tables';
 import { getAnalysisById } from './analyses';
+import { getSubscriptionContext } from './subscriptionAudit';
 import { USE_AI_MOCKS } from '@/config/ai';
 import {
   mergeIntoSnapshot, applyDebtUpdates, fromRow, toRow, patchFromAnalysis, patchFromOnboarding,
@@ -34,9 +35,10 @@ export async function getSnapshot(userId: string): Promise<FinancialSnapshot | n
  * (paywall-gated like any roast). Returns null when there's no snapshot to refresh from.
  */
 export async function buildRescoreInput(userId: string, latestAnalysisId?: string): Promise<string | null> {
-  const [snap, latest] = await Promise.all([
+  const [snap, latest, subCtx] = await Promise.all([
     getSnapshot(userId),
     latestAnalysisId ? getAnalysisById(latestAnalysisId) : Promise.resolve(null),
+    getSubscriptionContext(userId).catch(() => ''),
   ]);
   if (!snap) return null;
   const income = Math.round(snap.monthlyIncome?.value ?? 0);
@@ -52,7 +54,7 @@ export async function buildRescoreInput(userId: string, latestAnalysisId?: strin
     else if (dSave <= -1) parts.push(`savings dropped $${(-dSave).toLocaleString()}`);
   }
   const delta = parts.length ? ` Since my last roast I ${parts.join(' and ')}.` : '';
-  return `Updated check-in on my finances. Right now: about $${income.toLocaleString()}/mo income, $${debt.toLocaleString()} in total debt, and $${savings.toLocaleString()} in savings.${delta}`;
+  return `Updated check-in on my finances. Right now: about $${income.toLocaleString()}/mo income, $${debt.toLocaleString()} in total debt, and $${savings.toLocaleString()} in savings.${delta}${subCtx}`;
 }
 
 /** Confident-merge a patch into the user's snapshot and persist it. Returns the new snapshot. */

@@ -30,6 +30,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
 import { trackFunnelStep } from '@/services/analytics';
 import { getProfile, updateProfile } from '@/services/profile';
+import { getSubscriptionContext } from '@/services/subscriptionAudit';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
@@ -79,6 +80,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
   // Saved personalization context (edited via the Financial Context screen).
   const [profileContext, setProfileContext] = useState<ContextValues>({});
+  const [subContext, setSubContext] = useState(''); // logged subscriptions → roast context (approach A)
   const inputRef = useRef<TextInput>(null);
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
@@ -121,6 +123,10 @@ export default function HomeScreen({ navigation }: Props) {
             // select('*') stays resilient if preferred_tone isn't migrated yet (avoids PGRST204).
             const prof = await getProfile(user.id);
             if (active && prof?.preferred_tone) setSelectedTone(prof.preferred_tone as RoastTone); // seed the sticky voice
+          } catch { /* ignore */ }
+          try {
+            const sc = await getSubscriptionContext(user.id);
+            if (active) setSubContext(sc);
           } catch { /* ignore */ }
         })();
       }
@@ -186,7 +192,7 @@ export default function HomeScreen({ navigation }: Props) {
     }
     trackFunnelStep('input_submitted', { input_length: input.length, tone: selectedTone });
     const context = Object.keys(profileContext).length > 0 ? profileContext : undefined;
-    navigation.navigate('Processing', { userInput: input.trim(), tone: selectedTone, userContext: context as any });
+    navigation.navigate('Processing', { userInput: input.trim() + subContext, tone: selectedTone, userContext: context as any });
   };
 
   const handleVoiceToggle = async () => {

@@ -24,6 +24,19 @@ export async function getSubscriptions(userId: string): Promise<Subscription[]> 
   });
 }
 
+/**
+ * A short context line summarizing the user's logged subscriptions, for injection into the roast /
+ * re-score input (approach A — no prompt change). Framed as a SUBSET of spending so the model
+ * doesn't add it on top of stated expenses. Returns '' when nothing is logged.
+ */
+export async function getSubscriptionContext(userId: string): Promise<string> {
+  const subs = await getSubscriptions(userId);
+  if (!subs.length) return '';
+  const total = subs.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const items = subs.slice(0, 8).map((s) => `${s.name} $${Math.round(s.amount)}`).join(', ');
+  return ` (For context, about $${Math.round(total)}/mo of my spending goes to subscriptions: ${items}.)`;
+}
+
 export async function saveSubscription(userId: string, sub: Omit<Subscription, 'id'>): Promise<string | null> {
   return withClient('save subscription', null, async (client) => {
     const { data, error } = await (client as any)
