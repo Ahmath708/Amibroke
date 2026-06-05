@@ -27,7 +27,7 @@ import ScoreRing from '@/components/ScoreRing';
 import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
-import NeonButton from '@/components/NeonButton';
+import Fab from '@/components/Fab';
 import Skeleton from '@/components/Skeleton';
 import HomeScreen from '@/screens/HomeScreen';
 
@@ -36,6 +36,8 @@ type Props = { navigation: TabScreenNav<'Home'> };
 // Sparkline box
 const SPARK_W = 140;
 const SPARK_H = 40;
+// Extra bottom scroll inset so the floating "New Roast" FAB never covers the last card.
+const FAB_CLEARANCE = 88;
 
 // Time-of-day greeting for the home header (warmer than a static wordmark).
 function timeGreeting(): string {
@@ -170,7 +172,7 @@ export default function DashboardScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + FAB_CLEARANCE }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header: time-aware greeting (small lead + name hero) + avatar → Profile */}
@@ -234,11 +236,6 @@ export default function DashboardScreen({ navigation }: Props) {
           </ReAnimated.View>
         )}
 
-        {/* Primary CTA */}
-        <ReAnimated.View entering={enterUp(3)}>
-          <NeonButton label="New roast" onPress={() => navigation.navigate('Analyze')} style={styles.cta} />
-        </ReAnimated.View>
-
         {/* Check-in nudge — renders itself only when a check-in is due */}
         <ReAnimated.View entering={enterUp(4)}>
           <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.lg }} />
@@ -290,6 +287,9 @@ export default function DashboardScreen({ navigation }: Props) {
         )}
         </ReAnimated.View>
       </ScrollView>
+
+      {/* Floating primary-create CTA — mirrors Community's "Share" FAB (lifted out of the card stack) */}
+      <Fab label="New Roast" onPress={() => navigation.navigate('Analyze')} />
     </View>
   );
 }
@@ -313,7 +313,6 @@ const styles = StyleSheet.create({
   deltaRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   deltaText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize },
   checkedDate: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
-  cta: { marginBottom: Spacing.lg },
   // Your-finances snapshot card
   financeCard: { ...card, padding: Spacing.lg, marginBottom: Spacing.lg },
   financeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },

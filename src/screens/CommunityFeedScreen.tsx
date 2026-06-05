@@ -10,9 +10,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
-import { PlusIcon } from 'react-native-heroicons/outline';
 import ProfileAvatarButton from '@/components/ProfileAvatarButton';
-import { LinearGradient } from 'expo-linear-gradient';
+import Fab from '@/components/Fab';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
 import { REACTION_EMOJIS, totalReactions } from '@/utils/reactions';
@@ -275,17 +274,7 @@ export default function CommunityFeedScreen() {
       />
 
       {/* Floating share entry — opens the manager of your analyses (post/unpost) */}
-      <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.md }]}
-        onPress={() => setManagerOpen(true)}
-        activeOpacity={0.85}
-        accessibilityLabel="Manage what you share"
-      >
-        <LinearGradient colors={Colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fabInner}>
-          <PlusIcon size={20} color={Colors.onAccent} />
-          <Text style={styles.fabText}>Share</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+      <Fab label="Share" onPress={() => setManagerOpen(true)} accessibilityLabel="Manage what you share" />
 
       <ShareManagerSheet
         visible={managerOpen}
@@ -363,12 +352,4 @@ const styles = StyleSheet.create({
   pickerEmoji: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: Radius.sm },
   pickerEmojiActive: { backgroundColor: Colors.accentContainer },
   pickerEmojiText: { fontSize: Typography.title3.fontSize },
-  fab: { position: 'absolute', right: Spacing.xl },
-  fabInner: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-    paddingLeft: Spacing.md, paddingRight: Spacing.lg, paddingVertical: Spacing.sm + 2,
-    borderRadius: Radius.pill,
-    shadowColor: Colors.accentSolid, shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 10,
-  },
-  fabText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: '#fff', fontWeight: '600' },
 });
