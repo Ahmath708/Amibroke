@@ -9,8 +9,9 @@ import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Cog6ToothIcon, UserIcon, MicrophoneIcon, StopCircleIcon, SparklesIcon, ChevronRightIcon,
+  MicrophoneIcon, StopCircleIcon, SparklesIcon, ChevronRightIcon,
 } from 'react-native-heroicons/outline';
+import NotificationBell from '@/components/NotificationBell';
 import { selection } from '@/utils/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -217,17 +218,8 @@ export default function HomeScreen({ navigation }: Props) {
               "Analyze" route, the stack header ("New Roast") replaces it. */}
           {!navigation.canGoBack() && (
             <View style={styles.pageHeader}>
-              <Text style={styles.pageLargeTitle}>Am I Broke?</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate(user ? 'Settings' : 'Login')}
-                style={styles.settingsBtn}
-                activeOpacity={0.7}
-              >
-                {user
-                  ? <Cog6ToothIcon size={22} color={Colors.textSecondary} />
-                  : <UserIcon size={22} color={Colors.textSecondary} />}
-                {!user && <Text style={styles.loginHint}>Log In</Text>}
-              </TouchableOpacity>
+              <Text style={styles.pageLargeTitle}>Roast Me</Text>
+              <NotificationBell />
             </View>
           )}
           <Text style={styles.pageSubtitle}>
@@ -404,8 +396,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.heading,
     color: Colors.textPrimary,
   },
-  settingsBtn: { marginTop: Spacing.xs, alignItems: 'center' },
-  loginHint: { fontFamily: Typography.fonts.bodyMed, fontSize: 10, color: Colors.accent, marginTop: 2 },
   pageSubtitle: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.subhead.fontSize, color: Colors.textSecondary,
