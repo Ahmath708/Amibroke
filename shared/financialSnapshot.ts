@@ -76,11 +76,17 @@ function deriveMetrics(s: FinancialSnapshot, now: string): FinancialSnapshot {
   const liquid = s.liquidSavings?.value ?? 0;
   // Consumer debt only — a mortgage isn't "debt to pay down" in the dig-out sense (Finding A).
   const debtTotal = (s.debts?.value ?? []).filter(isPayoffDebt).reduce((sum, d) => sum + (d.balance || 0), 0);
-  const monthlySavings = income - expenses;
+  // Monthly savings is asserted ONLY when income AND expenses are actually KNOWN (user-stated /
+  // high-confidence — expenses become 'stated' when reconciled from a stated monthly-savings
+  // figure, Finding B). When expenses are merely inferred there is no deterministic way to know
+  // savings, so default to 0 rather than fabricate a rate from a baseline expense guess.
+  const known = (f?: ProvField<number>): boolean => !!f && (f.confidence === 'stated' || f.confidence === 'high');
+  const savingsKnown = income > 0 && known(s.monthlyIncome) && known(s.monthlyExpenses);
+  const monthlySavings = savingsKnown ? income - expenses : 0;
   return {
     ...s,
     monthlySavings,
-    savingsRate: income > 0 ? monthlySavings / income : 0,
+    savingsRate: savingsKnown ? monthlySavings / income : 0,
     debtTotal,
     emergencyFundMonths: expenses > 0 ? liquid / expenses : 0,
     debtToIncome: income > 0 ? debtTotal / (income * 12) : 0,

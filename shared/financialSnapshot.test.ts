@@ -51,6 +51,26 @@ describe('mergeIntoSnapshot — confidence rules', () => {
   });
 });
 
+describe('monthly savings — only when deterministically known (Finding B)', () => {
+  it('savingsRate is 0 when expenses are inferred (no deterministic basis)', () => {
+    const s = mergeIntoSnapshot(null, {
+      monthlyIncome: { value: 5000, confidence: 'high' },
+      monthlyExpenses: { value: 3000, confidence: 'low' }, // inferred from baselines
+    }, 'roast', NOW);
+    expect(s.monthlySavings).toBe(0);
+    expect(s.savingsRate).toBe(0);
+  });
+
+  it('savingsRate is computed when income AND expenses are both known', () => {
+    const s = mergeIntoSnapshot(null, {
+      monthlyIncome: { value: 5000, confidence: 'stated' },
+      monthlyExpenses: { value: 3000, confidence: 'stated' }, // e.g. reconciled from stated savings
+    }, 'roast', NOW);
+    expect(s.monthlySavings).toBe(2000);
+    expect(s.savingsRate).toBeCloseTo(0.4);
+  });
+});
+
 describe('patchFromAnalysis', () => {
   it('maps numbers with their confidence and debts when present', () => {
     const patch = patchFromAnalysis({
