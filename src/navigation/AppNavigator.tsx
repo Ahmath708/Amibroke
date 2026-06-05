@@ -8,13 +8,14 @@ import {
   Squares2X2Icon as ToolsOutline,
   UserGroupIcon as CommunityOutline,
   UserIcon as ProfileOutline,
+  FireIcon as FireOutline,
 } from 'react-native-heroicons/outline';
 import {
   HomeIcon as HomeSolid,
   Squares2X2Icon as ToolsSolid,
   UserGroupIcon as CommunitySolid,
   UserIcon as ProfileSolid,
-  FireIcon,
+  FireIcon as FireSolid,
 } from 'react-native-heroicons/solid';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -75,6 +76,7 @@ const sheetModal = {
 const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: React.ComponentType<any> }> = {
   Home:      { active: HomeSolid,      inactive: HomeOutline },
   Tools:     { active: ToolsSolid,     inactive: ToolsOutline },
+  Roast:     { active: FireSolid,      inactive: FireOutline },
   Community: { active: CommunitySolid, inactive: CommunityOutline },
   Profile:   { active: ProfileSolid,   inactive: ProfileOutline },
 };
@@ -82,7 +84,7 @@ const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: Re
 // Active-indicator pill — a wide, rounded-rectangular magenta sub-pill that slides
 // behind the focused icon (Cash-App floating capsule, our brand tint).
 const PILL_H = 44;
-const PILL_GAP = 24; // horizontal inset of the pill within each slot
+const PILL_GAP = 8; // horizontal inset of the pill within each slot (smaller = wider pill)
 const PILL_RADIUS = 16;
 
 // A single icon-only tab. The active icon brightens + springs up a touch; the
@@ -94,24 +96,8 @@ function TabBarButton({ route, focused, reduce, onPress }: { route: { name: stri
   }, [focused, reduce]);
   const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  // Center "Roast" slot — a distinct accent create button (an action, not a dwell-tab); it
-  // opens the composer rather than switching tabs, so it never reads as focused.
-  if (route.name === 'Roast') {
-    return (
-      <TouchableOpacity
-        style={tabStyles.tabItem}
-        onPress={onPress}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel="New roast"
-      >
-        <View style={tabStyles.centerButton}>
-          <FireIcon size={24} color={Colors.onAccent} />
-        </View>
-      </TouchableOpacity>
-    );
-  }
-
+  // Roast blends in with the other icons (it's still an action — IOSTabBar opens the composer
+  // on press instead of switching tabs — but it doesn't stand out visually).
   const icons = TAB_ICONS[route.name];
   const TabIcon = focused ? icons.active : icons.inactive;
   return (
@@ -318,14 +304,6 @@ const tabStyles = StyleSheet.create({
     height: TAB_ROW_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Center "Roast" create button — a raised accent circle (the brand action).
-  centerButton: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: Colors.accent,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.accentSolid, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
   },
   // Wide rounded-rectangular magenta sub-pill (width is set per-slot at runtime).
   pill: {
