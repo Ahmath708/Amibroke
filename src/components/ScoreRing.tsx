@@ -4,7 +4,7 @@ import Svg, {
   Circle, Defs, LinearGradient as SvgGradient, Stop, RadialGradient, Rect,
 } from 'react-native-svg';
 import Animated, {
-  useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withSpring, withSequence,
+  useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withSpring, withSequence, withRepeat,
   runOnJS, useReducedMotion, type SharedValue,
 } from 'react-native-reanimated';
 import { Colors, Typography } from '@/theme/colors';
@@ -32,6 +32,8 @@ interface Props {
    * a calm hero (e.g. the Dashboard score) that shouldn't buzz on every visit.
    */
   glow?: boolean;
+  /** First-run state: shows "?" on a bare track ring with a slow breathing pulse (no score yet). */
+  empty?: boolean;
 }
 
 function landHaptic() {
@@ -58,14 +60,14 @@ function BurstDot({ burst, index, color, size }: {
   return <Animated.View style={[styles.dot, { backgroundColor: color }, style]} />;
 }
 
-export default function ScoreRing({ score, size = 120, showLabel = false, showOutOf = false, reveal = false, glow = false }: Props) {
+export default function ScoreRing({ score, size = 120, showLabel = false, showOutOf = false, reveal = false, glow = false, empty = false }: Props) {
   const reduceMotion = useReducedMotion();
   const strokeWidth = size * 0.08;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   // Single source of truth — same band color/label the rest of the app uses.
   const band = getScoreBand(score);
-  const color = band.color;
+  const color = empty ? Colors.textSecondary : band.color;
   const [gradFrom, gradTo] = scoreGradient(score);
 
   // ONE shared value drives both the arc and the number → guaranteed lockstep.
@@ -82,8 +84,22 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
       : band.label === 'Surviving' ? 'mid'
         : 'good'; // Stable | Thriving
 
+  // Empty-state: a slow breathing pulse to invite the first roast (no score travel).
+  const breathe = useSharedValue(1);
+  useEffect(() => {
+    if (empty && !reduceMotion) {
+      breathe.value = withRepeat(
+        withSequence(
+          withTiming(1.03, { duration: 1500, easing: Easings.smooth }),
+          withTiming(1, { duration: 1500, easing: Easings.smooth }),
+        ), -1, false,
+      );
+    }
+  }, [empty, reduceMotion]);
+
   useEffect(() => {
     const duration = reveal ? Durations.reveal : Durations.normal;
+    if (empty) { progress.value = 0; return; }
     if (reduceMotion) {
       progress.value = score; // snap — preserve the information, drop the travel
       if (reveal) landHaptic();
@@ -122,7 +138,7 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
   });
 
   const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shudder.value }, { scale: ringScale.value }],
+    transform: [{ translateX: shudder.value }, { scale: ringScale.value * breathe.value }],
   }));
   // Glow blooms (scales + brightens) on landing, then settles back to the calm anchored glow.
   const glowStyle = useAnimatedStyle(() => ({
@@ -188,7 +204,9 @@ export default function ScoreRing({ score, size = 120, showLabel = false, showOu
       {/* Center content */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={styles.center}>
-          {reveal ? (
+          {empty ? (
+            <Text style={[styles.scoreNum, { fontSize: size * 0.26, color }]}>?</Text>
+          ) : reveal ? (
             <AnimatedTextInput
               editable={false}
               underlineColorAndroid="transparent"

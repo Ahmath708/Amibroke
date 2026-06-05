@@ -28,11 +28,11 @@ import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import StatusPill from '@/components/StatusPill';
 import ScoreRing from '@/components/ScoreRing';
+import NeonButton from '@/components/NeonButton';
 import ProfileAvatarButton from '@/components/ProfileAvatarButton';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
 import Skeleton from '@/components/Skeleton';
-import HomeScreen from '@/screens/HomeScreen';
 
 type Props = { navigation: TabScreenNav<'Home'> };
 
@@ -148,11 +148,42 @@ export default function DashboardScreen({ navigation }: Props) {
     );
   }
 
-  // First run (no analyses yet) → the full analyze input. (HomeScreen only uses
-  // navigate/goBack/canGoBack, which the tab nav has; cast past the composite-vs-stack
-  // dispatch type mismatch.)
+  // First run (no analyses yet) → keep the dashboard shell with an empty "?/100" hero that
+  // previews the destination and invites the first roast (instead of dropping into the raw input).
   if (history.length === 0) {
-    return <HomeScreen navigation={navigation as any} />;
+    return (
+      <View style={styles.container}>
+        <ScreenBackground variant="home" />
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <ReAnimated.View entering={enterUp(0)} style={styles.header}>
+            <View style={styles.greeting}>
+              {firstName ? (
+                <>
+                  <Text style={styles.greetingLead}>{timeGreeting()},</Text>
+                  <Text style={styles.greetingName} numberOfLines={1}>{firstName}</Text>
+                </>
+              ) : (
+                <Text style={styles.greetingName} numberOfLines={1}>{timeGreeting()}</Text>
+              )}
+            </View>
+            <ProfileAvatarButton onPress={() => navigation.navigate('Profile')} />
+          </ReAnimated.View>
+
+          <ReAnimated.View entering={enterUp(1)} style={styles.emptyHero}>
+            <ScoreRing score={0} size={150} showOutOf empty />
+            <Text style={styles.emptyTitle}>Your score is waiting</Text>
+            <Text style={styles.emptySub}>Run your first roast to unlock your score, breakdown, and plan.</Text>
+          </ReAnimated.View>
+
+          <ReAnimated.View entering={enterUp(2)}>
+            <NeonButton label="Start your first roast" onPress={() => navigation.navigate('Analyze')} />
+          </ReAnimated.View>
+        </ScrollView>
+      </View>
+    );
   }
 
   const latest = history[0];
@@ -350,6 +381,10 @@ const styles = StyleSheet.create({
   greetingLead: { fontFamily: Typography.fonts.headingMed, fontSize: Typography.title3.fontSize, color: Colors.textSecondary, letterSpacing: -0.3 },
   greetingName: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   hero: { alignItems: 'center', marginBottom: Spacing.xl },
+  // Empty-state hero (first run)
+  emptyHero: { alignItems: 'center', marginTop: Spacing.xxl, marginBottom: Spacing.xl },
+  emptyTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.xl },
+  emptySub: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 21, paddingHorizontal: Spacing.lg },
   heroMeta: { alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.md },
   deltaRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   deltaText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize },
