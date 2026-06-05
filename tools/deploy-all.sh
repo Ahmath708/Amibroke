@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_REF="zefhsplmgxefmpdqbbvv"
-FUNCTIONS=("analyze" "action-plan" "generate-captions" "create-payment-intent" "confirm-purchase" "verify-purchase")
+FUNCTIONS=("analyze" "action-plan" "generate-captions" "checkin-reflection" "create-payment-intent" "confirm-purchase" "verify-purchase")
 
 echo "=== Deploying all Supabase Edge Functions ==="
 

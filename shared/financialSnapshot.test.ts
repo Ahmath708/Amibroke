@@ -1,5 +1,5 @@
 import {
-  mergeIntoSnapshot, emptySnapshot, patchFromAnalysis, patchFromOnboarding,
+  mergeIntoSnapshot, applyDebtUpdates, emptySnapshot, patchFromAnalysis, patchFromOnboarding,
   fromRow, toRow, INCOME_MID, isPayoffDebt, type FinancialSnapshot, type SnapshotRow,
 } from './financialSnapshot';
 
@@ -137,6 +137,38 @@ describe('debt kind — mortgage exclusion (Finding A)', () => {
   it('patchFromAnalysis carries kind through', () => {
     const patch = patchFromAnalysis({ debts: [{ name: 'Car', balance: 18000, kind: 'auto' }] });
     expect(patch.debts?.value[0].kind).toBe('auto');
+  });
+});
+
+describe('applyDebtUpdates — per-debt check-in (Chunk B)', () => {
+  const base = () => mergeIntoSnapshot(null, {
+    debts: { value: [
+      { name: 'Credit card', balance: 3000, apr: 0.21, min_payment: 90, kind: 'credit_card' },
+      { name: 'Student loan', balance: 15000, apr: 0.05, kind: 'student_loan' },
+    ], confidence: 'medium' },
+  }, 'roast', NOW);
+
+  it('updates a matched balance (by name), keeps APR/kind, marks stated/checkin, re-derives total', () => {
+    const s = applyDebtUpdates(base(), { 'Credit card': 2400 }, 'checkin', LATER);
+    const cc = s.debts!.value.find((d) => d.name === 'Credit card')!;
+    expect(cc.balance).toBe(2400);
+    expect(cc.apr).toBe(0.21);
+    expect(cc.kind).toBe('credit_card');
+    expect(s.debts!.confidence).toBe('stated');
+    expect(s.debts!.source).toBe('checkin');
+    expect(s.debtTotal).toBe(2400 + 15000);
+  });
+
+  it('matches case-insensitively and ignores unknown names', () => {
+    const s = applyDebtUpdates(base(), { 'credit card': 1000, 'Car loan': 5000 }, 'checkin', LATER);
+    expect(s.debts!.value.find((d) => d.name === 'Credit card')!.balance).toBe(1000);
+    expect(s.debts!.value).toHaveLength(2); // 'Car loan' ignored — not present
+  });
+
+  it('no real change → returns the snapshot unchanged (same ref)', () => {
+    const b = base();
+    expect(applyDebtUpdates(b, { 'Credit card': 3000 }, 'checkin', LATER)).toBe(b); // same balance
+    expect(applyDebtUpdates(b, {}, 'checkin', LATER)).toBe(b);                       // empty
   });
 });
 

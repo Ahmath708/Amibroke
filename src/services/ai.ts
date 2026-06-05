@@ -308,3 +308,29 @@ export async function fetchOrGenerateCaptions(
     return null;
   }
 }
+
+// Short personalized monthly check-in reflection (unified financial model §7). Haiku, server-side.
+// Non-fatal — null on any failure so the check-in falls back to a deterministic template.
+export async function checkinReflection(input: {
+  mood: string;
+  note?: string;
+  delta?: Record<string, number> | string | null;
+  planStatus?: string;
+  tone: RoastTone;
+}): Promise<string | null> {
+  if (USE_AI_MOCKS) {
+    await new Promise((r) => setTimeout(r, 400));
+    return "Real talk — you showed up this month, and that's the streak that actually matters. Keep chipping away.";
+  }
+  const client = getSupabase();
+  if (!client) return null;
+  try {
+    const { data, error } = await client.functions.invoke('checkin-reflection', { body: input });
+    if (error) { console.warn('[ai] checkinReflection error:', error); return null; }
+    const reflection = (data as { reflection?: unknown })?.reflection;
+    return typeof reflection === 'string' ? reflection : null;
+  } catch (e) {
+    console.warn('[ai] checkinReflection exception:', e);
+    return null;
+  }
+}

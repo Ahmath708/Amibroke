@@ -124,6 +124,34 @@ export function mergeIntoSnapshot(
   return deriveMetrics(next, now);
 }
 
+/**
+ * Update specific debts' balances from a check-in (the per-debt path, §7). Matches each update to
+ * an existing snapshot debt **by name** (case-insensitive — v1; snapshot debts have no stable id
+ * yet) and sets its balance, leaving APR/kind/min_payment intact. The debts field becomes
+ * `stated`/the given source (the user explicitly reported these balances). Unmatched names are
+ * ignored; a no-op returns the snapshot unchanged. Derived metrics recomputed.
+ */
+export function applyDebtUpdates(
+  current: FinancialSnapshot,
+  updates: Record<string, number>,
+  source: SnapshotSource,
+  now: string,
+): FinancialSnapshot {
+  const debts = current.debts?.value ?? [];
+  if (debts.length === 0 || Object.keys(updates).length === 0) return current;
+  const norm = (n: string) => n.trim().toLowerCase();
+  const byName = new Map(Object.entries(updates).map(([n, b]) => [norm(n), b]));
+  let changed = false;
+  const next = debts.map((d) => {
+    const nb = byName.get(norm(d.name));
+    if (nb != null && Number.isFinite(nb) && nb >= 0 && nb !== d.balance) { changed = true; return { ...d, balance: nb }; }
+    return d;
+  });
+  if (!changed) return current;
+  const field: ProvField<SnapshotDebt[]> = { value: next, source, confidence: 'stated', updatedAt: now };
+  return deriveMetrics({ ...current, debts: field }, now);
+}
+
 // ─── Mapping from a roast (FinalAnalysis-shaped) ─────────────────────────────
 type Source = 'user_stated' | 'inferred';
 interface NumberWithConfidence { value: number; confidence?: Confidence; source?: Source }
