@@ -221,7 +221,10 @@ export default function ActionPlanScreen({ route }: Props) {
   // the selection was completed or no longer exists (so it self-resets after completion).
   const focalStep = rows.find((s) => s.id === selectedId && s.status !== 'done') ?? currentStep;
   const focalIsCurrent = !!focalStep && focalStep.id === currentStep?.id;
-  const upNext = rows.filter((s) => s.status !== 'done' && s.id !== focalStep?.id);
+  // Up Next = remaining pending steps, excluding BOTH the current step (it owns "This Week") and
+  // the focal step (it owns "This Week" or "Coming Up") — so picking a future card never demotes
+  // the current week into Up Next.
+  const upNext = rows.filter((s) => s.status !== 'done' && s.id !== focalStep?.id && s.id !== currentStep?.id);
   const doneSteps = rows.filter((s) => s.status === 'done');
 
   // Contextual revise: only surface the update affordance when the latest check-in is a
@@ -234,6 +237,36 @@ export default function ActionPlanScreen({ route }: Props) {
     score: plan.start_metrics?.score ?? 0,
   } : null;
   const canUpdate = !!plan && !!snap && shouldRevisePlan(plan, snap).revise;
+
+  // Expanded focal card (This Week current, or the selected Coming Up step).
+  const renderFocal = (step: (typeof rows)[number]) => (
+    <GlassCard style={styles.focalCard}>
+      <View style={styles.focalTop}>
+        <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
+        <View style={[styles.catDot, { backgroundColor: catColor(step.category) }]} />
+      </View>
+      <Text style={styles.focalTitle}>{step.title}</Text>
+      <Text style={styles.focalDesc}>{step.description}</Text>
+      <Text style={styles.focalImpact} numberOfLines={2}>→ {step.impact}</Text>
+      {isActive && <NeonButton label="Mark this done" onPress={() => toggle(step.id, false)} style={{ marginTop: Spacing.md }} />}
+    </GlassCard>
+  );
+
+  // Minimized step row (collapsed This Week + Up Next): tap ○ to complete, tap the row to focus it.
+  const renderCompact = (step: (typeof rows)[number]) => (
+    <View key={step.id} style={styles.compactRow}>
+      <TouchableOpacity
+        onPress={() => isActive && toggle(step.id, false)} disabled={!isActive}
+        hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }} activeOpacity={0.6}
+      >
+        <View style={styles.openCircle} />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.compactTextHit} onPress={() => setSelectedId(step.id)} activeOpacity={0.7}>
+        <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
+      </TouchableOpacity>
+      <Text style={styles.compactWeek}>{step.week}</Text>
+    </View>
+  );
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -304,45 +337,35 @@ export default function ActionPlanScreen({ route }: Props) {
 
         {isActive && (
           <>
-            <SectionLabel>{focalIsCurrent ? 'This Week' : 'Coming Up'}</SectionLabel>
-            {focalStep ? (
-              <GlassCard style={styles.focalCard}>
-                <View style={styles.focalTop}>
-                  <View style={styles.weekBadge}><Text style={styles.weekText}>{focalStep.week}</Text></View>
-                  <View style={[styles.catDot, { backgroundColor: catColor(focalStep.category) }]} />
-                </View>
-                <Text style={styles.focalTitle}>{focalStep.title}</Text>
-                <Text style={styles.focalDesc}>{focalStep.description}</Text>
-                <Text style={styles.focalImpact} numberOfLines={2}>→ {focalStep.impact}</Text>
-                <NeonButton label="Mark this done" onPress={() => toggle(focalStep.id, false)} style={{ marginTop: Spacing.md }} />
-              </GlassCard>
+            {/* This Week — always the current step: expanded when it's the focal, else minimized. */}
+            <SectionLabel>This Week</SectionLabel>
+            {currentStep ? (
+              focalIsCurrent ? renderFocal(currentStep) : (
+                <View style={styles.block}>{renderCompact(currentStep)}</View>
+              )
             ) : (
               <GlassCard style={styles.focalCard}>
                 <Text style={styles.focalTitle}>All steps done 🎉</Text>
                 <Text style={styles.focalDesc}>You ran the whole 90-day plan. Re-roast to see how far your score moved.</Text>
               </GlassCard>
             )}
-          </>
-        )}
 
-        {isActive && upNext.length > 0 && (
-          <View style={styles.block}>
-            <SectionLabel>Up Next</SectionLabel>
-            {upNext.map((step) => (
-              <View key={step.id} style={styles.compactRow}>
-                <TouchableOpacity
-                  onPress={() => isActive && toggle(step.id, false)} disabled={!isActive}
-                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }} activeOpacity={0.6}
-                >
-                  <View style={styles.openCircle} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.compactTextHit} onPress={() => setSelectedId(step.id)} activeOpacity={0.7}>
-                  <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
-                </TouchableOpacity>
-                <Text style={styles.compactWeek}>{step.week}</Text>
+            {/* Coming Up — the selected future step, expanded (only when you've tapped a future card). */}
+            {!focalIsCurrent && focalStep && (
+              <View style={styles.block}>
+                <SectionLabel>Coming Up</SectionLabel>
+                {renderFocal(focalStep)}
               </View>
-            ))}
-          </View>
+            )}
+
+            {/* Up Next — the remaining future steps, minimized; hidden when there are none. */}
+            {upNext.length > 0 && (
+              <View style={styles.block}>
+                <SectionLabel>Up Next</SectionLabel>
+                {upNext.map(renderCompact)}
+              </View>
+            )}
+          </>
         )}
 
         {doneSteps.length > 0 && (
