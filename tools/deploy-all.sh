@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PROJECT_REF="zefhsplmgxefmpdqbbvv"
-FUNCTIONS=("analyze" "action-plan" "generate-captions" "checkin-reflection" "create-payment-intent" "confirm-purchase" "verify-purchase")
+# The live LLM/edge functions (the Stripe-era create-payment-intent/confirm/verify were ghosts —
+# the app uses RevenueCat). revenuecat-webhook needs its RC webhook secret set to do anything.
+FUNCTIONS=("analyze" "action-plan" "generate-captions" "checkin-reflection" "revise-plan" "revenuecat-webhook")
 
 echo "=== Deploying all Supabase Edge Functions ==="
 
