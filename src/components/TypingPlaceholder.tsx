@@ -24,7 +24,15 @@ export default function TypingPlaceholder({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [caretOn, setCaretOn] = useState(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Blinking caret — matches the real TextInput's caret (color + blink), so the hand-off from the
+  // animated placeholder to a focused input is seamless.
+  useEffect(() => {
+    const id = setInterval(() => setCaretOn((v) => !v), 500);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const currentPlaceholder = placeholders[currentIndex];
@@ -63,7 +71,7 @@ export default function TypingPlaceholder({
     <View style={[styles.container, style]}>
       <Text style={[styles.text, textStyle]}>
         {displayText}
-        <Text style={[styles.cursor, textStyle, { color: Colors.accent, opacity: isPaused ? 0.3 : 1 }]}>|</Text>
+        <Text style={[styles.cursor, textStyle, { opacity: caretOn ? 1 : 0 }]}>|</Text>
       </Text>
     </View>
   );
@@ -84,7 +92,7 @@ const styles = StyleSheet.create({
   cursor: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.subhead.fontSize,
-    color: Colors.accent,
+    color: Colors.accentSolid, // matches AppTextInput's caret (CARET = accentSolid)
     fontWeight: '300',
   },
 });

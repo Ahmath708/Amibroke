@@ -424,7 +424,9 @@ const styles = StyleSheet.create({
     padding: 0, // remove iOS multiline inset so typed text aligns with the placeholder
   },
   // Must match textInput's font metrics exactly so there's no jump when typing starts.
-  placeholderText: { fontSize: Typography.callout.fontSize, lineHeight: 24 },
+  // Match textInput's font metrics exactly (family, size, line height, upright) so the animated
+  // placeholder + its caret line up with real typed text — no jump on the hand-off.
+  placeholderText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, lineHeight: 24, fontStyle: 'normal' },
   inputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm },
   charCount: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   inputActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
