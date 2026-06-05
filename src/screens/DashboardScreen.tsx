@@ -152,6 +152,13 @@ export default function DashboardScreen({ navigation }: Props) {
     savings: snapshot?.liquidSavings?.value ?? 0,
   };
   const hasFinances = fin.income > 0 || fin.debt > 0 || fin.savings > 0;
+  // Provenance: brackets from onboarding read 'estimated' until a roast pins them (debt is never
+  // bracket-seeded, so it's always real). Flag estimated figures with a "~".
+  const est = {
+    income: snapshot?.monthlyIncome?.confidence === 'estimated',
+    savings: snapshot?.liquidSavings?.confidence === 'estimated',
+  };
+  const anyEst = est.income || est.savings;
 
   // Chronological scores for the sparkline (oldest → newest), last 8.
   const series = [...history].slice(0, 8).reverse().map((h) => h.score);
@@ -220,7 +227,7 @@ export default function DashboardScreen({ navigation }: Props) {
               </View>
               <View style={styles.financeRow}>
                 <View style={styles.financeStat}>
-                  <Text style={styles.financeVal}>{fmtMoney(fin.income)}</Text>
+                  <Text style={styles.financeVal}>{est.income ? '~' : ''}{fmtMoney(fin.income)}</Text>
                   <Text style={styles.financeLbl}>Income/mo</Text>
                 </View>
                 <View style={styles.financeStat}>
@@ -228,10 +235,11 @@ export default function DashboardScreen({ navigation }: Props) {
                   <Text style={styles.financeLbl}>Debt</Text>
                 </View>
                 <View style={styles.financeStat}>
-                  <Text style={styles.financeVal}>{fmtMoney(fin.savings)}</Text>
+                  <Text style={styles.financeVal}>{est.savings ? '~' : ''}{fmtMoney(fin.savings)}</Text>
                   <Text style={styles.financeLbl}>Savings</Text>
                 </View>
               </View>
+              {anyEst && <Text style={styles.estFootnote}>~ estimated from your profile — roast to refine</Text>}
             </View>
           </ReAnimated.View>
         )}
@@ -319,6 +327,7 @@ const styles = StyleSheet.create({
   financeStat: { flex: 1 },
   financeVal: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, letterSpacing: -0.5 },
   financeLbl: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
+  estFootnote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.sm, fontStyle: 'italic' },
   trendNums: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   trendEnd: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
   // Bento tiles (varied-weight 2-col row)
