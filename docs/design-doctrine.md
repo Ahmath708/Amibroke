@@ -42,6 +42,10 @@ Restraint counts too: **flair must be earned.** Hero moments get motion; utility
 - **Oversized numerals** for the score (the payoff) + **`fontVariant: ['tabular-nums']`** on every
   number that animates or updates, so digits don't jitter.
 - **Keep** the type pairing (SpaceGrotesk headings + Inter body).
+- **Accent-agnostic components.** Never hardcode the accent hue — always the `accent*` tokens — so
+  the `EXPO_PUBLIC_NEON_ACCENT` swap and the future **warm pole** (Phase 5) both work unchanged.
+- **Imagery/illustration**, when added, is committed + branded (the brief's surprise-delight model),
+  never generic stock to "fill space." We have none today — white space beats stock.
 
 ---
 
@@ -136,14 +140,71 @@ Restraint counts too: **flair must be earned.** Hero moments get motion; utility
 
 ---
 
-## 9. The gate (run before shipping any UI)
+## 9. Interaction & feedback
 
-1. One accent only? Semantics used semantically? No reintroduced decorative neon? (§1)
+- **Feedback channel:** transient success/confirmation → `components/Toast`; blocking errors or
+  destructive confirms → `Alert`; field validation → **inline** (not an Alert). Alert is overused
+  today — prefer Toast for success.
+- **States:** every button/input carries disabled + loading + pressed states (`NeonButton` loading,
+  `PressableScale` press). Disabled = lowered opacity, no haptic.
+- **Destructive actions** (sign out, delete account, clear data) always confirm first (Alert,
+  destructive style) — never one-tap.
+- **Surface choice:** quick focused task / picker / confirm → **bottom sheet**; a full sub-context →
+  **push**. Don't push a one-field edit; don't sheet a whole flow.
+- **Keyboard:** forms use keyboard avoidance + `keyboardShouldPersistTaps="handled"`; the active
+  field stays visible; tap-outside dismisses.
+
+## 10. Content & data
+
+- **Money & numbers** always go through `@/utils/format.ts` — consistent currency, decimals,
+  large-number abbreviation, and **negative/debt** styling. Never ad-hoc `` `$${n}` ``.
+- **Degenerate data:** design the zero / single / very-large / negative / **null-or-"unknown"**
+  (snapshot estimates) cases, not just the happy path. Clamp long AI/user text with `numberOfLines`.
+- **Async:** **skeleton/shimmer, not a spinner** (brief Part 3); always an explicit empty state and
+  an error state with a retry path.
+- **Microcopy:** on-brand voice but clear (errors say what to do next); **sentence case** for
+  labels/body, Title Case only for true buttons; emoji are intentional accents, not filler.
+
+## 11. Accessibility & environment
+
+- **Dynamic Type:** don't fight it — allow scaling where layout permits, cap with
+  `maxFontSizeMultiplier` only where it would break, sanity-check at XL sizes. (Unhandled today.)
+- **VoiceOver:** interactive + informative elements get `accessibilityLabel`/`Role`; **icon-only
+  buttons (bell, mic, chevrons) must be labeled**; purely decorative bits hidden from a11y.
+- **Safe area + chrome:** honor `useSafeAreaInsets`; content **clears the floating tab bar**
+  (`+ TAB_BAR_HEIGHT` bottom padding); status bar is light content on the dark field.
+- (Keyboard → §9; contrast → §2; reduce-motion → §5.)
+
+## 12. Performance (premium = 60fps)
+
+- Long/unbounded lists → `FlatList` (virtualized), never `.map` inside a `ScrollView`.
+- No always-on heavy animation (battery/thermals); ambient motion stays cheap and slow.
+- Memoize expensive renders; avoid redundant per-focus refetches (cache or lift shared reads).
+
+## 13. The gate (run before shipping any UI)
+
+> This checklist **is** the `/audit-screen` rubric — each item maps to a section. Change a rule in
+> its section; the audit grades the new version automatically.
+
+1. One accent, accent-agnostic? Semantics semantic-only? No decorative neon? (§1)
 2. All spacing/radius/type/color/motion from **tokens**, nothing hardcoded? (§2–5)
-3. Tappables use `PressableScale`; numbers `CountUp`; entrances from the system; **reduce-motion
-   honored**? (§5)
-4. Icons Heroicons (or a documented exception)? Consistent sizes? (§6)
+3. Tappables `PressableScale`; numbers `CountUp` + `format.ts`; entrances from the system;
+   **reduce-motion honored**? (§5, §10)
+4. Icons Heroicons (or a documented exception), consistent sizes? (§6)
 5. Reused existing primitives instead of bespoke UI? (§7)
-6. Run the §0 table as pass/fail — and confirm at least one **positive identity anchor** (a branded,
-   ownable element) is present, not just "nothing generic."
-7. `npx tsc --noEmit` clean; re-screenshot on the SE (multiple frames for motion/overflow).
+6. Right feedback channel (Toast/Alert/inline)? Destructive actions confirmed? Right surface
+   (sheet vs push)? Keyboard handled? (§9)
+7. Degenerate-data + empty/error/skeleton states designed, not just the happy path? (§10)
+8. VoiceOver labels (esp. icon-only), Dynamic Type sane, safe-area + tab-bar clearance? (§11)
+9. Long lists virtualized; no always-on heavy motion? (§12)
+10. §0 table passes — and at least one **positive identity anchor** (branded, ownable) is present.
+11. `npx tsc --noEmit` clean; re-screenshot on the SE (multiple frames for motion/overflow).
+
+---
+
+## Deferred (named, not yet enforced)
+
+Strategic bets from the [brief](./redesign/research-brief.md), captured so they don't get lost —
+not rules yet: an **imagery/illustration system**, a **reacting mascot** (Rive), and a **living
+Skia background**. When any ships it follows §1; until then, don't approximate them with generic
+stock or always-on gradients.
