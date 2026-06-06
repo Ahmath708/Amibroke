@@ -35,9 +35,11 @@ and every feature reads from it.
 
 - **App:** Expo SDK 55, React Native 0.83.6, React 19.2.0, TypeScript 5.9 (`strict`), New
   Architecture enabled. Metro bundler. Entry: `App.tsx` → `src/navigation/AppNavigator.tsx`.
-- **Navigation:** React Navigation v7 — native-stack + bottom-tabs. Tabs are **Home
-  (`DashboardScreen`) · Tools · Community**; the analyze input (`HomeScreen`) is pushed as the
-  **"New Roast"** (`Analyze`) route.
+- **Navigation:** React Navigation v7 — native-stack + bottom-tabs. Five tabs (custom `IOSTabBar`
+  with a sliding pill): **Home (`DashboardScreen`) · Tools · Roast · Community · Profile**. **Roast**
+  is a real tab that renders the composer (`HomeScreen`); the same screen is also pushed as the
+  **"New Roast"** (`Analyze`) route for contextual entries. A header **notification bell** opens the
+  computed **Notifications** center. **History** is a pushed stack screen.
 - **State:** React Context (`AuthContext`) + hooks. Local persistence via AsyncStorage.
 - **Backend:** Supabase — Postgres (SQL migrations + RLS) and **Deno edge functions**. All LLM
   work (Anthropic Claude + Groq fallback) runs server-side in edge functions, keyed by Supabase
@@ -92,8 +94,9 @@ See **[Deploying the backend](#deploying-the-backend)**.
 App.tsx                  Root: fonts, providers (Auth), RevenueCat init, navigation
 src/
   navigation/            AppNavigator — all routes; RootStackParamList in src/types
-  screens/               ~27 screens (Dashboard, Home, Results, Paywall, ActionPlan, DebtPayoff,
-                         MonthlyCheckIn, Onboarding, Tools, Community, History, …)
+  screens/               ~29 screens (Dashboard, Home, Results, Paywall, ActionPlan, DebtPayoff,
+                         MonthlyCheckIn, Onboarding, Tools, Community, History, Notifications,
+                         EditProfile, …)
   components/            Reusable UI (NeonButton, GlassCard, ScoreRing, ScreenBackground,
                          StaleBadge, Fab, motion/*, …)
   context/AuthContext    Supabase client, session, OAuth (PKCE), RevenueCat identity sync

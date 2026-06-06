@@ -40,9 +40,13 @@ the paywall UI/copy + docs reflect the model, the entitlement logic is the remai
 
 - **App:** Expo SDK 55, React Native 0.83.6, React 19.2.0, TypeScript 5.9 (`strict`), New
   Architecture enabled. Metro bundler. Entry: `App.tsx` → `src/navigation/AppNavigator.tsx`.
-- **Navigation:** React Navigation v7 — native-stack + bottom-tabs (+ legacy stack). Tabs are
-  **Home (`DashboardScreen`) · Tools · Community**; the analyze input is `HomeScreen`, pushed as
-  the **"New Roast"** (`Analyze`) route; **Profile** and **History** are pushed stack screens.
+- **Navigation:** React Navigation v7 — native-stack + bottom-tabs (+ legacy stack). Five tabs
+  (custom `IOSTabBar`, sliding pill): **Home (`DashboardScreen`) · Tools · Roast · Community ·
+  Profile**. **Roast** is a real dwell tab that renders the composer (`HomeScreen` with the `asTab`
+  prop → in-screen header); the *same* `HomeScreen` is also pushed as the **"New Roast"** (`Analyze`)
+  route for contextual entries (empty-hero CTA, etc.). A header **notification bell**
+  (`NotificationBell`) replaces the old profile avatar and opens the computed **Notifications**
+  center. **History** is a pushed stack screen.
 - **State:** React Context (`AuthContext`) + hooks. No Redux/MobX. Local persistence via
   `@react-native-async-storage/async-storage`.
 - **Backend:** Supabase — Postgres (SQL migrations + RLS) and **Deno edge functions**. LLM work
@@ -62,7 +66,8 @@ src/
   screens/               ~25 screens (Home, Results, Paywall, ActionPlan, DebtPayoff, etc.)
   components/             Reusable UI (NeonButton, GlassCard, ScoreRing, ScreenBackground, …)
   context/AuthContext    Supabase client, session, OAuth (PKCE), RevenueCat identity sync
-  hooks/                 useAnalysis, useSubscription, useVoiceInput, useShare, useDebtStrategy…
+  hooks/                 useAnalysis, useSubscription, useVoiceInput, useShare, useDebtStrategy,
+                         useNotifications, useRescore, useCheckinStatus…
   services/              Data/IO layer (see below)
   config/                ai.ts (mocks flag), features.ts (flags) — scoring lives in shared/scoring/
   theme/colors.ts        Design tokens: Colors, Typography, Spacing, Radius
@@ -133,8 +138,18 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
   roast voice (HomeScreen selector + Settings → Roast Voice; read by analyze + check-in
   reflection). `profiles.debt_strategy` (00025) stickies avalanche/snowball on Debt Payoff.
 - **Stale-state** — shared `StaleBadge`; the Dashboard shows a "score may be out of date" banner
-  and re-scores from the snapshot via `buildRescoreInput` (no re-typing, paywall-gated); a
-  plan-stale "Update" badge does the same for the action plan.
+  and re-scores from the snapshot via `buildRescoreInput` (no re-typing, paywall-gated; shared
+  `useRescore` hook drives both the banner and the notifications center); a plan-stale "Update"
+  badge does the same for the action plan.
+- **Notifications center** — *computed*, no new table. `useNotifications` aggregates the nudges we
+  already derive (score stale, plan stale via `shouldRevisePlan`, check-in due); `NotificationsScreen`
+  lists them and each routes to where you act (score → re-score, plan → the plan, check-in → the
+  check-in); the header `NotificationBell` shows an accent dot when any are pending. (Community
+  reactions are a planned 4th signal — needs a "reactions on my posts" query.)
+- **Edit Profile** (`EditProfileScreen`, Profile → Edit Profile) — first/last name + username for
+  all; email + password only for email/password accounts (gated on `app_metadata.provider`), each
+  re-authing with the current password first. OAuth users see a locked "Managed by {provider}"
+  explainer instead.
 
 ## Conventions
 

@@ -111,13 +111,12 @@ export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: num
   deep_dive: { label: 'Deep Dive', price: 9.99, description: 'Everything in Action Plan plus scenario simulator, debt comparison, and PDF report' },
 };
 
-// Bottom-tab routes (live inside MainTabs). 3 tabs: dashboard, premium hub, social.
-// History & Profile are no longer tabs — they're pushed routes (History from the
-// dashboard's "View all"; Profile from the dashboard's avatar button).
+// Bottom-tab routes (live inside MainTabs). Five tabs: Home (dashboard), Tools (premium hub),
+// Roast (the composer), Community (social), Profile. History is a pushed route (dashboard "View all").
 export type MainTabsParamList = {
   Home: undefined;
   Tools: undefined;
-  Roast: undefined;     // center create button — opens the composer, never a dwell screen
+  Roast: undefined;     // a real dwell tab — renders the composer (HomeScreen with asTab)
   Community: undefined;
   Profile: undefined;
 };
