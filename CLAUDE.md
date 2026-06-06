@@ -153,6 +153,11 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
 
 ## Conventions
 
+- **⚠️ Design doctrine — read before any frontend work.** Creating, modifying, deleting, or
+  rearranging UI follows [`docs/design-doctrine.md`](docs/design-doctrine.md): **disciplined-neon**
+  brand (one `accent*`, semantics demoted), token-only styling (spacing/radius/type/color/motion),
+  the motion system (`PressableScale`/`CountUp`/`entrances` + `useReducedMotion`), and
+  **Heroicons-first** icons. The `/audit-screen` skill grades against it.
 - **Path aliases:** `@/*` → `src/*`, `@shared/*` → `shared/*` (configured in `tsconfig.json`,
   `babel.config.js` module-resolver, and `metro.config.js`). Use them; avoid deep `../../`.
 - **`shared/` is cross-runtime** — keep it framework-agnostic (no RN/Deno-specific imports) since
