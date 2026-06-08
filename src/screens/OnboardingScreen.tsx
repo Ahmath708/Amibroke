@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
 import { ChartBarIcon, ClipboardDocumentListIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { PressableScale, enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
 import AppTextInput from '@/components/AppTextInput';
 import SelectableChip from '@/components/SelectableChip';
@@ -48,7 +50,7 @@ export default function OnboardingScreen() {
     !!sel.state && !!sel.ageBracket,
     !!sel.livingSituation && !!sel.employmentStatus,
     !!sel.incomeBracket || parseIncome(incomeExact) != null, // a bracket OR an exact amount
-    !!sel.liquidSavingsBracket, // debt is NOT collected here — the first roast itemizes it
+    !!sel.debtBracket && !!sel.liquidSavingsBracket, // debt + savings together (the score's make-or-break inputs)
   ][step];
 
   const finish = async () => {
@@ -72,10 +74,12 @@ export default function OnboardingScreen() {
           if (error) console.warn('[onboarding] monthly_income not persisted (push migration 00021):', error.message);
         }
         // Seed the unified snapshot (Phase 2a). Non-fatal — table may be unpushed (00022).
-        // No debt — onboarding doesn't collect it; the first roast itemizes debts (kind/APR).
+        // Debt is seeded as a coarse `estimated` line so the starting score is debt-aware; the first
+        // roast itemizes real debts and the confident-merge overwrites it.
         await seedSnapshotFromOnboarding(user.id, {
           incomeBracket: ctx.incomeBracket,
           liquidSavingsBracket: ctx.liquidSavingsBracket,
+          debtBracket: ctx.debtBracket,
         }, exact);
       }
     } catch (e) {
@@ -105,8 +109,8 @@ export default function OnboardingScreen() {
         {showIntro ? (
           <>
             <ScrollView contentContainerStyle={styles.introScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>First, your money profile.</Text>
-              <Text style={styles.subtitle}>~30 seconds — it's what makes everything accurate:</Text>
+              <Text style={styles.title}>Before we roast you… the basics.</Text>
+              <Text style={styles.subtitle}>60 seconds. The more you tell us, the sharper your score:</Text>
               <View style={styles.benefits}>
                 <BenefitRow Icon={ChartBarIcon} text="A score that fits your real situation" />
                 <BenefitRow Icon={ClipboardDocumentListIcon} text="A 90-day plan built around your numbers" />
@@ -114,7 +118,7 @@ export default function OnboardingScreen() {
               </View>
             </ScrollView>
             <View style={styles.footer}>
-              <NeonButton label="Set it up" onPress={() => setShowIntro(false)} />
+              <NeonButton label="Let's do this" onPress={() => setShowIntro(false)} />
             </View>
           </>
         ) : (
@@ -124,10 +128,12 @@ export default function OnboardingScreen() {
                 <View key={i} style={[styles.seg, i <= step && styles.segOn]} />
               ))}
             </View>
+            <Text style={styles.progressHint}>Step {step + 1} of {STEP_COUNT} · each answer sharpens your score</Text>
 
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <ReAnimated.View key={step} entering={enterUp(0)}>
               {step === 0 && (
-                <Step title="What should we call you?" subtitle="So your roasts feel personal.">
+                <Step title="What do we call you?" subtitle="So the roast hits personal.">
                   <Text style={styles.fieldLabel}>First name</Text>
                   <AppTextInput value={firstName} onChangeText={setFirstName} placeholder="First" placeholderTextColor={Colors.textMuted} autoCapitalize="words" returnKeyType="next" style={styles.input} />
                   <Text style={[styles.fieldLabel, styles.fieldLabelGap]}>Last name</Text>
@@ -135,19 +141,19 @@ export default function OnboardingScreen() {
                 </Step>
               )}
               {step === 1 && (
-                <Step title="A bit about you" subtitle="Tunes your score to where you actually are.">
+                <Step title={firstName.trim() ? `Nice to meet you, ${firstName.trim()}.` : 'A bit about you'} subtitle="Tunes your score to your actual life — not some average.">
                   <Field label="State"><StateSelect value={sel.state ?? ''} onChange={(c) => pick('state', c)} /></Field>
                   <ChipField label="Age" fieldKey="ageBracket" sel={sel} pick={pick} />
                 </Step>
               )}
               {step === 2 && (
-                <Step title="Your situation" subtitle="Housing and work shape the advice.">
+                <Step title="Your setup" subtitle="Rent, mortgage, or mom's basement — it all counts.">
                   <ChipField label="Housing" fieldKey="livingSituation" sel={sel} pick={pick} />
                   <ChipField label="Employment" fieldKey="employmentStatus" sel={sel} pick={pick} />
                 </Step>
               )}
               {step === 3 && (
-                <Step title="Your monthly income" subtitle="Pick a range — or enter your exact monthly income.">
+                <Step title="The money in" subtitle="Ballpark's fine. Exact if you're feeling brave.">
                   <ChipField label="Monthly income" fieldKey="incomeBracket" sel={sel} pick={pick} />
                   <Text style={[styles.fieldLabel, styles.fieldLabelGap]}>Or enter exact (optional)</Text>
                   <View style={styles.exactRow}>
@@ -161,10 +167,12 @@ export default function OnboardingScreen() {
                 </Step>
               )}
               {step === 4 && (
-                <Step title="Savings" subtitle="Last piece — then we're in.">
+                <Step title="The damage" subtitle="Debt and savings — the make-or-break inputs. Then we're in.">
+                  <ChipField label="Total debt" fieldKey="debtBracket" sel={sel} pick={pick} />
                   <ChipField label="Liquid savings" fieldKey="liquidSavingsBracket" sel={sel} pick={pick} />
                 </Step>
               )}
+              </ReAnimated.View>
             </ScrollView>
 
             <View style={styles.footer}>
@@ -174,9 +182,9 @@ export default function OnboardingScreen() {
                 disabled={!stepValid || saving}
                 loading={saving && isLast}
               />
-              <TouchableOpacity onPress={goBack} disabled={saving} style={styles.backBtn} activeOpacity={0.7}>
+              <PressableScale onPress={goBack} disabled={saving} style={styles.backBtn}>
                 <Text style={styles.backText}>Back</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </>
         )}
@@ -229,7 +237,8 @@ function ChipField({ label, fieldKey, sel, pick }: { label: string; fieldKey: st
 const styles = StyleSheet.create({
   container: { flex: 1 },
   body: { flex: 1, paddingHorizontal: Spacing.xl },
-  progress: { flexDirection: 'row', gap: Spacing.xs, marginBottom: Spacing.xl },
+  progress: { flexDirection: 'row', gap: Spacing.xs, marginBottom: Spacing.sm },
+  progressHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xl },
   seg: { flex: 1, height: 4, borderRadius: Radius.xs, backgroundColor: Colors.backgroundSecondary },
   segOn: { backgroundColor: Colors.accentSolid },
   scroll: { flexGrow: 1, paddingBottom: Spacing.lg },
