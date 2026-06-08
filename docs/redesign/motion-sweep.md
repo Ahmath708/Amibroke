@@ -61,12 +61,24 @@ kept**. Commit per screen/group.
 | `components/Toggle.tsx` | — | ✅ verified — already uses `useReducedMotion`. | ✅ done |
 | `navigation/AppNavigator.tsx` | — | ✅ verified — IOSTabBar pill + icon scale already gate on `reduce` (`reduce ? … : withSpring`). | ✅ done |
 
-### Phase 3 — Tail (mostly `useEntryAnimation` consumers → auto-fixed by pilot)
-Each: confirm the entrance is covered by the pilot, then fix any **local** `Animated` + reduce-motion.
+### Phase 3 — Tail (`useEntryAnimation` consumers) — ✅ DONE (auto-covered by the pilot)
+
+Verified: all 13 have **zero local `Animated`** (no `.timing`/`.spring`/`.loop`/`.event`/`new
+Animated.Value`) — their only motion is the `useEntryAnimation` entrance, which the pilot already
+made reduce-motion compliant. No per-file work needed.
 
 `CommunityFeedScreen` · `CreatorDashboardScreen` · `DebtPayoffScreen` · `HistoryScreen` ·
 `MonthlyCheckInScreen` · `ProfileScreen` · `ScenarioSimulatorScreen` · `SettingsScreen` ·
-`ShareScreen` · `SubscriptionAuditScreen` · `ToolsScreen` · `PaywallScreen` · `LoginScreen` — todo
+`ShareScreen` · `SubscriptionAuditScreen` · `ToolsScreen` · `PaywallScreen` · `LoginScreen` — ✅
+
+---
+
+## ✅ Sweep #1 complete
+
+Every hand-rolled animation in the app now honors **reduce-motion** and uses tokens (or named
+constants for bespoke choreography). The `useEntryAnimation` pilot cascaded the fix to 15+ screens
+from one file. Out-of-scope follow-ups noted inline (Processing's Ionicons step icons §6, its retry
+`TouchableOpacity` §9) belong to the icon/interaction audits, not this motion sweep.
 
 ### Already on the system (reference, no action)
 `NeonButton` · `SelectableChip` · `CheckinCard` · `PremiumCard` · `ProfileAvatarButton` ·
