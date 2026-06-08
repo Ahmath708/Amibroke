@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   KeyboardAvoidingView, Platform, Alert,
-  Animated,
+  Animated, Easing,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import SelectableChip from '@/components/SelectableChip';
@@ -12,12 +12,13 @@ import {
   FireIcon, HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
 } from 'react-native-heroicons/outline';
 import NotificationBell from '@/components/NotificationBell';
-import { PressableScale } from '@/components/motion';
+import { PressableScale, useReducedMotion } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AnalysisHistoryItem, RoastTone, RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Durations } from '@/theme/motion';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
@@ -94,6 +95,7 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
 
   const { listening, transcript, startListening, stopListening, supported, error } = useVoiceInput();
   const { animatedStyle } = useEntryAnimation();
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (!user) {
@@ -145,27 +147,33 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
   }, [error]);
 
   useEffect(() => {
-    if (listening) {
+    if (listening && !reduce) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(micPulse, { toValue: 1.2, duration: 500, useNativeDriver: true }),
-          Animated.timing(micPulse, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.timing(micPulse, { toValue: 1.2, duration: Durations.slow, useNativeDriver: true }),
+          Animated.timing(micPulse, { toValue: 1, duration: Durations.slow, useNativeDriver: true }),
         ]),
       ).start();
     } else {
-      micPulse.setValue(1);
+      micPulse.setValue(1); // reduce-motion or idle → no pulse
     }
-  }, [listening]);
+  }, [listening, reduce]);
 
   const applySuggestion = (chip: string) => {
     // Replace the current input with the suggestion (PressableScale handles the press + haptic).
     setInput(chip);
+    if (reduce) {
+      // Reduce Motion: show the text immediately, no fade/slide.
+      inputOpacity.setValue(1);
+      inputTranslateY.setValue(0);
+      return;
+    }
     // Fade + rise the new input text in.
     inputOpacity.setValue(0);
     inputTranslateY.setValue(8);
     Animated.parallel([
-      Animated.timing(inputOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.spring(inputTranslateY, { toValue: 0, friction: 6, tension: 80, useNativeDriver: true }),
+      Animated.timing(inputOpacity, { toValue: 1, duration: Durations.fast, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(inputTranslateY, { toValue: 0, duration: Durations.fast, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
   };
 
