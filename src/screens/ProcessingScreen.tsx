@@ -11,6 +11,7 @@ import { analyzeFinances } from '@/services/ai';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { trackFunnelStep, trackError } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
+import { useReducedMotion } from '@/components/motion';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Processing'>;
@@ -28,12 +29,27 @@ const STEPS: { label: string; icon: IoniconsName }[] = [
   { label: 'Building your action plan...', icon: 'calendar-outline' },
 ];
 
+// Bespoke "thinking" choreography — tuned wait timings (ms). Most don't map to the global Durations
+// scale, so they live here as named constants rather than magic inline literals.
+const T = {
+  spin: 1600,        // ring rotation period
+  cycle: 2000,       // how long each step label shows
+  progress: 10000,   // progress-bar sweep (perceived progress)
+  resultsDelay: 520, // hold on "complete" before routing to Results
+  initialFade: 220,
+  fadeOut: 140, fadeIn: 160,
+  pulseUp: 180, pulseDown: 220,
+  successFade: 260,
+  shake: 140,
+};
+
 export default function ProcessingScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { userInput, tone, userContext } = route.params;
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reduce = useReducedMotion();
 
   const spin = useRef(new Animated.Value(0)).current;
   const stepOpacity = useRef(new Animated.Value(0)).current;
@@ -63,14 +79,19 @@ export default function ProcessingScreen({ navigation, route }: Props) {
       clearTimeout(timeout);
       trackFunnelStep('analysis_completed', { score: analysis.score, tone: tone || 'savage' });
 
-      // Success animation
-      Animated.parallel([
-        Animated.spring(successScale, { toValue: 1, friction: 7, tension: 55, useNativeDriver: true }),
-        Animated.timing(successOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
-      ]).start();
+      // Success landing — snap under reduce-motion.
+      if (reduce) {
+        successScale.setValue(1);
+        successOpacity.setValue(1);
+      } else {
+        Animated.parallel([
+          Animated.spring(successScale, { toValue: 1, friction: 7, tension: 55, useNativeDriver: true }),
+          Animated.timing(successOpacity, { toValue: 1, duration: T.successFade, useNativeDriver: true }),
+        ]).start();
+      }
 
       setDone(true);
-      setTimeout(() => navigation.replace('Results', { analysis, userInput }), 520);
+      setTimeout(() => navigation.replace('Results', { analysis, userInput }), T.resultsDelay);
 
     } catch (e) {
       clearTimeout(timeout);
@@ -81,11 +102,13 @@ export default function ProcessingScreen({ navigation, route }: Props) {
         msg = `Request timed out after ${ANALYSIS_TIMEOUT_MS / 1000} seconds. Check your internet connection and try again.`;
       }
 
-      // Error microinteraction
-      Animated.sequence([
-        Animated.timing(errorShake, { toValue: 1, duration: 140, useNativeDriver: true }),
-        Animated.timing(errorShake, { toValue: 0, duration: 140, useNativeDriver: true }),
-      ]).start();
+      // Error microinteraction — skip the shake under reduce-motion.
+      if (!reduce) {
+        Animated.sequence([
+          Animated.timing(errorShake, { toValue: 1, duration: T.shake, useNativeDriver: true }),
+          Animated.timing(errorShake, { toValue: 0, duration: T.shake, useNativeDriver: true }),
+        ]).start();
+      }
 
       trackError('analysis_failed', msg, 'ProcessingScreen');
       setError(msg);
@@ -94,32 +117,36 @@ export default function ProcessingScreen({ navigation, route }: Props) {
   }, [userInput, tone, navigation]);
 
   useEffect(() => {
-    // Spin animation
+    // Rotating ring — decorative; skipped under reduce-motion (the step labels + progress bar carry
+    // the "working" information).
     const spinAnim = Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 1600, easing: Easing.linear, useNativeDriver: true }),
+      Animated.timing(spin, { toValue: 1, duration: T.spin, easing: Easing.linear, useNativeDriver: true }),
     );
-    spinAnim.start();
+    if (!reduce) spinAnim.start();
 
-    // Initial fade-in
-    Animated.timing(stepOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    // Initial fade-in (snap under reduce-motion).
+    if (reduce) stepOpacity.setValue(1);
+    else Animated.timing(stepOpacity, { toValue: 1, duration: T.initialFade, useNativeDriver: true }).start();
 
-
-    // Step cycling (iOS-ish crossfade + pulse)
+    // Step cycling — the labels are informational, so we keep cycling them; only the crossfade +
+    // pulse flourish is gated.
     const interval = setInterval(() => {
+      if (reduce) { setStepIndex((i) => (i + 1) % STEPS.length); return; }
       Animated.parallel([
-        Animated.timing(stepOpacity, { toValue: 0, duration: 140, useNativeDriver: true }),
-        Animated.timing(ringPulse, { toValue: 1.15, duration: 180, useNativeDriver: true }),
+        Animated.timing(stepOpacity, { toValue: 0, duration: T.fadeOut, useNativeDriver: true }),
+        Animated.timing(ringPulse, { toValue: 1.15, duration: T.pulseUp, useNativeDriver: true }),
       ]).start(() => {
         setStepIndex((i) => (i + 1) % STEPS.length);
         Animated.parallel([
-          Animated.timing(stepOpacity, { toValue: 1, duration: 160, useNativeDriver: true }),
-          Animated.timing(ringPulse, { toValue: 1, duration: 220, useNativeDriver: true }),
+          Animated.timing(stepOpacity, { toValue: 1, duration: T.fadeIn, useNativeDriver: true }),
+          Animated.timing(ringPulse, { toValue: 1, duration: T.pulseDown, useNativeDriver: true }),
         ]).start();
       });
-    }, 2000);
+    }, T.cycle);
 
-    // Progress bar (non-native driver because we're animating width)
-    Animated.timing(progressWidth, { toValue: 1, duration: 10000, useNativeDriver: false }).start();
+    // Progress bar — informational perceived-progress, kept even under reduce-motion (a linear width
+    // fill, not a vestibular trigger).
+    Animated.timing(progressWidth, { toValue: 1, duration: T.progress, useNativeDriver: false }).start();
 
     doAnalysis();
 
