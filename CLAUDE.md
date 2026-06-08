@@ -33,8 +33,11 @@ After that it's a **hard paywall — there is NO permanent free tier**: using th
 score, breakdown, plan, debt tools, scenario simulator, deep-dive) requires a paid plan — **Action
 Plan** (~$4.99/mo) or **Deep Dive** (~$9.99/mo, supersedes Action Plan). **No per-subscription free
 trial** — the 3-day access is granted app-side on signup, NOT an Apple/RevenueCat introductory offer.
-(The 3-day-access *enforcement* — granting access + hard-gating after expiry — is NOT yet implemented;
-the paywall UI/copy + docs reflect the model, the entitlement logic is the remaining work.)
+(The 3-day-access *enforcement* is **built but flag-gated OFF**, not missing: shared trial math
+(`@shared/entitlement`, anchored on `user.created_at`, no migration), server `enforceEntitlement` in
+`analyze`/`action-plan`, and client `canUseApp`/`hasAccess` gates all exist behind
+`FEATURES.PAYWALL_ENFORCEMENT`. The remaining work is a coverage audit + the trial-expiry UX + a
+**validated flag-flip** at the trial boundary — see [`docs/three-day-enforcement.md`](docs/three-day-enforcement.md).)
 
 ## Tech stack
 
@@ -129,8 +132,14 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
   only when incoming confidence ≥ stored (ladder `estimated < low < medium < high < stated`); a
   field the writer is silent on is kept; a mortgage is excluded from payoff debt + `debt_total`.
   See `docs/unified-financial-model.md`.
-- **Mandatory staged onboarding** (post-login, no skip) writes profile names + `ctx_*`
-  income/savings/debt brackets and seeds the snapshot.
+- **Mandatory staged onboarding** (post-login, no skip) — 5 cheeky, personalized steps collect
+  profile names + `ctx_*` income/savings/**debt** brackets (debt seeds a coarse `estimated` snapshot
+  line via `DEBT_MID`). It ends with a **user-initiated starting-score reveal**: "Calculate my
+  starting score" reuses the re-score path (`buildRescoreInput` → `analyzeFinances`, score-only,
+  persisted via `mergeSnapshot`) and reveals it on the `ScoreRing`, then hands off to the first roast.
+  The Dashboard shows that starting score (calm glow) for a 0-analysis user instead of the `?/100`
+  hero. (Cheap-model routing for the onboarding score is a `TODO(cost)` — a `provider` param on
+  analyze.)
 - **Monthly check-in reframe** — a soft-monthly emotional ritual (mood/note → refresh per-debt
   figures → reward screen with delta + streak + AI reflection → handoff). `checkin-reflection`
   (Haiku) writes `check_ins.reflection` (00023). Streak on the home card; journey timeline in History.
