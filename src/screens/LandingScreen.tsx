@@ -8,11 +8,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Durations } from '@/theme/motion';
 import ReAnimated from 'react-native-reanimated';
 import NeonButton from '@/components/NeonButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import AnalyzingHero from '@/components/AnalyzingHero';
-import { enterUp } from '@/components/motion';
+import { enterUp, useReducedMotion } from '@/components/motion';
 import { trackFunnelStep } from '@/services/analytics';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Landing'> };
@@ -37,17 +38,25 @@ export default function LandingScreen({ navigation }: Props) {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [visible, setVisible] = useState(false);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
+    if (reduce) {
+      // Reduce Motion: present immediately, no entrance slide or CTA pulse.
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      setVisible(true);
+      return;
+    }
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: Durations.slow, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: Durations.slow, useNativeDriver: true }),
     ]).start(() => setVisible(true));
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: Durations.reveal, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: Durations.reveal, useNativeDriver: true }),
       ]),
     ).start();
   }, []);

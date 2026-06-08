@@ -46,8 +46,8 @@ kept**. Commit per screen/group.
 | `components/ScoreRing.tsx` | — | ✅ **already exemplary** — Reanimated, one shared value (arc+number lockstep), `useReducedMotion` snap-with-haptic, `Durations.reveal`/`Easings`/`Springs`, band-reactive landing, tabular-nums. The reference impl; no work. | ✅ done |
 | `screens/ResultsScreen.tsx` | 2 | The reveal is ScoreRing (done). Gated the content `fadeIn` + disclosure `LayoutAnimation` on reduce-motion + tokenized the duration. | ✅ done |
 | `screens/ProcessingScreen.tsx` | 23 | ✅ Tier B — spin / crossfade / pulse / success-spring / error-shake gated on reduce-motion (step labels + progress bar kept as info); magic ms pulled into a named `T` timing map. (Step icons are still Ionicons + retry buttons bare `TouchableOpacity` — out of motion scope; §6/§9 follow-ups.) | ✅ done |
-| `screens/LandingScreen.tsx` | 10 | Tier B — hero entrance | todo |
-| `components/AnalyzingHero.tsx` | 4 | Tier B — bespoke hero | todo |
+| `screens/LandingScreen.tsx` | 10 | ✅ Tier B — entrance fade/slide + CTA pulse gated on reduce-motion + `Durations.slow`/`.reveal`; value-props already used `enterUp`. | ✅ done |
+| `components/AnalyzingHero.tsx` | 4 | ✅ Tier B — the looping ring/sparkline/count-up demo now shows one fully-drawn static sample under reduce-motion (no sweep/cycle); `DRAW_MS`/`FADE_MS` → `Durations`. | ✅ done |
 
 ### Phase 2 — Shared components (high reuse)
 | File | `Animated.*` | Plan | Status |

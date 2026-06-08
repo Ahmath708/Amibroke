@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Durations } from '@/theme/motion';
+import { useReducedMotion } from '@/components/motion';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -59,9 +61,9 @@ const STROKE = RING * 0.1;
 const R = (RING - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 const CHART_H = 48;
-const DRAW_MS = 1500;
-const HOLD_MS = 1500;
-const FADE_MS = 350;
+const DRAW_MS = Durations.reveal; // 1500 — ring/line draw
+const HOLD_MS = 1500;             // dwell on the finished sample
+const FADE_MS = Durations.normal; // 350 — cross-fade to the next sample
 const DASH = 800; // any length >= the sparkline path length
 
 /**
@@ -94,6 +96,7 @@ export default function AnalyzingHero() {
   const [chartW, setChartW] = useState(0);
   const [display, setDisplay] = useState(0);
   const [analyzing, setAnalyzing] = useState(true);
+  const reduce = useReducedMotion();
 
   const band = getScoreBand(sample.score);
 
@@ -110,6 +113,13 @@ export default function AnalyzingHero() {
 
   // The loop: draw → hold → fade out → advance sample → fade in → repeat.
   useEffect(() => {
+    if (reduce) {
+      // Reduce Motion: present one fully-drawn sample, no sweep/cycle.
+      progress.setValue(1);
+      cardOpacity.setValue(1);
+      setAnalyzing(false);
+      return;
+    }
     let cancelled = false;
     let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -147,7 +157,7 @@ export default function AnalyzingHero() {
       progress.stopAnimation();
       cardOpacity.stopAnimation();
     };
-  }, [sample, progress, cardOpacity]);
+  }, [sample, progress, cardOpacity, reduce]);
 
   const onChartLayout = (e: LayoutChangeEvent) => setChartW(e.nativeEvent.layout.width);
 
