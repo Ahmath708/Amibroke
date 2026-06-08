@@ -85,7 +85,7 @@ export async function mergeSnapshot(
 /** Seed (or refine) the snapshot from onboarding answers — brackets `estimated`, exact `stated`. */
 export function seedSnapshotFromOnboarding(
   userId: string,
-  ctx: { incomeBracket?: string; liquidSavingsBracket?: string },
+  ctx: { incomeBracket?: string; liquidSavingsBracket?: string; debtBracket?: string },
   exactIncome?: number | null,
 ): Promise<FinancialSnapshot | null> {
   return mergeSnapshot(userId, patchFromOnboarding(ctx, exactIncome), 'onboarding');

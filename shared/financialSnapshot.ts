@@ -196,15 +196,17 @@ export function patchFromAnalysis(a: AnalysisLike): SnapshotPatch {
   return patch;
 }
 
-// ─── Mapping from onboarding (income/savings brackets → estimated midpoints, exact → stated) ──
-// NOTE: onboarding does NOT collect debt — debt is a multi-entity, kind-tagged concept that the
-// first roast itemizes (name/balance/APR/kind). So we never seed a synthetic debt here.
+// ─── Mapping from onboarding (income/savings/debt brackets → estimated midpoints, exact → stated) ──
+// Onboarding now seeds a COARSE, `estimated` debt total (one synthetic line) so the starting score is
+// debt-aware. The first roast itemizes real debts (name/balance/APR/kind) at higher confidence, and
+// the confident-merge replaces this estimate.
 export const INCOME_MID: Record<string, number> = { under_2k: 1500, '2k_4k': 3000, '4k_6k': 5000, '6k_10k': 8000, over_10k: 12000 };
 export const SAVINGS_MID: Record<string, number> = { none: 0, under_500: 250, '500_2k': 1250, '2k_10k': 6000, '10k_50k': 30000, over_50k: 65000 };
+export const DEBT_MID: Record<string, number> = { none: 0, under_5k: 2500, '5k_15k': 10000, '15k_50k': 30000, over_50k: 75000 };
 
-/** Onboarding answers → snapshot patch (income + savings only). Exact income `stated`, else `estimated`. */
+/** Onboarding answers → snapshot patch (income + savings + debt). Exact income `stated`, else `estimated`. */
 export function patchFromOnboarding(
-  ctx: { incomeBracket?: string; liquidSavingsBracket?: string },
+  ctx: { incomeBracket?: string; liquidSavingsBracket?: string; debtBracket?: string },
   exactIncome?: number | null,
 ): SnapshotPatch {
   const patch: SnapshotPatch = {};
@@ -215,6 +217,11 @@ export function patchFromOnboarding(
   }
   if (ctx.liquidSavingsBracket && ctx.liquidSavingsBracket in SAVINGS_MID) {
     patch.liquidSavings = { value: SAVINGS_MID[ctx.liquidSavingsBracket], confidence: 'estimated' };
+  }
+  if (ctx.debtBracket && ctx.debtBracket in DEBT_MID) {
+    const bal = DEBT_MID[ctx.debtBracket];
+    // One coarse line so debtTotal is debt-aware; the first roast itemizes + the merge overwrites it.
+    patch.debts = { value: bal > 0 ? [{ name: 'Debt (estimated)', balance: bal, apr: 0, min_payment: 0, kind: 'other' }] : [], confidence: 'estimated' };
   }
   return patch;
 }
