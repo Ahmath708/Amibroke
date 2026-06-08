@@ -294,7 +294,7 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
           <View style={styles.chipsScrollWrap}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {CHIPS.map((chip) => (
-                <PressableScale key={chip} style={styles.chip} onPress={() => applySuggestion(chip)} haptic="light">
+                <PressableScale key={chip} style={styles.chip} onPress={() => applySuggestion(chip)} haptic="light" hitSlop={{ top: 6, bottom: 6 }}>
                   <Text style={styles.chipText}>{chip}</Text>
                 </PressableScale>
               ))}
@@ -405,12 +405,11 @@ const styles = StyleSheet.create({
     height: 160, lineHeight: 24, // fixed height — overflow scrolls inside the box
     padding: 0, // remove iOS multiline inset so typed text aligns with the placeholder
   },
-  // Must match textInput's font metrics exactly so there's no jump when typing starts.
   // Match textInput's font metrics exactly (family, size, line height, upright) so the animated
   // placeholder + its caret line up with real typed text — no jump on the hand-off.
   placeholderText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, lineHeight: 24, fontStyle: 'normal' },
   inputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm },
-  charCount: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+  charCount: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, fontVariant: ['tabular-nums'] },
   inputActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   clearBtn: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.accent },
   micBtn: { padding: Spacing.xs },
@@ -436,6 +435,6 @@ const styles = StyleSheet.create({
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },
   scoreNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700' },
-  scoreLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: 2 },
+  scoreLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.xs },
   scoreUser: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: Spacing.xs },
 });
