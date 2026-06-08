@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { ChartBarIcon, ClipboardDocumentListIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,9 +10,21 @@ import AppTextInput from '@/components/AppTextInput';
 import SelectableChip from '@/components/SelectableChip';
 import StateSelect from '@/components/StateSelect';
 import NeonButton from '@/components/NeonButton';
+import ScoreRing from '@/components/ScoreRing';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import { CONTEXT_FIELDS, ContextValues, profileUpdateFromValues, labelFor } from '@/components/FinancialContextForm';
-import { seedSnapshotFromOnboarding } from '@/services/financialSnapshot';
+import { seedSnapshotFromOnboarding, buildRescoreInput, mergeSnapshot } from '@/services/financialSnapshot';
+import { analyzeFinances } from '@/services/ai';
 import { useAuth } from '@/context/AuthContext';
+
+// Cheeky band reaction for the starting-score reveal (welcoming, not mean).
+function reactionFor(score: number): string {
+  const label = getScoreBand(score).label;
+  if (label === 'Financially Fragile') return "Oof. We've got work to do.";
+  if (label === 'Surviving') return "Middle of the pack. Let's climb.";
+  if (label === 'Stable') return "Not bad — let's make it better.";
+  return "Okay, show-off."; // Thriving
+}
 
 const STEP_COUNT = 5;
 const optsFor = (key: string) => CONTEXT_FIELDS.find((f) => f.key === key)?.options ?? [];
@@ -41,6 +53,8 @@ export default function OnboardingScreen() {
   const [sel, setSel] = useState<ContextValues>({});
   const [incomeExact, setIncomeExact] = useState(''); // optional precise monthly income
   const [saving, setSaving] = useState(false);
+  const [stage, setStage] = useState<'form' | 'ready' | 'calculating' | 'reveal'>('form');
+  const [startScore, setStartScore] = useState<number | null>(null);
 
   const pick = (key: string, opt: string) => setSel((p) => ({ ...p, [key]: opt }));
 
@@ -53,45 +67,68 @@ export default function OnboardingScreen() {
     !!sel.debtBracket && !!sel.liquidSavingsBracket, // debt + savings together (the score's make-or-break inputs)
   ][step];
 
-  const finish = async () => {
-    if (saving) return;
-    setSaving(true);
+  // Save the profile + seed the snapshot (no navigation — the reveal/exit drives that).
+  const persistProfile = async () => {
+    if (!user) return;
     const exact = parseIncome(incomeExact);
     // Exact income (if given) is the source of truth → derive the bracket from it.
     const ctx: ContextValues = { ...sel, incomeBracket: exact != null ? incomeBracketFor(exact) : sel.incomeBracket };
     try {
-      if (user) {
-        await supabase.from('profiles').update({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          ...profileUpdateFromValues(ctx),
-          onboarded: true,
-        }).eq('id', user.id);
-        // Optional precise income — separate, non-fatal: the monthly_income column (00021)
-        // may not be pushed yet, so a failure here must not block onboarding.
-        if (exact != null) {
-          const { error } = await supabase.from('profiles').update({ monthly_income: exact }).eq('id', user.id);
-          if (error) console.warn('[onboarding] monthly_income not persisted (push migration 00021):', error.message);
-        }
-        // Seed the unified snapshot (Phase 2a). Non-fatal — table may be unpushed (00022).
-        // Debt is seeded as a coarse `estimated` line so the starting score is debt-aware; the first
-        // roast itemizes real debts and the confident-merge overwrites it.
-        await seedSnapshotFromOnboarding(user.id, {
-          incomeBracket: ctx.incomeBracket,
-          liquidSavingsBracket: ctx.liquidSavingsBracket,
-          debtBracket: ctx.debtBracket,
-        }, exact);
+      await supabase.from('profiles').update({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        ...profileUpdateFromValues(ctx),
+        onboarded: true,
+      }).eq('id', user.id);
+      // Optional precise income — separate, non-fatal: monthly_income (00021) may be unpushed.
+      if (exact != null) {
+        const { error } = await supabase.from('profiles').update({ monthly_income: exact }).eq('id', user.id);
+        if (error) console.warn('[onboarding] monthly_income not persisted (push migration 00021):', error.message);
       }
+      // Seed the unified snapshot (Phase 2a). Non-fatal — table may be unpushed (00022). Debt is a
+      // coarse `estimated` line so the starting score is debt-aware; the first roast overwrites it.
+      await seedSnapshotFromOnboarding(user.id, {
+        incomeBracket: ctx.incomeBracket,
+        liquidSavingsBracket: ctx.liquidSavingsBracket,
+        debtBracket: ctx.debtBracket,
+      }, exact);
     } catch (e) {
       console.warn('[onboarding] save failed:', e);
     }
-    refreshProfile(); // gates re-resolve → AppNavigator advances into the app
+  };
+
+  const exitToApp = () => refreshProfile(); // gates re-resolve → AppNavigator advances into the app
+
+  // The payoff: persist, then run a real snapshot-driven starting score (reuses the re-score path).
+  // Score-only — the first typed roast is the full experience. Graceful fallback if it can't score.
+  const calculate = async () => {
+    if (saving) return;
+    setSaving(true);
+    setStage('calculating');
+    await persistProfile();
+    try {
+      if (user) {
+        const input = await buildRescoreInput(user.id);
+        if (input) {
+          const analysis = await analyzeFinances(input, 'savage'); // TODO(cost): route to the cheap model (provider param)
+          await mergeSnapshot(user.id, {}, 'onboarding', analysis.score); // persist the starting score
+          setStartScore(analysis.score);
+          setStage('reveal');
+          setSaving(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[onboarding] starting score failed:', e);
+    }
+    setSaving(false);
+    exitToApp(); // no dead end if the score can't be computed
   };
 
   const advance = () => {
     if (!stepValid || saving) return;
     if (step < STEP_COUNT - 1) setStep(step + 1);
-    else finish();
+    else setStage('ready'); // last data step → the "Ready?" gate (user-initiated reveal)
   };
 
   const goBack = () => {
@@ -99,8 +136,6 @@ export default function OnboardingScreen() {
     if (step === 0) setShowIntro(true); // first step → back to the intro
     else setStep(step - 1);
   };
-
-  const isLast = step === STEP_COUNT - 1;
 
   return (
     <View style={styles.container}>
@@ -121,7 +156,7 @@ export default function OnboardingScreen() {
               <NeonButton label="Let's do this" onPress={() => setShowIntro(false)} />
             </View>
           </>
-        ) : (
+        ) : stage === 'form' ? (
           <>
             <View style={styles.progress}>
               {Array.from({ length: STEP_COUNT }).map((_, i) => (
@@ -176,17 +211,46 @@ export default function OnboardingScreen() {
             </ScrollView>
 
             <View style={styles.footer}>
-              <NeonButton
-                label={isLast ? (saving ? '' : 'Finish') : 'Continue'}
-                onPress={advance}
-                disabled={!stepValid || saving}
-                loading={saving && isLast}
-              />
-              <PressableScale onPress={goBack} disabled={saving} style={styles.backBtn}>
+              <NeonButton label="Continue" onPress={advance} disabled={!stepValid} />
+              <PressableScale onPress={goBack} style={styles.backBtn}>
                 <Text style={styles.backText}>Back</Text>
               </PressableScale>
             </View>
           </>
+        ) : stage === 'ready' ? (
+          <View style={styles.stage}>
+            <View style={styles.stageCenter}>
+              <Text style={styles.title}>That's everything{firstName.trim() ? `, ${firstName.trim()}` : ''}.</Text>
+              <Text style={styles.subtitle}>Ready for the verdict? We'll crunch a starting score from your profile.</Text>
+            </View>
+            <View style={styles.footer}>
+              <NeonButton label="Calculate my starting score" onPress={calculate} />
+              <PressableScale onPress={() => setStage('form')} style={styles.backBtn}>
+                <Text style={styles.backText}>Back</Text>
+              </PressableScale>
+            </View>
+          </View>
+        ) : stage === 'calculating' ? (
+          <View style={[styles.stage, styles.stageCenter]}>
+            <ActivityIndicator size="large" color={Colors.accent} />
+            <Text style={[styles.subtitle, styles.calcText]}>Doing the math you've been avoiding…</Text>
+          </View>
+        ) : (
+          <View style={styles.stage}>
+            <View style={styles.stageCenter}>
+              {startScore != null && (
+                <>
+                  <ScoreRing score={startScore} size={168} showOutOf reveal />
+                  <Text style={[styles.revealBand, { color: getScoreBand(startScore).color }]}>{getScoreBand(startScore).label}</Text>
+                  <Text style={styles.revealReaction}>{reactionFor(startScore)}</Text>
+                  <Text style={styles.revealNote}>That's your starting estimate — built from ranges. Your first real roast sharpens it.</Text>
+                </>
+              )}
+            </View>
+            <View style={styles.footer}>
+              <NeonButton label="See the real roast →" onPress={exitToApp} />
+            </View>
+          </View>
         )}
       </View>
     </View>
@@ -282,4 +346,11 @@ const styles = StyleSheet.create({
   footer: { paddingTop: Spacing.sm },
   backBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   backText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
+  // Ready / calculating / reveal stages
+  stage: { flex: 1 },
+  stageCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  calcText: { marginTop: Spacing.lg, textAlign: 'center' },
+  revealBand: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', marginTop: Spacing.md },
+  revealReaction: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, textAlign: 'center', marginTop: Spacing.xs },
+  revealNote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.sm, paddingHorizontal: Spacing.xl, lineHeight: 18 },
 });

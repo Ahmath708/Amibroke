@@ -173,9 +173,20 @@ export default function DashboardScreen({ navigation }: Props) {
           </ReAnimated.View>
 
           <ReAnimated.View entering={enterUp(1)} style={styles.emptyHero}>
-            <ScoreRing score={0} size={150} showOutOf empty />
-            <Text style={styles.emptyTitle}>Your score is waiting</Text>
-            <Text style={styles.emptySub}>Run your first roast to unlock your score, breakdown, and plan.</Text>
+            {snapshot?.score != null ? (
+              // Onboarding seeded a starting score (an estimate from the profile) — show it, not "?".
+              <>
+                <ScoreRing score={snapshot.score} size={150} showOutOf glow />
+                <Text style={styles.emptyTitle}>Your starting score</Text>
+                <Text style={styles.emptySub}>An estimate from your profile. Run your first roast to make it real — with the breakdown and plan.</Text>
+              </>
+            ) : (
+              <>
+                <ScoreRing score={0} size={150} showOutOf empty />
+                <Text style={styles.emptyTitle}>Your score is waiting</Text>
+                <Text style={styles.emptySub}>Run your first roast to unlock your score, breakdown, and plan.</Text>
+              </>
+            )}
           </ReAnimated.View>
 
           <ReAnimated.View entering={enterUp(2)}>
