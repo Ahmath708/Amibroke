@@ -43,16 +43,16 @@ kept**. Commit per screen/group.
 ### Phase 1 — Signature / high-visibility
 | File | `Animated.*` | Plan | Status |
 |---|---|---|---|
-| `screens/ResultsScreen.tsx` | 2 | **Tier A** — `CountUp` + `ScoreRing` sync (the brand reveal, brief Part 3) | todo |
+| `components/ScoreRing.tsx` | — | ✅ **already exemplary** — Reanimated, one shared value (arc+number lockstep), `useReducedMotion` snap-with-haptic, `Durations.reveal`/`Easings`/`Springs`, band-reactive landing, tabular-nums. The reference impl; no work. | ✅ done |
+| `screens/ResultsScreen.tsx` | 2 | The reveal is ScoreRing (done). Gated the content `fadeIn` + disclosure `LayoutAnimation` on reduce-motion + tokenized the duration. | ✅ done |
 | `screens/ProcessingScreen.tsx` | 23 | Tier B — tokenize + reduce-motion; align to brief skeleton/"thinking" | todo |
 | `screens/LandingScreen.tsx` | 10 | Tier B — hero entrance | todo |
 | `components/AnalyzingHero.tsx` | 4 | Tier B — bespoke hero | todo |
-| `components/ScoreRing.tsx` | — | verify (likely already reduce-motion aware) | todo |
 
 ### Phase 2 — Shared components (high reuse)
 | File | `Animated.*` | Plan | Status |
 |---|---|---|---|
-| `components/TypingPlaceholder.tsx` | 4 | Tier B — gate caret blink + typing behind reduce-motion (runs unconditionally now) | todo |
+| `components/TypingPlaceholder.tsx` | 4 | Tier B — caret blink + typing now gated on reduce-motion (static first example, no caret blink). Blink ms kept (deliberately matched to the native iOS caret). | ✅ done |
 | `components/Toast.tsx` | 4 | Tier B — slide/fade + reduce-motion | todo |
 | `components/AuthBackground.tsx` | — | Tier B — ambient bg; reduce-motion + ensure not always-on-heavy | todo |
 | `components/iOS/GlassSection.tsx` | 5 | Tier B | todo |

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Text, StyleSheet, View, Animated, Easing } from 'react-native';
 import { Colors, Typography } from '@/theme/colors';
+import { useReducedMotion } from '@/components/motion';
 
 interface TypingPlaceholderProps {
   placeholders: string[];
@@ -20,6 +21,7 @@ export default function TypingPlaceholder({
   style,
   textStyle,
 }: TypingPlaceholderProps) {
+  const reduce = useReducedMotion();
   const [displayText, setDisplayText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -34,6 +36,7 @@ export default function TypingPlaceholder({
   // Native-style caret: a thin bar that holds solid, fades out, holds off, fades in (~1.06s — the
   // macOS/iOS caret blink rate).
   useEffect(() => {
+    if (reduce) { caretOpacity.setValue(0); return; } // reduce-motion: static placeholder, no caret blink
     const loop = Animated.loop(Animated.sequence([
       Animated.delay(420),
       Animated.timing(caretOpacity, { toValue: 0, duration: 160, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -42,9 +45,14 @@ export default function TypingPlaceholder({
     ]));
     loop.start();
     return () => loop.stop();
-  }, [caretOpacity]);
+  }, [caretOpacity, reduce]);
 
   useEffect(() => {
+    if (reduce) {
+      // Reduce Motion: show the first example statically — no typing/cycling (info preserved).
+      if (displayText !== (placeholders[0] ?? '')) setDisplayText(placeholders[0] ?? '');
+      return;
+    }
     const currentPlaceholder = placeholders[currentIndex];
 
     function tick() {
@@ -75,7 +83,7 @@ export default function TypingPlaceholder({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [displayText, isDeleting, isPaused, currentIndex, placeholders, typingSpeed, deletingSpeed, pauseDuration]);
+  }, [displayText, isDeleting, isPaused, currentIndex, placeholders, typingSpeed, deletingSpeed, pauseDuration, reduce]);
 
   const caretH = caret.h; // the native caret spans the full line height — match it
   return (

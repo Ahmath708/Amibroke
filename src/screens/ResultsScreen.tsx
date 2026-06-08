@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Durations } from '@/theme/motion';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
 import ScoreRing from '@/components/ScoreRing';
@@ -22,7 +23,7 @@ import SeverityPill from '@/components/SeverityPill';
 import ConfidenceBadge, { confidenceLevel } from '@/components/ConfidenceBadge';
 import SectionLabel from '@/components/SectionLabel';
 import NeonButton from '@/components/NeonButton';
-import { PressableScale } from '@/components/motion';
+import { PressableScale, useReducedMotion } from '@/components/motion';
 import Disclaimer from '@/components/Disclaimer';
 import { GlassSection } from '@/components/iOS/GlassSection';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -103,6 +104,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const tone = (route.params as any).tone || 'savage';
   const { user } = useAuth();
   const fadeIn = useRef(new Animated.Value(0)).current;
+  const reduce = useReducedMotion();
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
@@ -111,12 +113,13 @@ export default function ResultsScreen({ navigation, route }: Props) {
   // report stays one tap away so the screen doesn't read as a homework packet.
   const [expanded, setExpanded] = useState(false);
   const toggleBreakdown = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (!reduce) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded((e) => !e);
   };
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: Spacing.lg * 6.25, useNativeDriver: true }).start();
+    if (reduce) fadeIn.setValue(1);
+    else Animated.timing(fadeIn, { toValue: 1, duration: Durations.fast, useNativeDriver: true }).start();
     trackSnapshotGenerated(analysis.score, analysis.scoreLabel, tone, userInput.length);
     trackRoastGenerated(tone, analysis.roast.length);
     trackFunnelStep('results_viewed', { score: analysis.score });
