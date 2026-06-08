@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
-  TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert,
   Animated,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
-import { Ionicons } from '@expo/vector-icons';
 import {
   MicrophoneIcon, StopCircleIcon, SparklesIcon, ChevronRightIcon,
+  FireIcon, HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
 } from 'react-native-heroicons/outline';
 import NotificationBell from '@/components/NotificationBell';
-import { selection } from '@/utils/haptics';
+import { PressableScale } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,7 +25,7 @@ import TypingPlaceholder from '@/components/TypingPlaceholder';
 import { getAnalysisHistory } from '@/services/analyses';
 import { useAuth } from '@/context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { ContextValues, CTX_COLUMNS, valuesFromProfile } from '@/components/FinancialContextForm';
+import { ContextValues, valuesFromProfile } from '@/components/FinancialContextForm';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
@@ -58,13 +58,12 @@ const CHIPS = [
   'I have no emergency fund',
 ];
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-const TONES: { key: RoastTone; label: string; icon: IoniconsName }[] = [
-  { key: 'savage',        label: 'Savage',       icon: 'flame-outline' },
-  { key: 'gentle',        label: 'Gentle',       icon: 'heart-outline' },
-  { key: 'therapist',     label: 'Therapist',    icon: 'medical-outline' },
-  { key: 'older_sibling', label: 'Big Sibling',  icon: 'fitness-outline' },
-  { key: 'finance_bro',   label: 'Finance Bro',  icon: 'trending-up-outline' },
+const TONES: { key: RoastTone; label: string; icon: React.ComponentType<{ size?: number; color?: string }> }[] = [
+  { key: 'savage',        label: 'Savage',       icon: FireIcon },
+  { key: 'gentle',        label: 'Gentle',       icon: HeartIcon },
+  { key: 'therapist',     label: 'Therapist',    icon: ChatBubbleLeftRightIcon },
+  { key: 'older_sibling', label: 'Big Sibling',  icon: HandThumbUpIcon },
+  { key: 'finance_bro',   label: 'Finance Bro',  icon: ArrowTrendingUpIcon },
 ];
 
 const PLACEHOLDERS = [
@@ -77,7 +76,7 @@ const PLACEHOLDERS = [
 
 export default function HomeScreen({ navigation, asTab = false }: Props) {
   const insets = useSafeAreaInsets();
-  const { user, supabase } = useAuth();
+  const { user } = useAuth();
   const { tier, canUseApp } = useSubscription();
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -89,14 +88,9 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
   const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
   const micPulse = useRef(new Animated.Value(1)).current;
-  // Suggestion fade-and-rise: input text fades in + slides up; tapped chip bounces.
+  // Suggestion text fade-and-rise: the input text fades in + slides up when a chip is applied.
   const inputOpacity = useRef(new Animated.Value(1)).current;
   const inputTranslateY = useRef(new Animated.Value(0)).current;
-  const chipScales = useRef<Record<string, Animated.Value>>({}).current;
-  const getChipScale = (chip: string) => {
-    if (!chipScales[chip]) chipScales[chip] = new Animated.Value(1);
-    return chipScales[chip];
-  };
 
   const { listening, transcript, startListening, stopListening, supported, error } = useVoiceInput();
   const { animatedStyle } = useEntryAnimation();
@@ -120,13 +114,13 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
       if (user) {
         (async () => {
           try {
-            const { data } = await supabase.from('profiles').select(CTX_COLUMNS).eq('id', user.id).maybeSingle();
-            if (active) setProfileContext(valuesFromProfile(data as Record<string, unknown> | null));
-          } catch { /* ignore */ }
-          try {
-            // select('*') stays resilient if preferred_tone isn't migrated yet (avoids PGRST204).
+            // One profile read (select('*')) serves both the saved context and the sticky tone;
+            // stays resilient if preferred_tone isn't migrated yet (avoids PGRST204).
             const prof = await getProfile(user.id);
-            if (active && prof?.preferred_tone) setSelectedTone(prof.preferred_tone as RoastTone); // seed the sticky voice
+            if (active) {
+              setProfileContext(valuesFromProfile((prof ?? null) as Record<string, unknown> | null));
+              if (prof?.preferred_tone) setSelectedTone(prof.preferred_tone as RoastTone); // seed the sticky voice
+            }
           } catch { /* ignore */ }
           try {
             const sc = await getSubscriptionContext(user.id);
@@ -135,7 +129,7 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
         })();
       }
       return () => { active = false; };
-    }, [user, supabase]),
+    }, [user]),
   );
 
   useEffect(() => {
@@ -164,15 +158,8 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
   }, [listening]);
 
   const applySuggestion = (chip: string) => {
-    selection();
-    // Replace the current input with the suggestion (clear-then-insert).
+    // Replace the current input with the suggestion (PressableScale handles the press + haptic).
     setInput(chip);
-    // Bounce the tapped chip.
-    const scale = getChipScale(chip);
-    Animated.sequence([
-      Animated.timing(scale, { toValue: 0.92, duration: 80, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }),
-    ]).start();
     // Fade + rise the new input text in.
     inputOpacity.setValue(0);
     inputTranslateY.setValue(8);
@@ -261,22 +248,24 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
               <Text style={styles.charCount}>{input.length}/{MAX_INPUT_CHARS}</Text>
               <View style={styles.inputActions}>
                 {input.length > 0 && (
-                  <TouchableOpacity onPress={() => setInput('')}>
+                  <PressableScale onPress={() => setInput('')} hitSlop={8}>
                     <Text style={styles.clearBtn}>Clear</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
                 {supported && (
-                  <TouchableOpacity
+                  <PressableScale
                     onPress={handleVoiceToggle}
                     style={[styles.micBtn, listening && styles.micBtnActive]}
-                    activeOpacity={0.7}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={listening ? 'Stop recording' : 'Voice input'}
                   >
                     <Animated.View style={{ transform: [{ scale: micPulse }] }}>
                       {listening
                         ? <StopCircleIcon size={20} color={Colors.danger} />
                         : <MicrophoneIcon size={20} color={Colors.textSecondary} />}
                     </Animated.View>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
               </View>
             </View>
@@ -305,15 +294,9 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
           <View style={styles.chipsScrollWrap}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {CHIPS.map((chip) => (
-                <Animated.View key={chip} style={{ transform: [{ scale: getChipScale(chip) }] }}>
-                  <TouchableOpacity
-                    style={styles.chip}
-                    onPress={() => applySuggestion(chip)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.chipText}>{chip}</Text>
-                  </TouchableOpacity>
-                </Animated.View>
+                <PressableScale key={chip} style={styles.chip} onPress={() => applySuggestion(chip)} haptic="light">
+                  <Text style={styles.chipText}>{chip}</Text>
+                </PressableScale>
               ))}
             </ScrollView>
             {/* Right-edge fade: signals there are more suggestions to scroll to. */}
@@ -344,16 +327,15 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
           </View>
 
           {/* Financial context — opens the personalization form */}
-          <TouchableOpacity
+          <PressableScale
             onPress={() => navigation.navigate('FinancialContext')}
-            activeOpacity={0.7}
             style={styles.contextRow}
           >
             <Text style={styles.contextRowText}>
               {Object.keys(profileContext).length > 0 ? 'Edit Financial Context' : '+ Add Financial Context (optional)'}
             </Text>
             <ChevronRightIcon size={16} color={Colors.textSecondary} />
-          </TouchableOpacity>
+          </PressableScale>
 
           {/* Monthly check-in nudge (only for users who track goals) */}
           <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.xl }} />

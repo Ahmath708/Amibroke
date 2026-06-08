@@ -1,29 +1,26 @@
 import React from 'react';
 import { Text, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface Props {
   label: string;
   active: boolean;
   onPress: () => void;
-  icon?: IoniconsName;     // optional leading icon (e.g. tone selector)
+  icon?: React.ComponentType<{ size?: number; color?: string }>; // optional leading Heroicon (e.g. tone selector)
   size?: 'sm' | 'md';      // sm = caption1 text (compact); md = footnote (default)
   style?: ViewStyle;       // layout extras (maxWidth, etc.)
   maxLines?: number;
 }
 
 /** The single source of truth for a tappable single-select pill (tone selector,
- *  context options, goal selector, amount picker). Active = primary border +
- *  primaryContainer fill, label → primary/medium. */
-export default function SelectableChip({ label, active, onPress, icon, size = 'md', style, maxLines }: Props) {
+ *  context options, goal selector, amount picker). Active = accent border +
+ *  accentContainer fill, label → accent/medium. */
+export default function SelectableChip({ label, active, onPress, icon: Icon, size = 'md', style, maxLines }: Props) {
   const accent = active ? Colors.accent : Colors.textSecondary;
   return (
     <PressableScale style={[styles.chip, active && styles.chipActive, style]} onPress={onPress} haptic="light">
-      {icon ? <Ionicons name={icon} size={size === 'sm' ? 14 : 16} color={accent} /> : null}
+      {Icon ? <Icon size={size === 'sm' ? 14 : 16} color={accent} /> : null}
       <Text style={[styles.text, size === 'sm' && styles.textSm, active && styles.textActive]} numberOfLines={maxLines}>
         {label}
       </Text>
