@@ -53,13 +53,13 @@ kept**. Commit per screen/group.
 | File | `Animated.*` | Plan | Status |
 |---|---|---|---|
 | `components/TypingPlaceholder.tsx` | 4 | Tier B — caret blink + typing now gated on reduce-motion (static first example, no caret blink). Blink ms kept (deliberately matched to the native iOS caret). | ✅ done |
-| `components/Toast.tsx` | 4 | Tier B — slide/fade + reduce-motion | todo |
-| `components/AuthBackground.tsx` | — | Tier B — ambient bg; reduce-motion + ensure not always-on-heavy | todo |
-| `components/iOS/GlassSection.tsx` | 5 | Tier B | todo |
-| `components/AnimatedProgressRing.tsx` | — | verify (uses motion system already) | todo |
-| `components/Skeleton.tsx` | — | verify | todo |
-| `components/Toggle.tsx` | — | verify | todo |
-| `navigation/AppNavigator.tsx` | — | verify (IOSTabBar pill) | todo |
+| `components/Toast.tsx` | 4 | ✅ Tier B — appears instantly + auto-dismisses (no fade) under reduce-motion; fade ms → `Durations.normal`. | ✅ done |
+| `components/AuthBackground.tsx` | — | ✅ Tier B — the drifting/scaling accent orb rests static & centered under reduce-motion (no withRepeat). | ✅ done |
+| `components/iOS/GlassSection.tsx` | 5 | ✅ Tier B — entrance fade/slide gated on reduce-motion; 380ms → `Durations.normal`. | ✅ done |
+| `components/AnimatedProgressRing.tsx` | — | ✅ verified — already uses `useReducedMotion`. | ✅ done |
+| `components/Skeleton.tsx` | — | ✅ verified — already uses `useReducedMotion`. | ✅ done |
+| `components/Toggle.tsx` | — | ✅ verified — already uses `useReducedMotion`. | ✅ done |
+| `navigation/AppNavigator.tsx` | — | ✅ verified — IOSTabBar pill + icon scale already gate on `reduce` (`reduce ? … : withSpring`). | ✅ done |
 
 ### Phase 3 — Tail (mostly `useEntryAnimation` consumers → auto-fixed by pilot)
 Each: confirm the entrance is covered by the pilot, then fix any **local** `Animated` + reduce-motion.

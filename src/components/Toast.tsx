@@ -1,6 +1,8 @@
 ﻿import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Durations } from '@/theme/motion';
+import { useReducedMotion } from '@/components/motion';
 
 interface Props {
   message: string;
@@ -12,13 +14,20 @@ interface Props {
 
 export default function Toast({ message, emoji, visible, duration = 2500, onHide }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (visible) {
+      if (reduce) {
+        // Reduce Motion: appear instantly, auto-dismiss after the dwell (no fade).
+        opacity.setValue(1);
+        const t = setTimeout(() => onHide?.(), duration);
+        return () => clearTimeout(t);
+      }
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: Durations.normal, useNativeDriver: true }),
         Animated.delay(duration),
-        Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: Durations.normal, useNativeDriver: true }),
       ]).start(() => onHide?.());
     } else {
       opacity.setValue(0);

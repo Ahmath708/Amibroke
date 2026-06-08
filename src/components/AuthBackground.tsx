@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing,
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing, useReducedMotion,
 } from 'react-native-reanimated';
 import { Colors } from '@/theme/colors';
 import { resolveAccent } from '@/theme/palettes/accents';
@@ -22,9 +22,11 @@ interface OrbProps {
 /** A single slowly-drifting, gently-scaling gradient orb. */
 function Orb({ colors, size, top, left, right, bottom, range, duration, delay, opacity }: OrbProps) {
   const p = useSharedValue(0);
+  const reduce = useReducedMotion();
   useEffect(() => {
+    if (reduce) { p.value = 0.5; return; } // reduce-motion: a static, centered glow (no drift)
     p.value = withDelay(delay, withRepeat(withTiming(1, { duration, easing: Easing.inOut(Easing.ease) }), -1, true));
-  }, [p, delay, duration]);
+  }, [p, delay, duration, reduce]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
