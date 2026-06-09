@@ -8,3 +8,9 @@
  * is always false — mocks NEVER ship to production.
  */
 export const USE_AI_MOCKS = __DEV__ && true;
+
+// DEV/MOCK-ONLY viewing aid: force the roast + plan-building animations to play for a fixed duration
+// when opening a past roast / the plan — mocks make real loads near-instant, so you can't otherwise
+// see them. NEVER ships (gated on __DEV__ && USE_AI_MOCKS). Flip to `&& false` to disable.
+export const MOCK_ANIMATION = __DEV__ && USE_AI_MOCKS && true;
+export const MOCK_ANIMATION_MS = 8000;

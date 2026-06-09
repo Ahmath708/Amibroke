@@ -25,6 +25,7 @@ import {
 import { getSnapshot } from '@/services/financialSnapshot';
 import { formatCurrency } from '@/utils/format';
 import { trackActionPlanViewed } from '@/services/analytics';
+import { MOCK_ANIMATION, MOCK_ANIMATION_MS } from '@/config/ai';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -175,6 +176,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   const [latest, setLatest] = useState<{ debt: number | null; savings: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false); // create OR refresh in progress → full-screen loading view
+  const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION); // dev: show the building animation on open
   const [selectedId, setSelectedId] = useState<string | null>(null); // step shown in the focal card
 
   const load = useCallback(async () => {
@@ -192,7 +194,12 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   // check-in / edit made while this screen stayed mounted — not just the first mount.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  useEffect(() => { trackActionPlanViewed(0); }, []);
+  useEffect(() => {
+    trackActionPlanViewed(0);
+    if (!MOCK_ANIMATION) return;
+    const t = setTimeout(() => setMockAnimating(false), MOCK_ANIMATION_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   // Create → generate the plan (LLM, behind the loading view) and immediately start tracking it.
   // Generation is user-triggered here (not on the Tools tap) so opening the screen is instant.
@@ -261,7 +268,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
 
   if (loading) return <LoadingState />;
   if (!authorized) return null;
-  if (generating) {
+  if (generating || mockAnimating) {
     // Shared loading view for Create + Refresh — never blocks the Tools tap, always lands here.
     return (
       <Animated.View style={[styles.container, animatedStyle]}>

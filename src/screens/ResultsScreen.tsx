@@ -27,6 +27,8 @@ import { PressableScale, useReducedMotion } from '@/components/motion';
 import Disclaimer from '@/components/Disclaimer';
 import { GlassSection } from '@/components/iOS/GlassSection';
 import ScreenBackground from '@/components/ScreenBackground';
+import RoastLoading from '@/components/RoastLoading';
+import { MOCK_ANIMATION, MOCK_ANIMATION_MS } from '@/config/ai';
 import Toast from '@/components/Toast';
 
 import { useAuth } from '@/context/AuthContext';
@@ -112,6 +114,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
   const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
+  const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION && !!viewingId); // dev: replay the roast animation when opening a past roast
   // Progressive disclosure: lead with the hit (score/roast/#1 fix/CTA); the full
   // report stays one tap away so the screen doesn't read as a homework packet.
   const [expanded, setExpanded] = useState(false);
@@ -157,6 +160,14 @@ export default function ResultsScreen({ navigation, route }: Props) {
       .catch((e) => { setSaveFailed(true); Alert.alert("Couldn't save this roast", String(e)); });
   }, [user, userInput, analysis, viewingId]);
 
+  // Dev viewing aid (MOCK only): when opening a PAST roast, replay the roast animation for a fixed
+  // beat so it can be reviewed — mocks make this near-instant otherwise. Never runs in prod.
+  useEffect(() => {
+    if (!mockAnimating) return;
+    const t = setTimeout(() => setMockAnimating(false), MOCK_ANIMATION_MS);
+    return () => clearTimeout(t);
+  }, []);
+
   const handleShareToFeed = async () => {
     if (!user || !analysisId) return;
     const id = await shareToFeed(user.id, analysisId, analysis.score, analysis.scoreLabel, analysis.roast, analysis.summary);
@@ -188,6 +199,15 @@ export default function ResultsScreen({ navigation, route }: Props) {
     { label: 'Monthly Debt Service', value: fmt(analysis.monthlyDebtService ?? 0), icon: 'calendar-outline' },
   ];
   const metrics = allMetrics.filter((m) => m.value !== 'N/A');
+
+  if (mockAnimating) {
+    return (
+      <View style={styles.container}>
+        <ScreenBackground variant="results" />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><RoastLoading /></View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
