@@ -190,7 +190,7 @@ export default function DashboardScreen({ navigation }: Props) {
           </ReAnimated.View>
 
           <ReAnimated.View entering={enterUp(2)}>
-            <NeonButton label="Start your first roast" onPress={() => navigation.navigate('Analyze')} />
+            <NeonButton label="Start your first roast" onPress={() => navigation.navigate('Roast')} />
           </ReAnimated.View>
         </ScrollView>
       </View>
