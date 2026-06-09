@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Alert, Animated,
 } from 'react-native';
@@ -39,32 +39,26 @@ export default function ToolsScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { tier, hasAccess, refresh, loading: subLoading } = useSubscription();
   const { animatedStyle } = useEntryAnimation();
-  const [latestId, setLatestId] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
-  const loaded = useRef(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-      if (!user) return;
-      if (loaded.current) return;
-      getAnalysisHistory(user.id)
-        .then((h) => setLatestId(h?.[0]?.id ?? null))
-        .catch(() => {})
-        .finally(() => { loaded.current = true; });
-    }, [user, refresh]),
-  );
+  // Keep subscription state fresh on focus. The latest-analysis check happens at TAP time (below) —
+  // fetched fresh, not from a cache — so a roast done this session is always reflected (no stale gate).
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   // Analysis-scoped tools open from the user's LATEST analysis (Model A —
   // "latest = your plan"; see docs/DECISIONS.md), straight into the tool screen.
   const openLatest = useCallback(async (mode: 'plan' | 'debt') => {
-    if (opening) return;
-    if (!latestId) {
-      Alert.alert('No analysis yet', 'Run an analysis first, then your tools open right from it.');
-      return;
-    }
+    if (opening || !user) return;
     setOpening(true);
     try {
+      // Fetch the latest analysis FRESH at tap time — reflects a roast done this session immediately,
+      // with no stale focus-effect cache and no focus-timing race.
+      const history = await getAnalysisHistory(user.id);
+      const latestId = history?.[0]?.id ?? null;
+      if (!latestId) {
+        Alert.alert('No analysis yet', 'Run an analysis first, then your tools open right from it.');
+        return;
+      }
       const analysis: any = await getAnalysisById(latestId);
       if (!analysis) return;
       if (mode === 'debt') {
@@ -81,7 +75,7 @@ export default function ToolsScreen({ navigation }: Props) {
     } finally {
       setOpening(false);
     }
-  }, [opening, latestId, navigation]);
+  }, [opening, user, navigation]);
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
