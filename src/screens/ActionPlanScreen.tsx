@@ -1,9 +1,10 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation, ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import SectionLabel from '@/components/SectionLabel';
-import { ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
+import { ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,7 +13,6 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
 import AnimatedProgressRing from '@/components/AnimatedProgressRing';
-import { PressableScale } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
@@ -115,13 +115,23 @@ function FocalCard({ step, isActive, onDone }: {
   onDone: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const toggle = () => {
+  const [justDone, setJustDone] = useState(false);
+  const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded((v) => !v);
   };
+  // Marking done shows a confirmation beat first (haptic + "done!"), THEN collapses to Done — so
+  // the completion is seen to register before the card slides away.
+  const markDone = () => {
+    if (justDone) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setJustDone(true);
+    setTimeout(onDone, 650);
+  };
   return (
     <GlassCard style={styles.focalCard}>
-      <TouchableOpacity activeOpacity={0.85} onPress={toggle}>
+      <TouchableOpacity activeOpacity={0.85} onPress={toggleExpand} disabled={justDone}>
         <View style={styles.focalTop}>
           <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
         </View>
@@ -134,7 +144,11 @@ function FocalCard({ step, isActive, onDone }: {
             : <ChevronDownIcon size={18} color={Colors.textSecondary} />}
         </View>
       </TouchableOpacity>
-      {isActive && <NeonButton label="Mark this done" onPress={onDone} style={{ marginTop: Spacing.sm }} />}
+      {isActive && (justDone ? (
+        <View style={styles.focalDoneRow}><Text style={styles.focalDoneText}>✓ Nice — done!</Text></View>
+      ) : (
+        <NeonButton label="Mark this done" onPress={markDone} style={{ marginTop: Spacing.sm }} />
+      ))}
     </GlassCard>
   );
 }
@@ -142,7 +156,6 @@ function FocalCard({ step, isActive, onDone }: {
 export default function ActionPlanScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const rawSteps = route.params?.steps;
   const analysis = (route.params as any)?.analysis;
   const analysisId = (route.params as any)?.analysisId as string | undefined;
   const overallMessage = route.params?.overallMessage;
@@ -152,14 +165,8 @@ export default function ActionPlanScreen({ route }: Props) {
   const [plan, setPlan] = useState<ActivePlan | null>(null);
   const [latest, setLatest] = useState<{ debt: number | null; savings: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [committing, setCommitting] = useState(false);
-  const [revising, setRevising] = useState(false);
+  const [generating, setGenerating] = useState(false); // create OR refresh in progress → full-screen loading view
   const [selectedId, setSelectedId] = useState<string | null>(null); // step shown in the focal card
-
-  // Candidate plan shown until one is committed (the generated/passed steps).
-  const previewSteps: ActionStep[] = (rawSteps && rawSteps.length > 0)
-    ? rawSteps
-    : (analysis ? generatePersonalizedSteps(analysis) : DEFAULT_STEPS);
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
@@ -174,25 +181,42 @@ export default function ActionPlanScreen({ route }: Props) {
 
   useEffect(() => {
     load();
-    trackActionPlanViewed(previewSteps.length);
+    trackActionPlanViewed(0);
   }, []);
 
-  const commit = async () => {
-    if (!user || committing) return;
-    setCommitting(true);
+  // Create → generate the plan (LLM, behind the loading view) and immediately start tracking it.
+  // Generation is user-triggered here (not on the Tools tap) so opening the screen is instant.
+  const create = async () => {
+    if (!user || generating) return;
+    setGenerating(true);
     try {
-      const p = await startPlan(user.id, analysisId ?? null, analysis ?? {}, previewSteps, overallMessage);
+      const { fetchOrGenerateActionPlan } = await import('@/services/ai');
+      const gen = analysis ? await fetchOrGenerateActionPlan(analysis, 'savage', analysisId) : null;
+      const steps = (gen?.steps && gen.steps.length > 0)
+        ? gen.steps
+        : (analysis ? generatePersonalizedSteps(analysis) : DEFAULT_STEPS);
+      const p = await startPlan(user.id, analysisId ?? null, analysis ?? {}, steps, gen?.overallMessage ?? overallMessage);
       if (p) setPlan(p);
-      else Alert.alert('Couldn\'t start plan', 'Something went wrong. Please try again.');
+      else Alert.alert('Couldn\'t create plan', 'Something went wrong. Please try again.');
     } finally {
-      setCommitting(false);
+      setGenerating(false);
     }
   };
 
-  const toggle = async (stepId: string, done: boolean) => {
+  const toggle = async (stepId: string, currentlyDone: boolean) => {
     if (!plan) return;
-    const updated = await setStepStatus(plan, stepId, done ? 'pending' : 'done');
-    if (updated) setPlan(updated);
+    const updated = await setStepStatus(plan, stepId, currentlyDone ? 'pending' : 'done');
+    if (!updated) return;
+    // Animate the reflow (the step sliding to/from Done) so it never snaps. The focal card runs
+    // its own "done" confirmation beat before calling this, so the check is seen before the move.
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setPlan(updated);
+  };
+
+  // Smoothly animate the focal-card swap when a different step is selected.
+  const select = (stepId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedId(stepId);
   };
 
   const restart = () => {
@@ -203,10 +227,11 @@ export default function ActionPlanScreen({ route }: Props) {
     ]);
   };
 
-  // Revise the active plan from the latest check-in numbers (gated by materiality).
-  const update = async () => {
-    if (!plan || revising) return;
-    setRevising(true);
+  // Refresh = revise the active plan to the latest numbers (keeps completed steps). Shows the
+  // shared "building" loading view; the revision is gated by materiality upstream (canUpdate).
+  const refresh = async () => {
+    if (!plan || generating) return;
+    setGenerating(true);
     try {
       const start = plan.start_metrics;
       const snap: PlanStartMetrics = {
@@ -216,26 +241,36 @@ export default function ActionPlanScreen({ route }: Props) {
         monthlySavings: start?.monthlySavings ?? 0,
         score: start?.score ?? 0,
       };
-      const res = await reviseActivePlan(plan, 'Updating from my latest check-in.', snap, 'savage');
+      const res = await reviseActivePlan(plan, 'Refreshing to my latest numbers.', snap, 'savage');
       if (res.revised) setPlan(res.plan);
       else Alert.alert('Plan unchanged', res.reason);
     } finally {
-      setRevising(false);
+      setGenerating(false);
     }
   };
 
   if (loading) return <LoadingState />;
   if (!authorized) return null;
+  if (generating) {
+    // Shared loading view for Create + Refresh — never blocks the Tools tap, always lands here.
+    return (
+      <Animated.View style={[styles.container, animatedStyle]}>
+        <ScreenBackground variant="actionPlan" />
+        <View style={styles.buildingWrap}>
+          <ActivityIndicator size="large" color={Colors.accent} />
+          <Text style={styles.buildingTitle}>Building your plan…</Text>
+          <Text style={styles.buildingSub}>Turning your numbers into a 90-day game plan.</Text>
+        </View>
+      </Animated.View>
+    );
+  }
 
   const isActive = !!plan;
-  // Unified row shape: active rows carry id/status; preview rows are pending + synthetic id.
-  const rows = isActive
-    ? plan!.steps
-    : previewSteps.map((s, i) => ({ ...s, id: `p${i}`, status: 'pending' as const, completed_at: null }));
+  const rows = plan?.steps ?? [];
   const firstPendingIndex = rows.findIndex((s) => s.status !== 'done');
   const prog = plan ? planProgress(plan) : null;
   const delta = plan ? planDelta(plan.start_metrics, latest) : null;
-  const bigPicture = isActive ? plan!.overall_message : overallMessage;
+  const bigPicture = plan?.overall_message;
 
   // Coach layout: one focal step + the rest split into up-next / done.
   const currentStep = firstPendingIndex >= 0 ? rows[firstPendingIndex] : null;
@@ -275,7 +310,7 @@ export default function ActionPlanScreen({ route }: Props) {
       >
         <View style={styles.openCircle} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.compactTextHit} onPress={() => setSelectedId(step.id)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.compactTextHit} onPress={() => select(step.id)} activeOpacity={0.7}>
         <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
       </TouchableOpacity>
       <Text style={styles.compactWeek}>{step.week}</Text>
@@ -311,29 +346,22 @@ export default function ActionPlanScreen({ route }: Props) {
             )}
           </View>
         ) : (
-          /* Preview — not yet committed */
+          /* No plan yet → create one. Generation runs on tap (with the loading view), so opening
+             this screen is instant and the user explicitly starts their plan. */
           <GlassCard style={styles.progressCard}>
-            <View style={styles.previewBadge}><Text style={styles.previewBadgeText}>PREVIEW</Text></View>
             <Text style={styles.progressTitle}>Your 90-day action plan</Text>
-            <Text style={styles.progressSub}>A preview — nothing's tracked until you start it. Then check off steps over the next 90 days.</Text>
-            <NeonButton
-              label={committing ? 'Starting…' : 'Start this plan'}
-              onPress={commit}
-              disabled={committing}
-              style={{ marginTop: Spacing.md }}
-            />
+            <Text style={styles.progressSub}>A personalized, step-by-step plan to move your score — tracked the moment you create it.</Text>
+            <NeonButton label="Create my plan" onPress={create} style={{ marginTop: Spacing.md }} />
           </GlassCard>
         )}
 
         {/* Status — visible up top so staleness is obvious before scrolling. */}
         {isActive && (canUpdate ? (
-          <PressableScale style={styles.updateBanner} onPress={update} haptic="light" disabled={revising}>
-            <View style={styles.updateBannerText}>
-              <Text style={styles.updateBannerTitle}>{revising ? 'Updating your plan…' : 'Your numbers changed'}</Text>
-              <Text style={styles.updateBannerSub}>Tap to update this plan to your latest check-in.</Text>
-            </View>
-            <ChevronRightIcon size={18} color={Colors.accent} />
-          </PressableScale>
+          <View style={styles.statusStale}>
+            <Text style={styles.statusStaleTitle}>Your plan may be out of date</Text>
+            <Text style={styles.statusStaleSub}>Your numbers changed since you started it. Refreshing keeps the steps you've completed.</Text>
+            <NeonButton label="Refresh Plan" onPress={refresh} style={{ marginTop: Spacing.sm }} />
+          </View>
         ) : (
           <View style={styles.statusFresh}>
             <Text style={styles.statusFreshCheck}>✓</Text>
@@ -412,10 +440,12 @@ const styles = StyleSheet.create({
   // SectionLabel owns its own marginBottom (sm) so labels hug their content. marginBottom
   // only — never marginTop — so gaps never compound.
   block: { marginBottom: Spacing.xl },
-  // Preview card (no active plan)
+  // "Create my plan" card (no active plan)
   progressCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.sm },
-  previewBadge: { alignSelf: 'flex-start', backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-  previewBadgeText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.accent, letterSpacing: 0.6 },
+  // Shared "Building your plan…" loading view (Create + Refresh)
+  buildingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl },
+  buildingTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.sm },
+  buildingSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
   progressTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   progressSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
 
@@ -436,6 +466,8 @@ const styles = StyleSheet.create({
   focalImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, marginTop: Spacing.sm },
   focalDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 20, marginTop: Spacing.sm },
   discloseRow: { alignItems: 'center', marginTop: Spacing.sm },
+  focalDoneRow: { marginTop: Spacing.md, alignItems: 'center', paddingVertical: Spacing.sm },
+  focalDoneText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.success },
 
   // Compact up-next / done rows. Up Next: tap the ○ to complete, tap the row to view.
   compactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm + 2 },
@@ -454,13 +486,9 @@ const styles = StyleSheet.create({
 
   weekBadge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 5, minWidth: 34, alignItems: 'center', alignSelf: 'flex-start' },
   weekText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent },
-  updateBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl,
-  },
-  updateBannerText: { flex: 1, gap: 2 },
-  updateBannerTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent },
-  updateBannerSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  statusStale: { backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.xs },
+  statusStaleTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent },
+  statusStaleSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
   restartLink: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textMuted, textAlign: 'center', marginBottom: Spacing.xl },
   disclaimer: { marginTop: 0 },
   overallMessageCard: { padding: Spacing.lg, marginBottom: Spacing.xl },

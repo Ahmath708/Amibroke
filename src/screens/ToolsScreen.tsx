@@ -72,19 +72,9 @@ export default function ToolsScreen({ navigation }: Props) {
         const monthlyIncome = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
         (navigation.navigate as any)('DebtPayoff', { debts, monthlyIncome });
       } else {
-        // 90-Day Action Plan. If an active plan exists, open it directly — `active_plans` IS the
-        // cache, so we don't regenerate (or re-pay). Otherwise generate a preview to review + commit.
-        const { getActivePlan } = await import('@/services/activePlan');
-        const active = await getActivePlan(user!.id);
-        if (active) {
-          (navigation.navigate as any)('ActionPlan', { analysis, analysisId: latestId });
-        } else {
-          const { fetchOrGenerateActionPlan } = await import('@/services/ai');
-          const plan = await fetchOrGenerateActionPlan(analysis, 'savage', latestId);
-          (navigation.navigate as any)('ActionPlan', {
-            steps: plan?.steps ?? [], analysis, overallMessage: plan?.overallMessage, analysisId: latestId,
-          });
-        }
+        // Navigate IMMEDIATELY — ActionPlan fetches the active plan and handles create/refresh with
+        // its own loading state. No blocking generation here (that caused the open stall).
+        (navigation.navigate as any)('ActionPlan', { analysis, analysisId: latestId });
       }
     } catch {
       // ignore
