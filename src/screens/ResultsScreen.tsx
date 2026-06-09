@@ -142,14 +142,19 @@ export default function ResultsScreen({ navigation, route }: Props) {
       setAnalysisId(viewingId);
       return;
     }
-    // New roast → save it + confident-merge into the unified snapshot (Phase 2a). Non-fatal.
+    // New roast → save it; only merge the snapshot once it actually persisted (atomicity — so the
+    // score never moves without a roast on record). Surface the real DB error (no Metro console here).
     saveAnalysis(user.id, userInput, analysis)
-      .then((id) => {
-        setAnalysisId(id);
-        if (!id) setSaveFailed(true);
+      .then((res) => {
+        setAnalysisId(res.id);
+        if (!res.id) {
+          setSaveFailed(true);
+          Alert.alert("Couldn't save this roast", res.error ?? "Unknown error. Your score won't update until this saves.");
+          return;
+        }
+        updateSnapshotFromAnalysis(user.id, analysis).catch((e) => console.warn('[snapshot] roast merge failed:', e));
       })
-      .catch(() => setSaveFailed(true));
-    updateSnapshotFromAnalysis(user.id, analysis).catch((e) => console.warn('[snapshot] roast merge failed:', e));
+      .catch((e) => { setSaveFailed(true); Alert.alert("Couldn't save this roast", String(e)); });
   }, [user, userInput, analysis, viewingId]);
 
   const handleShareToFeed = async () => {

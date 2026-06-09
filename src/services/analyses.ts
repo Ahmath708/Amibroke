@@ -4,10 +4,13 @@ import { FinalAnalysis } from '@shared/types';
 import { TABLES, HISTORY_COLUMNS } from './tables';
 import { AnalysisHistoryItem } from '@/types';
 import { USE_AI_MOCKS } from '@/config/ai';
-import { withClient } from './supabaseClient';
+import { withClient, getSupabase } from './supabaseClient';
 
-export async function saveAnalysis(userId: string, input: string, analysis: FinalAnalysis): Promise<string | null> {
-  return withClient('save analysis', null, async (client) => {
+// Returns { id, error } so callers can surface the REAL DB error (no Metro console available).
+export async function saveAnalysis(userId: string, input: string, analysis: FinalAnalysis): Promise<{ id: string | null; error: string | null }> {
+  const client = getSupabase();
+  if (!client) return { id: null, error: 'No Supabase client (not signed in?).' };
+  try {
     const { data, error } = await (client as any).from(TABLES.analyses).insert({
       user_id: userId,
       input_text: input,
@@ -37,9 +40,15 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
       emotional_status: analysis.emotionalStatus,
       mentioned_spending: analysis.mentionedSpending,
     }).select('id').single();
-    if (error) throw error;
-    return data.id;
-  });
+    if (error) {
+      console.warn('[db] save analysis failed:', error);
+      return { id: null, error: `${(error as any).code ?? ''} ${(error as any).message ?? error}`.trim() };
+    }
+    return { id: data.id, error: null };
+  } catch (e: any) {
+    console.warn('[db] save analysis threw:', e);
+    return { id: null, error: e?.message ?? String(e) };
+  }
 }
 
 export async function getAnalysisHistory(userId: string): Promise<AnalysisHistoryItem[]> {
