@@ -7,6 +7,7 @@ import {
   assertSavingsInvariant,
   assertNoForbiddenStrings,
   assertConfidenceDistribution,
+  assertRoastGrounded,
 } from './assertions';
 
 function extractScore(responseBody: unknown): number | undefined {
@@ -40,6 +41,11 @@ runSuite({
     if (expects.minHighConfidence !== undefined) {
       const distCheck = assertConfidenceDistribution(responseBody, { high: expects.minHighConfidence as number });
       if (!distCheck.pass) return distCheck;
+    }
+
+    if (expects.roastGrounded) {
+      const groundedCheck = assertRoastGrounded(responseBody);
+      if (!groundedCheck.pass) return groundedCheck;
     }
 
     return { pass: true, message: 'All assertions passed' };

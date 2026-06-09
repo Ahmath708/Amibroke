@@ -42,6 +42,20 @@ export const FIXTURES: Fixture[] = [
     },
     expects: { scoreMin: 0, scoreMax: 100, forbiddenStrings: FORBIDDEN, maxLowConfidence: 10, savingsInvariant: true },
   },
+  {
+    // The exact case that fabricated "4 streaming services… property in NY… a breakdown in 2022":
+    // vague, number-free, with owning/NY context the model dramatized. roastGrounded tripwires on
+    // any year / brand / $ figure leaking into the shareable roast.
+    id: 'vague_subscriptions_ny',
+    group: 'A-vague',
+    label: 'Vague + owning/NY: "my subscriptions are out of control" (groundedness/privacy tripwire)',
+    input: {
+      freeText: 'my subscriptions are out of control',
+      userContext: { state: 'NY', ageBracket: '30-34', incomeBracket: '6k_8k', livingSituation: 'owning', employmentStatus: 'full_time', debtBracket: 'under_5k', liquidSavingsBracket: '5k_15k' },
+      tone: 'savage',
+    },
+    expects: { scoreMin: 0, scoreMax: 100, forbiddenStrings: FORBIDDEN, maxLowConfidence: 10, savingsInvariant: true, roastGrounded: true },
+  },
 
   // ─── Group B: Partial inputs ───────────────────────────────
   {
