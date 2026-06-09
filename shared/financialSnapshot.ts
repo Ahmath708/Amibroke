@@ -57,6 +57,20 @@ export interface FinancialSnapshot {
 const INPUT_FIELDS = ['monthlyIncome', 'monthlyExpenses', 'liquidSavings', 'debts'] as const;
 type InputField = (typeof INPUT_FIELDS)[number];
 
+// Timing-safe "is the latest roast stale?" — true if any roast-INPUT field was changed by a
+// NON-roast source (check-in, manual edit, …) AFTER the given roast's created_at. The roast's own
+// confident-merge (source: 'roast') is excluded, and pre-roast changes fall before the timestamp —
+// so it never false-positives right after a roast, yet catches any later data change (not just
+// check-ins). Returns false for an unparseable timestamp.
+export function isSnapshotStaleSince(snap: FinancialSnapshot, roastCreatedAt: string): boolean {
+  const since = new Date(roastCreatedAt).getTime();
+  if (Number.isNaN(since)) return false;
+  return INPUT_FIELDS.some((k) => {
+    const f = snap[k] as ProvField<unknown> | undefined;
+    return f != null && f.source !== 'roast' && new Date(f.updatedAt).getTime() > since;
+  });
+}
+
 // An incoming write — only the fields the writer has signal for.
 export interface SnapshotPatch {
   monthlyIncome?: { value: number; confidence: Confidence };

@@ -18,9 +18,8 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getProfile } from '@/services/profile';
 import { getSnapshot, buildRescoreInput } from '@/services/financialSnapshot';
-import type { FinancialSnapshot } from '@shared/financialSnapshot';
+import { isSnapshotStaleSince, type FinancialSnapshot } from '@shared/financialSnapshot';
 import { getActivePlan, shouldRevisePlan, type ActivePlan } from '@/services/activePlan';
-import { useCheckinStatus } from '@/hooks/useCheckinStatus';
 import StaleBadge from '@/components/StaleBadge';
 import { FEATURES } from '@/config/features';
 import { capitalize } from '@/utils/string';
@@ -58,7 +57,6 @@ export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { tier, canUseApp } = useSubscription();
-  const { lastCheckIn } = useCheckinStatus();
 
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [snapshot, setSnapshot] = useState<FinancialSnapshot | null>(null);
@@ -217,9 +215,10 @@ export default function DashboardScreen({ navigation }: Props) {
   };
   const anyEst = est.income || est.savings;
 
-  // Stale-state: the score is stale when you've checked in since your last roast; the plan reuses
-  // the existing value-aware shouldRevisePlan (gated to a material change).
-  const scoreStale = !!lastCheckIn && new Date(lastCheckIn.created_at) > new Date(latest.created_at);
+  // Stale-state: the score is stale when ANY roast-input field changed (check-in, edit, …) since the
+  // latest roast — timing-safe via per-field provenance (the roast's own merge is excluded). The plan
+  // reuses the existing value-aware shouldRevisePlan (gated to a material change).
+  const scoreStale = !!latest && !!snapshot && isSnapshotStaleSince(snapshot, latest.created_at);
   const revSnap = snapshot
     ? { debtTotal: snapshot.debtTotal, liquidSavings: snapshot.liquidSavings?.value ?? null, monthlyIncome: snapshot.monthlyIncome?.value ?? null, score: snapshot.score }
     : null;

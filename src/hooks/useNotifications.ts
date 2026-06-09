@@ -5,6 +5,7 @@ import { useCheckinStatus } from '@/hooks/useCheckinStatus';
 import { getAnalysisHistory } from '@/services/analyses';
 import { getActivePlan, shouldRevisePlan } from '@/services/activePlan';
 import { getSnapshot } from '@/services/financialSnapshot';
+import { isSnapshotStaleSince } from '@shared/financialSnapshot';
 
 export type NotifType = 'score_stale' | 'plan_stale' | 'checkin_due';
 export interface AppNotification {
@@ -36,8 +37,8 @@ export function useNotifications(): { items: AppNotification[]; loading: boolean
         ]);
         const next: AppNotification[] = [];
         const latest = history[0];
-        if (lastCheckIn && latest && new Date(lastCheckIn.created_at) > new Date(latest.created_at)) {
-          next.push({ type: 'score_stale', emoji: '📊', title: 'Your score may be out of date', body: "You've checked in since your last roast — refresh it." });
+        if (latest && snap && isSnapshotStaleSince(snap, latest.created_at)) {
+          next.push({ type: 'score_stale', emoji: '📊', title: 'Your score may be out of date', body: 'Your numbers changed since your last roast — refresh it.' });
         }
         if (plan && snap) {
           const revSnap = { debtTotal: snap.debtTotal, liquidSavings: snap.liquidSavings?.value ?? null, monthlyIncome: snap.monthlyIncome?.value ?? null, score: snap.score };
