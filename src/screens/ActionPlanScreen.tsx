@@ -313,8 +313,9 @@ export default function ActionPlanScreen({ route }: Props) {
         ) : (
           /* Preview — not yet committed */
           <GlassCard style={styles.progressCard}>
+            <View style={styles.previewBadge}><Text style={styles.previewBadgeText}>PREVIEW</Text></View>
             <Text style={styles.progressTitle}>Your 90-day action plan</Text>
-            <Text style={styles.progressSub}>Commit to it and track your progress over the next 90 days.</Text>
+            <Text style={styles.progressSub}>A preview — nothing's tracked until you start it. Then check off steps over the next 90 days.</Text>
             <NeonButton
               label={committing ? 'Starting…' : 'Start this plan'}
               onPress={commit}
@@ -413,6 +414,8 @@ const styles = StyleSheet.create({
   block: { marginBottom: Spacing.xl },
   // Preview card (no active plan)
   progressCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.sm },
+  previewBadge: { alignSelf: 'flex-start', backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
+  previewBadgeText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.accent, letterSpacing: 0.6 },
   progressTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   progressSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
 

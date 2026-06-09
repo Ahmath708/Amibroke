@@ -54,13 +54,29 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map(mapAnalysisRow);
+    const planIds = await planSourceIds(client, userId);
+    return (data || []).map((r: any) => mapAnalysisRow(r, planIds));
   });
 }
 
 export interface AnalysesPage { items: AnalysisHistoryItem[]; nextCursor: string | null; hasMore: boolean; }
 
-function mapAnalysisRow(row: any): AnalysisHistoryItem {
+// Which analyses have a plan? The plan lives in `active_plans` now (keyed by source_analysis_id),
+// not on the roast row. Resilient: any error → empty Set (the "has plan" badge just won't show).
+async function planSourceIds(client: any, userId: string): Promise<Set<string>> {
+  try {
+    const { data } = await client
+      .from(TABLES.active_plans)
+      .select('source_analysis_id')
+      .eq('user_id', userId)
+      .neq('status', 'abandoned');
+    return new Set((data || []).map((r: any) => r.source_analysis_id).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+function mapAnalysisRow(row: any, planIds: Set<string> = new Set()): AnalysisHistoryItem {
   return {
     id: row.id,
     score: row.score,
@@ -68,7 +84,7 @@ function mapAnalysisRow(row: any): AnalysisHistoryItem {
     summary: row.summary,
     created_at: row.created_at,
     emotional_status: row.emotional_status,
-    has_action_plan: !!(row.action_plan && (Array.isArray(row.action_plan) ? row.action_plan.length > 0 : true)),
+    has_action_plan: planIds.has(row.id),
     has_captions: !!row.share_captions,
   };
 }
@@ -100,7 +116,8 @@ export async function getAnalysesPage(
     if (error) throw error;
     const rows = data || [];
     const hasMore = rows.length > limit;
-    const items = (hasMore ? rows.slice(0, limit) : rows).map(mapAnalysisRow);
+    const planIds = await planSourceIds(client, userId);
+    const items = (hasMore ? rows.slice(0, limit) : rows).map((r: any) => mapAnalysisRow(r, planIds));
     return { items, nextCursor: items.length ? items[items.length - 1].created_at : null, hasMore };
   });
 }

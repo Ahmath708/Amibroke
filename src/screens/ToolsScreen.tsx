@@ -72,17 +72,19 @@ export default function ToolsScreen({ navigation }: Props) {
         const monthlyIncome = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
         (navigation.navigate as any)('DebtPayoff', { debts, monthlyIncome });
       } else {
-        // 90-Day Action Plan → open the latest analysis's plan DIRECTLY (the cached
-        // AI plan, or generate it), then push ActionPlan — not the roast. tone
-        // defaults to 'savage'; it only matters if the plan isn't already cached.
-        const { fetchOrGenerateActionPlan } = await import('@/services/ai');
-        const plan = await fetchOrGenerateActionPlan(analysis, 'savage', latestId);
-        (navigation.navigate as any)('ActionPlan', {
-          steps: plan?.steps ?? [],
-          analysis,
-          overallMessage: plan?.overallMessage,
-          analysisId: latestId,
-        });
+        // 90-Day Action Plan. If an active plan exists, open it directly — `active_plans` IS the
+        // cache, so we don't regenerate (or re-pay). Otherwise generate a preview to review + commit.
+        const { getActivePlan } = await import('@/services/activePlan');
+        const active = await getActivePlan(user!.id);
+        if (active) {
+          (navigation.navigate as any)('ActionPlan', { analysis, analysisId: latestId });
+        } else {
+          const { fetchOrGenerateActionPlan } = await import('@/services/ai');
+          const plan = await fetchOrGenerateActionPlan(analysis, 'savage', latestId);
+          (navigation.navigate as any)('ActionPlan', {
+            steps: plan?.steps ?? [], analysis, overallMessage: plan?.overallMessage, analysisId: latestId,
+          });
+        }
       }
     } catch {
       // ignore

@@ -21,4 +21,4 @@ export const BUCKETS = {
 
 /** Columns for the analyses/history list — used by both getAnalysisHistory and
  *  getAnalysesPage (was duplicated verbatim). */
-export const HISTORY_COLUMNS = 'id, score, score_label, summary, created_at, emotional_status, action_plan, share_captions';
+export const HISTORY_COLUMNS = 'id, score, score_label, summary, created_at, emotional_status, share_captions';

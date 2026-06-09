@@ -149,10 +149,10 @@ export function fetchOrGenerateActionPlan(
   tone: RoastTone,
   analysisId?: string,
 ): Promise<ActionPlanResponse | null> {
-  if (!analysisId) return runActionPlan(analysis, tone, analysisId);
+  if (!analysisId) return runActionPlan(analysis, tone);
   const existing = actionPlanInFlight.get(analysisId);
   if (existing) return existing;
-  const p = runActionPlan(analysis, tone, analysisId).finally(() => actionPlanInFlight.delete(analysisId));
+  const p = runActionPlan(analysis, tone).finally(() => actionPlanInFlight.delete(analysisId));
   actionPlanInFlight.set(analysisId, p);
   return p;
 }
@@ -194,7 +194,6 @@ export async function revisePlanPatch(
 async function runActionPlan(
   analysis: FinalAnalysis,
   tone: RoastTone,
-  analysisId?: string,
 ): Promise<ActionPlanResponse | null> {
   if (USE_AI_MOCKS) {
     const { SAMPLE_ACTION_PLAN } = require('../__fixtures__/sampleAnalysis');
@@ -205,20 +204,9 @@ async function runActionPlan(
   if (!client) return null;
 
   try {
-    if (analysisId) {
-      const { data: row } = await (client as any)
-        .from(TABLES.analyses)
-        .select('action_plan')
-        .eq('id', analysisId)
-        .single();
-
-      const plan = row?.action_plan;
-      if (plan && typeof plan === 'object' && plan.overallMessage && Array.isArray(plan.steps) && plan.steps.length > 0) {
-        const parsed = ActionPlanResponseSchema.safeParse(plan);
-        if (parsed.success) return parsed.data;
-      }
-    }
-
+    // No analyses.action_plan cache — the plan lives in active_plans once committed (the post-commit
+    // cache; callers check getActivePlan before generating). A pre-commit preview re-generates if
+    // re-opened, which is fine + rare; in-flight dedupe (fetchOrGenerateActionPlan) covers concurrent.
     const { data, error } = await client.functions.invoke('action-plan', {
       body: { analysis, tone },
     });
@@ -232,13 +220,6 @@ async function runActionPlan(
     if (!parsed.success) {
       console.warn('[ai] fetchOrGenerateActionPlan malformed response');
       return null;
-    }
-
-    if (analysisId) {
-      await (client as any)
-        .from(TABLES.analyses)
-        .update({ action_plan: parsed.data })
-        .eq('id', analysisId);
     }
 
     return parsed.data;
