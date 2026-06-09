@@ -139,7 +139,7 @@ export type RootStackParamList = {
   Analyze: undefined;           // the "New roast" input (also the first-run Home)
   History: undefined;           // pushed from the dashboard trend / "View all"
   Processing: { userInput: string; tone?: RoastTone; userContext?: Record<string, unknown> };
-  Results: { analysis: FinancialAnalysis; userInput: string };
+  Results: { analysis: FinancialAnalysis; userInput: string; analysisId?: string }; // analysisId set when VIEWING a saved roast → read-only (no re-save/merge)
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
   ActionPlan: { steps?: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string };

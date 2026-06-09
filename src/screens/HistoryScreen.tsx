@@ -92,7 +92,7 @@ export default function HistoryScreen() {
     try {
       const analysis = await getAnalysisById(id);
       if (analysis) {
-        navigation.navigate('Results', { analysis, userInput: '' });
+        navigation.navigate('Results', { analysis, userInput: '', analysisId: id });
       }
     } catch {
       // silently ignore

@@ -109,7 +109,7 @@ export default function DashboardScreen({ navigation }: Props) {
     setOpening(true);
     try {
       const analysis = await getAnalysisById(id);
-      if (analysis) (navigation.navigate as any)('Results', { analysis, userInput: '' });
+      if (analysis) (navigation.navigate as any)('Results', { analysis, userInput: '', analysisId: id });
     } catch {
       // ignore
     } finally {

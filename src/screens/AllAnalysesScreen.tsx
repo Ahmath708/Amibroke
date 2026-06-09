@@ -56,7 +56,7 @@ export default function AllAnalysesScreen() {
     setRowLoading(id);
     try {
       const analysis = await getAnalysisById(id);
-      if (analysis) navigation.navigate('Results', { analysis, userInput: '' });
+      if (analysis) navigation.navigate('Results', { analysis, userInput: '', analysisId: id });
     } catch {
       // ignore
     } finally {

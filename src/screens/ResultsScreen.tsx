@@ -102,6 +102,9 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { analysis, userInput } = route.params;
   const tone = (route.params as any).tone || 'savage';
+  // Set when VIEWING a saved roast (History/AllAnalyses/Dashboard) → this screen is read-only:
+  // no re-save (no duplicate row) and no snapshot re-merge (no clobbering newer data).
+  const viewingId = (route.params as any).analysisId as string | undefined;
   const { user } = useAuth();
   const fadeIn = useRef(new Animated.Value(0)).current;
   const reduce = useReducedMotion();
@@ -133,17 +136,21 @@ export default function ResultsScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      saveAnalysis(user.id, userInput, analysis)
-        .then((id) => {
-          setAnalysisId(id);
-          if (!id) setSaveFailed(true);
-        })
-        .catch(() => setSaveFailed(true));
-      // Confident-merge this roast into the unified snapshot (Phase 2a). Non-fatal.
-      updateSnapshotFromAnalysis(user.id, analysis).catch((e) => console.warn('[snapshot] roast merge failed:', e));
+    if (!user) return;
+    if (viewingId) {
+      // Read-only view of an existing roast — adopt its id (so Share works), persist nothing.
+      setAnalysisId(viewingId);
+      return;
     }
-  }, [user, userInput, analysis]);
+    // New roast → save it + confident-merge into the unified snapshot (Phase 2a). Non-fatal.
+    saveAnalysis(user.id, userInput, analysis)
+      .then((id) => {
+        setAnalysisId(id);
+        if (!id) setSaveFailed(true);
+      })
+      .catch(() => setSaveFailed(true));
+    updateSnapshotFromAnalysis(user.id, analysis).catch((e) => console.warn('[snapshot] roast merge failed:', e));
+  }, [user, userInput, analysis, viewingId]);
 
   const handleShareToFeed = async () => {
     if (!user || !analysisId) return;
