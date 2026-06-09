@@ -227,7 +227,7 @@ export default function ProfileScreen({ navigation }: Props) {
 {user && (
   <View style={styles.statsRow}>
     {[
-      { label: 'Analyses', value: String(analysisCount) },
+      { label: 'Roasts', value: String(analysisCount) },
       { label: 'Avg Score', value: avgScore != null ? String(avgScore) : '—' },
       { label: 'Best Score', value: bestScore != null ? String(bestScore) : '—' },
     ].map((s, i, arr) => (

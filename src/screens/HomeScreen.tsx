@@ -290,7 +290,7 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
 
           {/* CTA — directly under the input for immediate access */}
           <NeonButton
-            label="Analyze My Finances"
+            label="Roast My Finances"
             onPress={handleAnalyze}
             disabled={!input.trim()}
             style={styles.cta}

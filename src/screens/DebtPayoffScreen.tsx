@@ -91,7 +91,7 @@ export default function DebtPayoffScreen() {
           <EmptyState
             emoji="🎉"
             title="No debts to plan"
-            body="Your latest analysis didn’t list any debts. When you’ve got debt to tackle, your payoff plan shows up here."
+            body="Your latest roast didn’t list any debts. When you’ve got debt to tackle, your payoff plan shows up here."
           />
         </View>
       </View>

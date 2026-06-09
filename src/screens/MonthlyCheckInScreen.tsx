@@ -307,10 +307,10 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
           <View style={{ paddingTop: Spacing.xxl }}>
             <EmptyState
               emoji="📈"
-              title="Start with an analysis"
-              body="Run your first analysis, then pick the numbers you want to track here every month."
+              title="Start with a roast"
+              body="Run your first roast, then pick the numbers you want to track here every month."
             />
-            <NeonButton label="Analyze my finances" onPress={() => navigation.navigate('Analyze')} style={{ marginTop: Spacing.lg }} />
+            <NeonButton label="Roast my finances" onPress={() => navigation.navigate('Analyze')} style={{ marginTop: Spacing.lg }} />
           </View>
         )}
 

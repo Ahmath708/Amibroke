@@ -56,7 +56,7 @@ export default function ToolsScreen({ navigation }: Props) {
       const history = await getAnalysisHistory(user.id);
       const latestId = history?.[0]?.id ?? null;
       if (!latestId) {
-        Alert.alert('No analysis yet', 'Run an analysis first, then your tools open right from it.');
+        Alert.alert('No roast yet', 'Run a roast first, then your tools open right from it.');
         return;
       }
       const analysis: any = await getAnalysisById(latestId);

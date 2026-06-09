@@ -95,7 +95,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
 
     } catch (e) {
       clearTimeout(timeout);
-      let msg = e instanceof Error ? e.message : 'Something went wrong while analyzing. Please try again.';
+      let msg = e instanceof Error ? e.message : 'Something went wrong while roasting. Please try again.';
       console.error('[Processing] Analysis error:', e);
 
       if (e instanceof Error && e.name === 'AbortError') {
@@ -204,7 +204,7 @@ export default function ProcessingScreen({ navigation, route }: Props) {
           <Text style={styles.errorText}>{error}</Text>
         ) : (
           <Animated.Text style={[styles.stepText, { opacity: stepOpacity }]}>
-            {done ? 'Analysis complete!' : STEPS[stepIndex].label}
+            {done ? 'Roast complete!' : STEPS[stepIndex].label}
           </Animated.Text>
         )}
 

@@ -480,7 +480,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
       <Toast
         visible={saveFailed}
         emoji="⚠️"
-        message="Couldn't save this analysis — sharing and your plan may be unavailable."
+        message="Couldn't save this roast — sharing and your plan may be unavailable."
         duration={3500}
         onHide={() => setSaveFailed(false)}
       />

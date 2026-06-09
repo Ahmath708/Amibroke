@@ -243,13 +243,13 @@ export default function SettingsScreen({ navigation }: Props) {
       title: 'Danger Zone',
       rows: [
         { type: 'action', label: 'Sign Out', icon: 'log-out-outline', destructive: true, onPress: () => signOut() },
-        { type: 'action', label: 'Clear Analysis History', icon: 'trash-outline', destructive: true, onPress: () => {
+        { type: 'action', label: 'Clear Roast History', icon: 'trash-outline', destructive: true, onPress: () => {
           if (!user) return;
-          Alert.alert('Clear History?', 'This permanently deletes all your analyses. This cannot be undone.', [
+          Alert.alert('Clear History?', 'This permanently deletes all your roasts. This cannot be undone.', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Clear', style: 'destructive', onPress: async () => {
               const ok = await deleteAllAnalyses(user.id);
-              Alert.alert(ok ? 'History Cleared' : 'Failed', ok ? 'All your analyses have been deleted.' : 'Could not clear your history.');
+              Alert.alert(ok ? 'History Cleared' : 'Failed', ok ? 'All your roasts have been deleted.' : 'Could not clear your history.');
             } },
           ]);
         } },

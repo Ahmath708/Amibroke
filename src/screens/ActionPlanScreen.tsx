@@ -41,7 +41,7 @@ const DEFAULT_STEPS: ActionStep[] = [
   { week: '5', title: 'Credit Card Minimum+', description: 'Pay minimums on all cards, plus $50 extra on the highest-rate card.', impact: 'Reduces interest paid', category: 'debt', confidence: 'medium' },
   { week: '6', title: 'Side Income Session', description: 'Dedicate 4 hours this week to one income-generating activity.', impact: '+$50–200 this week', category: 'income', confidence: 'medium' },
   { week: '7', title: 'Negotiate Bills', description: 'Call your internet, phone, and insurance providers and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium' },
-  { week: '8', title: '30-Day Review', description: 'Run a new analysis and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', confidence: 'high' },
+  { week: '8', title: '30-Day Review', description: 'Run a new roast and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', confidence: 'high' },
 ];
 
 // Category → the color of its slim left stripe (replaces the old exposed text chips).
@@ -98,7 +98,7 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
   steps.push({
     week: String(weekNum++),
     title: 'Monthly Check-In',
-    description: 'Run a new analysis in 30 days and compare your score. Track your progress.',
+    description: 'Run a new roast in 30 days and compare your score. Track your progress.',
     impact: 'Accountability and motivation',
     category: 'mindset',
     confidence: 'medium',

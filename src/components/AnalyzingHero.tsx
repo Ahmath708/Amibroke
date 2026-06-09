@@ -207,7 +207,7 @@ export default function AnalyzingHero() {
       <View style={styles.right}>
         <Text style={styles.status} numberOfLines={1}>
           {analyzing ? (
-            <Text style={styles.analyzing}>Analyzing…</Text>
+            <Text style={styles.analyzing}>Roasting…</Text>
           ) : (
             <Text style={[styles.statusValue, { color: band.color }]}>{band.label}</Text>
           )}
