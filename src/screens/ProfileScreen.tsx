@@ -28,6 +28,8 @@ import { manageSubscriptions } from '@/services/purchases';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
+import { UserIcon } from 'react-native-heroicons/solid';
+import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
@@ -179,7 +181,7 @@ export default function ProfileScreen({ navigation }: Props) {
     <Animated.View style={[styles.container, animatedStyle]}>
       <ScreenBackground variant="profile" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Large title */}
@@ -192,7 +194,7 @@ export default function ProfileScreen({ navigation }: Props) {
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={[styles.avatarImage, uploadingAvatar && { opacity: 0.4 }]} />
               ) : (
-                <Text style={[styles.avatarEmoji, uploadingAvatar && { opacity: 0.4 }]}>💸</Text>
+                <UserIcon size={30} color={uploadingAvatar ? 'rgba(255,255,255,0.4)' : '#fff'} />
               )}
               {uploadingAvatar && (
                 <ActivityIndicator size="small" color="#fff" style={StyleSheet.absoluteFill} />
@@ -280,7 +282,7 @@ export default function ProfileScreen({ navigation }: Props) {
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
                   <View style={styles.menuRight}>
-                    {isPlan ? <TierPill tier={purchaseTier} /> : detail ? <Text style={styles.menuDetail}>{detail}</Text> : null}
+                    {isPlan ? <TierPill tier={purchaseTier} size="md" /> : detail ? <Text style={styles.menuDetail}>{detail}</Text> : null}
                     <Text style={styles.menuChevron}>›</Text>
                   </View>
                 </TouchableOpacity>
@@ -317,7 +319,6 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
   avatarImage: { width: 60, height: 60, borderRadius: 30 },
-  avatarEmoji: { fontSize: Typography.title2.fontSize },
   nameInput: {
     fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600',
     borderBottomWidth: 1, borderBottomColor: Colors.accent, paddingVertical: 0, minWidth: 120,
