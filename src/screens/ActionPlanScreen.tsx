@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import SectionLabel from '@/components/SectionLabel';
@@ -13,6 +13,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
 import AnimatedProgressRing from '@/components/AnimatedProgressRing';
+import JourneyLoading from '@/components/JourneyLoading';
 import { PressableScale, useReducedMotion } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
@@ -35,14 +36,14 @@ type Props = {
 };
 
 const DEFAULT_STEPS: ActionStep[] = [
-  { week: '1', title: 'Emergency Fund Start', description: 'Open a high-yield savings account and automate $25/week transfers.', impact: 'Builds safety net', category: 'savings', confidence: 'medium' },
-  { week: '2', title: 'Subscription Purge', description: 'Cancel all subscriptions you haven\'t used in the last 30 days. No mercy.', impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high' },
-  { week: '3', title: 'Meal Prep Sunday', description: 'Prep 5 weekday lunches each Sunday to cut eating-out spend by 60%.', impact: 'Saves $120–180/mo', category: 'savings', confidence: 'high' },
-  { week: '4', title: 'Automate Savings', description: 'Set up a recurring transfer on payday so savings happen before you can spend.', impact: 'Increases savings rate', category: 'savings', confidence: 'high' },
-  { week: '5', title: 'Credit Card Minimum+', description: 'Pay minimums on all cards, plus $50 extra on the highest-rate card.', impact: 'Reduces interest paid', category: 'debt', confidence: 'medium' },
-  { week: '6', title: 'Side Income Session', description: 'Dedicate 4 hours this week to one income-generating activity.', impact: '+$50–200 this week', category: 'income', confidence: 'medium' },
-  { week: '7', title: 'Negotiate Bills', description: 'Call your internet, phone, and insurance providers and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium' },
-  { week: '8', title: '30-Day Review', description: 'Run a new roast and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', confidence: 'high' },
+  { week: 'Week 1', title: 'Emergency Fund Start', description: 'Open a high-yield savings account and automate $25/week transfers.', impact: 'Builds safety net', category: 'savings', confidence: 'medium' },
+  { week: 'Week 2', title: 'Subscription Purge', description: 'Cancel all subscriptions you haven\'t used in the last 30 days. No mercy.', impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high' },
+  { week: 'Week 3', title: 'Meal Prep Sunday', description: 'Prep 5 weekday lunches each Sunday to cut eating-out spend by 60%.', impact: 'Saves $120–180/mo', category: 'savings', confidence: 'high' },
+  { week: 'Week 4', title: 'Automate Savings', description: 'Set up a recurring transfer on payday so savings happen before you can spend.', impact: 'Increases savings rate', category: 'savings', confidence: 'high' },
+  { week: 'Week 5', title: 'Credit Card Minimum+', description: 'Pay minimums on all cards, plus $50 extra on the highest-rate card.', impact: 'Reduces interest paid', category: 'debt', confidence: 'medium' },
+  { week: 'Week 6', title: 'Side Income Session', description: 'Dedicate 4 hours this week to one income-generating activity.', impact: '+$50–200 this week', category: 'income', confidence: 'medium' },
+  { week: 'Week 7', title: 'Negotiate Bills', description: 'Call your internet, phone, and insurance providers and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium' },
+  { week: 'Week 8', title: '30-Day Review', description: 'Run a new roast and compare to your starting score. Celebrate progress.', impact: 'Accountability boost', category: 'mindset', confidence: 'high' },
 ];
 
 // Category → the color of its slim left stripe (replaces the old exposed text chips).
@@ -52,7 +53,7 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
 
   if (analysis.emergencyFundMonths < 3) {
     steps.push({
-      week: String(weekNum++),
+      week: `Week ${weekNum++}`,
       title: 'Build Emergency Fund',
       description: `You have ${analysis.emergencyFundMonths.toFixed(1)} months of emergency fund. Aim for at least 3 months. Start by setting aside $50/week.`,
       impact: 'Increases financial safety net',
@@ -63,7 +64,7 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
 
   if (analysis.savingsRate < 0.10) {
     steps.push({
-      week: String(weekNum++),
+      week: `Week ${weekNum++}`,
       title: 'Boost Savings Rate',
       description: `Your savings rate is ${(analysis.savingsRate * 100).toFixed(0)}%. Try to get to at least 10% by cutting discretionary spending.`,
       impact: `Could save ~$${Math.round(analysis.monthlyIncome * 0.1 - analysis.monthlySavings)}/mo`,
@@ -76,7 +77,7 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
     const debts = analysis.debts ?? [];
     const highestRateDebt = debts.length > 0 ? [...debts].sort((a: any, b: any) => b.interestRate - a.interestRate)[0] : null;
     steps.push({
-      week: String(weekNum++),
+      week: `Week ${weekNum++}`,
       title: 'Attack Highest-Interest Debt',
       description: highestRateDebt
         ? `Focus on ${highestRateDebt.name} at ${(highestRateDebt.interestRate * 100).toFixed(1)}% APR. Pay minimums on everything else, then put extra toward this.`
@@ -88,7 +89,7 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
   }
 
   steps.push({
-    week: String(weekNum++),
+    week: `Week ${weekNum++}`,
     title: 'Automate Your Finances',
     description: 'Set up automatic transfers for savings, bill payments, and debt payments. Remove the friction.',
     impact: 'Prevents missed payments and builds habits',
@@ -97,7 +98,7 @@ function generatePersonalizedSteps(analysis: any): ActionStep[] {
   });
 
   steps.push({
-    week: String(weekNum++),
+    week: `Week ${weekNum++}`,
     title: 'Monthly Check-In',
     description: 'Run a new roast in 30 days and compare your score. Track your progress.',
     impact: 'Accountability and motivation',
@@ -274,9 +275,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
       <Animated.View style={[styles.container, animatedStyle]}>
         <ScreenBackground variant="actionPlan" />
         <View style={styles.buildingWrap}>
-          <ActivityIndicator size="large" color={Colors.accent} />
-          <Text style={styles.buildingTitle}>Building your plan…</Text>
-          <Text style={styles.buildingSub}>Turning your numbers into a 90-day game plan.</Text>
+          <JourneyLoading />
         </View>
       </Animated.View>
     );
@@ -468,9 +467,7 @@ const styles = StyleSheet.create({
   // "Create my plan" card (no active plan)
   progressCard: { padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.sm },
   // Shared "Building your plan…" loading view (Create + Refresh)
-  buildingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl },
-  buildingTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.sm },
-  buildingSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
+  buildingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   progressTitle: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
   progressSub: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
 

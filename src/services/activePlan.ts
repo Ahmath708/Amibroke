@@ -113,8 +113,26 @@ function metricsFromAnalysis(a: FinalAnalysis): PlanStartMetrics {
 }
 
 // ─── CRUD ───────────────────────────────────────────────────────────────────
-// Dev-only in-memory store (resets on reload) so the flow works without the table.
-let mockPlan: ActivePlan | null = null;
+// Dev-only in-memory store (resets on reload) so the flow works without the table. Seeded with a
+// sample ACTIVE plan so mock mode shows an existing tracked plan (not the "Create my plan" CTA).
+let mockPlan: ActivePlan | null = {
+  id: 'mock-active-plan',
+  source_analysis_id: 'mock-1',
+  started_at: '2026-06-01T00:00:00.000Z',
+  horizon_days: 90,
+  status: 'active',
+  version: 1,
+  overall_message: 'Three months to turn the leaks into a cushion — small, repeatable wins, not heroics.',
+  steps: [
+    { id: 's0', week: 'Week 1', title: 'Subscription purge', description: "Cancel every subscription you haven't used in 30 days. No mercy.", impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-06-03T00:00:00.000Z' },
+    { id: 's1', week: 'Week 2', title: 'Automate savings', description: 'Set a recurring transfer on payday so savings happen before you can spend.', impact: 'Builds the cushion', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-06-08T00:00:00.000Z' },
+    { id: 's2', week: 'Weeks 3-4', title: 'Credit card minimum+', description: 'Pay minimums on all cards plus $50 extra on the highest-rate one.', impact: 'Cuts interest', category: 'debt', confidence: 'medium', status: 'pending', completed_at: null },
+    { id: 's3', week: 'Weeks 5-8', title: 'Negotiate a bill', description: 'Call your internet, phone, or insurance and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium', status: 'pending', completed_at: null },
+    { id: 's4', week: 'Weeks 9-12', title: '30-day review', description: 'Run a new roast and compare to your starting score.', impact: 'Accountability boost', category: 'mindset', confidence: 'high', status: 'pending', completed_at: null },
+  ],
+  start_metrics: { debtTotal: 7200, liquidSavings: 0, monthlyIncome: 4800, monthlySavings: -150, score: 37 },
+  synced_metrics: { debtTotal: 7200, liquidSavings: 0, monthlyIncome: 4800, monthlySavings: -150, score: 37 },
+};
 
 export async function getActivePlan(userId: string): Promise<ActivePlan | null> {
   if (USE_AI_MOCKS) return mockPlan;
