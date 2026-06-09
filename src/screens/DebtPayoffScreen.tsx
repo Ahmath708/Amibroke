@@ -12,7 +12,7 @@ import { formatCurrency as fmt } from '@/utils/format';
 import GlassCard from '@/components/GlassCard';
 import SeverityPill from '@/components/SeverityPill';
 import SelectableChip from '@/components/SelectableChip';
-import LoadingState from '@/components/LoadingState';
+import LoadingScreen from '@/components/LoadingScreen';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { useAuth } from '@/context/AuthContext';
@@ -38,6 +38,7 @@ export default function DebtPayoffScreen() {
   // Source of truth = the unified snapshot (no per-roast param hand-off). Estimated onboarding
   // placeholders are ignored (no APR/min → useless for payoff).
   const [debts, setDebts] = useState<DebtItem[]>([]);
+  const [debtsLoading, setDebtsLoading] = useState(true); // first snapshot fetch — gates the empty-state flash
   // Refetch on focus so debt balances reflect a check-in / edit (returning here shows fresh figures).
   useFocusEffect(useCallback(() => {
     if (!user) return;
@@ -51,7 +52,7 @@ export default function DebtPayoffScreen() {
           minimumPayment: x.min_payment ?? 0, urgency: 'medium',
         })));
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setDebtsLoading(false));
   }, [user]));
   const { authorized, loading } = useRequireEntitlement('deep_dive');
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
@@ -80,7 +81,7 @@ export default function DebtPayoffScreen() {
     if (user) updateProfile(user.id, { debt_strategy: s }).catch(() => {}); // sticky
   };
 
-  if (loading) return <LoadingState />;
+  if (loading || debtsLoading) return <LoadingScreen variant="debt" />;
   if (!authorized) return null;
 
   if (debts.length === 0) {
