@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation, ActivityIndicator,
 } from 'react-native';
@@ -13,6 +13,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
 import AnimatedProgressRing from '@/components/AnimatedProgressRing';
+import { PressableScale, useReducedMotion } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
@@ -116,17 +117,23 @@ function FocalCard({ step, isActive, onDone }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const [justDone, setJustDone] = useState(false);
+  const reduce = useReducedMotion();
+  const pop = useRef(new Animated.Value(1)).current;
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded((v) => !v);
   };
-  // Marking done shows a confirmation beat first (haptic + "done!"), THEN collapses to Done — so
-  // the completion is seen to register before the card slides away.
+  // Marking done shows a confirmation beat first (haptic + a checkmark that POPS in), THEN collapses
+  // to Done — so the completion is seen to register before the card slides away.
   const markDone = () => {
     if (justDone) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setJustDone(true);
+    if (!reduce) {
+      pop.setValue(0.5);
+      Animated.spring(pop, { toValue: 1, useNativeDriver: true, friction: 5, tension: 160 }).start();
+    }
     setTimeout(onDone, 650);
   };
   return (
@@ -145,7 +152,9 @@ function FocalCard({ step, isActive, onDone }: {
         </View>
       </TouchableOpacity>
       {isActive && (justDone ? (
-        <View style={styles.focalDoneRow}><Text style={styles.focalDoneText}>✓ Nice — done!</Text></View>
+        <Animated.View style={[styles.focalDoneRow, { transform: [{ scale: pop }] }]}>
+          <Text style={styles.focalDoneText}>✓ Nice — done!</Text>
+        </Animated.View>
       ) : (
         <NeonButton label="Mark this done" onPress={markDone} style={{ marginTop: Spacing.sm }} />
       ))}
@@ -153,7 +162,7 @@ function FocalCard({ step, isActive, onDone }: {
   );
 }
 
-export default function ActionPlanScreen({ route }: Props) {
+export default function ActionPlanScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const analysis = (route.params as any)?.analysis;
@@ -370,6 +379,14 @@ export default function ActionPlanScreen({ route }: Props) {
           </View>
         ))}
 
+        {/* Check-in bridge: once there's progress, nudge logging real numbers — checking off tracks
+            the plan; the SCORE moves at check-in. (Hidden once every step is done.) */}
+        {isActive && !!prog && prog.done > 0 && prog.done < prog.total && (
+          <PressableScale onPress={() => navigation.navigate('MonthlyCheckIn')} haptic="light" style={styles.checkinNudge}>
+            <Text style={styles.checkinNudgeText}>Made progress? Check in with your real numbers to move your score →</Text>
+          </PressableScale>
+        )}
+
         {/* Plan contents only exist once the plan is committed. Pre-commit = just the
             "Start this plan" action above. */}
         {isActive && bigPicture && (
@@ -484,6 +501,8 @@ const styles = StyleSheet.create({
   statusFresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
   statusFreshCheck: { fontSize: Typography.footnote.fontSize, color: Colors.success, fontWeight: '700' },
   statusFreshText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  checkinNudge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl },
+  checkinNudgeText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent, lineHeight: 18 },
 
   weekBadge: { backgroundColor: Colors.accentContainer, borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 5, minWidth: 34, alignItems: 'center', alignSelf: 'flex-start' },
   weekText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent },
