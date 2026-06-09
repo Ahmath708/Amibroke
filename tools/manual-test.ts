@@ -68,18 +68,20 @@ async function healthCheck(): Promise<void> {
   }
 }
 
-async function runInput(name: string, save: boolean): Promise<void> {
+async function runInput(name: string, save: boolean, yes: boolean): Promise<void> {
   const input = readInput(name);
 
   const counter = getCounterState();
   console.log(`\n📋 Manual test — ${name}`);
   console.log(`Counter currently at ${counter.count}/${40}.`);
   console.log(`About to make 1 API call to the analyze endpoint. Estimated cost: ~$0.04.`);
-  console.log(`Press Enter to continue or Ctrl-C to abort.`);
-
-  await new Promise<void>((resolve) => {
-    process.stdin.once('data', () => resolve());
-  });
+  // --yes skips the interactive confirm (for batch / parallel runs where cost was pre-approved).
+  if (!yes) {
+    console.log(`Press Enter to continue or Ctrl-C to abort.`);
+    await new Promise<void>((resolve) => {
+      process.stdin.once('data', () => resolve());
+    });
+  }
 
   recordApiCall(`manual-test:${name}`);
 
@@ -163,6 +165,7 @@ async function main(): Promise<void> {
   const inputIndex = args.indexOf('--input');
   const inputName = inputIndex >= 0 && inputIndex + 1 < args.length ? args[inputIndex + 1] : null;
   const saveMode = args.includes('--save');
+  const yesMode = args.includes('--yes');
 
   if (healthCheckMode) {
     if (inputName) {
@@ -171,7 +174,7 @@ async function main(): Promise<void> {
     }
     await healthCheck();
   } else if (inputName) {
-    await runInput(inputName, saveMode);
+    await runInput(inputName, saveMode, yesMode);
   } else {
     console.error('Specify --health-check or --input <name>.');
     usage();
