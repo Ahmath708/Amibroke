@@ -11,3 +11,6 @@ dist/
 ios/
 # Demo/marketing screenshots (kept local, not source)
 demo/
+
+# Local clips / scratch — reference videos dropped here for UI planning (not source)
+tmp/

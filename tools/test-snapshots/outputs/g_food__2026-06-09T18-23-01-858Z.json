@@ -1,0 +1,121 @@
+{
+  "inputFile": "g_food",
+  "timestamp": "2026-06-09T18:23:01.858Z",
+  "request": {
+    "freeText": "I spend way too much on food",
+    "userContext": {
+      "state": "CA",
+      "ageBracket": "25-29",
+      "incomeBracket": "4k_6k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "none",
+      "liquidSavingsBracket": "under_500"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 4500,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "monthlyExpenses": {
+      "value": 4050,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 250,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "debts": [],
+    "cfpb_responses": [
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 0,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      }
+    ],
+    "scoreModifier": -2,
+    "scoreModifierReason": "Near-zero liquid savings in a VHCOL state with a known overspending pattern leaves essentially no buffer for any disruption.",
+    "summary": "Full-time employed in CA with almost nothing saved and a self-admitted food spending problem — the income bracket is workable but the savings cushion is basically nonexistent. No debt is a real win, but one bad month away from going into the red. The food habit is the most actionable lever right now.",
+    "roast": "You're in California, employed, debt-free, and somehow your savings account has less in it than a Chipotle order for two. The food budget called — it said it's the main character and you're just the wallet.",
+    "insights": [
+      "With under $500 saved in a VHCOL state, you have essentially zero runway — one unexpected bill and you're in the red.",
+      "No debt is genuinely rare and valuable — don't let food spending slowly build a credit card balance to compensate.",
+      "Food overspending is often the most fixable leak: meal prepping or a weekly cap can recover $100–$200/mo fast.",
+      "At your income bracket, a 15% savings rate means setting aside ~$675/mo — right now you're nowhere near that.",
+      "The gap between your income and savings suggests most of your paycheck is gone before you notice it leaving."
+    ],
+    "topProblems": [
+      "Near-zero emergency fund in a high cost-of-living state — one surprise away from debt.",
+      "Self-identified food overspending draining money that should be building a cushion.",
+      "Savings rate is effectively 0%, leaving no progress toward financial security."
+    ],
+    "positiveBehaviors": [
+      "Zero debt is a massive structural advantage — you have no interest payments eating your income.",
+      "You're self-aware enough to name the problem, which is further than most people get."
+    ],
+    "topFix": {
+      "action": "Set a hard weekly food budget, track every purchase for 30 days, and redirect whatever you recover straight into a high-yield savings account until you hit one month of expenses.",
+      "monthlyImpact": 150
+    },
+    "emotionalStatus": {
+      "label": "Treading water, fork in hand",
+      "emoji": "🍜"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 450,
+    "savingsRate": 0.1,
+    "debtTotal": 0,
+    "monthlyDebtService": 0,
+    "emergencyFundMonths": 0.06172839506172839,
+    "debtToIncomeRatio": 0,
+    "score": 39,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.725,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 19839,
+    "model": "claude-sonnet-4-6"
+  }
+}

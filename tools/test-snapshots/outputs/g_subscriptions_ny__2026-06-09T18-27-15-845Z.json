@@ -1,0 +1,121 @@
+{
+  "inputFile": "g_subscriptions_ny",
+  "timestamp": "2026-06-09T18:27:15.845Z",
+  "request": {
+    "freeText": "my subscriptions are out of control",
+    "userContext": {
+      "state": "NY",
+      "ageBracket": "30-34",
+      "incomeBracket": "6k_10k",
+      "livingSituation": "owning",
+      "employmentStatus": "full_time",
+      "debtBracket": "under_5k",
+      "liquidSavingsBracket": "2k_10k"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 6500,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "monthlyExpenses": {
+      "value": 5200,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 6000,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "debts": [],
+    "cfpb_responses": [
+      {
+        "value": 3,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 3,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      }
+    ],
+    "scoreModifier": 0,
+    "scoreModifierReason": "Nothing in the input warrants a situational adjustment beyond what the scale captures.",
+    "summary": "You own your place in a high-cost state on a solid income, which is genuinely good — but you flagged subscriptions as out of control without naming a single one. That usually means recurring charges are quietly draining you on autopay, unwatched. The fix is visibility, not more income.",
+    "roast": "You typed \"subscriptions are out of control\" like that's a budget plan. You can't name one charge that's bleeding you — the call is coming from inside the bank app and you're just vibing.",
+    "insights": [
+      "You named the problem but gave zero numbers — the leak is real but invisible until you actually look.",
+      "Owning in a high-cost state means your fixed costs are already heavy; autopay creep stings harder here.",
+      "Small recurring charges feel harmless solo but stack into a real monthly drain you stop noticing.",
+      "The fact you can't quantify it is the whole problem — you can't fix what you won't measure.",
+      "On a solid income, this is a visibility issue, not a survival crisis — one audit session fixes it."
+    ],
+    "topProblems": [
+      "Recurring subscription spending you can't currently name or total.",
+      "No visibility into how much quietly leaves your account on autopay each month."
+    ],
+    "positiveBehaviors": [
+      "You own your home in a high-cost state — that's real long-term wealth building.",
+      "You flagged the pattern yourself — awareness is genuinely the hardest first step.",
+      "Low debt and some savings means you have breathing room to fix this without crisis mode."
+    ],
+    "topFix": {
+      "action": "Pull your last two bank and card statements, list every recurring charge, and cancel anything you forgot you were paying for — takes one hour.",
+      "monthlyImpact": 0
+    },
+    "emotionalStatus": {
+      "label": "Vaguely uneasy",
+      "emoji": "😵‍\ud83d"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 1300,
+    "savingsRate": 0.2,
+    "debtTotal": 0,
+    "monthlyDebtService": 0,
+    "emergencyFundMonths": 1.1538461538461537,
+    "debtToIncomeRatio": 0,
+    "score": 55,
+    "scoreLabel": "Surviving",
+    "scoreColor": "#FFB020",
+    "avgConfidence": 0.5,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 16902,
+    "model": "claude-sonnet-4-6"
+  }
+}

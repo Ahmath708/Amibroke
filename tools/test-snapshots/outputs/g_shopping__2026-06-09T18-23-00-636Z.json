@@ -1,0 +1,121 @@
+{
+  "inputFile": "g_shopping",
+  "timestamp": "2026-06-09T18:23:00.636Z",
+  "request": {
+    "freeText": "my online shopping is out of control",
+    "userContext": {
+      "state": "TX",
+      "ageBracket": "25-29",
+      "incomeBracket": "4k_6k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "under_5k",
+      "liquidSavingsBracket": "under_500"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 5000,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "monthlyExpenses": {
+      "value": 4400,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 250,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "debts": [],
+    "cfpb_responses": [
+      {
+        "value": 0,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      }
+    ],
+    "scoreModifier": -2,
+    "scoreModifierReason": "Near-zero liquid savings with an acknowledged impulse spending habit creates a fragile buffer that the CFPB scale doesn't fully penalize on its own.",
+    "summary": "You're a full-time earner in a medium cost-of-living state with almost nothing saved and an online shopping habit you already know is a problem. That combo — tiny cushion, leaky spending — means one bad month turns into debt fast. The income is workable; the behavior is the variable.",
+    "roast": "You've got less than a car payment in savings and your cart is basically a second rent. The \"add to cart\" button is doing more work than your 401k right now.",
+    "insights": [
+      "Near-zero savings means any unexpected expense — car repair, medical bill — goes straight to a credit card.",
+      "Online shopping leaks are dangerous precisely because they feel small per transaction but stack into hundreds monthly.",
+      "In a medium COL state like TX, your income bracket should leave room to save — the gap is behavioral, not structural.",
+      "Without a named budget for discretionary spending, 'out of control' stays out of control — visibility is the first fix.",
+      "Building even a $1,000 emergency buffer would break the debt spiral before it starts."
+    ],
+    "topProblems": [
+      "Virtually no liquid savings — one surprise expense away from debt.",
+      "Unquantified but self-acknowledged online shopping habit draining discretionary budget.",
+      "No financial cushion to absorb income disruption or irregular expenses."
+    ],
+    "positiveBehaviors": [
+      "You named the problem yourself — that's not nothing, most people don't.",
+      "Full-time employment in a medium COL state gives you real structural room to fix this."
+    ],
+    "topFix": {
+      "action": "Pull your last 60 days of bank/card statements, total every online purchase, then set a hard monthly cap and move that freed cash to a separate savings account on payday.",
+      "monthlyImpact": 150
+    },
+    "emotionalStatus": {
+      "label": "Spending feelings, not money",
+      "emoji": "🛒"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 600,
+    "savingsRate": 0.12,
+    "debtTotal": 0,
+    "monthlyDebtService": 0,
+    "emergencyFundMonths": 0.056818181818181816,
+    "debtToIncomeRatio": 0,
+    "score": 40,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.7,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 18428,
+    "model": "claude-sonnet-4-6"
+  }
+}

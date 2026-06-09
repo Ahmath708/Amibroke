@@ -1,0 +1,121 @@
+{
+  "inputFile": "g_badmoney",
+  "timestamp": "2026-06-09T18:23:01.973Z",
+  "request": {
+    "freeText": "I'm just bad with money",
+    "userContext": {
+      "state": "FL",
+      "ageBracket": "18-24",
+      "incomeBracket": "2k_4k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "unknown",
+      "liquidSavingsBracket": "unknown"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 2400,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "monthlyExpenses": {
+      "value": 2100,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 500,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "debts": [],
+    "cfpb_responses": [
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      }
+    ],
+    "scoreModifier": -2,
+    "scoreModifierReason": "Self-identified lack of financial control at 18-24 with unknown debt and savings signals higher behavioral risk than demographics alone capture.",
+    "summary": "You're early-career in FL, renting on a modest income, and the only thing you told us is that you're bad with money — which is a vibe, not a budget. The good news: you're young enough that fixing this now pays off more than almost any raise you'll ever get. The bad news: \"bad with money\" doesn't fix itself.",
+    "roast": "You submitted \"I'm just bad with money\" like that's a financial plan. No numbers, no receipts, just a confession and a shrug — your bank account is somewhere crying and you don't even know how much it's crying.",
+    "insights": [
+      "You gave zero numbers — which usually means you're avoiding looking, and avoidance is how small problems become big ones.",
+      "At 18-24, every dollar you redirect toward savings compounds harder than it ever will again — time is your only real edge.",
+      "Renting in FL on a modest income means your rent-to-income ratio is likely already tight, leaving little room for drift.",
+      "\"Bad with money\" is a behavior, not an identity — it's fixable, but only once you can see where the money actually goes.",
+      "Unknown debt and unknown savings brackets are red flags: you can't fix what you refuse to measure."
+    ],
+    "topProblems": [
+      "No visibility into income, spending, or debt — you can't course-correct blind.",
+      "Self-described poor money habits with no current system or tracking in place.",
+      "Likely thin or nonexistent emergency fund given age, income bracket, and unknown savings."
+    ],
+    "positiveBehaviors": [
+      "You admitted the problem out loud — most people in denial don't even get this far.",
+      "You're employed full-time at 18-24, which gives you a real foundation to build on."
+    ],
+    "topFix": {
+      "action": "Spend 20 minutes this week pulling your last two bank statements and writing down every outflow — you cannot make a plan until you know the actual numbers.",
+      "monthlyImpact": 0
+    },
+    "emotionalStatus": {
+      "label": "Lost but self-aware",
+      "emoji": "🫠"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 300,
+    "savingsRate": 0.125,
+    "debtTotal": 0,
+    "monthlyDebtService": 0,
+    "emergencyFundMonths": 0.23809523809523808,
+    "debtToIncomeRatio": 0,
+    "score": 42,
+    "scoreLabel": "Surviving",
+    "scoreColor": "#FFB020",
+    "avgConfidence": 0.65,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 19946,
+    "model": "claude-sonnet-4-6"
+  }
+}

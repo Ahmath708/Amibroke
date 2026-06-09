@@ -1,0 +1,132 @@
+{
+  "inputFile": "high_income_high_debt",
+  "timestamp": "2026-06-09T18:23:03.924Z",
+  "request": {
+    "freeText": "I make $200k/yr but have $50k in CC debt and almost nothing saved",
+    "userContext": {
+      "state": "NY",
+      "ageBracket": "30-34",
+      "incomeBracket": "over_10k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "15k_50k",
+      "liquidSavingsBracket": "under_500"
+    },
+    "tone": "older_sibling"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 16667,
+      "confidence": "high",
+      "source": "user_stated"
+    },
+    "monthlyExpenses": {
+      "value": 15500,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 250,
+      "confidence": "medium",
+      "source": "inferred"
+    },
+    "debts": [
+      {
+        "name": "Credit card",
+        "balance": 50000,
+        "interestRate": 0.21,
+        "minimumPayment": 1250,
+        "urgency": "critical",
+        "source": "user_stated",
+        "kind": "credit_card"
+      }
+    ],
+    "cfpb_responses": [
+      {
+        "value": 1,
+        "confidence": "high"
+      },
+      {
+        "value": 1,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 2,
+        "confidence": "medium"
+      },
+      {
+        "value": 2,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 2,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      }
+    ],
+    "scoreModifier": -5,
+    "scoreModifierReason": "$50k in high-interest revolving debt with near-zero liquid savings on a high income signals severe lifestyle inflation and structural cash-flow breakdown the scale alone can't capture.",
+    "summary": "You're earning serious money but carrying serious debt with almost nothing to show for it — that gap is the whole story. The income is there to fix this fast, but something is eating every dollar before it can stick. The priority is stopping the bleed on that CC interest and building even a small buffer before the next surprise hits.",
+    "roast": "Six figures twice over and your savings account is basically a rounding error. The money's not the problem — it's where it's going after it lands. You're not broke, you're leaking.",
+    "insights": [
+      "At 21% APR, that CC balance is costing you roughly $875/mo in interest alone — money that builds zero equity and zero future.",
+      "With near-zero savings, one medical bill or job disruption puts you right back on the card, compounding the hole.",
+      "Your income puts you in the top tier nationally, yet your net worth is effectively negative — that's a spending structure problem, not an income problem.",
+      "A 15% savings rate on your income would be over $2,500/mo — you're currently capturing almost none of that.",
+      "In a VHCOL city like NY, lifestyle costs scale fast with income; the danger zone is normalizing high spend because the paycheck covers it — until it doesn't."
+    ],
+    "topProblems": [
+      "$50k in high-interest CC debt costing nearly $900/mo in interest with no savings backstop.",
+      "Near-zero liquid savings on a high income means zero resilience to any financial shock.",
+      "Spending is consuming almost all of a top-tier income, leaving nothing to build wealth."
+    ],
+    "positiveBehaviors": [
+      "You're earning at a level that makes this genuinely fixable — fast — if you redirect even a fraction of income.",
+      "You named the problem clearly instead of rationalizing it. That self-awareness matters.",
+      "You're looking at this now, in your early 30s, with decades of compounding still ahead of you."
+    ],
+    "topFix": {
+      "action": "Throw $3,000–$4,000/mo at the CC above minimums — you could be debt-free in 12–15 months and save roughly $6,000+ in interest, then redirect that same amount to savings.",
+      "monthlyImpact": 875
+    },
+    "emotionalStatus": {
+      "label": "High earner, low net worth panic",
+      "emoji": "😤"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 1167,
+    "savingsRate": 0.07001859962800744,
+    "debtTotal": 50000,
+    "monthlyDebtService": 1250,
+    "emergencyFundMonths": 0.016129032258064516,
+    "debtToIncomeRatio": 0.0749985000299994,
+    "score": 36,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.95,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 21899,
+    "model": "claude-sonnet-4-6"
+  }
+}

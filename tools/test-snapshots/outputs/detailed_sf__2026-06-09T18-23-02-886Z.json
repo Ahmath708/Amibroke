@@ -1,0 +1,138 @@
+{
+  "inputFile": "detailed_sf",
+  "timestamp": "2026-06-09T18:23:02.886Z",
+  "request": {
+    "freeText": "Net $4,800/mo, rent $1,800 in SF, $7,200 in CC debt at 24% APR, no savings",
+    "userContext": {
+      "state": "CA",
+      "ageBracket": "25-29",
+      "incomeBracket": "4k_6k",
+      "livingSituation": "renting",
+      "employmentStatus": "full_time",
+      "debtBracket": "5k_15k",
+      "liquidSavingsBracket": "none"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 4800,
+      "confidence": "high",
+      "source": "user_stated"
+    },
+    "monthlyExpenses": {
+      "value": 4200,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 0,
+      "confidence": "high",
+      "source": "user_stated"
+    },
+    "debts": [
+      {
+        "name": "Credit card",
+        "balance": 7200,
+        "interestRate": 0.24,
+        "minimumPayment": 216,
+        "urgency": "high",
+        "source": "user_stated",
+        "kind": "credit_card"
+      }
+    ],
+    "cfpb_responses": [
+      {
+        "value": 0,
+        "confidence": "high"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "medium"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      },
+      {
+        "value": 1,
+        "confidence": "high"
+      },
+      {
+        "value": 2,
+        "confidence": "high"
+      },
+      {
+        "value": 3,
+        "confidence": "medium"
+      }
+    ],
+    "scoreModifier": -2,
+    "scoreModifierReason": "Zero emergency buffer in a VHCOL city means any unexpected expense immediately deepens high-interest CC debt, amplifying fragility beyond what the scale captures.",
+    "summary": "You're pulling a solid income for your age bracket but rent is eating 37.5% of take-home and a high-interest credit card is bleeding you further. With zero savings, one bad month doesn't just hurt — it compounds directly onto that 24% APR balance. The income is there to fix this; the margin just isn't being used yet.",
+    "roast": "Rent's swallowing 37 cents of every dollar, the credit card's charging you 24% to exist, and your savings account is a philosophical concept — you're not broke, you're just funding everyone else's retirement but yours.",
+    "insights": [
+      "Your rent is 37.5% of take-home — just above the 35% guideline, and that's before the CC minimum hits.",
+      "At 24% APR, that card is costing you roughly $144/mo in interest alone — money that builds zero equity.",
+      "With no emergency fund, a single unexpected expense goes straight onto the card and grows at 24%.",
+      "Your income is above the age-bracket median — the problem isn't what you earn, it's where it's going.",
+      "Freeing up $400/mo extra toward the card clears it in under 18 months and saves ~$1,100 in interest."
+    ],
+    "topProblems": [
+      "Zero emergency fund means every surprise expense deepens high-interest debt.",
+      "Credit card at 24% APR is actively destroying your net worth each month.",
+      "Rent burden leaves almost no margin to build savings or attack debt aggressively."
+    ],
+    "positiveBehaviors": [
+      "Your net income is well above the age-bracket median — you have real firepower to work with.",
+      "You know your numbers cold: income, rent, APR, balance — that clarity is rarer than you think.",
+      "You're facing the situation instead of ignoring it, which is where every turnaround actually starts."
+    ],
+    "topFix": {
+      "action": "Stack $400/mo above the CC minimum — card is gone in ~17 months, saves ~$1,100 in interest, and that same $400 becomes your emergency fund builder the day it's paid off.",
+      "monthlyImpact": 144
+    },
+    "emotionalStatus": {
+      "label": "Treading water, engine running",
+      "emoji": "😤"
+    },
+    "mentionedSpending": [
+      {
+        "category": "rent",
+        "amount": 1800,
+        "source": "user_stated"
+      }
+    ],
+    "monthlySavings": 600,
+    "savingsRate": 0.125,
+    "debtTotal": 7200,
+    "monthlyDebtService": 216,
+    "emergencyFundMonths": 0,
+    "debtToIncomeRatio": 0.045,
+    "score": 37,
+    "scoreLabel": "Financially Fragile",
+    "scoreColor": "#FF4D6D",
+    "avgConfidence": 0.875,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 20756,
+    "model": "claude-sonnet-4-6"
+  }
+}

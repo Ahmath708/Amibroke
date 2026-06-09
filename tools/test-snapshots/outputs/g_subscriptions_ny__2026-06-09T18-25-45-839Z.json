@@ -1,0 +1,121 @@
+{
+  "inputFile": "g_subscriptions_ny",
+  "timestamp": "2026-06-09T18:25:45.839Z",
+  "request": {
+    "freeText": "my subscriptions are out of control",
+    "userContext": {
+      "state": "NY",
+      "ageBracket": "30-34",
+      "incomeBracket": "6k_10k",
+      "livingSituation": "owning",
+      "employmentStatus": "full_time",
+      "debtBracket": "under_5k",
+      "liquidSavingsBracket": "2k_10k"
+    },
+    "tone": "savage"
+  },
+  "response": {
+    "monthlyIncome": {
+      "value": 7500,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "monthlyExpenses": {
+      "value": 6000,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "liquidSavings": {
+      "value": 6000,
+      "confidence": "low",
+      "source": "inferred"
+    },
+    "debts": [],
+    "cfpb_responses": [
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      },
+      {
+        "value": 1,
+        "confidence": "low"
+      },
+      {
+        "value": 2,
+        "confidence": "low"
+      }
+    ],
+    "scoreModifier": 0,
+    "scoreModifierReason": "No situational factors beyond the scale are evident from the input.",
+    "summary": "You own in a VHCOL state on a solid income with minimal debt — the bones are good. But you flagged subscriptions as out of control without naming a single one, which means money is quietly leaving on autopay while you're not watching. The fix is visibility, not more income.",
+    "roast": "You own property, have low debt, and still typed \"subscriptions are out of control\" like that's a budget plan. You can't name what's draining you — the villain is literally in your bank app and you haven't looked.",
+    "insights": [
+      "You named the problem but gave zero numbers — the leak is real, just invisible until you actually open the app.",
+      "Owning in a VHCOL state means fixed costs are already elevated, so subscription creep hits harder than it feels.",
+      "With minimal debt and a solid income, this is a visibility problem — not a survival one.",
+      "Autopay is the enemy of awareness; charges that feel small stack into a real monthly drag.",
+      "A one-time audit of recurring charges is the highest-ROI 30 minutes you can spend right now."
+    ],
+    "topProblems": [
+      "Recurring subscription spending you can't currently name or quantify.",
+      "No visibility into how much leaves your account on autopay each month."
+    ],
+    "positiveBehaviors": [
+      "You own your home in a VHCOL state — that's a significant wealth-building move.",
+      "Low debt load means you're not bleeding interest every month.",
+      "You recognized the pattern yourself — that's the hardest part."
+    ],
+    "topFix": {
+      "action": "Pull your last two bank and card statements, list every recurring charge, and cancel anything you forgot you were paying for — do it this week.",
+      "monthlyImpact": 0
+    },
+    "emotionalStatus": {
+      "label": "Vaguely uneasy",
+      "emoji": "😵‍\ud83d"
+    },
+    "mentionedSpending": [],
+    "monthlySavings": 1500,
+    "savingsRate": 0.2,
+    "debtTotal": 0,
+    "monthlyDebtService": 0,
+    "emergencyFundMonths": 1,
+    "debtToIncomeRatio": 0,
+    "score": 51,
+    "scoreLabel": "Surviving",
+    "scoreColor": "#FFB020",
+    "avgConfidence": 0.5,
+    "_provider": "claude"
+  },
+  "metadata": {
+    "responseTimeMs": 14323,
+    "model": "claude-sonnet-4-6"
+  }
+}
