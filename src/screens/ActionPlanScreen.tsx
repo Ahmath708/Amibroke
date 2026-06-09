@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import SectionLabel from '@/components/SectionLabel';
 import { ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, ActionStep } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -179,10 +179,11 @@ export default function ActionPlanScreen({ route }: Props) {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    load();
-    trackActionPlanViewed(0);
-  }, []);
+  // Refetch the plan + snapshot on every focus so the "Refresh Plan" staleness gate reflects a
+  // check-in / edit made while this screen stayed mounted — not just the first mount.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => { trackActionPlanViewed(0); }, []);
 
   // Create → generate the plan (LLM, behind the loading view) and immediately start tracking it.
   // Generation is user-triggered here (not on the Tools tap) so opening the screen is instant.

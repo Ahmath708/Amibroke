@@ -1,10 +1,10 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, DebtItem } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -38,7 +38,8 @@ export default function DebtPayoffScreen() {
   // Source of truth = the unified snapshot (no per-roast param hand-off). Estimated onboarding
   // placeholders are ignored (no APR/min → useless for payoff).
   const [debts, setDebts] = useState<DebtItem[]>([]);
-  useEffect(() => {
+  // Refetch on focus so debt balances reflect a check-in / edit (returning here shows fresh figures).
+  useFocusEffect(useCallback(() => {
     if (!user) return;
     getSnapshot(user.id).then((snap) => {
       const d = snap?.debts;
@@ -51,7 +52,7 @@ export default function DebtPayoffScreen() {
         })));
       }
     }).catch(() => {});
-  }, [user]);
+  }, [user]));
   const { authorized, loading } = useRequireEntitlement('deep_dive');
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);
@@ -59,7 +60,8 @@ export default function DebtPayoffScreen() {
   const { animatedStyle } = useEntryAnimation();
 
   // Sticky strategy (profiles.debt_strategy) + paydown progress from check-in history.
-  useEffect(() => {
+  // Sticky strategy + paydown trend — also refetched on focus so progress reflects a new check-in.
+  useFocusEffect(useCallback(() => {
     if (!user) return;
     // select('*') stays resilient if debt_strategy isn't migrated yet.
     getProfile(user.id).then((p) => { if (p?.debt_strategy) setStrategy(p.debt_strategy as Strategy); }).catch(() => {});
@@ -71,7 +73,7 @@ export default function DebtPayoffScreen() {
       const amount = sumAt(sorted[0]) - sumAt(sorted[sorted.length - 1]); // positive = paid down
       if (Math.abs(amount) >= 1) setPaidDown({ amount, since: sorted[0].created_at });
     }).catch(() => {});
-  }, [user]);
+  }, [user]));
 
   const selectStrategy = (s: Strategy) => {
     setStrategy(s);
