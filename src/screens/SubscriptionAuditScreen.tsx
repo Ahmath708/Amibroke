@@ -10,7 +10,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { Subscription } from '@/types';
 import { getSubscriptions, saveSubscription, deleteSubscription } from '@/services/subscriptionAudit';
 import { useAuth } from '@/context/AuthContext';
-import LoadingScreen from '@/components/LoadingScreen';
+import ToolSkeleton from '@/components/ToolSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
@@ -92,7 +92,7 @@ export default function SubscriptionAuditScreen() {
     ]);
   };
 
-  if (loading) return <LoadingScreen variant="subscriptions" />;
+  if (loading) return <ToolSkeleton variant="subscriptions" heroHeight={96} rows={3} rowHeight={64} />;
   if (!authorized) return null;
 
   const keepCount = Object.values(decisions).filter((v) => v === true).length;

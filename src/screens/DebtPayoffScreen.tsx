@@ -12,7 +12,7 @@ import { formatCurrency as fmt } from '@/utils/format';
 import GlassCard from '@/components/GlassCard';
 import SeverityPill from '@/components/SeverityPill';
 import SelectableChip from '@/components/SelectableChip';
-import LoadingScreen from '@/components/LoadingScreen';
+import ToolSkeleton from '@/components/ToolSkeleton';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { useAuth } from '@/context/AuthContext';
@@ -81,7 +81,7 @@ export default function DebtPayoffScreen() {
     if (user) updateProfile(user.id, { debt_strategy: s }).catch(() => {}); // sticky
   };
 
-  if (loading || debtsLoading) return <LoadingScreen variant="debt" />;
+  if (loading || debtsLoading) return <ToolSkeleton variant="debt" heroHeight={120} rows={3} rowHeight={72} />;
   if (!authorized) return null;
 
   if (debts.length === 0) {
