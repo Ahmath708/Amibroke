@@ -108,7 +108,8 @@ _Newest first. One short entry per meaningful unit of work: what changed + any l
   doc) and `docs/redesign/implementation-plan.md` ("no code written yet" but redesign is built;
   principles now in design-doctrine) — fixed its one dangling link in `research-brief.md`. KEPT
   `unified-financial-model.md` (accurate + cited by ~10 code/migration/README refs). `active-plan-design.md`
-  NOT deleted — entangled (7 refs, 3 in live code); needs a header update instead (pending).
+  NOT deleted — entangled (7 refs, 3 in live code); header updated to "implemented" with a
+  lifecycle-superseded-by-schema-v2 pointer instead.
 
 ### 2026-06-10 — doc-consistency audit
 - Codebase audit + doc-conflict pass. Caught + corrected a **self-inflicted** error: the
