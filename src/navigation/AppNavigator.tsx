@@ -29,6 +29,8 @@ import { useAuth } from '@/context/AuthContext';
 // Screens
 import SplashScreen from '@/screens/SplashScreen';
 import OnboardingScreen from '@/screens/OnboardingScreen';
+import OnboardingV2Screen from '@/screens/OnboardingV2Screen';
+import { FEATURES } from '@/config/features';
 import LandingScreen from '@/screens/LandingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import HomeScreen from '@/screens/HomeScreen';
@@ -236,7 +238,7 @@ export default function AppNavigator() {
           <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'fade' }} />
         ) : needsOnboarding ? (
           /* ─── First-run gate: personalization ─── */
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'fade' }} />
+          <Stack.Screen name="Onboarding" component={FEATURES.ONBOARDING_V2 ? OnboardingV2Screen : OnboardingScreen} options={{ animation: 'fade' }} />
         ) : (
           /* ─── Signed in: APP STACK ─── */
           <>
