@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\":\"[PreCompact] Append a Session Log entry to docs/PROJECT-STATUS.md before context is lost.\",\"hookSpecificOutput\":{\"hookEventName\":\"PreCompact\",\"additionalContext\":\"Before this compaction, append a one-line Session Log entry to docs/PROJECT-STATUS.md summarizing the work done this session and any landmines learned, so the next session starts warm.\"}}'",
+            "statusMessage": "Reminding to checkpoint the Session Log…"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -311,21 +311,24 @@ client-side.
 
 ## Skills (in `.claude/skills/`)
 
-Project-scoped skills curated for this stack — invoke when relevant:
-- **audit-screen** — design-audit a single screen against the app concept + theme
-  (`/audit-screen <name>`): screenshots the SE sim, checks readability/contrast/hierarchy/
-  consistency, judges if it's too basic. Recommend-only; never implements until approved.
-- **react-patterns**, **react-performance** — React hooks/state/perf (web-oriented; principles
-  transfer to React Native)
-- **react-testing** — jest/RTL component + hook testing, network mocking
-- **postgres-patterns**, **database-migrations** — Postgres schema/indexing/RLS and safe migrations
-- **api-design**, **error-handling** — REST patterns and typed TS error handling for edge functions
-- **security-scan** — audit `.claude/` config for misconfigurations (distinct from the built-in
-  `/security-review` code review)
-- **git-workflow** — branching/commit conventions
-- **cost-aware-llm-pipeline** — model routing, budget tracking, prompt caching (fits rule #1)
-- **ios-icon-gen** — generate Xcode app-icon imagesets for the App Store build
-- **demo-app** — record a product walkthrough/demo of the app
+Project-scoped skills curated for this stack. Invoke proactively when the **Use when** trigger fits —
+don't wait to be asked.
+
+| Skill | Use when |
+|---|---|
+| **audit-screen** | Grading a screen against the design doctrine — `/audit-screen <name>`. Screenshots the SE sim; checks readability/contrast/hierarchy/consistency, flags "too basic." Recommend-only; never implements until approved. **(Mac only — needs the simulator.)** |
+| **react-patterns** | Writing/reviewing React hooks, state, or component structure (web-oriented; principles transfer to RN). |
+| **react-performance** | A screen/list feels janky, re-renders too much, or you're optimizing render/scroll perf. |
+| **react-testing** | Adding jest/RTL component or hook tests, or mocking network/native modules. |
+| **postgres-patterns** | Designing schema, indexes, or RLS; tuning a Supabase/Postgres query. |
+| **database-migrations** | Writing or reviewing a `supabase/migrations/*` change — safe/reversible schema edits. |
+| **api-design** | Shaping an edge-function request/response contract (status codes, pagination, errors). |
+| **error-handling** | Adding typed error handling / retries / user-facing error copy in TS or an edge function. |
+| **security-scan** | Auditing `.claude/` config for misconfigurations (distinct from the built-in `/security-review`). |
+| **git-workflow** | Branching/commit conventions — unsure how to branch or phrase a commit. |
+| **cost-aware-llm-pipeline** | Touching LLM calls — model routing, budget tracking, prompt caching (pairs with rule #1). |
+| **ios-icon-gen** | Generating Xcode app-icon imagesets for the App Store build. |
+| **demo-app** | Recording a product walkthrough/demo of the app. |
 
 Built-in skills also available (don't duplicate): `/deep-research`, `/security-review`,
 `/code-review`, `/verify`, `/simplify`, `/run`.
