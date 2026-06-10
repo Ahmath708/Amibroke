@@ -8,7 +8,7 @@ import SectionLabel from '@/components/SectionLabel';
 import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
 import {
-  MicrophoneIcon, StopCircleIcon, SparklesIcon, ChevronRightIcon,
+  MicrophoneIcon, StopCircleIcon, SparklesIcon,
   FireIcon, HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
 } from 'react-native-heroicons/outline';
 import NotificationBell from '@/components/NotificationBell';
@@ -334,17 +334,6 @@ export default function HomeScreen({ navigation, asTab = false }: Props) {
             ))}
           </View>
 
-          {/* Financial context — opens the personalization form */}
-          <PressableScale
-            onPress={() => navigation.navigate('FinancialContext')}
-            style={styles.contextRow}
-          >
-            <Text style={styles.contextRowText}>
-              {Object.keys(profileContext).length > 0 ? 'Edit Financial Context' : '+ Add Financial Context (optional)'}
-            </Text>
-            <ChevronRightIcon size={16} color={Colors.textSecondary} />
-          </PressableScale>
-
           {/* Monthly check-in nudge (only for users who track goals) */}
           <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.xl }} />
 
@@ -434,11 +423,6 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.accent },
   toneWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
   cta: { marginBottom: Spacing.sm },
-  contextRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
-    paddingVertical: Spacing.sm, marginBottom: Spacing.md,
-  },
-  contextRowText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.accent },
   ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl },
   scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
   scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View, StyleSheet, ViewStyle } from 'react-native';
-import { ChevronRightIcon, CalendarIcon } from 'react-native-heroicons/outline';
+import { ChevronRightIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
@@ -17,10 +17,10 @@ interface Props {
   style?: ViewStyle;
 }
 
-/** Home nudge for the monthly check-in. Persists for any user with a check-in schedule: a
- *  prominent CTA when due, a compact "next check-in · date" line otherwise. Neutral elevated
- *  surface (the accent moment is reserved for the premium card), with an accent-tinted icon
- *  badge + chevron for a contained pop. */
+/** Home nudge for the monthly check-in. Persists for any user with a check-in schedule as a calm
+ *  one-liner — "your {month} check-in is ready" (brighter text + accent chevron) when due, a muted
+ *  "next check-in · date" otherwise. Kept compact so the Dashboard hierarchy (score + finances)
+ *  leads; the accent moment stays reserved for the premium card. */
 export default function CheckinCard({ onPress, anchorFallback, style }: Props) {
   const { loading, config, lastCheckIn, streak } = useCheckinStatus();
   if (loading) return null;
@@ -34,48 +34,26 @@ export default function CheckinCard({ onPress, anchorFallback, style }: Props) {
 
   const dateLabel = `${MONTHS_SHORT[dueDate.getMonth()]} ${dueDate.getDate()}`;
 
-  if (due) {
-    const monthName = dueDate ? MONTHS_FULL[dueDate.getMonth()] : 'your';
-    return (
-      <PressableScale onPress={onPress} haptic="light" style={style}>
-        <View style={styles.dueCard}>
-          <View style={styles.iconBadge}><CalendarIcon size={20} color={Colors.accent} /></View>
-          <View style={styles.dueText}>
-            <Text style={styles.dueTitle}>Your {monthName} check-in is ready</Text>
-            <Text style={styles.dueBody}>{streak > 1 ? `Keep your ${streak}-month streak alive 🔥` : 'Check in on how you’re feeling + what’s changed.'}</Text>
-          </View>
-          <ChevronRightIcon size={18} color={Colors.textSecondary} />
-        </View>
-      </PressableScale>
-    );
-  }
+  // One calm one-liner either way, so the Dashboard hierarchy (score + finances) leads. Due → an
+  // actionable "ready" line (brighter text + accent chevron); otherwise the next-check-in date.
+  const monthFull = MONTHS_FULL[dueDate.getMonth()];
+  const icon = streak > 1 ? '🔥' : due ? '🔔' : '🗓️';
+  const text = due
+    ? `Your ${monthFull} check-in is ready`
+    : `Next check-in · ${dateLabel}${streak > 1 ? ` · ${streak}-mo streak` : ''}`;
 
   return (
     <PressableScale onPress={onPress} haptic="light" style={style}>
       <View style={styles.compact}>
-        <Text style={styles.compactIcon}>{streak > 1 ? '🔥' : '🗓️'}</Text>
-        <Text style={styles.compactText}>Next check-in · {dateLabel}{streak > 1 ? ` · ${streak}-mo streak` : ''}</Text>
-        <ChevronRightIcon size={16} color={Colors.textMuted} />
+        <Text style={styles.compactIcon}>{icon}</Text>
+        <Text style={[styles.compactText, due && styles.compactTextDue]} numberOfLines={1}>{text}</Text>
+        <ChevronRightIcon size={16} color={due ? Colors.accent : Colors.textMuted} />
       </View>
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  dueCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    borderRadius: Radius.lg, padding: Spacing.lg,
-    backgroundColor: Colors.surfaceElevated,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-  },
-  iconBadge: {
-    width: 40, height: 40, borderRadius: Radius.md,
-    backgroundColor: Colors.accentContainer,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  dueText: { flex: 1 },
-  dueTitle: { fontFamily: Typography.fonts.heading, fontSize: 16, color: Colors.textPrimary, letterSpacing: -0.2, marginBottom: 2 },
-  dueBody: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },
   compact: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     borderRadius: Radius.lg, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
@@ -84,4 +62,5 @@ const styles = StyleSheet.create({
   },
   compactIcon: { fontSize: Typography.subhead.fontSize },
   compactText: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  compactTextDue: { color: Colors.textPrimary },
 });

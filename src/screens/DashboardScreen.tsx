@@ -292,12 +292,17 @@ export default function DashboardScreen({ navigation }: Props) {
           </ReAnimated.View>
         )}
 
-        {/* Your finances — the snapshot behind the score (unified financial model read path) */}
+        {/* Your finances — the snapshot behind the score (unified financial model read path).
+            Tappable → FinancialContext: the non-roast way to update your numbers. */}
         {hasFinances && (
           <ReAnimated.View entering={enterUp(3)}>
-            <View style={styles.financeCard}>
+            <PressableScale haptic="light" onPress={() => navigation.navigate('FinancialContext')} style={styles.financeCard}>
               <View style={styles.tileHeader}>
                 <Text style={styles.tileLabel}>Your Finances</Text>
+                <View style={styles.financeEdit}>
+                  <Text style={styles.financeEditText}>Update</Text>
+                  <ChevronRightIcon size={14} color={Colors.textMuted} />
+                </View>
               </View>
               <View style={styles.financeRow}>
                 <View style={styles.financeStat}>
@@ -314,7 +319,7 @@ export default function DashboardScreen({ navigation }: Props) {
                 </View>
               </View>
               {anyEst && <Text style={styles.estFootnote}>~ estimated from your profile — roast to refine</Text>}
-            </View>
+            </PressableScale>
           </ReAnimated.View>
         )}
 
@@ -387,7 +392,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: Spacing.lg },
-  greeting: { flex: 1, marginRight: Spacing.md },
+  greeting: { flex: 1, marginRight: Spacing.md, gap: Spacing.xs }, // gap between "Good evening," and the name
   greetingLead: { fontFamily: Typography.fonts.headingMed, fontSize: Typography.title3.fontSize, color: Colors.textSecondary, letterSpacing: -0.3 },
   greetingName: { ...Typography.screenTitle, fontFamily: Typography.fonts.heading, color: Colors.textPrimary },
   hero: { alignItems: 'center', marginBottom: Spacing.xl },
@@ -406,6 +411,8 @@ const styles = StyleSheet.create({
   financeVal: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, letterSpacing: -0.5 },
   financeLbl: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   estFootnote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.sm, fontStyle: 'italic' },
+  financeEdit: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  financeEditText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
   // Stale-state
   staleBanner: { ...card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, marginBottom: Spacing.lg },
   refreshCta: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
