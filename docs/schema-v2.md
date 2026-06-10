@@ -50,7 +50,12 @@ to just `analysis_id`. (Hosted-DB reset to match the new baseline is **approved*
 
 **Resolved:**
 - **D1 ✅ keep `preferred_tone`** on profiles (alongside `debt_strategy`).
-- **D3 ✅ `dob DATE`** in `financial_context`; derive age/bracket where needed (baselines).
+- **D3 ✅ `dob DATE`** in `financial_context` — **store the raw birthday, never a derived age**.
+  Compute age **at runtime** wherever it's needed (e.g. the `analyze` endpoint / `buildRescoreInput`
+  age-bracket for baselines), so it never goes stale. **UI is already built** (`DobField` + the
+  FinancialContext "Birthday" picker): it collects the birthday now and, until this column exists,
+  derives + stores the coarse `ctx_age_bracket` as a bridge. At cutover, the same picker just
+  persists the real `dob` and the bracket math moves to runtime age-from-dob.
 - **D4 ✅ brackets persist in `financial_context` AND update the snapshot.** Today
   `FinancialContextScreen.save` writes `profiles.ctx_*` only — it does NOT touch the snapshot, so a
   later edit never propagates (onboarding seeds it once). Fix: both onboarding **and** the context
