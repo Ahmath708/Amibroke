@@ -310,4 +310,4 @@ paid APIs — see **CLAUDE.md → Critical rules**.
 - **[docs/DECISIONS.md](docs/DECISIONS.md)** — architecture decisions + monetization spec
 - **[docs/REVENUECAT_SETUP.md](docs/REVENUECAT_SETUP.md)** — RevenueCat setup + free-tier StoreKit testing
 - **[docs/TESTING.md](docs/TESTING.md)** — eval methodology + fixtures
-- **[docs/active-plan-design.md](docs/active-plan-design.md)** — Model B persistent plan (design-only / parked)
+- **[docs/active-plan-design.md](docs/active-plan-design.md)** — Model B persistent plan (implemented; current lifecycle in docs/schema-v2.md)

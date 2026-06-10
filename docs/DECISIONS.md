@@ -54,8 +54,14 @@ plan that locks for 90 days and is tracked against regardless of re-roasts (need
 an `active_plan` concept: which analysis + a start date + a re-roast rule).
 Conceptually nicer for a "journey," but a meaningful build (schema + flow). Chosen
 to defer; revisit when there's time. A locked plan also goes stale as finances
-change, which is the main argument for A. **Full architecture (deterministic engine +
-commodity Claude, competitor-researched) is specced in `docs/active-plan-design.md`.**
+change, which is the main argument for A. The full architecture (deterministic engine +
+commodity Claude, competitor-researched) was specced in `docs/active-plan-design.md`.
+
+**Update — later built:** Model B shipped anyway — `active_plans` (one active plan per user,
+`start_metrics` snapshot at commit, revise-in-place that keeps progress). `docs/active-plan-design.md`
+holds the still-current revision rationale (now marked implemented); the current plan *lifecycle*
+(rename → `action_plans`, status `active|completed|incomplete`, fixed 90-day windows, completion
+funnel) lives in `docs/schema-v2.md`.
 
 ## Subscription Product Spec (2026-05-29)
 
