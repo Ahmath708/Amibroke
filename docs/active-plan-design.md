@@ -1,8 +1,14 @@
 # Active Plan (Model B) — Design
 
-**Status: design-only / parked. NOT implemented.** Model A ("your plan = your latest
-roast's plan") ships today — see `docs/DECISIONS.md` → "90-Day Action Plan: per-roast".
-This document specs **Model B**, a committed, trackable 90-day program, for when we build it.
+**Status: IMPLEMENTED.** Model B shipped — one committed, trackable plan per user lives in
+`active_plans` (one active per user, `start_metrics` snapshot at commit, revise-in-place that keeps
+progress). This doc is the standing rationale for that design + its revision logic (still cited by
+`services/activePlan.ts`, `shared/planRevision.ts`, `shared/schemas.ts`).
+
+> **Superseded for the plan *lifecycle*:** the table rename (`active_plans` → `action_plans`), status
+> values (`active|completed|incomplete`, dropping `version`), fixed 90-day windows, and the
+> completion→check-in funnel are specified in **[`docs/schema-v2.md`](schema-v2.md)** — read that for
+> the current target. The design reasoning + competitor research below still stand.
 
 ---
 

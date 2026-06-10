@@ -2,6 +2,11 @@
 
 Guidance for Claude Code working in this repository. Read this first.
 
+> **Start here:** before doing any work, read [`docs/PROJECT-STATUS.md`](docs/PROJECT-STATUS.md) for
+> *where the project is right now* (in-flight work, known drift, a Session Log). This file is *how
+> things are built*; that file is *where we are*. Append a Session Log entry when you finish
+> meaningful work.
+
 ## ⚠️ Critical rules (do not skip)
 
 1. **Paid API cost confirmation.** Before running any script that calls the Anthropic API, the
@@ -17,8 +22,28 @@ Guidance for Claude Code working in this repository. Read this first.
    PGRST204 "column not found" at runtime means a migration wasn't applied remotely. Editing
    Auth/dashboard settings needs an elevated org role the dev may not have. A separate
    **AmIBroke-staging** project (`zgrfgzjnhkellqgqfque`) exists.
-4. **Branching:** active work happens on the `dev` branch; `master` is left stable. Branch before
-   committing; don't commit/push unless asked.
+4. **Branching:** active work happens on a feature branch (currently `redesign` / `better-workflow`);
+   `master` is left stable. Branch before committing; don't commit/push unless asked.
+
+## How to operate
+
+Most pain in this repo comes from a cold start re-deriving state and from `CLAUDE.md` silently
+drifting as feature branches land. The loop that prevents both:
+
+1. **Read state first.** [`docs/PROJECT-STATUS.md`](docs/PROJECT-STATUS.md) indexes the live trackers
+   (DECISIONS, design-doctrine, roast-plan-rework, demo-checklist, …) and carries a Session Log of
+   what's in flight. Read it, then the area-specific doc, before changing that area.
+2. **Reuse before building.** Grep for an existing component/hook/util/service first (see *Reuse &
+   modularity rules*). The view layer stays thin; logic lives in `shared/` or a service.
+3. **Verify what you can.** `npx tsc --noEmit` after every change (+ `npm test` when logic changed).
+   Device/visual checks (SE screenshots) happen in the Mac session — say so rather than claiming a
+   visual pass you couldn't run.
+4. **Capture what you learn.** Hit a non-obvious landmine (deploy crash, remote-DB lag, signing
+   quirk)? Add it to **Gotchas** below or **DECISIONS.md** *in the same change* — don't let the next
+   session rediscover it. Append a one-line **Session Log** entry to PROJECT-STATUS.md when done.
+5. **Commit hygiene.** Branch before committing; commit/push only when asked. Before offering a
+   commit, run `git status --short` — if a file you changed isn't listed, it's gitignored or
+   unchanged, so don't offer to commit it; just announce the path ("wrote it to `docs/…`").
 
 ## What this app is
 
@@ -67,7 +92,8 @@ App.tsx                  App root: fonts, providers (Auth), RevenueCat init, nav
 src/
   navigation/            AppNavigator — all routes; RootStackParamList lives in src/types
   screens/               ~25 screens (Home, Results, Paywall, ActionPlan, DebtPayoff, etc.)
-  components/             Reusable UI (NeonButton, GlassCard, ScoreRing, ScreenBackground, …)
+  components/             Reusable UI (NeonButton, GlassCard, ScoreRing, ScreenBackground,
+                         RoastLoading, ToolSkeleton, …)
   context/AuthContext    Supabase client, session, OAuth (PKCE), RevenueCat identity sync
   hooks/                 useAnalysis, useSubscription, useVoiceInput, useShare, useDebtStrategy,
                          useNotifications, useRescore, useCheckinStatus…
@@ -82,8 +108,9 @@ shared/                  Framework-agnostic financial logic shared by app + edge
   schemas.ts             Zod schemas (FinalAnalysisSchema, etc.)
   calculations.ts        Pure financial math
 supabase/
-  migrations/            00001–00025, applied via `supabase db push` (00022 financial_snapshots,
-                         00023 check_ins.reflection, 00024 preferred_tone, 00025 debt_strategy)
+  migrations/            00001–00026, applied via `supabase db push` (00022 financial_snapshots,
+                         00023 check_ins.reflection, 00024 preferred_tone, 00025 debt_strategy,
+                         00026 drop analyses.action_plan)
   functions/             Deno edge functions (see below)
 tools/                   Dev / test / ops scripts — NOT bundled into the app (`tsconfig` excludes it)
   eval/                  LLM eval harness: fixtures, runners, Zod assertions, cycle results in results/ (PAID — rule #1)
@@ -132,6 +159,11 @@ tools/                   Dev / test / ops scripts — NOT bundled into the app (
   only when incoming confidence ≥ stored (ladder `estimated < low < medium < high < stated`); a
   field the writer is silent on is kept; a mortgage is excluded from payoff debt + `debt_total`.
   See `docs/unified-financial-model.md`.
+- **Action plan storage** — the active 90-day plan lives in **`active_plans`** (one per user, keyed
+  by `source_analysis_id`); `analyses.action_plan` was **dropped** (migration 00026), so the active
+  plan *is* the cache. `has_action_plan` in the history list derives from `active_plans`, not a column
+  on `analyses`. Generating goes straight to an active plan (no preview/commit); a roast-input change
+  **revises** it (keeps completed-step progress), never regenerates. See `docs/roast-plan-rework.md`.
 - **Mandatory staged onboarding** (post-login, no skip) — 5 cheeky, personalized steps collect
   profile names + `ctx_*` income/savings/**debt** brackets (debt seeds a coarse `estimated` snapshot
   line via `DEBT_MID`). It ends with a **user-initiated starting-score reveal**: "Calculate my
@@ -276,23 +308,38 @@ client-side.
   wiring without also creating the `affiliate_clicks` table (with RLS).
 - **ScenarioSimulator** is an intentional "Coming Soon" stub (being rebuilt on the new scoring
   engine) — wired into nav but not implemented.
+- **CreatorDashboard is half-implemented and deferred** (flag-gated off via
+  `FEATURES.CREATOR_DASHBOARD`; the screen `goBack()`s on mount when the flag is off). It's a
+  creator/influencer mode, not an end-user feature. Scope: (1) **Batch Roast** — loops the normal
+  paid analyze pipeline (`batchRoast` → `analyzeFinancialSituation`) so a creator can roast many
+  inputs at once (**real, but each input is a paid call — rule #1**); (2) **Referral code** —
+  generates `BROKE-XXXX` + writes a `referrals` row (codes work, but **no payout system populates
+  earnings**); (3) **Creator stats** derived from `community_posts` — "Views" is a reactions×10
+  proxy and "Earnings" is effectively always $0 (vanity/aspirational). Treat as a parked
+  monetization experiment: keep its single flag-gated entry in Profile, don't wire it into more
+  surfaces, and don't surface "Views"/"Earnings" as if they're real without a backing payout/metrics
+  system. (Dedup TODO: remove the duplicate Settings entry — see `docs/PROJECT-STATUS.md`.)
 
 ## Skills (in `.claude/skills/`)
 
-Project-scoped skills curated for this stack — invoke when relevant:
-- **audit-screen** — design-audit a single screen against the app concept + theme
-  (`/audit-screen <name>`): screenshots the SE sim, checks readability/contrast/hierarchy/
-  consistency, judges if it's too basic. Recommend-only; never implements until approved.
-- **react-patterns**, **react-performance** — React hooks/state/perf (web-oriented; principles
-  transfer to React Native)
-- **react-testing** — jest/RTL component + hook testing, network mocking
-- **postgres-patterns**, **database-migrations** — Postgres schema/indexing/RLS and safe migrations
-- **api-design**, **error-handling** — REST patterns and typed TS error handling for edge functions
-- **security-scan** — audit `.claude/` config for misconfigurations (distinct from the built-in
-  `/security-review` code review)
-- **git-workflow** — branching/commit conventions
-- **cost-aware-llm-pipeline** — model routing, budget tracking, prompt caching (fits rule #1)
-- **ios-icon-gen** — generate Xcode app-icon imagesets for the App Store build
+Project-scoped skills curated for this stack. Invoke proactively when the **Use when** trigger fits —
+don't wait to be asked.
+
+| Skill | Use when |
+|---|---|
+| **audit-screen** | Grading a screen against the design doctrine — `/audit-screen <name>`. Screenshots the SE sim; checks readability/contrast/hierarchy/consistency, flags "too basic." Recommend-only; never implements until approved. **(Mac only — needs the simulator.)** |
+| **react-patterns** | Writing/reviewing React hooks, state, or component structure (web-oriented; principles transfer to RN). |
+| **react-performance** | A screen/list feels janky, re-renders too much, or you're optimizing render/scroll perf. |
+| **react-testing** | Adding jest/RTL component or hook tests, or mocking network/native modules. |
+| **postgres-patterns** | Designing schema, indexes, or RLS; tuning a Supabase/Postgres query. |
+| **database-migrations** | Writing or reviewing a `supabase/migrations/*` change — safe/reversible schema edits. |
+| **api-design** | Shaping an edge-function request/response contract (status codes, pagination, errors). |
+| **error-handling** | Adding typed error handling / retries / user-facing error copy in TS or an edge function. |
+| **security-scan** | Auditing `.claude/` config for misconfigurations (distinct from the built-in `/security-review`). |
+| **git-workflow** | Branching/commit conventions — unsure how to branch or phrase a commit. |
+| **cost-aware-llm-pipeline** | Touching LLM calls — model routing, budget tracking, prompt caching (pairs with rule #1). |
+| **ios-icon-gen** | Generating Xcode app-icon imagesets for the App Store build. |
+| **demo-app** | Recording a product walkthrough/demo of the app. |
 
 Built-in skills also available (don't duplicate): `/deep-research`, `/security-review`,
 `/code-review`, `/verify`, `/simplify`, `/run`.
