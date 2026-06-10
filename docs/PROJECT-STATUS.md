@@ -82,10 +82,12 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 ## Known drift to verify (not yet acted on)
 
-- **Onboarding debt step.** `CLAUDE.md` / commit history / `demo-checklist.md` describe onboarding
-  collecting a **debt** bracket, but `src/screens/OnboardingScreen.tsx` on this branch still comments
-  *"debt is NOT collected here — the first roast itemizes it"* (STEP_COUNT 5, step 4 = savings only).
-  Reconcile code vs. docs before relying on either.
+- **Onboarding debt step — RESOLVED (no drift; earlier note was a misread).** The current
+  `src/screens/OnboardingScreen.tsx` (redesign/better-workflow) DOES collect debt: step 4 is
+  "debt & savings" (`debtBracket` + `liquidSavingsBracket`, both required) and seeds a debt-aware
+  `estimated` snapshot line. `CLAUDE.md` and `demo-checklist.md` are accurate. (The original "drift"
+  flag came from reading the older `master` copy of the file — verify the working branch before
+  flagging code-vs-doc conflicts.)
 
 ## Environment constraints (this machine)
 
@@ -100,6 +102,13 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 ## Session log
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
+
+### 2026-06-10 — doc-consistency audit
+- Codebase audit + doc-conflict pass. Caught + corrected a **self-inflicted** error: the
+  "onboarding-debt drift" note was based on a stale `master` read — the current branch DOES collect
+  debt, so CLAUDE.md/demo-checklist were right (note flipped to RESOLVED). Added a "docs to update at
+  cutover" list to schema-v2 and a supersedes-pointer on roast-plan-rework (plan lifecycle). Lesson:
+  verify the working branch before flagging code-vs-doc conflicts.
 
 ### 2026-06-10 — schema audit → schema-v2 consolidation plan (decisions finalized)
 - Reconstructed the full schema from all 26 migrations + verified against code. Wrote

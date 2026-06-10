@@ -133,3 +133,8 @@ Fixed 90-day windows that stay constant across in-place revisions — the basis 
 - **payments drop** → `gdpr.ts` (remove from export + delete lists).
 - **types/index.ts** — every interface above (Profile, AnalysisHistoryItem, CommunityPost, etc.).
 - **GDPR** — export/delete lists must match the final table set.
+- **Docs to update AT CUTOVER (not just code):** `CLAUDE.md` (migration list, repo-structure
+  `src/services` descriptions, the Core-systems table names: `subscriptions`/`user_subscriptions`/
+  `active_plans` → new names, drop `payments`, add `financial_context`), `docs/demo-checklist.md`
+  (table/field references), `docs/DECISIONS.md` (log the rebuild), and reconcile
+  `docs/roast-plan-rework.md` (its plan-lifecycle section is superseded — see below).

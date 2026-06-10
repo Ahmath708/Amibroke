@@ -2,6 +2,12 @@
 
 Living tracker. Surfaced by a real (mocks-off) demo pass.
 
+> **Note:** the **plan storage + lifecycle** specifics here (`active_plans` table name, `version`,
+> abandon-on-supersede) are **superseded by [`docs/schema-v2.md`](schema-v2.md)** — which renames the
+> table to `action_plans`, drops `version`, uses `status` `active|completed|incomplete` with fixed
+> 90-day windows + revise-in-place, and adds the completion→check-in funnel. The rest of this doc
+> (read-only view, re-roast = new `analyses` row, estimate logic) still stands.
+
 ## Locked decisions (the contract)
 - **View = read-only** — tapping any past roast writes nothing.
 - **Re-roast = a NEW `analyses` row (insert), never an overwrite**; only the **most-recent** roast is
