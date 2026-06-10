@@ -20,6 +20,7 @@
 | [`docs/demo-checklist.md`](demo-checklist.md) | Fresh-account end-to-end QA checklist |
 | [`docs/unified-financial-model.md`](unified-financial-model.md) | The snapshot / analyses / check-ins model |
 | [`docs/three-day-enforcement.md`](three-day-enforcement.md) | 3-day-access paywall enforcement plan |
+| [`docs/schema-v2.md`](schema-v2.md) | DB rebuild/consolidation plan — target schema, open decisions (D1–D8), butterfly-effects map |
 
 ## In flight
 
@@ -99,6 +100,18 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 ## Session log
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
+
+### 2026-06-10 — schema audit → schema-v2 consolidation plan (decisions finalized)
+- Reconstructed the full schema from all 26 migrations + verified against code. Wrote
+  `docs/schema-v2.md`: target lean schema, butterfly-effects map, and a **plan-lifecycle** design
+  (fixed 90-day windows; status `active|completed|incomplete`; status-aware create; lazy window-end;
+  completion→check-in/re-roast funnel = v1/post-demo). **All decisions D1–D8 settled.**
+- Key findings: (1) RLS makes `community_posts` denormalization load-bearing — it CAN'T be slimmed
+  to just `analysis_id` (analyses/profiles are owner-private; the feed is public). (2) `payments` is
+  Stripe-legacy, only `gdpr.ts` refs it → drop. (3) `source_analysis_id` IS written + drives
+  `has_action_plan` (don't drop). (4) rate-limiting IS wired into the 4 LLM edge fns. Renames:
+  `subscriptions`→`tracked_subscriptions`, `user_subscriptions`→`plan_entitlements`,
+  `active_plans`→`action_plans`. Post-demo refactor; hosted-DB reset needs coworker coord (rule #3).
 
 ### 2026-06-10 — IA open questions resolved; TODO finalized
 - Settled both open questions: keep Trend + AllAnalyses (distinct), but strip check-ins out of Trend
