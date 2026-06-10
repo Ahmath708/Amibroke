@@ -308,6 +308,17 @@ client-side.
   wiring without also creating the `affiliate_clicks` table (with RLS).
 - **ScenarioSimulator** is an intentional "Coming Soon" stub (being rebuilt on the new scoring
   engine) — wired into nav but not implemented.
+- **CreatorDashboard is half-implemented and deferred** (flag-gated off via
+  `FEATURES.CREATOR_DASHBOARD`; the screen `goBack()`s on mount when the flag is off). It's a
+  creator/influencer mode, not an end-user feature. Scope: (1) **Batch Roast** — loops the normal
+  paid analyze pipeline (`batchRoast` → `analyzeFinancialSituation`) so a creator can roast many
+  inputs at once (**real, but each input is a paid call — rule #1**); (2) **Referral code** —
+  generates `BROKE-XXXX` + writes a `referrals` row (codes work, but **no payout system populates
+  earnings**); (3) **Creator stats** derived from `community_posts` — "Views" is a reactions×10
+  proxy and "Earnings" is effectively always $0 (vanity/aspirational). Treat as a parked
+  monetization experiment: keep its single flag-gated entry in Profile, don't wire it into more
+  surfaces, and don't surface "Views"/"Earnings" as if they're real without a backing payout/metrics
+  system. (Dedup TODO: remove the duplicate Settings entry — see `docs/PROJECT-STATUS.md`.)
 
 ## Skills (in `.claude/skills/`)
 
