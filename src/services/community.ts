@@ -4,6 +4,7 @@ import { CommunityPost } from '@/types';
 import { TABLES } from './tables';
 import { withClient } from './supabaseClient';
 import { getProfile } from './profile';
+import { USE_AI_MOCKS } from '@/config/ai';
 
 export type FeedSort = 'recent' | 'trending' | 'lowest';
 /** Opaque keyset cursor — the caller just stores it and passes it back. */
@@ -23,6 +24,15 @@ export async function getCommunityFeed(
 ): Promise<FeedPage> {
   const { sort = 'recent', userId, cursor = null, limit = 20 } = opts;
   const empty: FeedPage = { posts: [], nextCursor: null, hasMore: false };
+  if (USE_AI_MOCKS) {
+    const { MOCK_FEED } = require('@/__fixtures__/mockFeed');
+    const reactSum = (p: CommunityPost) => Object.values(p.reactions).reduce((s, n) => s + (n as number), 0);
+    const posts: CommunityPost[] = [...MOCK_FEED];
+    if (sort === 'lowest') posts.sort((a, b) => a.score - b.score);
+    else if (sort === 'trending') posts.sort((a, b) => reactSum(b) - reactSum(a));
+    else posts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return { posts, nextCursor: null, hasMore: false };
+  }
   return withClient('fetch community feed', empty, async (client) => {
     let query = (client as any).from(TABLES.community_posts).select('*');
 
