@@ -1,5 +1,5 @@
 -- =============================================================================
--- Schema v2 — squashed baseline migration  (DRAFT — do NOT apply)
+-- Schema v2 — squashed baseline migration  (FINALIZED — not yet applied; post-demo cutover)
 -- =============================================================================
 -- Replaces the squash target of live migrations 00001–00026 with the Schema v2
 -- target schema (docs/schema-v2.md). This file lives in supabase/migrations.v2/
@@ -7,7 +7,8 @@
 -- the Friday demo). Nothing here is applied until the post-demo rebuild cutover.
 --
 -- =============================================================================
--- OPEN QUESTIONS / ASSUMPTIONS  (resolve before applying)
+-- RESOLVED DECISIONS  (locked; see docs/schema-v2.md) — everything below was
+-- confirmed as-drafted EXCEPT the deltas explicitly marked RESOLVED (#4/#9/#12/#16).
 -- =============================================================================
 -- 1. EXACT MONTHLY INCOME has NO column anywhere in v2. The slim `profiles` drops
 --    `monthly_income` (00021) and `financial_context` only holds the coarse
@@ -37,8 +38,9 @@
 --    score_label / is_paid / action_plan. It does NOT mention the OTHER extended
 --    columns added in 00013: top_problems, positive_behaviors, score_modifier,
 --    score_modifier_reason, avg_confidence, monthly_debt_service, liquid_savings.
---    ASSUMPTION: KEEP them (the analyze pipeline still writes them; dropping risks a
---    PGRST204 on insert). Confirm whether any of these should also be dropped.
+--    RESOLVED: KEEP them — immutable AI/scoring output, not derivable. (score_color/
+--    score_label are the ones dropped → derived via getScoreBand: no stale rows, no
+--    migration when band ranges move.)
 --    Also: the "metrics" are kept as the flat numeric columns (income/expenses/
 --    savings/debt_total/savings_rate/emergency_fund_months/debt_to_income_ratio),
 --    matching the snapshot's flat shape — NOT folded into a single JSONB.
@@ -64,12 +66,10 @@
 --    values weekly|monthly|quarterly|semiannual|yearly — kept in sync with the single source of
 --    truth @shared/billingPeriod.ts (BILLING_PERIODS + toMonthly() for the audit's $/mo math).
 --
--- 9. `plan_entitlements` keeps the CHECK on plan ('action_plan','deep_dive') and on
---    status, but the OLD status CHECK included Stripe-era values (trialing/past_due/
---    incomplete_expired/paused). ASSUMPTION: keep the same status vocabulary for
---    RevenueCat compatibility (the webhook maps RC events onto these). Confirm the
---    final RevenueCat status set — some Stripe statuses may be dead.
---    No client write RLS (SELECT-only) — only the service-role webhook writes here.
+-- 9. RESOLVED: plan_entitlements.status CHECK trimmed to (active|trialing|past_due|canceled)
+--    — exactly what revenuecat-webhook writes + entitlement.ts/subscriptions.ts read
+--    (incomplete/incomplete_expired/paused dropped as dead). plan CHECK
+--    ('action_plan','deep_dive'). SELECT-only RLS — the service-role webhook writes here.
 --
 -- 10. `community_posts.display_name` / `score` / `roast` / `summary` are the
 --     denormalized public-safe projection (load-bearing under RLS — see schema-v2's
@@ -83,10 +83,9 @@
 --     are DROPPED (no reactions JSONB to maintain — D8). Per-emoji counts are now
 --     derived by aggregating post_reactions client/edge-side.
 --
--- 12. `check_ins` carries forward ALL columns incl. the legacy flat income/expenses/
---     savings/debt numeric columns AND the newer metrics JSONB (00017) + reflection
---     (00023). ASSUMPTION: keep the flat columns (still written by older check-in
---     code paths). Confirm if check-ins should be JSONB-only now.
+-- 12. RESOLVED: check_ins is JSONB-ONLY — flat income/expenses/savings/debt DROPPED; all
+--     figures live in `metrics` (point-in-time history; the snapshot keeps only current
+--     state). The read path (checkins.ts, MonthlyCheckIn prefill) moves to metrics->> at cutover.
 --
 -- 13. RPCs carried forward: check_rate_limit, cleanup_rate_limits (00009),
 --     set_username (00010), is_username_available (00016). DROPPED:
@@ -101,10 +100,13 @@
 --     (deferred to the creator feature). GDPR export/delete lists must be repointed
 --     in code (gdpr.ts) — out of scope for this SQL.
 --
--- 16. handle_new_user() now writes ONLY (id) — it no longer writes display_name /
---     monthly_income / ctx_*. username stays NULL (set later via set_username);
---     preferred_tone/debt_strategy fall back to their column DEFAULTs; onboarded
---     defaults false. Confirm you don't want it to seed username from email prefix.
+-- 16. RESOLVED: handle_new_user() writes ONLY (id). username stays NULL (onboarding claims it
+--     via set_username — Phase 1); preferred_tone/debt_strategy/onboarded use column DEFAULTs.
+--
+-- ⚠ BEFORE APPLY:
+--   · financial_snapshots ✓ VERIFIED — matches live 00022 verbatim (flat values + provenance JSONB).
+--   · The code-side butterfly map (tables.ts renames, services, edge fns, gdpr.ts, and the
+--     check_ins metrics-JSONB read path) is OUT OF SCOPE for this SQL — done at cutover.
 -- =============================================================================
 
 
@@ -435,7 +437,7 @@ CREATE TRIGGER update_tracked_subscriptions_updated_at
 CREATE TABLE plan_entitlements (
   user_id              UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
   plan                 TEXT CHECK (plan IN ('action_plan', 'deep_dive')),
-  status               TEXT CHECK (status IN ('trialing','active','past_due','canceled','incomplete','incomplete_expired','paused')),
+  status               TEXT CHECK (status IN ('active','trialing','past_due','canceled')), -- the set revenuecat-webhook writes + entitlement reads (OQ #9)
   current_period_end   TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN NOT NULL DEFAULT false,
   store                TEXT,                               -- 'app_store' | 'play_store'
@@ -461,18 +463,16 @@ CREATE TRIGGER update_plan_entitlements_updated_at
 -- =============================================================================
 -- check_ins  (monthly check-in time-series)
 --   Carried forward from 00002 + 00017 (metrics JSONB) + 00023 (reflection).
---   See OQ #12 re: keeping the legacy flat income/expenses/savings/debt columns.
+--   OQ #10 RESOLVED: JSONB-only. The flat income/expenses/savings/debt columns are dropped — all
+--   recorded figures live in `metrics` (the immutable point-in-time history). The snapshot keeps
+--   ONLY current state (no history), so the check-in must freeze its own copy here.
 -- =============================================================================
 CREATE TABLE check_ins (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   mood       INTEGER NOT NULL,
   notes      TEXT,
-  income     NUMERIC,
-  expenses   NUMERIC,
-  savings    NUMERIC,
-  debt       NUMERIC,
-  metrics    JSONB,                                        -- 00017: goalId → current value
+  metrics    JSONB,                                        -- all recorded values this check-in (income/expenses/savings/debt + per-goal), keyed; goal DEFINITIONS live in profiles.checkin_config
   reflection TEXT,                                         -- 00023: per-check-in Haiku note
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
