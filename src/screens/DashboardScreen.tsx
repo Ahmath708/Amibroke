@@ -128,7 +128,7 @@ export default function DashboardScreen({ navigation }: Props) {
     return (
       <View style={styles.container}>
         <ScreenBackground variant="home" />
-        <View style={[styles.scroll, { paddingTop: insets.top + Spacing.lg }]}>
+        <View style={[styles.scroll, { paddingTop: insets.top + Spacing.xxl }]}>
           <View style={styles.header}>
             <View style={styles.greeting}>
               <Skeleton width={110} height={13} style={{ marginBottom: Spacing.sm }} />
@@ -153,7 +153,7 @@ export default function DashboardScreen({ navigation }: Props) {
       <View style={styles.container}>
         <ScreenBackground variant="home" />
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xxl, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
         >
           <ReAnimated.View entering={enterUp(0)} style={styles.header}>
@@ -243,7 +243,7 @@ export default function DashboardScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xxl, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header: time-aware greeting (small lead + name hero) + avatar → Profile */}
@@ -320,7 +320,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
         {/* Check-in nudge — renders itself only when a check-in is due */}
         <ReAnimated.View entering={enterUp(4)}>
-          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.lg }} />
+          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} anchorFallback={history[history.length - 1]?.created_at} style={{ marginBottom: Spacing.lg }} />
         </ReAnimated.View>
 
         {/* Bento row: a wider Trend tile + a Roasts-count stat tile (varied weights) */}

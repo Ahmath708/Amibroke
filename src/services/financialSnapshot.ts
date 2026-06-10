@@ -15,8 +15,12 @@ import {
 } from '@shared/financialSnapshot';
 import type { FinalAnalysis } from '@shared/types';
 
-// Dev-only in-memory store (resets on reload) so the flow works without the table pushed.
-let mockSnapshot: FinancialSnapshot | null = null;
+// Dev-only in-memory store (resets on reload) so the flow works without the table pushed. Seeded
+// with the mock-persona snapshot so the dashboard/Money/check-in surfaces show data in mock mode
+// (require, not a static import, so the fixture never ships to prod). Mutated by mergeSnapshot below.
+let mockSnapshot: FinancialSnapshot | null = USE_AI_MOCKS
+  ? (require('@/__fixtures__/mockHistory').MOCK_SNAPSHOT as FinancialSnapshot)
+  : null;
 
 export async function getSnapshot(userId: string): Promise<FinancialSnapshot | null> {
   if (USE_AI_MOCKS) return mockSnapshot;

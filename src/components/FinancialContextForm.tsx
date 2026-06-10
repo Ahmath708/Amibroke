@@ -4,6 +4,7 @@ import SelectableChip from '@/components/SelectableChip';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import StateSelect from '@/components/StateSelect';
+import AppTextInput from '@/components/AppTextInput';
 
 // Keys match the analyze `userContext` shape; `col` is the profiles column.
 export const CONTEXT_FIELDS: { key: string; label: string; col: string; options: string[] }[] = [
@@ -21,6 +22,16 @@ export type ContextValues = Record<string, string>;
 // profiles columns to SELECT when loading saved context.
 export const CTX_COLUMNS = CONTEXT_FIELDS.map((f) => f.col).join(', ');
 
+// Optional exact monthly income (profiles.monthly_income, 00021) → a positive number, and the
+// bracket it falls in. Mirrors onboarding so the input behaves identically. Held in the form's
+// values under the `incomeExact` key (a string), separate from the ctx_* bracket columns.
+export const parseIncome = (s?: string): number | null => {
+  const n = parseFloat((s ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+const incomeBracketFor = (n: number): string =>
+  n < 2000 ? 'under_2k' : n < 4000 ? '2k_4k' : n < 6000 ? '4k_6k' : n < 10000 ? '6k_10k' : 'over_10k';
+
 /** profiles row → form values (keyed like the analyze userContext). */
 export function valuesFromProfile(row: Record<string, unknown> | null): ContextValues {
   const v: ContextValues = {};
@@ -32,12 +43,16 @@ export function valuesFromProfile(row: Record<string, unknown> | null): ContextV
   return v;
 }
 
-/** form values → profiles update object (only non-empty). */
+/** form values → profiles ctx_* update object (only non-empty). NOTE: the numeric
+ *  `monthly_income` column is written separately by the screen (non-fatal, per the DB-lag gotcha). */
 export function profileUpdateFromValues(values: ContextValues): Record<string, string | null> {
   const update: Record<string, string | null> = {};
   for (const f of CONTEXT_FIELDS) {
     update[f.col] = values[f.key] || null;
   }
+  // An exact income (optional) pins the income bracket so the two stay consistent (mirrors onboarding).
+  const exact = parseIncome(values.incomeExact);
+  if (exact != null) update.ctx_income_bracket = incomeBracketFor(exact);
   return update;
 }
 
@@ -89,6 +104,22 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
               })}
             </ScrollView>
           )}
+          {field.key === 'incomeBracket' && (
+            <View style={styles.exactWrap}>
+              <Text style={styles.exactLabel}>Or enter exact (optional)</Text>
+              <View style={styles.exactRow}>
+                <Text style={styles.exactDollar}>$</Text>
+                <AppTextInput
+                  value={selections.incomeExact ?? ''}
+                  onChangeText={(v) => setSelections((prev) => ({ ...prev, incomeExact: v.replace(/[^0-9]/g, '') }))}
+                  placeholder="4800"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="number-pad"
+                  style={styles.exactInput}
+                />
+              </View>
+            </View>
+          )}
         </View>
       ))}
 
@@ -108,12 +139,22 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
 }
 
 const styles = StyleSheet.create({
-  field: { marginBottom: Spacing.lg },
+  field: { marginBottom: Spacing.xl + Spacing.xs }, // a touch more air between fields
   fieldLabel: {
     fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
   },
   chipsRow: { gap: Spacing.sm, paddingRight: Spacing.xl },
+  exactWrap: { marginTop: Spacing.md },
+  exactLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.sm },
+  exactRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    paddingHorizontal: Spacing.md,
+  },
+  exactDollar: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textSecondary },
+  exactInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm },
   cta: { marginTop: Spacing.lg },
   skipBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   skipText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },

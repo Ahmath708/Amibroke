@@ -13,6 +13,7 @@
  */
 import type { AnalysisHistoryItem, CheckIn, CheckinConfig, TrackedGoal } from '@/types';
 import type { FinalAnalysis } from '@shared/types';
+import { mergeIntoSnapshot, type FinancialSnapshot } from '@shared/financialSnapshot';
 import { metricGoalId, debtGoalId } from '@/utils/checkinGoals';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { SAMPLE_ANALYSIS } from './sampleAnalysis';
@@ -103,6 +104,25 @@ export const MOCK_CHECKINS: CheckIn[] = [
   { id: 'ci-1', mood: 2, notes: 'Tight month, car needed brakes. Held the line though.', income: 4800, expenses: 4400, savings: 900, debt: 14800, created_at: '2026-03-22T12:00:00',
     metrics: { [G_DEBT]: 14800, [G_CARD]: 3800, [G_SAVINGS]: 900, [G_EF]: 0.4 } },
 ];
+
+// Current financial snapshot for the mock user — a returning user mid-progress (~score 80): the
+// Capital One card is paid off (per ci-2), a student loan remains, and savings are building. Seeds
+// getSnapshot in mock mode so the dashboard "Your Finances" card, the Money hub, and the check-in
+// prefill all show real-looking data without burning API calls. Built via the real merge engine so
+// the derived metrics (savings rate, DTI, emergency fund) are computed correctly. Source 'roast' +
+// the latest-roast timestamp so it doesn't read as stale.
+export const MOCK_SNAPSHOT: FinancialSnapshot = mergeIntoSnapshot(
+  null,
+  {
+    monthlyIncome: { value: 5000, confidence: 'stated' },
+    monthlyExpenses: { value: 3700, confidence: 'stated' },
+    liquidSavings: { value: 2600, confidence: 'stated' },
+    debts: { value: [{ name: 'Student loan', balance: 9800, apr: 0.065, min_payment: 210, kind: 'student_loan' }], confidence: 'stated' },
+  },
+  'roast',
+  '2026-06-01T21:45:00',
+  80,
+);
 
 /** Returns a coherent full analysis for a tapped row (clone + score overrides). */
 export function getMockAnalysisById(id: string): FinalAnalysis | null {

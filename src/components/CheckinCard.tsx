@@ -4,24 +4,35 @@ import { ChevronRightIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
+import { dueStatus } from '@/utils/checkinSchedule';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 interface Props {
   onPress: () => void;
+  /** Earliest roast date — used as the schedule anchor when the user hasn't set up goals yet,
+   *  so the card still persists and states the next check-in for any roasted user. */
+  anchorFallback?: string | null;
   style?: ViewStyle;
 }
 
-/** Home nudge for the monthly check-in. Shows only for users who track goals:
- *  a prominent CTA when due, a compact "next check-in" line otherwise.
- *  Neutral elevated surface (the accent moment is reserved for the premium card),
- *  with an accent-tinted icon badge + chevron for a contained pop. */
-export default function CheckinCard({ onPress, style }: Props) {
-  const { loading, configured, due, dueDate, streak } = useCheckinStatus();
-  if (loading || !configured) return null;
+/** Home nudge for the monthly check-in. Persists for any user with a check-in schedule: a
+ *  prominent CTA when due, a compact "next check-in · date" line otherwise. Neutral elevated
+ *  surface (the accent moment is reserved for the premium card), with an accent-tinted icon
+ *  badge + chevron for a contained pop. */
+export default function CheckinCard({ onPress, anchorFallback, style }: Props) {
+  const { loading, config, lastCheckIn, streak } = useCheckinStatus();
+  if (loading) return null;
 
-  const dateLabel = dueDate ? `${MONTHS_SHORT[dueDate.getMonth()]} ${dueDate.getDate()}` : '';
+  // Anchor on the user's set-up date, else the earliest roast — so the schedule (and the next
+  // date) exist even before they pin goals. No anchor at all → nothing to state.
+  const anchor = config.firstAnalyzeAt ?? anchorFallback ?? null;
+  const status = dueStatus(anchor ? new Date(anchor) : null, lastCheckIn ? new Date(lastCheckIn.created_at) : null, new Date());
+  if (!status) return null;
+  const { due, dueDate } = status;
+
+  const dateLabel = `${MONTHS_SHORT[dueDate.getMonth()]} ${dueDate.getDate()}`;
 
   if (due) {
     const monthName = dueDate ? MONTHS_FULL[dueDate.getMonth()] : 'your';
@@ -33,7 +44,7 @@ export default function CheckinCard({ onPress, style }: Props) {
             <Text style={styles.dueTitle}>Your {monthName} check-in is ready</Text>
             <Text style={styles.dueBody}>{streak > 1 ? `Keep your ${streak}-month streak alive 🔥` : 'Check in on how you’re feeling + what’s changed.'}</Text>
           </View>
-          <ChevronRightIcon size={18} color={Colors.accent} />
+          <ChevronRightIcon size={18} color={Colors.textSecondary} />
         </View>
       </PressableScale>
     );
@@ -42,8 +53,8 @@ export default function CheckinCard({ onPress, style }: Props) {
   return (
     <PressableScale onPress={onPress} haptic="light" style={style}>
       <View style={styles.compact}>
-        <Text style={styles.compactIcon}>{streak > 1 ? '🔥' : '✅'}</Text>
-        <Text style={styles.compactText}>{streak > 1 ? `${streak}-month streak` : 'Tracking monthly'}{dateLabel ? ` · Next ${dateLabel}` : ''}</Text>
+        <Text style={styles.compactIcon}>{streak > 1 ? '🔥' : '🗓️'}</Text>
+        <Text style={styles.compactText}>Next check-in · {dateLabel}{streak > 1 ? ` · ${streak}-mo streak` : ''}</Text>
         <ChevronRightIcon size={16} color={Colors.textMuted} />
       </View>
     </PressableScale>

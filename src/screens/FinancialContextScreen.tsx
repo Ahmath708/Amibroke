@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
-import FinancialContextForm, { ContextValues, CTX_COLUMNS, valuesFromProfile, profileUpdateFromValues } from '@/components/FinancialContextForm';
+import FinancialContextForm, { ContextValues, CTX_COLUMNS, valuesFromProfile, profileUpdateFromValues, parseIncome } from '@/components/FinancialContextForm';
 import { useAuth } from '@/context/AuthContext';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'FinancialContext'> };
@@ -21,7 +21,14 @@ export default function FinancialContextScreen({ navigation }: Props) {
     (async () => {
       try {
         const { data } = await supabase.from('profiles').select(CTX_COLUMNS).eq('id', user.id).maybeSingle();
-        setInitial(valuesFromProfile(data as Record<string, unknown> | null));
+        const values = valuesFromProfile(data as Record<string, unknown> | null);
+        // Optional exact income — separate, non-fatal read: monthly_income (00021) may be unpushed.
+        try {
+          const { data: mi } = await supabase.from('profiles').select('monthly_income').eq('id', user.id).maybeSingle();
+          const n = (mi as Record<string, unknown> | null)?.monthly_income;
+          if (typeof n === 'number' && n > 0) values.incomeExact = String(Math.round(n));
+        } catch { /* column may not exist yet */ }
+        setInitial(values);
       } catch {
         setInitial({});
       }
@@ -31,7 +38,14 @@ export default function FinancialContextScreen({ navigation }: Props) {
   const save = async (values: ContextValues) => {
     setSaving(true);
     try {
-      if (user) await supabase.from('profiles').update(profileUpdateFromValues(values)).eq('id', user.id);
+      if (user) {
+        await supabase.from('profiles').update(profileUpdateFromValues(values)).eq('id', user.id);
+        // Optional exact income — separate, non-fatal write (monthly_income / 00021 may be unpushed).
+        try {
+          const { error } = await supabase.from('profiles').update({ monthly_income: parseIncome(values.incomeExact) }).eq('id', user.id);
+          if (error) console.warn('[financial-context] monthly_income not persisted (push 00021):', error.message);
+        } catch { /* column may not exist yet */ }
+      }
     } catch (e) {
       console.warn('[financial-context] save failed:', e);
     }

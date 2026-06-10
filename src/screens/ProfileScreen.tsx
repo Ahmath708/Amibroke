@@ -36,6 +36,7 @@ type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 // Account / app items (always available).
 const ACCOUNT_ITEMS: { icon: string; label: string; nav: string }[] = [
   { icon: 'person-outline', label: 'Edit Profile', nav: 'EditProfile' },
+  { icon: 'clipboard-outline', label: 'Financial Context', nav: 'FinancialContext' }, // state/age/housing/employment + brackets → analyze priors
   { icon: 'card-outline', label: 'Your Plan', nav: 'Paywall' }, // premium→manage, free→Paywall; detail = live tier (see render)
   ...(FEATURES.CREATOR_DASHBOARD ? [{ icon: 'trending-up-outline', label: 'Creator Dashboard', nav: 'CreatorDashboard' }] : []),
   { icon: 'settings-outline', label: 'Settings', nav: 'Settings' },

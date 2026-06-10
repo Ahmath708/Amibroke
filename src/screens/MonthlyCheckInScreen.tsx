@@ -7,7 +7,7 @@ import AppTextInput from '@/components/AppTextInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList, CheckinConfig, TrackedGoal, CheckIn, EMPTY_CHECKIN_CONFIG, MetricKey, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
@@ -18,7 +18,8 @@ import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getCheckinConfig, saveCheckinConfig, getCheckIns, saveCheckIn } from '@/services/checkins';
-import { mergeSnapshot, updateSnapshotDebts } from '@/services/financialSnapshot';
+import { mergeSnapshot, updateSnapshotDebts, getSnapshot } from '@/services/financialSnapshot';
+import type { FinancialSnapshot } from '@shared/financialSnapshot';
 import type { SnapshotPatch } from '@shared/financialSnapshot';
 import { checkinReflection } from '@/services/ai';
 import { currentStreak, daysUntilNextCheckin } from '@shared/checkinCadence';
@@ -64,6 +65,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   const [firstAnalyzeAt, setFirstAnalyzeAt] = useState<string | null>(null);
   const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null);
   const [candidates, setCandidates] = useState<TrackedGoal[]>([]);
+  const [snapshot, setSnapshot] = useState<FinancialSnapshot | null>(null);
 
   // setup state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -86,9 +88,10 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   useEffect(() => {
     (async () => {
       if (!user) { setMode('no-analysis'); return; }
-      const [cfg, checkins, history, profile] = await Promise.all([
-        getCheckinConfig(user.id), getCheckIns(user.id), getAnalysisHistory(user.id), getProfile(user.id),
+      const [cfg, checkins, history, profile, snap] = await Promise.all([
+        getCheckinConfig(user.id), getCheckIns(user.id), getAnalysisHistory(user.id), getProfile(user.id), getSnapshot(user.id),
       ]);
+      setSnapshot(snap);
       // The reflection matches the user's chosen roast voice (profiles.preferred_tone; default savage).
       setRoastTone((profile?.preferred_tone as RoastTone) ?? 'savage');
       // Retire the generic total-debt metric goal — debt is tracked per-debt now (kind: 'debt').
@@ -115,7 +118,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
         setSelectedIds(sel);
         setMode('setup');
       } else {
-        seedCheckin(cfg, checkins[0] ?? null);
+        seedCheckin(cfg, checkins[0] ?? null, snap);
         setMode('checkin');
       }
     })();
@@ -162,14 +165,21 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
         new Date(),
       ));
     }
-    seedCheckin(next, lastCheckIn);
+    seedCheckin(next, lastCheckIn, snapshot);
     setMode('checkin');
   };
 
   // ─── check-in ───
-  function seedCheckin(cfg: CheckinConfig, last: CheckIn | null) {
+  function seedCheckin(cfg: CheckinConfig, last: CheckIn | null, snap: FinancialSnapshot | null) {
     const b: Record<string, string> = {};
     const d: Record<string, string> = {};
+    // Default the base figures from the current snapshot (the source of truth). A prior check-in or
+    // a direct goal's baseline overrides below. Without this, goals that only need DERIVED inputs
+    // (savings rate, emergency fund) left income/expenses blank ($0) on the first check-in.
+    const snapStr = (f?: { value: number }) => (f?.value != null && f.value > 0 ? `${Math.round(f.value)}` : '');
+    b.income = snapStr(snap?.monthlyIncome);
+    b.expenses = snapStr(snap?.monthlyExpenses);
+    b.savings = snapStr(snap?.liquidSavings);
     const lastVal = (id: string, fallback?: number) => {
       const v = last?.metrics?.[id];
       return v != null ? `${v}` : fallback != null ? `${fallback}` : '';
@@ -340,15 +350,18 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                       {on && (g.unit === 'currency' || g.unit === 'percent' || g.unit === 'months') ? (
                         <View style={styles.targetWrap}>
                           <Text style={styles.targetLabel}>Goal</Text>
-                          <AppTextInput
-                            style={styles.targetInput}
-                            placeholder={targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g) || '—'}
-                            placeholderTextColor={Colors.textMuted}
-                            keyboardType="numeric"
-                            value={targetInputs[g.id] ?? targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g)}
-                            onChangeText={(v) => setTargetInputs((p) => ({ ...p, [g.id]: v }))}
-                          />
-                          <Text style={styles.targetUnit}>{g.unit === 'percent' ? '%' : g.unit === 'months' ? 'mo' : '$'}</Text>
+                          <View style={styles.targetBox}>
+                            {g.unit === 'currency' && <Text style={styles.targetUnit}>$</Text>}
+                            <AppTextInput
+                              style={styles.targetInput}
+                              placeholder={targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g) || '0'}
+                              placeholderTextColor={Colors.textMuted}
+                              keyboardType="numeric"
+                              value={targetInputs[g.id] ?? targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g)}
+                              onChangeText={(v) => setTargetInputs((p) => ({ ...p, [g.id]: v }))}
+                            />
+                            {g.unit !== 'currency' && <Text style={styles.targetUnit}>{g.unit === 'percent' ? '%' : 'mo'}</Text>}
+                          </View>
                         </View>
                       ) : null}
                     </TouchableOpacity>
@@ -404,18 +417,25 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
               {config.goals.map((g, i) => {
                 const current = computeGoalCurrent(g, currentBase());
                 const p = goalProgress(g, current);
-                // Arrow = actual value direction; colour = whether that's an improvement.
-                const arrow = p.delta === 0 ? '→' : p.delta > 0 ? '↑' : '↓';
-                const color = p.delta === 0 ? Colors.textMuted : p.improved ? Colors.success : Colors.danger;
+                // "No change" = the DISPLAYED values match, so 0.4 → 0.4 reads as no change even
+                // when the raw delta is a rounding hair. Thick bar for no change; a bold up / down
+                // arrow for a real increase / decrease. Colour = improvement (green) / regression
+                // (red); muted (never red) when there's no change.
+                const baseStr = formatGoalValue(g.unit, g.baseline);
+                const curStr = formatGoalValue(g.unit, current);
+                const noChange = baseStr === curStr;
+                const color = noChange ? Colors.textMuted : p.improved ? Colors.success : Colors.danger;
                 return (
                   <React.Fragment key={g.id}>
                     {i > 0 && <View style={styles.cellSep} />}
                     <View style={styles.progRow}>
                       <Text style={styles.progLabel}>{g.label}</Text>
                       <View style={styles.progValues}>
-                        <Text style={styles.progBaseline}>{formatGoalValue(g.unit, g.baseline)}</Text>
-                        <Text style={[styles.progArrow, { color }]}>{arrow}</Text>
-                        <Text style={[styles.progCurrent, { color }]}>{formatGoalValue(g.unit, current)}</Text>
+                        <Text style={styles.progBaseline}>{baseStr}</Text>
+                        {noChange
+                          ? <View style={[styles.noChangeBar, { backgroundColor: color }]} />
+                          : <MaterialCommunityIcons name={p.delta > 0 ? 'arrow-up-bold' : 'arrow-down-bold'} size={20} color={color} />}
+                        <Text style={[styles.progCurrent, { color }]}>{curStr}</Text>
                       </View>
                     </View>
                   </React.Fragment>
@@ -495,24 +515,25 @@ const styles = StyleSheet.create({
   cellSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
   formCell: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 13, minHeight: 50 },
   formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  formInputRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  formInputRow: { flexDirection: 'row', alignItems: 'center', gap: 1, backgroundColor: Colors.background, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.glassBorder, paddingHorizontal: Spacing.sm, paddingVertical: 5, minWidth: 104 },
   formPrefix: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  formInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minWidth: 80, textAlign: 'right' },
+  formInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, minWidth: 68, textAlign: 'left', paddingVertical: 0 },
   // setup picker
   pickRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: 12, minHeight: 56 },
   pickInfo: { flex: 1 },
   pickLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   pickBaseline: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: 1 },
-  targetWrap: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  targetWrap: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   targetLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted },
-  targetInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent, minWidth: 38, textAlign: 'right' },
+  targetBox: { flexDirection: 'row', alignItems: 'center', gap: 1, backgroundColor: Colors.background, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.glassBorder, paddingHorizontal: Spacing.sm, paddingVertical: 4, minWidth: 54 },
+  targetInput: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent, minWidth: 24, textAlign: 'left', paddingVertical: 0 },
   targetUnit: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   // progress
   progRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 12 },
   progLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, flex: 1 },
   progValues: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  progBaseline: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
-  progArrow: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, fontWeight: '700' },
+  noChangeBar: { width: 14, height: 4, borderRadius: 2 },
+  progBaseline: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textMuted },
   progCurrent: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, fontWeight: '700' },
   // mood
   moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs },
