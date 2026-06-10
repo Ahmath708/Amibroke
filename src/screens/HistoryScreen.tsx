@@ -10,33 +10,24 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { formatShortDate as fmtDate } from '@/utils/format';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { scoreGradient } from '@/utils/scoreVisual';
 import GlassCard from '@/components/GlassCard';
 import Skeleton from '@/components/Skeleton';
 import ErrorState from '@/components/ErrorState';
 import EmptyState from '@/components/EmptyState';
-import SectionLabel from '@/components/SectionLabel';
-import AnalysisRow from '@/components/AnalysisRow';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
-import { getCheckIns } from '@/services/checkins';
-import { AnalysisHistoryItem, CheckIn } from '@/types';
+import { AnalysisHistoryItem } from '@/types';
 import ScreenBackground from '@/components/ScreenBackground';
 import HistoryChart from '@/components/HistoryChart';
-import CheckinTrend from '@/components/CheckinTrend';
 import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
-
-// Inline analyses shown under the chart before the "View All" link.
-const INLINE_LIMIT = 2; // short preview; full archive via "View All"
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
-  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,12 +44,8 @@ export default function HistoryScreen() {
     }
     setError(null);
     try {
-      const [data, checkinData] = await Promise.all([
-        getAnalysisHistory(user.id),
-        getCheckIns(user.id),
-      ]);
+      const data = await getAnalysisHistory(user.id);
       setHistory(data || []);
-      setCheckIns(checkinData || []);
     } catch {
       setError('Failed to load history.');
     } finally {
@@ -158,60 +145,16 @@ export default function HistoryScreen() {
         {history.length === 0 ? (
           <EmptyState emoji="📋" title="No roasts yet" body="Run your first roast to start tracking your financial progress over time." />
         ) : (
-          <>
-            {/* Score trend chart — the hero of the Trend screen */}
-            <HistoryChart
-              items={history}
-              granularity={granularity}
-              anchor={anchor}
-              now={now}
-              onChange={(g, a) => { setGranularity(g); setAnchor(a); }}
-              onOpenAnalysis={handleRowPress}
-            />
-
-            {/* The roast LIST lives on its own screen (All Roasts), reached from the
-                Dashboard "Roasts" tile — Trend is just the chart + check-ins. */}
-
-            {/* Progress trend across check-ins (self-hides until there's data) */}
-            <CheckinTrend />
-
-            {/* Check-ins list */}
-            {checkIns.length > 0 && (
-              <>
-                <SectionLabel style={{ marginTop: Spacing.xl }}>Monthly Check-Ins</SectionLabel>
-                <View style={styles.historyGroup}>
-                  {checkIns.map((c, i) => {
-                    const MOODS = ['😭', '😟', '😐', '🙂', '🤑'];
-                    return (
-                      <React.Fragment key={c.id}>
-                        {i > 0 && <View style={styles.rowSep} />}
-                        <View style={styles.historyRow}>
-                          <View style={styles.checkinEmoji}>
-                            <Text style={styles.checkinEmojiText}>{MOODS[c.mood] || '😐'}</Text>
-                          </View>
-                          <View style={styles.historyInfo}>
-                            <Text style={styles.historyDate}>{fmtDate(c.created_at)}</Text>
-                            {c.notes ? (
-                              <Text style={styles.historySummary} numberOfLines={2}>
-                                "{c.notes}"
-                              </Text>
-                            ) : null}
-                            {c.reflection ? (
-                              <Text style={styles.checkinReflection} numberOfLines={3}>{c.reflection}</Text>
-                            ) : null}
-                          </View>
-                        </View>
-                      </React.Fragment>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-
-            <TouchableOpacity onPress={() => navigation.navigate('MonthlyCheckIn')} style={styles.newCheckinBtn} activeOpacity={0.8}>
-              <Text style={styles.newCheckinText}>+ New check-in</Text>
-            </TouchableOpacity>
-          </>
+          // Trend = just the score chart now. The roast list lives on its own screen (All Roasts)
+          // from the Dashboard "Roasts" tile; check-ins have their own CheckinCard on the Dashboard.
+          <HistoryChart
+            items={history}
+            granularity={granularity}
+            anchor={anchor}
+            now={now}
+            onChange={(g, a) => { setGranularity(g); setAnchor(a); }}
+            onOpenAnalysis={handleRowPress}
+          />
         )}
       </ScrollView>
     </Animated.View>
@@ -223,27 +166,4 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: Spacing.xl },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, marginBottom: Spacing.xxl },
   signInLink: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
-  newCheckinBtn: {
-    marginTop: Spacing.lg, alignItems: 'center', justifyContent: 'center',
-    minHeight: 44, paddingVertical: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.accent,
-    backgroundColor: Colors.accentContainer,
-  },
-  newCheckinText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.accent },
-  historyGroup: {
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-  },
-  rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 70 },
-  historyRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
-  historyInfo: { flex: 1, gap: Spacing.xs },
-  historyDate: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
-  historySummary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
-  checkinReflection: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.accent, lineHeight: 18, marginTop: Spacing.xs / 2, fontStyle: 'italic' },
-  checkinEmoji: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',
-  },
-  checkinEmojiText: { fontSize: Typography.title2.fontSize },
 });

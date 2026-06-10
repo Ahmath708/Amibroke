@@ -3,8 +3,8 @@
 // collect names + ctx_* (+ optional exact income) → persist to profiles + seed the snapshot →
 // buildRescoreInput → analyzeFinances (score-only) → mergeSnapshot('onboarding', score) → reveal →
 // refreshProfile. Only the experience around it is new.
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, StyleProp, TextStyle } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -37,6 +37,14 @@ const STORY: { hero: StoryScene; title: string; sub: string }[] = [
 ];
 
 const STEP_GLYPH: GlyphKind[] = ['name', 'location', 'housing', 'income', 'debt'];
+
+// Cycled while the real score computes — keeps the personality going (Gemini: no dead spinner).
+const CALC_MESSAGES = [
+  "Doing the math you've been avoiding…",
+  'Tallying the damage…',
+  'Consulting the financial gods…',
+  'Crunching your real score…',
+];
 
 function reactionFor(score: number): string {
   const label = getScoreBand(score).label;
@@ -245,8 +253,8 @@ export default function OnboardingV2Screen() {
         {/* ───────── CALCULATING ───────── */}
         {stage === 'calculating' && (
           <View style={[styles.stage, styles.stageCenter]}>
-            <ActivityIndicator size="large" color={Colors.accent} />
-            <Text style={[styles.storySub, styles.calcText]}>Crunching your real score…</Text>
+            <StoryHero scene="dial" />
+            <CyclingText messages={CALC_MESSAGES} style={[styles.storySub, styles.calcText]} />
           </View>
         )}
 
@@ -296,6 +304,16 @@ function Chips({ label, fieldKey, sel, pick }: { label: string; fieldKey: string
       </View>
     </View>
   );
+}
+
+// Rotates through loading messages so the score calc keeps its personality (vs a dead spinner).
+function CyclingText({ messages, style }: { messages: string[]; style?: StyleProp<TextStyle> }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % messages.length), 1700);
+    return () => clearInterval(t);
+  }, [messages.length]);
+  return <Text style={style}>{messages[i]}</Text>;
 }
 
 const styles = StyleSheet.create({

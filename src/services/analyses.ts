@@ -88,6 +88,7 @@ async function planSourceIds(client: any, userId: string): Promise<Set<string>> 
 function mapAnalysisRow(row: any, planIds: Set<string> = new Set()): AnalysisHistoryItem {
   return {
     id: row.id,
+    input_text: row.input_text ?? null,
     score: row.score,
     score_label: row.score_label,
     summary: row.summary,

@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { FEATURES } from '@/config/features';
 import { BRAND } from '@/config/brand';
 import ScreenBackground from '@/components/ScreenBackground';
 import * as Notifications from 'expo-notifications';
@@ -196,7 +195,6 @@ export default function SettingsScreen({ navigation }: Props) {
         navigation.navigate('Paywall');
       }
     }},
-    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav' as const, label: 'Creator Dashboard', icon: 'trending-up-outline', onPress: () => navigation.navigate('CreatorDashboard') }] : []),
   ];
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
@@ -226,8 +224,6 @@ export default function SettingsScreen({ navigation }: Props) {
       rows: [
         { type: 'nav', label: 'Roast Voice', icon: 'sparkles-outline', detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
         { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: 'pulse-outline' },
-        { type: 'nav', label: 'Monthly Check-In', icon: 'clipboard-outline', onPress: () => navigation.navigate('MonthlyCheckIn') },
-        { type: 'nav', label: 'Subscription Audit', icon: 'search-outline', onPress: () => navigation.navigate('SubscriptionAudit') },
       ],
     },
     {

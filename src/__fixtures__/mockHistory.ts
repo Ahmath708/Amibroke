@@ -64,9 +64,19 @@ const SEEDS = RAW.map(([iso, score, summary, plan, captions], i) => ({
   has_captions: !!captions,
 }));
 
+// Sample free-text inputs so the All Roasts preview snippet renders in mock mode.
+const SAMPLE_INPUTS = [
+  "My subscriptions are out of control and I've got ~$4k on credit cards",
+  "I make $5k/mo but somehow I'm broke by the 20th every month",
+  'Rent eats half my paycheck and I still have student loans',
+  'Trying to save for a trip but my spending is a disaster',
+  'Just tell me how cooked my credit card situation is',
+];
+
 export const MOCK_HISTORY: AnalysisHistoryItem[] = SEEDS
-  .map((s) => ({
+  .map((s, i) => ({
     id: s.id,
+    input_text: SAMPLE_INPUTS[i % SAMPLE_INPUTS.length],
     score: s.score,
     score_label: s.score_label,
     summary: s.summary,

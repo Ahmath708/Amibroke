@@ -123,7 +123,7 @@ export default function ShareScreen({ route }: Props) {
   const isDark = theme === 'dark';
   const cardBg = isDark ? ['#1a0026', '#0d001a'] : ['#ffffff', '#f0f0f5'];
   const cardTextColor = isDark ? Colors.textPrimary : '#1a1a2e';
-  const cardSubtextColor = isDark ? Colors.textSecondary : '#555';
+  const cardSubtextColor = isDark ? Colors.textSecondary : '#4a4a4a';
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -196,7 +196,7 @@ export default function ShareScreen({ route }: Props) {
               </View>
             )}
 
-            <Text style={[styles.shareCardRoast, { color: cardSubtextColor }]}>
+            <Text style={[styles.shareCardRoast, { color: cardTextColor }]}>
               "{analysis.roast}"
             </Text>
 

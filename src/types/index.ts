@@ -10,6 +10,7 @@ export type ActionStep = _ActionStep;
 
 export interface AnalysisHistoryItem {
   id: string;
+  input_text?: string | null; // the user's original free-text (preview snippet on All Roasts)
   score: number;
   score_label: string;
   summary: string;

@@ -16,8 +16,8 @@ interface Props {
 }
 
 
-/** A single analysis entry — partial-fill band ring + date · verdict + summary + chips.
- *  Shared by the History inline list and the All Analyses screen. */
+/** A single analysis entry — band ring + date · verdict + the user's original input (a recognizable
+ *  one-liner) + summary + chips. Used by the All Analyses screen. */
 export default function AnalysisRow({ item, delta, loading, disabled, onPress }: Props) {
   const band = getScoreBand(item.score);
   const deltaText = delta != null && delta > 0 ? `+${delta}` : delta != null && delta < 0 ? `${delta}` : '';
@@ -33,7 +33,8 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
           {item.emotional_status?.emoji ? <Text style={styles.emoji}>{item.emotional_status.emoji}</Text> : null}
           {deltaText ? <Text style={[styles.delta, { color: deltaColor }]}>{deltaText}</Text> : null}
         </View>
-        <Text style={styles.summary} numberOfLines={2}>{item.summary}</Text>
+        {item.input_text ? <Text style={styles.inputQuote} numberOfLines={1}>“{item.input_text}”</Text> : null}
+        <Text style={styles.summary} numberOfLines={item.input_text ? 1 : 2}>{item.summary}</Text>
         {(item.has_action_plan || item.has_captions) && (
           <View style={styles.badges}>
             {item.has_action_plan && (
@@ -64,6 +65,7 @@ const styles = StyleSheet.create({
   verdict: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, fontWeight: '600', flexShrink: 1 },
   emoji: { fontSize: Typography.subhead.fontSize, marginLeft: 2 },
   delta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
+  inputQuote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, fontStyle: 'italic', lineHeight: 18, marginTop: Spacing.xs / 2 },
   summary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
   badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
   badge: {
