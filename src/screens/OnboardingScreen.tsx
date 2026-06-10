@@ -1,8 +1,7 @@
-// Onboarding v2 (Plan 2) — Story → Build → Payoff. A ground-up presentation rebuild of the
-// onboarding, behind FEATURES.ONBOARDING_V2. The DATA/SCORE SPINE is identical to the legacy screen:
-// collect names + ctx_* (+ optional exact income) → persist to profiles + seed the snapshot →
+// Onboarding — Story → Build → Payoff (the Plan 2 rebuild, now the only onboarding). Data/score
+// spine: collect names + ctx_* (+ optional exact income) → persist to profiles + seed the snapshot →
 // buildRescoreInput → analyzeFinances (score-only) → mergeSnapshot('onboarding', score) → reveal →
-// refreshProfile. Only the experience around it is new.
+// refreshProfile.
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StyleProp, TextStyle } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
@@ -12,8 +11,11 @@ import { PressableScale, enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
 import AppTextInput from '@/components/AppTextInput';
 import MoneyInput from '@/components/MoneyInput';
+import UsernameField from '@/components/UsernameField';
 import SelectableChip from '@/components/SelectableChip';
 import StateSelect from '@/components/StateSelect';
+import DobField from '@/components/DobField';
+import { ageBracketFromDob, bracketMidpointDob } from '@shared/age';
 import NeonButton from '@/components/NeonButton';
 import ScoreRing from '@/components/ScoreRing';
 import { getScoreBand } from '@shared/scoring/bands.ts';
@@ -25,7 +27,7 @@ import { estimateScore } from '@/components/onboarding/estimateScore';
 import InputGlyph, { type GlyphKind } from '@/components/onboarding/InputGlyph';
 import CoinProgress from '@/components/onboarding/CoinProgress';
 import StoryHero, { type StoryScene } from '@/components/onboarding/StoryHero';
-import BrokeCard, { monthYear } from '@/components/onboarding/BrokeCard';
+import BrokeCard, { monthYear } from '@/components/BrokeCard';
 import StoryProgress from '@/components/onboarding/StoryProgress';
 
 const STEP_COUNT = 5;
@@ -65,7 +67,7 @@ function microcopy(step: number, sel: ContextValues, estimate: number | null): s
   return 'Answer honestly — the number reacts.';
 }
 
-export default function OnboardingV2Screen() {
+export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { user, supabase, refreshProfile } = useAuth();
 
@@ -74,15 +76,20 @@ export default function OnboardingV2Screen() {
   const [step, setStep] = useState(0);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameValid, setUsernameValid] = useState(false);
   const [sel, setSel] = useState<ContextValues>({});
   const [incomeExact, setIncomeExact] = useState('');
+  const [dob, setDob] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [startScore, setStartScore] = useState<number | null>(null);
 
   const pick = (key: string, opt: string) => setSel((p) => ({ ...p, [key]: p[key] === opt ? '' : opt }));
+  // Birthday → derive + store the age bracket (the analyze contract takes a bracket; @shared/age).
+  const handleDob = (date: Date) => { setDob(date); setSel((p) => ({ ...p, ageBracket: ageBracketFromDob(date) })); };
 
   const stepValid = [
-    firstName.trim().length > 0 && lastName.trim().length > 0,
+    firstName.trim().length > 0 && lastName.trim().length > 0 && usernameValid,
     !!sel.state && !!sel.ageBracket,
     !!sel.livingSituation && !!sel.employmentStatus,
     !!sel.incomeBracket || parseIncome(incomeExact) != null,
@@ -103,6 +110,10 @@ export default function OnboardingV2Screen() {
     const exact = parseIncome(incomeExact);
     const values: ContextValues = { ...sel, incomeExact }; // profileUpdateFromValues derives the bracket from incomeExact
     try {
+      // Claim the @handle (authoritative; availability was checked live in step 0). A rare collision
+      // (taken between check + claim) is recoverable via Edit Profile.
+      const { data: uData } = await supabase.rpc('set_username', { p_username: username.trim().toLowerCase() });
+      if (!(uData as { ok?: boolean } | null)?.ok) console.warn('[onboarding] username not claimed:', (uData as { error?: string } | null)?.error);
       await supabase.from('profiles').update({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
@@ -111,7 +122,7 @@ export default function OnboardingV2Screen() {
       }).eq('id', user.id);
       if (exact != null) {
         const { error } = await supabase.from('profiles').update({ monthly_income: exact }).eq('id', user.id);
-        if (error) console.warn('[onboarding-v2] monthly_income not persisted (push 00021):', error.message);
+        if (error) console.warn('[onboarding] monthly_income not persisted (push 00021):', error.message);
       }
       await seedSnapshotFromOnboarding(user.id, {
         incomeBracket: sel.incomeBracket,
@@ -119,7 +130,7 @@ export default function OnboardingV2Screen() {
         debtBracket: sel.debtBracket,
       }, exact);
     } catch (e) {
-      console.warn('[onboarding-v2] save failed:', e);
+      console.warn('[onboarding] save failed:', e);
     }
   };
 
@@ -143,7 +154,7 @@ export default function OnboardingV2Screen() {
         }
       }
     } catch (e) {
-      console.warn('[onboarding-v2] starting score failed:', e);
+      console.warn('[onboarding] starting score failed:', e);
     }
     setSaving(false);
     exitToApp();
@@ -208,13 +219,22 @@ export default function OnboardingV2Screen() {
                     <AppTextInput value={firstName} onChangeText={setFirstName} placeholder="First" placeholderTextColor={Colors.textMuted} autoCapitalize="words" returnKeyType="next" style={styles.input} />
                     <Label gap>Last name</Label>
                     <AppTextInput value={lastName} onChangeText={setLastName} placeholder="Last" placeholderTextColor={Colors.textMuted} autoCapitalize="words" style={styles.input} />
+                    <Label gap>Username</Label>
+                    <UsernameField value={username} onChangeText={setUsername} onValidChange={setUsernameValid} />
+                    <Text style={styles.handleNote}>Your public @handle — other members see it when you share a roast.</Text>
                   </Q>
                 )}
                 {step === 1 && (
                   <Q title={firstName.trim() ? `Where you at, ${firstName.trim()}?` : 'Where you at?'} sub="Tunes your score to your actual life — not some average.">
                     <Label>State</Label>
                     <View style={styles.field}><StateSelect value={sel.state ?? ''} onChange={(c) => pick('state', c)} /></View>
-                    <Chips label="Age" fieldKey="ageBracket" sel={sel} pick={pick} />
+                    <Label gap>Birthday</Label>
+                    <DobField
+                      value={dob}
+                      onChange={handleDob}
+                      defaultDate={bracketMidpointDob(sel.ageBracket)}
+                      placeholder="Select your birthday"
+                    />
                   </Q>
                 )}
                 {step === 2 && (
@@ -334,6 +354,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: Typography.fonts.heading, fontSize: Typography.title2.fontSize, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.md, marginBottom: Spacing.xs, letterSpacing: -0.5 },
   subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 21, marginBottom: Spacing.lg },
   field: { marginBottom: Spacing.lg, alignSelf: 'stretch' },
+  handleNote: { alignSelf: 'stretch', fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: Spacing.sm, lineHeight: 16 },
   fieldLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm },
   fieldLabelGap: { marginTop: Spacing.md },
   input: { alignSelf: 'stretch', backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontFamily: Typography.fonts.body, fontSize: Typography.body.fontSize, color: Colors.textPrimary },

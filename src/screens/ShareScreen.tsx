@@ -11,7 +11,9 @@ import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { BRAND } from '@/config/brand';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import StatusPill from '@/components/StatusPill';
+import BrokeCard from '@/components/BrokeCard';
+import { useAuth } from '@/context/AuthContext';
+import { getProfile } from '@/services/profile';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 import { fetchOrGenerateCaptions } from '@/services/ai';
@@ -20,7 +22,6 @@ import type { CaptionResponse } from '@shared/types';
 type Props = { route: RouteProp<RootStackParamList, 'Share'> };
 
 type CardFormat = 'tall' | 'square';
-type CardTheme = 'dark' | 'light';
 
 export default function ShareScreen({ route }: Props) {
   const navigation = useNavigation();
@@ -28,12 +29,16 @@ export default function ShareScreen({ route }: Props) {
   const { analysis } = route.params;
   const cardRef = useRef<any>(null);
   const [format, setFormat] = useState<CardFormat>('tall');
-  const [theme, setTheme] = useState<CardTheme>('dark');
   const [exporting, setExporting] = useState(false);
   const [captionResponse, setCaptionResponse] = useState<CaptionResponse | null>(null);
   const [captionsLoading, setCaptionsLoading] = useState(true);
   const [captionsError, setCaptionsError] = useState(false);
   const { animatedStyle } = useEntryAnimation();
+  const { user } = useAuth();
+  const [handle, setHandle] = useState('');
+  useEffect(() => {
+    if (user) getProfile(user.id).then((p) => { if (p?.username) setHandle('@' + p.username); }).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -52,9 +57,8 @@ export default function ShareScreen({ route }: Props) {
     return () => { mounted = false; };
   }, []);
 
-  const shareText = captionResponse?.captions?.[0]
-    ? captionResponse.captions[0]
-    : `I scored ${analysis.score}/100 on Am I Broke? — "${analysis.roast}" Try it: ${BRAND.domain}`;
+  // The roast IS the caption — the witty payload lives in the post text, not crammed into the card.
+  const shareText = `“${analysis.roast}”\n\nMy Am I Broke? score: ${analysis.score}/100 — ${getScoreBand(analysis.score).label}. ${BRAND.domain}`;
 
   const handleCopyCaption = async (text: string) => {
     try {
@@ -87,8 +91,6 @@ export default function ShareScreen({ route }: Props) {
     });
   }, [navigation]);
 
-  const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
-
   const handleShare = async () => {
     await Share.share({ message: shareText });
   };
@@ -120,10 +122,11 @@ export default function ShareScreen({ route }: Props) {
     { name: 'Copy Link', emoji: '🔗', color: Colors.accentSolid, action: handleCopyLink },
   ];
 
-  const isDark = theme === 'dark';
-  const cardBg = isDark ? ['#1a0026', '#0d001a'] : ['#ffffff', '#f0f0f5'];
-  const cardTextColor = isDark ? Colors.textPrimary : '#1a1a2e';
-  const cardSubtextColor = isDark ? Colors.textSecondary : '#4a4a4a';
+  const band = getScoreBand(analysis.score);
+  // Short roast → quote it on the card; long roast → the card stands alone (full roast is the caption).
+  const roast = analysis.roast ?? '';
+  const firstSentence = roast.split(/(?<=[.!?])\s/)[0] ?? roast;
+  const hook = roast.length <= 100 ? roast : firstSentence.length <= 100 ? firstSentence : undefined;
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -154,70 +157,22 @@ export default function ShareScreen({ route }: Props) {
           </View>
         </View>
 
-        {/* Theme toggle */}
-        <View style={styles.formatRow}>
-          <SectionLabel>Theme</SectionLabel>
-          <View style={styles.formatToggle}>
-            <TouchableOpacity
-              style={[styles.formatBtn, theme === 'dark' && styles.formatBtnActive]}
-              onPress={() => setTheme('dark')}
-            >
-              <Text style={[styles.formatBtnText, theme === 'dark' && styles.formatBtnTextActive]}>🌙 Dark</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.formatBtn, theme === 'light' && styles.formatBtnActive]}
-              onPress={() => setTheme('light')}
-            >
-              <Text style={[styles.formatBtnText, theme === 'light' && styles.formatBtnTextActive]}>☀️ Light</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Shareable card preview */}
+        {/* Shareable card — the BrokeCard on a branded frame (figures-free; the roast is the caption) */}
         <SectionLabel>Your Share Card</SectionLabel>
         <ViewShot ref={cardRef} options={{ format: 'png', quality: 1.0 }}>
-          <LinearGradient
-            colors={cardBg as [string, string]}
-            style={[styles.shareCard, format === 'square' ? styles.shareCardSquare : styles.shareCardTall]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.shareCardHeader}>
-              <Text style={[styles.shareCardApp, { color: cardSubtextColor }]}>💸 Am I Broke?</Text>
-              <Text style={[styles.shareCardDate, { color: cardSubtextColor }]}>{dateStr}</Text>
-            </View>
-
-            <Text style={[styles.shareCardScore, { color: scoreColor }]}>{analysis.score}</Text>
-            <StatusPill label={analysis.scoreLabel} color={scoreColor} size="md" />
-
-            {analysis.topFix && (
-              <View style={styles.shareCardFix}>
-                <Text style={styles.shareCardFixLabel}>FIX THIS:</Text>
-                <Text style={[styles.shareCardFixText, { color: cardSubtextColor }]}>{analysis.topFix.action}</Text>
-              </View>
-            )}
-
-            <Text style={[styles.shareCardRoast, { color: cardTextColor }]}>
-              "{analysis.roast}"
-            </Text>
-
-            <View style={styles.shareCardStats}>
-              {[
-                { label: 'Income', value: `$${analysis.monthlyIncome.value.toLocaleString()}` },
-                { label: 'Expenses', value: `$${analysis.monthlyExpenses.value.toLocaleString()}` },
-                { label: 'Savings Rate', value: `${analysis.savingsRate.toFixed(0)}%` },
-              ].map((s) => (
-                <View key={s.label} style={styles.shareCardStat}>
-                  <Text style={[styles.shareCardStatValue, { color: cardTextColor }]}>{s.value}</Text>
-                  <Text style={[styles.shareCardStatLabel, { color: cardSubtextColor }]}>{s.label}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.shareCardFooter}>
-              <Text style={[styles.shareCardFooterText, { color: cardSubtextColor }]}>{BRAND.domain}</Text>
-              <Text style={[styles.shareCardFooterDisclaimer, { color: cardSubtextColor }]}>Educational purposes only</Text>
-            </View>
-          </LinearGradient>
+          <View style={[styles.exportFrame, format === 'square' ? styles.frameSquare : styles.frameTall]}>
+            <LinearGradient colors={['#1a0026', '#0d001a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <BrokeCard
+              name={handle}
+              score={analysis.score}
+              bandLabel={band.label}
+              bandColor={band.color}
+              dateStr={dateStr}
+              hook={hook}
+              animated={false}
+            />
+            <Text style={styles.frameFooter}>{BRAND.domain} · educational only</Text>
+          </View>
         </ViewShot>
 
         {/* Export as PNG */}
@@ -300,36 +255,14 @@ const styles = StyleSheet.create({
   formatBtnActive: { backgroundColor: Colors.accentContainer },
   formatBtnText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   formatBtnTextActive: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
-  shareCard: {
-    borderRadius: Radius.xl, padding: Spacing.xxl, marginBottom: Spacing.md,
-    alignItems: 'center', gap: Spacing.md, justifyContent: 'space-between',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+  // Branded export frame: a dark gradient canvas (9:16 or 1:1) with the BrokeCard centered + a footer.
+  exportFrame: {
+    borderRadius: Radius.xl, padding: Spacing.xxl, marginBottom: Spacing.md, overflow: 'hidden',
+    justifyContent: 'center', alignItems: 'stretch', gap: Spacing.xl,
   },
-  shareCardTall: { aspectRatio: 9 / 16, width: '100%' },
-  shareCardSquare: { aspectRatio: 1, width: '100%' },
-  shareCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch' },
-  shareCardApp: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize },
-  shareCardDate: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize },
-  shareCardScore: { fontFamily: Typography.fonts.heading, fontSize: 72, fontWeight: '700', letterSpacing: -3 },
-  shareCardFix: {
-    backgroundColor: 'rgba(231,0,110,0.15)',
-    borderRadius: Radius.md, padding: Spacing.sm, alignSelf: 'stretch',
-    borderLeftWidth: 2, borderLeftColor: Colors.tertiarySolid,
-  },
-  shareCardFixLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, color: Colors.tertiary, letterSpacing: 0.5, marginBottom: 2 },
-  shareCardFixText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, lineHeight: 16 },
-  shareCardRoast: {
-    fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize,
-    fontStyle: 'italic', textAlign: 'center', lineHeight: 20,
-    paddingHorizontal: Spacing.sm,
-  },
-  shareCardStats: { flexDirection: 'row', gap: Spacing.xl, marginTop: Spacing.xs },
-  shareCardStat: { alignItems: 'center' },
-  shareCardStatValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.callout.fontSize, fontWeight: '700' },
-  shareCardStatLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, marginTop: 2 },
-  shareCardFooter: { alignItems: 'center', marginTop: Spacing.xs },
-  shareCardFooterText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize },
-  shareCardFooterDisclaimer: { fontFamily: Typography.fonts.body, fontSize: 9, marginTop: 2 },
+  frameTall: { aspectRatio: 9 / 16, width: '100%' },
+  frameSquare: { aspectRatio: 1, width: '100%' },
+  frameFooter: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textAlign: 'center' },
   exportBtn: {
     backgroundColor: Colors.accentContainer, borderRadius: Radius.xl,
     paddingVertical: Spacing.lg, alignItems: 'center', marginBottom: Spacing.xl,

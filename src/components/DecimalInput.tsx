@@ -62,7 +62,7 @@ export default function DecimalInput({ value, onChangeValue, prefix, suffix, pla
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', // never collapse in flex-start/centered parents
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
     paddingHorizontal: Spacing.md,

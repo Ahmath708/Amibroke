@@ -40,7 +40,6 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [mode, setMode] = useState<'login' | 'signup'>(route.params?.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
@@ -67,15 +66,10 @@ export default function LoginScreen({ navigation, route }: Props) {
       Alert.alert('Invalid email', 'Please enter a valid email address (e.g., name@example.com).');
       return;
     }
-    if (mode === 'signup' && !/^[a-z0-9_]{3,24}$/.test(username.trim().toLowerCase())) {
-      Alert.alert('Invalid username', 'Username must be 3–24 characters: lowercase letters, numbers, or underscores.');
-      return;
-    }
-
     setLoading(true);
     const { error } = mode === 'login'
       ? await signIn(trimmedEmail, password)
-      : await signUp(trimmedEmail, password, username.trim().toLowerCase());
+      : await signUp(trimmedEmail, password);
     setLoading(false);
     if (error) {
       Alert.alert(mode === 'login' ? 'Sign in failed' : 'Sign up failed', error);
@@ -176,25 +170,6 @@ export default function LoginScreen({ navigation, route }: Props) {
 
           {/* Form */}
           <BlurView intensity={24} tint="dark" style={styles.formGroup}>
-            {mode === 'signup' && (
-              <>
-                <View style={styles.formCell}>
-                  <Text style={styles.formLabel}>Username</Text>
-                  <AppTextInput
-                    style={styles.formInput}
-                    placeholder="yourname"
-                    placeholderTextColor={Colors.textSecondary}
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    maxLength={24}
-                    returnKeyType="next"
-                  />
-                </View>
-                <View style={styles.cellSeparator} />
-              </>
-            )}
             <View style={styles.formCell}>
               <Text style={styles.formLabel}>Email</Text>
               <AppTextInput

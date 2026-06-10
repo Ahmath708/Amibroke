@@ -75,7 +75,7 @@ const PLACEHOLDERS = [
   'I have 3 credit cards and no idea how much I owe...',
 ];
 
-export default function HomeScreen({ navigation, asTab = false }: Props) {
+export default function RoastComposerScreen({ navigation, asTab = false }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { tier, canUseApp } = useSubscription();

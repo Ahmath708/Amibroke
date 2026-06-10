@@ -1,7 +1,7 @@
-// The "Broke Card" — onboarding Act 3 payoff artifact (Plan 2). A neon foil card that prints the
-// user's name, starting score, and band title, with a chip + barcode motif and an animated
-// holographic sheen. Privacy-safe by design (no income/debt figures). Built to double as the
-// shareable artifact later. Disciplined-neon: dark surface, accent foil edge, band-coloured score.
+// The "Broke Card" — the shared neon-foil artifact: minted at onboarding Act 3 AND rendered into the
+// share image. Prints the user's name, score, and band title, with a chip + barcode motif and an
+// animated holographic sheen, plus an optional short `hook` line. Privacy-safe by design (no
+// income/debt figures). Disciplined-neon: dark surface, accent foil edge, band-coloured score.
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, useReducedMotion, Easing, FadeIn } from 'react-native-reanimated';
@@ -10,26 +10,30 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export default function BrokeCard({ name, score, bandLabel, bandColor, dateStr }: {
+export default function BrokeCard({ name, score, bandLabel, bandColor, dateStr, hook, animated = true }: {
   name: string;
   score: number;
   bandLabel: string;
   bandColor: string;
   /** Pass a fixed date string (avoid Date.now in shared/test contexts). Defaults to a blank. */
   dateStr?: string;
+  /** Optional short roast line (≤ ~100 chars) printed as a quote on the card. */
+  hook?: string;
+  /** false → static (no fade/sheen sweep), for a clean ViewShot capture in the share flow. */
+  animated?: boolean;
 }) {
   const reduce = useReducedMotion();
-  const sheen = useSharedValue(reduce ? 1 : 0);
+  const sheen = useSharedValue(reduce || !animated ? 1 : 0); // settled (sheen off-screen) when static
 
   useEffect(() => {
-    if (reduce) { sheen.value = 1; return; }
+    if (reduce || !animated) { sheen.value = 1; return; }
     sheen.value = withDelay(220, withTiming(1, { duration: 900, easing: Easing.inOut(Easing.cubic) }));
-  }, [reduce]);
+  }, [reduce, animated]);
 
   const sheenStyle = useAnimatedStyle(() => ({ transform: [{ translateX: -160 + sheen.value * 360 }], opacity: 0.5 - Math.abs(sheen.value - 0.5) }));
 
   return (
-    <Animated.View entering={reduce ? FadeIn.duration(160) : FadeIn.duration(420)} style={styles.glowWrap}>
+    <Animated.View entering={!animated ? undefined : reduce ? FadeIn.duration(160) : FadeIn.duration(420)} style={styles.glowWrap}>
       <LinearGradient colors={Colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.foil}>
         <View style={styles.inner}>
           {/* holographic sheen */}
@@ -45,6 +49,7 @@ export default function BrokeCard({ name, score, bandLabel, bandColor, dateStr }
             <Text style={styles.outOf}>/100</Text>
           </View>
           <Text style={styles.certified}>CERTIFIED · {bandLabel.toUpperCase()}</Text>
+          {hook ? <Text style={styles.hook} numberOfLines={2}>“{hook}”</Text> : null}
 
           {/* barcode */}
           <View style={styles.barcode}>
@@ -92,6 +97,7 @@ const styles = StyleSheet.create({
   score: { fontFamily: Typography.fonts.heading, fontSize: 56, fontWeight: '700', letterSpacing: -2 },
   outOf: { fontFamily: Typography.fonts.body, fontSize: Typography.title3.fontSize, color: Colors.textSecondary, marginLeft: 4 },
   certified: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, letterSpacing: 1, marginTop: 2 },
+  hook: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, fontStyle: 'italic', lineHeight: 18, marginTop: Spacing.sm },
   barcode: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 22, marginTop: Spacing.lg, opacity: 0.7 },
   bar: { height: '100%', backgroundColor: Colors.textSecondary, borderRadius: 1 },
   bottomRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.lg },

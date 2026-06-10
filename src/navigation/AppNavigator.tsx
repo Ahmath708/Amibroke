@@ -29,11 +29,9 @@ import { useAuth } from '@/context/AuthContext';
 // Screens
 import SplashScreen from '@/screens/SplashScreen';
 import OnboardingScreen from '@/screens/OnboardingScreen';
-import OnboardingV2Screen from '@/screens/OnboardingV2Screen';
-import { FEATURES } from '@/config/features';
 import LandingScreen from '@/screens/LandingScreen';
 import LoginScreen from '@/screens/LoginScreen';
-import HomeScreen from '@/screens/HomeScreen';
+import RoastComposerScreen from '@/screens/RoastComposerScreen';
 import DashboardScreen from '@/screens/DashboardScreen';
 import ToolsScreen from '@/screens/ToolsScreen';
 import ProcessingScreen from '@/screens/ProcessingScreen';
@@ -42,7 +40,7 @@ import ActionPlanScreen from '@/screens/ActionPlanScreen';
 import DebtPayoffScreen from '@/screens/DebtPayoffScreen';
 import ShareScreen from '@/screens/ShareScreen';
 import PaywallScreen from '@/screens/PaywallScreen';
-import HistoryScreen from '@/screens/HistoryScreen';
+import TrendScreen from '@/screens/TrendScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import CommunityFeedScreen from '@/screens/CommunityFeedScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
@@ -50,7 +48,6 @@ import EditProfileScreen from '@/screens/EditProfileScreen';
 import NotificationsScreen from '@/screens/NotificationsScreen';
 import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
-import UsernameSetupScreen from '@/screens/UsernameSetupScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
 import AllAnalysesScreen from '@/screens/AllAnalysesScreen';
 import FinancialContextScreen from '@/screens/FinancialContextScreen';
@@ -174,10 +171,10 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-// The center "Roast" tab is a real destination — it renders the roast composer (HomeScreen) as
+// The center "Roast" tab is a real destination — it renders the roast composer (RoastComposerScreen) as
 // the tab content, just like the other tabs.
 function RoastTab({ navigation }: { navigation: any }) {
-  return <HomeScreen navigation={navigation} asTab />;
+  return <RoastComposerScreen navigation={navigation} asTab />;
 }
 
 function MainTabs() {
@@ -233,18 +230,15 @@ export default function AppNavigator() {
             <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
             <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom' }} />
           </>
-        ) : needsUsername ? (
-          /* ─── First-run gate: pick a username (mainly OAuth users) ─── */
-          <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'fade' }} />
         ) : needsOnboarding ? (
           /* ─── First-run gate: personalization ─── */
-          <Stack.Screen name="Onboarding" component={FEATURES.ONBOARDING_V2 ? OnboardingV2Screen : OnboardingScreen} options={{ animation: 'fade' }} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'fade' }} />
         ) : (
           /* ─── Signed in: APP STACK ─── */
           <>
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
-            <Stack.Screen name="Analyze" component={HomeScreen} options={{ ...sharedHeader, headerShown: true, title: 'New Roast', animation: 'slide_from_right' }} />
-            <Stack.Screen name="History" component={HistoryScreen} options={{ ...sharedHeader, headerShown: true, title: 'Trend', animation: 'slide_from_right' }} />
+            <Stack.Screen name="Analyze" component={RoastComposerScreen} options={{ ...sharedHeader, headerShown: true, title: 'New Roast', animation: 'slide_from_right' }} />
+            <Stack.Screen name="History" component={TrendScreen} options={{ ...sharedHeader, headerShown: true, title: 'Trend', animation: 'slide_from_right' }} />
             <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
             <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
@@ -258,7 +252,10 @@ export default function AppNavigator() {
             <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
             <Stack.Screen name="AllAnalyses" component={AllAnalysesScreen} options={{ ...sharedHeader, headerShown: true, title: 'All Roasts', animation: 'slide_from_right' }} />
             <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
-            <Stack.Screen name="Share" component={ShareScreen} options={{ ...sheetModal, ...sharedHeader, headerShown: true, title: 'Share Result' }} />
+            {/* Card (slide-up), NOT a formSheet: ShareScreen is long + scrollable, and a formSheet
+                only defers scroll to a ScrollView that's the screen's FIRST child — ours is
+                ScreenBackground, so the sheet gesture ate the scroll (RNScreens #2687/#3092). */}
+            <Stack.Screen name="Share" component={ShareScreen} options={{ ...sharedHeader, headerShown: true, title: 'Share Result', animation: 'slide_from_bottom', presentation: 'card' }} />
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ ...sheetModal, headerShown: false }} />
             <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sharedHeader, headerShown: true, title: 'Monthly Check-In', animation: 'slide_from_right' }} />
           </>

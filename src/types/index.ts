@@ -117,7 +117,7 @@ export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: num
 export type MainTabsParamList = {
   Home: undefined;
   Tools: undefined;
-  Roast: undefined;     // a real dwell tab — renders the composer (HomeScreen with asTab)
+  Roast: undefined;     // a real dwell tab — renders the composer (RoastComposerScreen with asTab)
   Community: undefined;
   Profile: undefined;
 };
@@ -134,7 +134,6 @@ export type RootStackParamList = {
   Landing: undefined;
   Login: { mode?: 'login' | 'signup' } | undefined;
   Onboarding: undefined;
-  UsernameSetup: undefined;
   // App
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Analyze: undefined;           // the "New roast" input (also the first-run Home)

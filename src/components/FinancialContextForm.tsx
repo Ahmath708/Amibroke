@@ -6,6 +6,7 @@ import NeonButton from '@/components/NeonButton';
 import StateSelect from '@/components/StateSelect';
 import DobField from '@/components/DobField';
 import MoneyInput from '@/components/MoneyInput';
+import { ageBracketFromDob, bracketMidpointDob, ageBracketLabel } from '@shared/age';
 
 // Keys match the analyze `userContext` shape; `col` is the profiles column.
 export const CONTEXT_FIELDS: { key: string; label: string; col: string; options: string[] }[] = [
@@ -33,29 +34,8 @@ export const parseIncome = (s?: string): number | null => {
 const incomeBracketFor = (n: number): string =>
   n < 2000 ? 'under_2k' : n < 4000 ? '2k_4k' : n < 6000 ? '4k_6k' : n < 10000 ? '6k_10k' : 'over_10k';
 
-// Age (ctx_age_bracket) is collected via a DOB picker but stored as a coarse bracket until schema-v2
-// adds a real `dob DATE` column. Derive the bracket from the date; pre-position the wheel at a
-// bracket's midpoint so a returning user opens near their range.
-const BRACKET_MID_AGE: Record<string, number> = { '18-24': 21, '25-29': 27, '30-34': 32, '35-44': 40, '45+': 50 };
-function ageFromDob(dob: Date): number {
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const m = now.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age -= 1;
-  return age;
-}
-function bracketForAge(age: number): string {
-  if (age < 25) return '18-24';
-  if (age < 30) return '25-29';
-  if (age < 35) return '30-34';
-  if (age < 45) return '35-44';
-  return '45+';
-}
-function midpointDob(bracket?: string): Date {
-  const now = new Date();
-  return new Date(now.getFullYear() - (BRACKET_MID_AGE[bracket ?? ''] ?? 25), now.getMonth(), now.getDate());
-}
-const ageBracketLabel = (b: string): string => (b === '45+' ? '45+' : b.replace('-', '–'));
+// Age (ctx_age_bracket) is collected via the DOB picker but stored as a coarse bracket until
+// schema-v2 adds a real `dob DATE` column — the derivation lives in @shared/age.
 
 /** profiles row → form values (keyed like the analyze userContext). */
 export function valuesFromProfile(row: Record<string, unknown> | null): ContextValues {
@@ -108,7 +88,7 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
   const [dob, setDob] = useState<Date | null>(null);
   const handleDob = (date: Date) => {
     setDob(date);
-    setSelections((prev) => ({ ...prev, ageBracket: bracketForAge(ageFromDob(date)) }));
+    setSelections((prev) => ({ ...prev, ageBracket: ageBracketFromDob(date) }));
   };
 
   return (
@@ -125,7 +105,7 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
             <DobField
               value={dob}
               onChange={handleDob}
-              defaultDate={midpointDob(selections.ageBracket)}
+              defaultDate={bracketMidpointDob(selections.ageBracket)}
               placeholder={selections.ageBracket ? `Ages ${ageBracketLabel(selections.ageBracket)} · tap to set your birthday` : 'Select your birthday'}
             />
           ) : (

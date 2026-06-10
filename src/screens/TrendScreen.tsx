@@ -23,7 +23,7 @@ import HistoryChart from '@/components/HistoryChart';
 import { Granularity, itemsInPeriod } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
-export default function HistoryScreen() {
+export default function TrendScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();

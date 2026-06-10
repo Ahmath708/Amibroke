@@ -39,7 +39,7 @@ type SettingRow =
   | { type: 'action'; label: string; icon: string; detail?: string; destructive?: boolean; onPress: () => void }
   | { type: 'nav'; label: string; icon: string; detail?: string; onPress: () => void };
 
-// The user's roast voice (profiles.preferred_tone). Labels mirror the HomeScreen tone selector.
+// The user's roast voice (profiles.preferred_tone). Labels mirror the RoastComposer tone selector.
 const TONE_OPTIONS: { key: RoastTone; label: string }[] = [
   { key: 'savage', label: 'Savage' },
   { key: 'gentle', label: 'Gentle' },
@@ -72,7 +72,7 @@ export default function SettingsScreen({ navigation }: Props) {
     if (user) getProfile(user.id).then((p) => { if (p?.preferred_tone) setTone(p.preferred_tone); }).catch(() => {});
   }, [user]);
 
-  // Roast voice — the sticky tone preference, also settable from the HomeScreen selector.
+  // Roast voice — the sticky tone preference, also settable from the RoastComposer selector.
   const onChangeTone = () => {
     const labels = TONE_OPTIONS.map((t) => t.label);
     ActionSheetIOS.showActionSheetWithOptions(
