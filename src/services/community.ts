@@ -117,9 +117,8 @@ export async function shareToFeed(
 ): Promise<string | null> {
   return withClient('share to feed', null, async (client) => {
     const profile = await getProfile(userId);
-    const displayName = profile?.username
-      ? `anon_${profile.username.slice(0, 8)}`
-      : `anon_${userId.slice(0, 8)}`;
+    // Real handle (not anonymized) — the feed renders it as @display_name.
+    const displayName = profile?.username ?? `user_${userId.slice(0, 8)}`;
     const { data, error } = await (client as any)
       .from(TABLES.community_posts)
       .insert({

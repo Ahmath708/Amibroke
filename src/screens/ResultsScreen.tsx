@@ -168,7 +168,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
     return () => clearTimeout(t);
   }, []);
 
-  const handleShareToFeed = async () => {
+  const postToFeed = async () => {
     if (!user || !analysisId) return;
     const id = await shareToFeed(user.id, analysisId, analysis.score, analysis.scoreLabel, analysis.roast, analysis.summary);
     if (id) {
@@ -177,6 +177,19 @@ export default function ResultsScreen({ navigation, route }: Props) {
     } else {
       Alert.alert('Error', 'Failed to share to feed.');
     }
+  };
+
+  // Posting to the public feed is attributable (your @handle) — confirm first.
+  const handleShareToFeed = () => {
+    if (!user || !analysisId) return;
+    Alert.alert(
+      'Post to the Community Feed?',
+      'Your roast goes public under your @handle — other members can see it. (We never show your exact income or debts.)',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Post publicly', onPress: postToFeed },
+      ],
+    );
   };
 
   const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
