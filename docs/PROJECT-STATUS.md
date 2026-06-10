@@ -103,6 +103,13 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
+### 2026-06-10 — doc cleanup (removed 2 obsolete docs)
+- Removed `docs/531_NEXT_STEPS.md` (dated May-27 iOS-readiness checklist; "next steps" now = this
+  doc) and `docs/redesign/implementation-plan.md` ("no code written yet" but redesign is built;
+  principles now in design-doctrine) — fixed its one dangling link in `research-brief.md`. KEPT
+  `unified-financial-model.md` (accurate + cited by ~10 code/migration/README refs). `active-plan-design.md`
+  NOT deleted — entangled (7 refs, 3 in live code); needs a header update instead (pending).
+
 ### 2026-06-10 — doc-consistency audit
 - Codebase audit + doc-conflict pass. Caught + corrected a **self-inflicted** error: the
   "onboarding-debt drift" note was based on a stale `master` read — the current branch DOES collect

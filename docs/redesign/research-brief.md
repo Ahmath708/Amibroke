@@ -239,8 +239,7 @@ background. Treat shared-element transitions as experimental.
 ## Part 9 — Decisions (resolved from discussion 2026-06-03)
 
 1. **Brand pole:** prototype **both** — (A) disciplined-neon vs (B) warm pivot — on a vertical
-   slice with mocked data, decided empirically (flag-based palette swap, not two full builds). See
-   the [implementation plan](./implementation-plan.md) Phase 5.
+   slice with mocked data, decided empirically (flag-based palette swap, not two full builds).
 2. **Mascot:** **deferred to a post-launch phase.** Strongest retention lever in the brief, but
    couples to logo + the chosen brand pole + its own research cycle. Revisit after the pole is set.
 3. **Scope:** **vertical slice first** (Onboarding/auth → Home/Dashboard → Analyze → Processing →
