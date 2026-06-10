@@ -254,8 +254,8 @@ component, hook, util, or data call, grep for an existing one.** Specifically:
 ## Common commands
 
 ```bash
-npm run ios:sim                                           # build+launch on the SE sim (USE THIS — see gotcha)
-npx expo run:ios --device "iPhone SE (3rd generation)"   # ⚠️ broken under Xcode 26 + SDK 55 (signing error)
+npm run ios:se                                            # build+launch on the SE sim via Expo (resolves the sim UDID — see gotcha)
+npm run ios:sim                                           # no-Expo fallback: xcodebuild → iphonesimulator SDK directly
 npx expo start                                            # Metro (press shift+i to switch sims)
 npx tsc --noEmit                                          # typecheck the app
 npm test                                                  # jest
@@ -282,10 +282,15 @@ client-side.
   read.** Note a redeploy of an *unchanged* function with this pattern also crashes — the landmine
   is the deploy, not the edit.
 
-- **Build with `npm run ios:sim`, not `expo run:ios`.** Under Xcode 26 + Expo SDK 55, `expo run:ios`
-  (and the `ios`/`ios:se` scripts) mis-resolve the destination to a device/Mac target and fail with
-  "No code signing certificates are available." `tools/run-sim.sh` builds the *iphonesimulator* SDK
-  directly (no signing) and installs/launches via `simctl`, sidestepping Expo's device picker.
+- **`expo run:ios` works for the simulator — pass the sim's UDID, not its name.** Under Xcode 26 +
+  Expo SDK 55, `expo run:ios --device "iPhone SE (3rd generation)"` (the *name*, with parens)
+  mis-resolves the build destination to a device/generic target and fails with "No code signing
+  certificates are available." Passing the **simulator UDID** instead (`expo run:ios --device <UDID>`)
+  pins it to the simulator, where signing is local-only — so the build **ignores** the personal-team
+  provisioning errors (Sign in with Apple / Push Notifications need the paid Developer Program, but
+  only for *device* builds). `npm run ios:se` now resolves the SE sim's UDID automatically, so it
+  works through Expo (Metro + dev client managed by Expo). `npm run ios:sim` (`tools/run-sim.sh`)
+  remains the no-Expo fallback — it builds the *iphonesimulator* SDK directly via `xcodebuild`.
 
 - **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
   timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
