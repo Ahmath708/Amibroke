@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
+import { sanitizeDecimal, formatDecimal } from '@/components/DecimalInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -356,9 +357,10 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                               style={styles.targetInput}
                               placeholder={targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g) || '0'}
                               placeholderTextColor={Colors.textMuted}
-                              keyboardType="numeric"
+                              keyboardType="decimal-pad"
                               value={targetInputs[g.id] ?? targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g)}
-                              onChangeText={(v) => setTargetInputs((p) => ({ ...p, [g.id]: v }))}
+                              onChangeText={(v) => setTargetInputs((p) => ({ ...p, [g.id]: sanitizeDecimal(v) }))}
+                              onBlur={() => setTargetInputs((p) => ({ ...p, [g.id]: formatDecimal(p[g.id] ?? targetToDisplay(config.goals.find((e) => e.id === g.id) ?? g)) }))}
                             />
                             {g.unit !== 'currency' && <Text style={styles.targetUnit}>{g.unit === 'percent' ? '%' : 'mo'}</Text>}
                           </View>
@@ -496,8 +498,9 @@ function BaseInput({ label, value, onChange, first }: { label: string; value: st
             placeholder="0"
             placeholderTextColor={Colors.textMuted}
             value={value}
-            onChangeText={onChange}
-            keyboardType="numeric"
+            onChangeText={(t) => onChange(sanitizeDecimal(t))}
+            onBlur={() => onChange(formatDecimal(value))}
+            keyboardType="decimal-pad"
             returnKeyType="done"
           />
         </View>

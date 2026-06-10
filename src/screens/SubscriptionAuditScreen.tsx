@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
+import MoneyInput from '@/components/MoneyInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -184,13 +185,11 @@ export default function SubscriptionAuditScreen() {
               value={newName}
               onChangeText={setNewName}
             />
-            <AppTextInput
-              style={styles.addInput}
-              placeholder="Monthly amount"
-              placeholderTextColor={Colors.textMuted}
+            <MoneyInput
               value={newAmount}
-              onChangeText={setNewAmount}
-              keyboardType="numeric"
+              onChangeValue={setNewAmount}
+              placeholder="Monthly amount"
+              containerStyle={styles.amountField}
             />
             <View style={styles.addActions}>
               <TouchableOpacity onPress={() => setShowAdd(false)}>
@@ -288,6 +287,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary,
     backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.md, padding: Spacing.md,
   },
+  amountField: { backgroundColor: Colors.backgroundSecondary, borderWidth: 0 },
   addActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md, marginTop: Spacing.xs },
   cancelBtn: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs },
   addBtn: {

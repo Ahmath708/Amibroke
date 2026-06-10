@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import SelectableChip from '@/components/SelectableChip';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import StateSelect from '@/components/StateSelect';
-import AppTextInput from '@/components/AppTextInput';
+import DobField from '@/components/DobField';
+import MoneyInput from '@/components/MoneyInput';
 
 // Keys match the analyze `userContext` shape; `col` is the profiles column.
 export const CONTEXT_FIELDS: { key: string; label: string; col: string; options: string[] }[] = [
@@ -31,6 +32,30 @@ export const parseIncome = (s?: string): number | null => {
 };
 const incomeBracketFor = (n: number): string =>
   n < 2000 ? 'under_2k' : n < 4000 ? '2k_4k' : n < 6000 ? '4k_6k' : n < 10000 ? '6k_10k' : 'over_10k';
+
+// Age (ctx_age_bracket) is collected via a DOB picker but stored as a coarse bracket until schema-v2
+// adds a real `dob DATE` column. Derive the bracket from the date; pre-position the wheel at a
+// bracket's midpoint so a returning user opens near their range.
+const BRACKET_MID_AGE: Record<string, number> = { '18-24': 21, '25-29': 27, '30-34': 32, '35-44': 40, '45+': 50 };
+function ageFromDob(dob: Date): number {
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age -= 1;
+  return age;
+}
+function bracketForAge(age: number): string {
+  if (age < 25) return '18-24';
+  if (age < 30) return '25-29';
+  if (age < 35) return '30-34';
+  if (age < 45) return '35-44';
+  return '45+';
+}
+function midpointDob(bracket?: string): Date {
+  const now = new Date();
+  return new Date(now.getFullYear() - (BRACKET_MID_AGE[bracket ?? ''] ?? 25), now.getMonth(), now.getDate());
+}
+const ageBracketLabel = (b: string): string => (b === '45+' ? '45+' : b.replace('-', '–'));
 
 /** profiles row → form values (keyed like the analyze userContext). */
 export function valuesFromProfile(row: Record<string, unknown> | null): ContextValues {
@@ -78,19 +103,33 @@ interface Props {
 
 export default function FinancialContextForm({ initial = {}, submitLabel, submitting, onSubmit, onSkip, skipLabel }: Props) {
   const [selections, setSelections] = useState<ContextValues>(initial);
+  // Real DOB picked this session (null until they touch the wheel). selections.ageBracket already
+  // holds any previously-stored bracket, so leaving it untouched preserves it on submit.
+  const [dob, setDob] = useState<Date | null>(null);
+  const handleDob = (date: Date) => {
+    setDob(date);
+    setSelections((prev) => ({ ...prev, ageBracket: bracketForAge(ageFromDob(date)) }));
+  };
 
   return (
     <>
       {CONTEXT_FIELDS.map((field) => (
         <View key={field.key} style={styles.field}>
-          <Text style={styles.fieldLabel}>{field.label}</Text>
+          <Text style={styles.fieldLabel}>{field.key === 'ageBracket' ? 'Birthday' : field.label}</Text>
           {field.key === 'state' ? (
             <StateSelect
               value={selections.state ?? ''}
               onChange={(code) => setSelections((prev) => ({ ...prev, state: code }))}
             />
+          ) : field.key === 'ageBracket' ? (
+            <DobField
+              value={dob}
+              onChange={handleDob}
+              defaultDate={midpointDob(selections.ageBracket)}
+              placeholder={selections.ageBracket ? `Ages ${ageBracketLabel(selections.ageBracket)} · tap to set your birthday` : 'Select your birthday'}
+            />
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            <View style={styles.chipsRow}>
               {field.options.map((opt) => {
                 const active = selections[field.key] === opt;
                 return (
@@ -102,22 +141,15 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
                   />
                 );
               })}
-            </ScrollView>
+            </View>
           )}
           {field.key === 'incomeBracket' && (
             <View style={styles.exactWrap}>
               <Text style={styles.exactLabel}>Or enter exact (optional)</Text>
-              <View style={styles.exactRow}>
-                <Text style={styles.exactDollar}>$</Text>
-                <AppTextInput
-                  value={selections.incomeExact ?? ''}
-                  onChangeText={(v) => setSelections((prev) => ({ ...prev, incomeExact: v.replace(/[^0-9]/g, '') }))}
-                  placeholder="4800"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="number-pad"
-                  style={styles.exactInput}
-                />
-              </View>
+              <MoneyInput
+                value={selections.incomeExact ?? ''}
+                onChangeValue={(v) => setSelections((prev) => ({ ...prev, incomeExact: v }))}
+              />
             </View>
           )}
         </View>
@@ -144,17 +176,9 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
   },
-  chipsRow: { gap: Spacing.sm, paddingRight: Spacing.xl },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   exactWrap: { marginTop: Spacing.md },
   exactLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.sm },
-  exactRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    paddingHorizontal: Spacing.md,
-  },
-  exactDollar: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textSecondary },
-  exactInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm },
   cta: { marginTop: Spacing.lg },
   skipBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   skipText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },

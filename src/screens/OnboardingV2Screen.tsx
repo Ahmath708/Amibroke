@@ -11,6 +11,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { PressableScale, enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
 import AppTextInput from '@/components/AppTextInput';
+import MoneyInput from '@/components/MoneyInput';
 import SelectableChip from '@/components/SelectableChip';
 import StateSelect from '@/components/StateSelect';
 import NeonButton from '@/components/NeonButton';
@@ -226,10 +227,7 @@ export default function OnboardingV2Screen() {
                   <Q title="The money in" sub="Ballpark's fine. Exact if you're feeling brave.">
                     <Chips label="Monthly income" fieldKey="incomeBracket" sel={sel} pick={pick} />
                     <Label gap>Or enter exact (optional)</Label>
-                    <View style={styles.exactRow}>
-                      <Text style={styles.exactDollar}>$</Text>
-                      <AppTextInput value={incomeExact} onChangeText={(v) => setIncomeExact(v.replace(/[^0-9]/g, ''))} placeholder="4800" placeholderTextColor={Colors.textMuted} keyboardType="number-pad" style={[styles.input, styles.exactInput]} />
-                    </View>
+                    <MoneyInput value={incomeExact} onChangeValue={setIncomeExact} />
                   </Q>
                 )}
                 {step === 4 && (
@@ -340,9 +338,6 @@ const styles = StyleSheet.create({
   fieldLabelGap: { marginTop: Spacing.md },
   input: { alignSelf: 'stretch', backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontFamily: Typography.fonts.body, fontSize: Typography.body.fontSize, color: Colors.textPrimary },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  exactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, alignSelf: 'stretch' },
-  exactDollar: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
-  exactInput: { flex: 1 },
   // Footer / back
   footer: { paddingTop: Spacing.sm },
   backBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },

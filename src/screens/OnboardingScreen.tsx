@@ -7,6 +7,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { PressableScale, enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
 import AppTextInput from '@/components/AppTextInput';
+import MoneyInput from '@/components/MoneyInput';
 import SelectableChip from '@/components/SelectableChip';
 import StateSelect from '@/components/StateSelect';
 import NeonButton from '@/components/NeonButton';
@@ -191,14 +192,7 @@ export default function OnboardingScreen() {
                 <Step title="The money in" subtitle="Ballpark's fine. Exact if you're feeling brave.">
                   <ChipField label="Monthly income" fieldKey="incomeBracket" sel={sel} pick={pick} />
                   <Text style={[styles.fieldLabel, styles.fieldLabelGap]}>Or enter exact (optional)</Text>
-                  <View style={styles.exactRow}>
-                    <Text style={styles.exactDollar}>$</Text>
-                    <AppTextInput
-                      value={incomeExact} onChangeText={(v) => setIncomeExact(v.replace(/[^0-9]/g, ''))}
-                      placeholder="4800" placeholderTextColor={Colors.textMuted}
-                      keyboardType="number-pad" style={[styles.input, styles.exactInput]}
-                    />
-                  </View>
+                  <MoneyInput value={incomeExact} onChangeValue={setIncomeExact} />
                 </Step>
               )}
               {step === 4 && (
@@ -340,9 +334,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  exactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  exactDollar: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
-  exactInput: { flex: 1 },
   footer: { paddingTop: Spacing.sm },
   backBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   backText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
