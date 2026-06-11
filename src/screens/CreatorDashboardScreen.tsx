@@ -1,7 +1,9 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,7 +18,6 @@ import LoadingState from '@/components/LoadingState';
 import { useAuth } from '@/context/AuthContext';
 import { getCreatorStats, generateReferralCode, getReferralCode, batchRoast } from '@/services/creator';
 import { FEATURES } from '@/config/features';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'CreatorDashboard'> };
@@ -33,7 +34,6 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
   const [selectedTone, setSelectedTone] = useState('savage');
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchResults, setBatchResults] = useState<any[]>([]);
-  const { animatedStyle } = useEntryAnimation();
 
   useEffect(() => {
     if (!FEATURES.CREATOR_DASHBOARD) {
@@ -100,7 +100,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
   if (loading) return <LoadingState />;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="creator" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -203,7 +203,7 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
           </>
         )}
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

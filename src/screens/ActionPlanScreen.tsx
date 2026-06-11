@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import SectionLabel from '@/components/SectionLabel';
 import { ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
@@ -14,7 +15,7 @@ import GlassCard from '@/components/GlassCard';
 import NeonButton from '@/components/NeonButton';
 import AnimatedProgressRing from '@/components/AnimatedProgressRing';
 import JourneyLoading from '@/components/JourneyLoading';
-import { PressableScale, useReducedMotion } from '@/components/motion';
+import { PressableScale, useReducedMotion, enterUp } from '@/components/motion';
 import LoadingState from '@/components/LoadingState';
 import Disclaimer from '@/components/Disclaimer';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
@@ -27,7 +28,6 @@ import { getSnapshot } from '@/services/financialSnapshot';
 import { formatCurrency } from '@/utils/format';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { MOCK_ANIMATION, MOCK_ANIMATION_MS } from '@/config/ai';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
 type Props = {
@@ -171,7 +171,6 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   const analysisId = (route.params as any)?.analysisId as string | undefined;
   const overallMessage = route.params?.overallMessage;
   const { authorized } = useRequireEntitlement('action_plan');
-  const { animatedStyle } = useEntryAnimation();
 
   const [plan, setPlan] = useState<ActivePlan | null>(null);
   const [latest, setLatest] = useState<{ debt: number | null; savings: number | null } | null>(null);
@@ -272,12 +271,12 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   if (generating || mockAnimating) {
     // Shared loading view for Create + Refresh — never blocks the Tools tap, always lands here.
     return (
-      <Animated.View style={[styles.container, animatedStyle]}>
+      <ReAnimated.View entering={enterUp(0)} style={styles.container}>
         <ScreenBackground variant="actionPlan" />
         <View style={styles.buildingWrap}>
           <JourneyLoading />
         </View>
-      </Animated.View>
+      </ReAnimated.View>
     );
   }
 
@@ -334,7 +333,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   );
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="actionPlan" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -453,7 +452,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
 
         <Disclaimer style={styles.disclaimer} />
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

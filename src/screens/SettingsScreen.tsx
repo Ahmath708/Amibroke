@@ -1,11 +1,12 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Linking, ActivityIndicator, Animated, ActionSheetIOS,
+  TouchableOpacity, Alert, Linking, ActivityIndicator, ActionSheetIOS,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import Constants from 'expo-constants';
 import Toggle from '@/components/Toggle';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -61,7 +62,6 @@ export default function SettingsScreen({ navigation }: Props) {
   });
   const [gdprLoading, setGdprLoading] = useState<string | null>(null);
   const [tone, setTone] = useState<RoastTone>('savage');
-  const { animatedStyle } = useEntryAnimation();
 
   // Reflect persisted / OS state on mount.
   useEffect(() => {
@@ -255,7 +255,7 @@ export default function SettingsScreen({ navigation }: Props) {
   ];
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="settings" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -324,7 +324,7 @@ export default function SettingsScreen({ navigation }: Props) {
         ))}
         <Text style={styles.versionFooter}>{versionLabel}</Text>
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import MoneyInput from '@/components/MoneyInput';
@@ -14,7 +16,6 @@ import { useAuth } from '@/context/AuthContext';
 import ToolSkeleton from '@/components/ToolSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
 const ICONS = ['🎬', '🎵', '💪', '🎨', '💼', '🦜', '☁️', '🏰', '📦', '📰', '🧘', '🍿', '📺', '🎮', '📚'];
@@ -31,7 +32,6 @@ export default function SubscriptionAuditScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('');
-  const { animatedStyle } = useEntryAnimation();
 
   const fetchSubs = async () => {
     if (!user) return;
@@ -103,7 +103,7 @@ export default function SubscriptionAuditScreen() {
   const totalMonthly = subs.reduce((s, sub) => s + sub.amount, 0);
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="subscriptions" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -222,7 +222,7 @@ export default function SubscriptionAuditScreen() {
           </LinearGradient>
         )}
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

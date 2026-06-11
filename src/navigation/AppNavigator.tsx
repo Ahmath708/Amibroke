@@ -84,9 +84,9 @@ const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: Re
 
 // Active-indicator pill — a wide, rounded-rectangular magenta sub-pill that slides
 // behind the focused icon (Cash-App floating capsule, our brand tint).
-const PILL_H = 44;
+const PILL_H = 52;
 const PILL_GAP = 8; // horizontal inset of the pill within each slot (smaller = wider pill)
-const PILL_RADIUS = 16;
+const PILL_RADIUS = 18;
 
 // A single icon-only tab. The active icon brightens + springs up a touch; the
 // sliding sub-pill (rendered once in the row) is what reads the focus.
@@ -110,7 +110,7 @@ function TabBarButton({ route, focused, reduce, onPress }: { route: { name: stri
       accessibilityState={{ selected: focused }}
     >
       <Animated.View style={iconStyle}>
-        <TabIcon size={24} color={focused ? Colors.accent : Colors.textSecondary} style={{ opacity: focused ? 1 : 0.6 }} />
+        <TabIcon size={27} color={focused ? Colors.accent : Colors.textSecondary} style={{ opacity: focused ? 1 : 0.6 }} />
       </Animated.View>
     </TouchableOpacity>
   );
@@ -140,7 +140,9 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View
       pointerEvents="box-none"
-      style={[tabStyles.outerWrapper, { paddingBottom: insets.bottom + TAB_FLOAT_MARGIN }]}
+      // Clamp the home-indicator inset (34pt on the 16e is over-generous for a FLOATING bar) so the
+      // capsule sits lower while still clearing the gesture area; SE-class devices (inset 0) unaffected.
+      style={[tabStyles.outerWrapper, { paddingBottom: Math.min(insets.bottom, 16) + TAB_FLOAT_MARGIN }]}
     >
       <View style={tabStyles.capsuleShadow}>
         <BlurView intensity={40} tint="dark" style={tabStyles.capsule}>
@@ -181,7 +183,7 @@ function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <IOSTabBar {...props} />}
-      screenOptions={{ headerShown: false, animation: 'shift' }}
+      screenOptions={{ headerShown: false, animation: 'none' }}
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Tools" component={ToolsScreen} />

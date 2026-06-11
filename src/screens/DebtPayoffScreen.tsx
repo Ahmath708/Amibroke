@@ -1,7 +1,9 @@
 ﻿import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -14,7 +16,6 @@ import SeverityPill from '@/components/SeverityPill';
 import SelectableChip from '@/components/SelectableChip';
 import ToolSkeleton from '@/components/ToolSkeleton';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { useAuth } from '@/context/AuthContext';
 import { getSnapshot } from '@/services/financialSnapshot';
 import { getProfile, updateProfile } from '@/services/profile';
@@ -58,7 +59,6 @@ export default function DebtPayoffScreen() {
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);
   const [paidDown, setPaidDown] = useState<{ amount: number; since: string } | null>(null);
-  const { animatedStyle } = useEntryAnimation();
 
   // Sticky strategy (profiles.debt_strategy) + paydown progress from check-in history.
   // Sticky strategy + paydown trend — also refetched on focus so progress reflects a new check-in.
@@ -110,7 +110,7 @@ export default function DebtPayoffScreen() {
 
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="debt" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -218,7 +218,7 @@ export default function DebtPayoffScreen() {
           ))}
         </View>
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { sanitizeDecimal, formatDecimal } from '@/components/DecimalInput';
@@ -26,7 +28,6 @@ import { checkinReflection } from '@/services/ai';
 import { currentStreak, daysUntilNextCheckin } from '@shared/checkinCadence';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getProfile } from '@/services/profile';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import { getCheckinReminderEnabled, scheduleCheckinReminder } from '@/services/notifications';
 import {
@@ -59,7 +60,6 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { hasAccess } = useSubscription();
-  const { animatedStyle } = useEntryAnimation();
 
   const [mode, setMode] = useState<Mode>('loading');
   const [config, setConfig] = useState<CheckinConfig>(EMPTY_CHECKIN_CONFIG);
@@ -309,7 +309,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
     ? 'Check-in open' : `Next check-in in ${daysUntilNextCheckin(checkinDates, now)}d`;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="checkin" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -483,7 +483,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
           </View>
         )}
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

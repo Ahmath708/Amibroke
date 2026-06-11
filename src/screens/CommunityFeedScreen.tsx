@@ -1,8 +1,8 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Animated,
+  View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl,
 } from 'react-native';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import { enterUp } from '@/components/motion';
 import { selection } from '@/utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -55,7 +55,6 @@ export default function CommunityFeedScreen() {
   const [managerOpen, setManagerOpen] = useState(false);           // share-manager sheet
   const loadingRef = useRef(false);                    // guards concurrent page loads
   const pendingRef = useRef<Set<string>>(new Set());   // `${postId}:${emoji}` reactions in flight
-  const { animatedStyle } = useEntryAnimation();
 
   // Load one page. reset → page 1 of `sort`; otherwise append the next keyset page.
   const loadPage = useCallback(async (reset: boolean, sortOverride?: FeedSort) => {
@@ -214,7 +213,7 @@ export default function CommunityFeedScreen() {
   };
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <Reanimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="community" />
       <FlatList
         data={posts}
@@ -281,7 +280,7 @@ export default function CommunityFeedScreen() {
         onClose={() => setManagerOpen(false)}
         onRunAnalysis={() => { setManagerOpen(false); navigation.navigate('Home'); }}
       />
-    </Animated.View>
+    </Reanimated.View>
   );
 }
 

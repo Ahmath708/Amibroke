@@ -1,7 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, Animated, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +16,6 @@ import { getScoreBand } from '@shared/scoring/bands.ts';
 import BrokeCard from '@/components/BrokeCard';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile } from '@/services/profile';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 import { fetchOrGenerateCaptions } from '@/services/ai';
 import type { CaptionResponse } from '@shared/types';
@@ -33,7 +34,6 @@ export default function ShareScreen({ route }: Props) {
   const [captionResponse, setCaptionResponse] = useState<CaptionResponse | null>(null);
   const [captionsLoading, setCaptionsLoading] = useState(true);
   const [captionsError, setCaptionsError] = useState(false);
-  const { animatedStyle } = useEntryAnimation();
   const { user } = useAuth();
   const [handle, setHandle] = useState('');
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function ShareScreen({ route }: Props) {
   const dateStr = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="share" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -242,7 +242,7 @@ export default function ShareScreen({ route }: Props) {
           <Text style={styles.nativeShareText}>📤  Share with Other Apps</Text>
         </TouchableOpacity>
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

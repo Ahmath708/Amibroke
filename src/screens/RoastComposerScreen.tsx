@@ -12,20 +12,19 @@ import {
   FireIcon, HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
 } from 'react-native-heroicons/outline';
 import NotificationBell from '@/components/NotificationBell';
-import { PressableScale, useReducedMotion } from '@/components/motion';
+import ReAnimated from 'react-native-reanimated';
+import { PressableScale, useReducedMotion, enterUp } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AnalysisHistoryItem, RoastTone, RootStackParamList } from '@/types';
+import { RoastTone, RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { Durations } from '@/theme/motion';
-import { getScoreBand } from '@shared/scoring/bands.ts';
 import NeonButton from '@/components/NeonButton';
 import GlassCard from '@/components/GlassCard';
 import TypingPlaceholder from '@/components/TypingPlaceholder';
-import { getAnalysisHistory } from '@/services/analyses';
 import { useAuth } from '@/context/AuthContext';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { ContextValues } from '@/components/FinancialContextForm';
 import { getFinancialContext } from '@/services/financialContext';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
@@ -37,7 +36,6 @@ import { getSubscriptionContext } from '@/services/subscriptionAudit';
 import ScreenBackground from '@/components/ScreenBackground';
 import PremiumCard from '@/components/PremiumCard';
 import CheckinCard from '@/components/CheckinCard';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 const MAX_INPUT_CHARS = 4000;
@@ -87,27 +85,14 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
   const [profileContext, setProfileContext] = useState<ContextValues>({});
   const [subContext, setSubContext] = useState(''); // logged subscriptions → roast context (approach A)
   const inputRef = useRef<TextInput>(null);
-  const [recentScores, setRecentScores] = useState<AnalysisHistoryItem[]>([]);
-  const [scoresLoading, setScoresLoading] = useState(true);
   const micPulse = useRef(new Animated.Value(1)).current;
   // Suggestion text fade-and-rise: the input text fades in + slides up when a chip is applied.
   const inputOpacity = useRef(new Animated.Value(1)).current;
   const inputTranslateY = useRef(new Animated.Value(0)).current;
 
   const { listening, transcript, startListening, stopListening, supported, error } = useVoiceInput();
-  const { animatedStyle } = useEntryAnimation();
   const reduce = useReducedMotion();
-
-  useEffect(() => {
-    if (!user) {
-      setScoresLoading(false);
-      return;
-    }
-    getAnalysisHistory(user.id)
-      .then((data) => setRecentScores(data?.slice(0, 3) || []))
-      .catch(() => console.warn('Failed to load recent scores'))
-      .finally(() => setScoresLoading(false));
-  }, [user]);
+  const isFocused = useIsFocused(); // tabs stay mounted — pause the placeholder loop when off-screen
 
   // Reload saved personalization each time Home regains focus (e.g. after editing
   // it on the Financial Context screen) so analyses use the latest values.
@@ -204,7 +189,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
   };
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="home" />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
@@ -249,7 +234,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
                   typing animation the moment the user is about to type. */}
               {input.length === 0 && !inputFocused && (
                 <View style={styles.placeholderOverlay} pointerEvents="none">
-                  <TypingPlaceholder placeholders={PLACEHOLDERS} textStyle={styles.placeholderText} />
+                  <TypingPlaceholder placeholders={PLACEHOLDERS} textStyle={styles.placeholderText} paused={!isFocused} />
                 </View>
               )}
             </View>
@@ -338,25 +323,6 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           {/* Monthly check-in nudge (only for users who track goals) */}
           <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.xl }} />
 
-          {/* Recent scores */}
-          {!scoresLoading && recentScores.length > 0 && (
-            <>
-              <SectionLabel>Your Recent Scores</SectionLabel>
-              <View style={styles.scoreCards}>
-                {recentScores.map((s) => {
-                  const color = getScoreBand(s.score).color; // single source of truth — matches Results
-                  return (
-                    <GlassCard key={s.id} style={styles.scoreCard}>
-                      <Text style={[styles.scoreNum, { color }]}>{s.score}</Text>
-                      <Text style={styles.scoreLabel} numberOfLines={1}>{s.score_label}</Text>
-                      <Text style={styles.scoreUser}>{new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
-                    </GlassCard>
-                  );
-                })}
-              </View>
-            </>
-          )}
-
           {/* Premium teaser — hidden on Deep Dive, an upgrade CTA on Action Plan */}
           {tier !== 'deep_dive' && (
             <PremiumCard
@@ -366,7 +332,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

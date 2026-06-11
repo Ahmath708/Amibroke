@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Alert, Animated,
+  View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
-import { PressableScale } from '@/components/motion';
+import ReAnimated from 'react-native-reanimated';
+import { PressableScale, enterUp } from '@/components/motion';
 import {
   ClipboardDocumentListIcon, ArrowTrendingDownIcon, MagnifyingGlassIcon, BeakerIcon,
   ChevronRightIcon, LockClosedIcon,
@@ -14,7 +15,6 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
@@ -38,7 +38,6 @@ export default function ToolsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { tier, hasAccess, refresh, loading: subLoading } = useSubscription();
-  const { animatedStyle } = useEntryAnimation();
   const [opening, setOpening] = useState(false);
 
   // Keep subscription state fresh on focus. The latest-analysis check happens at TAP time (below) —
@@ -78,7 +77,7 @@ export default function ToolsScreen({ navigation }: Props) {
   }, [opening, user, navigation]);
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
@@ -133,7 +132,7 @@ export default function ToolsScreen({ navigation }: Props) {
           })}
         </View>
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

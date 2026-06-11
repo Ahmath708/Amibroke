@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Alert,
+  View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
 import {
   SparklesIcon, CalendarIcon, CreditCardIcon, ChartBarIcon, LockClosedIcon, XMarkIcon,
 } from 'react-native-heroicons/outline';
 import SectionLabel from '@/components/SectionLabel';
-import { PressableScale } from '@/components/motion';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import { PressableScale, enterUp } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesOffering } from 'react-native-purchases';
@@ -58,7 +58,6 @@ export default function PaywallScreen({ navigation }: Props) {
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [processing, setProcessing] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const { animatedStyle } = useEntryAnimation();
   const { user } = useAuth();
   const { refresh, tier: owned } = useSubscription();
 
@@ -133,7 +132,7 @@ export default function PaywallScreen({ navigation }: Props) {
   };
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="paywall" />
       <View style={[styles.handleRow, { marginTop: insets.top > 0 ? 8 : 16 }]}>
         <View style={styles.handle} />
@@ -265,7 +264,7 @@ export default function PaywallScreen({ navigation }: Props) {
           cancel anytime in your App Store settings. Payment is charged to your Apple ID.
         </Text>
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

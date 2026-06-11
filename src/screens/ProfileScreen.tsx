@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,7 +60,6 @@ export default function ProfileScreen({ navigation }: Props) {
   const firstLoad = useRef(true); // gate the full-screen loader to the first load only
   const [latestDate, setLatestDate] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const { animatedStyle } = useEntryAnimation();
   // Shared hook → live customerInfo listener, so the tier updates the moment a
   // purchase lands (the old one-shot fetch left Profile stuck on the old tier).
   const { tier: purchaseTier, refresh: refreshSub } = useSubscription();
@@ -179,7 +179,7 @@ export default function ProfileScreen({ navigation }: Props) {
   }
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="profile" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
@@ -299,7 +299,7 @@ export default function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

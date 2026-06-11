@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -35,7 +36,6 @@ export default function TrendScreen() {
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [now] = useState<Date>(() => new Date());
-  const { animatedStyle } = useEntryAnimation();
 
   const fetchHistory = useCallback(async () => {
     if (!user) {
@@ -122,7 +122,7 @@ export default function TrendScreen() {
   }
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="history" />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
@@ -157,7 +157,7 @@ export default function TrendScreen() {
           />
         )}
       </ScrollView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

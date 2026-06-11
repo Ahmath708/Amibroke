@@ -2,8 +2,8 @@
 // content isn't hidden behind the floating tab bar. The bar is position:absolute
 // and floats (detached from the screen edges, Cash-App style), so this covers the
 // capsule height + the gap below it; screens add insets.bottom on top.
-export const TAB_BAR_HEIGHT = 72;
+export const TAB_BAR_HEIGHT = 76;
 
 // Internal geometry of the floating capsule (see IOSTabBar in AppNavigator).
-export const TAB_ROW_HEIGHT = 56; // capsule content height
-export const TAB_FLOAT_MARGIN = 12; // gap between the capsule bottom and the safe area
+export const TAB_ROW_HEIGHT = 64; // capsule content height
+export const TAB_FLOAT_MARGIN = 4; // gap between the capsule bottom and the safe area

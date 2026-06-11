@@ -1,14 +1,13 @@
 ﻿import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import { Colors, Typography, Spacing } from '@/theme/colors';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import ScreenBackground from '@/components/ScreenBackground';
 
 export default function ScenarioSimulatorScreen() {
-  const { animatedStyle } = useEntryAnimation();
-
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="scenarios" />
       <View style={styles.content}>
         <Text style={styles.emoji}>🔮</Text>
@@ -17,7 +16,7 @@ export default function ScenarioSimulatorScreen() {
           Scenario simulations are being rebuilt on the new scoring engine. Check back after the next update.
         </Text>
       </View>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 

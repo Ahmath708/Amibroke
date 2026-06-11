@@ -11,6 +11,8 @@ interface TypingPlaceholderProps {
   style?: object;
   /** Override the text font metrics (e.g. to match the host TextInput exactly). */
   textStyle?: object;
+  /** Pause the typing + caret loops (e.g. when the host screen is off-tab) to save CPU. */
+  paused?: boolean;
 }
 
 export default function TypingPlaceholder({
@@ -20,6 +22,7 @@ export default function TypingPlaceholder({
   pauseDuration = 2000,
   style,
   textStyle,
+  paused = false,
 }: TypingPlaceholderProps) {
   const reduce = useReducedMotion();
   const [displayText, setDisplayText] = useState('');
@@ -37,6 +40,7 @@ export default function TypingPlaceholder({
   // macOS/iOS caret blink rate).
   useEffect(() => {
     if (reduce) { caretOpacity.setValue(0); return; } // reduce-motion: static placeholder, no caret blink
+    if (paused) { caretOpacity.setValue(1); return; } // off-tab: hold the caret solid, no blink loop
     const loop = Animated.loop(Animated.sequence([
       Animated.delay(420),
       Animated.timing(caretOpacity, { toValue: 0, duration: 160, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -45,7 +49,7 @@ export default function TypingPlaceholder({
     ]));
     loop.start();
     return () => loop.stop();
-  }, [caretOpacity, reduce]);
+  }, [caretOpacity, reduce, paused]);
 
   useEffect(() => {
     if (reduce) {
@@ -53,6 +57,7 @@ export default function TypingPlaceholder({
       if (displayText !== (placeholders[0] ?? '')) setDisplayText(placeholders[0] ?? '');
       return;
     }
+    if (paused) return; // off-tab: freeze the typing loop (resumes from the current text on focus)
     const currentPlaceholder = placeholders[currentIndex];
 
     function tick() {
@@ -83,7 +88,7 @@ export default function TypingPlaceholder({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [displayText, isDeleting, isPaused, currentIndex, placeholders, typingSpeed, deletingSpeed, pauseDuration, reduce]);
+  }, [displayText, isDeleting, isPaused, currentIndex, placeholders, typingSpeed, deletingSpeed, pauseDuration, reduce, paused]);
 
   const caretH = caret.h; // the native caret spans the full line height — match it
   return (

@@ -89,14 +89,25 @@ interface Props {
   skipLabel?: string;
 }
 
+// DOB is a calendar date (no time/zone). Parse + format with LOCAL components so it never shifts a
+// day across the UTC boundary: `new Date("2001-06-14")` is UTC-midnight → renders as the 13th in any
+// timezone behind UTC. Keep it June 14 by building/reading from local Y-M-D directly.
+function ymdToLocalDate(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function dateToYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function FinancialContextForm({ initial = {}, submitLabel, submitting, onSubmit, onSkip, skipLabel }: Props) {
   const [selections, setSelections] = useState<ContextValues>(initial);
-  // Real DOB picked this session (null until they touch the wheel). selections.ageBracket already
-  // holds any previously-stored bracket, so leaving it untouched preserves it on submit.
-  const [dob, setDob] = useState<Date | null>(null);
+  // Seed the picker from the saved financial_context.dob so Birthday prefills the actual date
+  // (not just the derived bracket placeholder). Null only when no DOB has ever been set.
+  const [dob, setDob] = useState<Date | null>(() => (initial.dob ? ymdToLocalDate(initial.dob) : null));
   const handleDob = (date: Date) => {
     setDob(date);
-    setSelections((prev) => ({ ...prev, ageBracket: ageBracketFromDob(date), dob: date.toISOString() }));
+    setSelections((prev) => ({ ...prev, ageBracket: ageBracketFromDob(date), dob: dateToYmd(date) }));
   };
 
   return (

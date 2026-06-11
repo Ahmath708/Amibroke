@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert, Animated, Image,
+  KeyboardAvoidingView, Platform, ScrollView, Alert, Image,
 } from 'react-native';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp } from '@/components/motion';
 import { impact, notify, ImpactFeedbackStyle, NotificationFeedbackType } from '@/utils/haptics';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons'; // kept for the Apple brand logo (no Heroicon)
@@ -47,7 +48,6 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [termsAgreed, setTermsAgreed] = useState(false);
-  const { animatedStyle } = useEntryAnimation();
 
   const dismiss = () => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('Landing'));
 
@@ -116,7 +116,7 @@ export default function LoginScreen({ navigation, route }: Props) {
   };
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <AuthBackground />
 
       {/* Top bar — back chevron dismisses to Landing */}
@@ -126,11 +126,13 @@ export default function LoginScreen({ navigation, route }: Props) {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.select({ ios: undefined, android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.lg }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
           bounces={false}
         >
           {/* Header — horizontal logo lockup + rotating tagline */}
@@ -273,7 +275,7 @@ export default function LoginScreen({ navigation, route }: Props) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </Animated.View>
+    </ReAnimated.View>
   );
 }
 
