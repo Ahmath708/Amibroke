@@ -26,7 +26,8 @@ import TypingPlaceholder from '@/components/TypingPlaceholder';
 import { getAnalysisHistory } from '@/services/analyses';
 import { useAuth } from '@/context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { ContextValues, valuesFromProfile } from '@/components/FinancialContextForm';
+import { ContextValues } from '@/components/FinancialContextForm';
+import { getFinancialContext } from '@/services/financialContext';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
@@ -118,9 +119,9 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           try {
             // One profile read (select('*')) serves both the saved context and the sticky tone;
             // stays resilient if preferred_tone isn't migrated yet (avoids PGRST204).
-            const prof = await getProfile(user.id);
+            const [prof, ctx] = await Promise.all([getProfile(user.id), getFinancialContext(user.id)]);
             if (active) {
-              setProfileContext(valuesFromProfile((prof ?? null) as Record<string, unknown> | null));
+              setProfileContext(ctx);
               if (prof?.preferred_tone) setSelectedTone(prof.preferred_tone as RoastTone); // seed the sticky voice
             }
           } catch { /* ignore */ }

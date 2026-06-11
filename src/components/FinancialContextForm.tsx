@@ -8,20 +8,22 @@ import DobField from '@/components/DobField';
 import MoneyInput from '@/components/MoneyInput';
 import { ageBracketFromDob, bracketMidpointDob, ageBracketLabel } from '@shared/age';
 
-// Keys match the analyze `userContext` shape; `col` is the profiles column.
+// Keys match the analyze `userContext` shape; `col` is the financial_context column (schema-v2:
+// demographics moved off `profiles`). The `ageBracket` field is special — it stores the raw `dob`
+// DATE and the bracket is DERIVED (see valuesFromContext / contextUpdateFromValues).
 export const CONTEXT_FIELDS: { key: string; label: string; col: string; options: string[] }[] = [
-  { key: 'state', label: 'State', col: 'ctx_state', options: [] }, // rendered via StateSelect (all 50 + DC)
-  { key: 'incomeBracket', label: 'Monthly Income', col: 'ctx_income_bracket', options: ['under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k'] },
-  { key: 'ageBracket', label: 'Age', col: 'ctx_age_bracket', options: ['18-24', '25-29', '30-34', '35-44', '45+'] },
-  { key: 'livingSituation', label: 'Housing', col: 'ctx_living_situation', options: ['renting', 'owning', 'with_family', 'dorm', 'other'] },
-  { key: 'employmentStatus', label: 'Employment', col: 'ctx_employment_status', options: ['full_time', 'part_time', 'self_employed', 'student', 'between_jobs'] },
-  { key: 'debtBracket', label: 'Total Debt', col: 'ctx_debt_bracket', options: ['none', 'under_5k', '5k_15k', '15k_50k', 'over_50k'] },
-  { key: 'liquidSavingsBracket', label: 'Savings', col: 'ctx_liquid_savings_bracket', options: ['none', 'under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k'] },
+  { key: 'state', label: 'State', col: 'state', options: [] }, // rendered via StateSelect (all 50 + DC)
+  { key: 'incomeBracket', label: 'Monthly Income', col: 'income_bracket', options: ['under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k'] },
+  { key: 'ageBracket', label: 'Age', col: 'dob', options: ['18-24', '25-29', '30-34', '35-44', '45+'] },
+  { key: 'livingSituation', label: 'Housing', col: 'living_situation', options: ['renting', 'owning', 'with_family', 'dorm', 'other'] },
+  { key: 'employmentStatus', label: 'Employment', col: 'employment_status', options: ['full_time', 'part_time', 'self_employed', 'student', 'between_jobs'] },
+  { key: 'debtBracket', label: 'Total Debt', col: 'debt_bracket', options: ['none', 'under_5k', '5k_15k', '15k_50k', 'over_50k'] },
+  { key: 'liquidSavingsBracket', label: 'Savings', col: 'liquid_savings_bracket', options: ['none', 'under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k'] },
 ];
 
 export type ContextValues = Record<string, string>;
 
-// profiles columns to SELECT when loading saved context.
+// financial_context columns to SELECT when loading saved context.
 export const CTX_COLUMNS = CONTEXT_FIELDS.map((f) => f.col).join(', ');
 
 // Optional exact monthly income (profiles.monthly_income, 00021) → a positive number, and the
@@ -34,30 +36,36 @@ export const parseIncome = (s?: string): number | null => {
 const incomeBracketFor = (n: number): string =>
   n < 2000 ? 'under_2k' : n < 4000 ? '2k_4k' : n < 6000 ? '4k_6k' : n < 10000 ? '6k_10k' : 'over_10k';
 
-// Age (ctx_age_bracket) is collected via the DOB picker but stored as a coarse bracket until
-// schema-v2 adds a real `dob DATE` column — the derivation lives in @shared/age.
+// Age is collected via the DOB picker and stored as the raw `dob` DATE (financial_context.dob);
+// the coarse ageBracket is DERIVED for display + the analyze input (@shared/age).
 
-/** profiles row → form values (keyed like the analyze userContext). */
-export function valuesFromProfile(row: Record<string, unknown> | null): ContextValues {
+/** financial_context row → form values (keyed like the analyze userContext). dob → derived ageBracket. */
+export function valuesFromContext(row: Record<string, unknown> | null): ContextValues {
   const v: ContextValues = {};
   if (!row) return v;
   for (const f of CONTEXT_FIELDS) {
+    if (f.key === 'ageBracket') {
+      const dob = row.dob;
+      if (typeof dob === 'string' && dob) { v.dob = dob; v.ageBracket = ageBracketFromDob(new Date(dob)); }
+      continue;
+    }
     const val = row[f.col];
     if (typeof val === 'string' && val) v[f.key] = val;
   }
   return v;
 }
 
-/** form values → profiles ctx_* update object (only non-empty). NOTE: the numeric
- *  `monthly_income` column is written separately by the screen (non-fatal, per the DB-lag gotcha). */
-export function profileUpdateFromValues(values: ContextValues): Record<string, string | null> {
+/** form values → financial_context update object (only non-empty). ageBracket → raw `dob`. The exact
+ *  monthly income goes to the SNAPSHOT (stated) — written separately by the screen, not here. */
+export function contextUpdateFromValues(values: ContextValues): Record<string, string | null> {
   const update: Record<string, string | null> = {};
   for (const f of CONTEXT_FIELDS) {
+    if (f.key === 'ageBracket') { update.dob = values.dob || null; continue; }
     update[f.col] = values[f.key] || null;
   }
   // An exact income (optional) pins the income bracket so the two stay consistent (mirrors onboarding).
   const exact = parseIncome(values.incomeExact);
-  if (exact != null) update.ctx_income_bracket = incomeBracketFor(exact);
+  if (exact != null) update.income_bracket = incomeBracketFor(exact);
   return update;
 }
 
@@ -88,7 +96,7 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
   const [dob, setDob] = useState<Date | null>(null);
   const handleDob = (date: Date) => {
     setDob(date);
-    setSelections((prev) => ({ ...prev, ageBracket: ageBracketFromDob(date) }));
+    setSelections((prev) => ({ ...prev, ageBracket: ageBracketFromDob(date), dob: date.toISOString() }));
   };
 
   return (

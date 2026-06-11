@@ -19,7 +19,8 @@ import { ageBracketFromDob, bracketMidpointDob } from '@shared/age';
 import NeonButton from '@/components/NeonButton';
 import ScoreRing from '@/components/ScoreRing';
 import { getScoreBand } from '@shared/scoring/bands.ts';
-import { CONTEXT_FIELDS, ContextValues, profileUpdateFromValues, labelFor, parseIncome } from '@/components/FinancialContextForm';
+import { CONTEXT_FIELDS, ContextValues, labelFor, parseIncome } from '@/components/FinancialContextForm';
+import { saveFinancialContext } from '@/services/financialContext';
 import { seedSnapshotFromOnboarding, buildRescoreInput, mergeSnapshot } from '@/services/financialSnapshot';
 import { analyzeFinances } from '@/services/ai';
 import { useAuth } from '@/context/AuthContext';
@@ -86,7 +87,7 @@ export default function OnboardingScreen() {
 
   const pick = (key: string, opt: string) => setSel((p) => ({ ...p, [key]: p[key] === opt ? '' : opt }));
   // Birthday → derive + store the age bracket (the analyze contract takes a bracket; @shared/age).
-  const handleDob = (date: Date) => { setDob(date); setSel((p) => ({ ...p, ageBracket: ageBracketFromDob(date) })); };
+  const handleDob = (date: Date) => { setDob(date); setSel((p) => ({ ...p, ageBracket: ageBracketFromDob(date), dob: date.toISOString() })); };
 
   const stepValid = [
     firstName.trim().length > 0 && lastName.trim().length > 0 && usernameValid,
@@ -108,7 +109,7 @@ export default function OnboardingScreen() {
   const persist = async () => {
     if (!user) return;
     const exact = parseIncome(incomeExact);
-    const values: ContextValues = { ...sel, incomeExact }; // profileUpdateFromValues derives the bracket from incomeExact
+    const values: ContextValues = { ...sel, incomeExact }; // saveFinancialContext derives the bracket from incomeExact
     try {
       // Claim the @handle (authoritative; availability was checked live in step 0). A rare collision
       // (taken between check + claim) is recoverable via Edit Profile.
@@ -117,13 +118,10 @@ export default function OnboardingScreen() {
       await supabase.from('profiles').update({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        ...profileUpdateFromValues(values),
         onboarded: true,
       }).eq('id', user.id);
-      if (exact != null) {
-        const { error } = await supabase.from('profiles').update({ monthly_income: exact }).eq('id', user.id);
-        if (error) console.warn('[onboarding] monthly_income not persisted (push 00021):', error.message);
-      }
+      // Demographics + brackets (incl. raw dob) → financial_context; exact income → the snapshot (stated, below).
+      await saveFinancialContext(user.id, values);
       await seedSnapshotFromOnboarding(user.id, {
         incomeBracket: sel.incomeBracket,
         liquidSavingsBracket: sel.liquidSavingsBracket,
