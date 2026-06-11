@@ -34,7 +34,6 @@ export interface ActivePlan {
   started_at: string;
   horizon_days?: number;                              // fixed 90 (PLAN_HORIZON_DAYS) — derived, not stored
   status: 'active' | 'completed' | 'incomplete';      // schema-v2 status set (no 'abandoned')
-  version?: number;                                   // in-memory revise counter — not persisted (dropped from action_plans)
   overall_message: string | null;
   steps: ActivePlanStep[];
   start_metrics: PlanStartMetrics | null;
@@ -122,7 +121,6 @@ let mockPlan: ActivePlan | null = {
   started_at: '2026-06-01T00:00:00.000Z',
   horizon_days: 90,
   status: 'active',
-  version: 1,
   overall_message: 'Three months to turn the leaks into a cushion — small, repeatable wins, not heroics.',
   steps: [
     { id: 's0', week: 'Week 1', title: 'Subscription purge', description: "Cancel every subscription you haven't used in 30 days. No mercy.", impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-06-03T00:00:00.000Z' },
@@ -165,7 +163,7 @@ export async function startPlan(
   if (USE_AI_MOCKS) {
     mockPlan = {
       id: 'mock-plan', source_analysis_id: sourceAnalysisId, started_at: new Date().toISOString(),
-      horizon_days: 90, status: 'active', version: 1, overall_message: overallMessage ?? null,
+      horizon_days: 90, status: 'active', overall_message: overallMessage ?? null,
       steps: planSteps, start_metrics, synced_metrics: start_metrics,
     };
     return mockPlan;
@@ -217,8 +215,8 @@ export interface ReviseResult { revised: boolean; reason: string; plan: ActivePl
 
 /** Revise the active plan to a new snapshot. Gated by shouldRevisePlan (never fires
  *  without a committed plan or for an immaterial change), then: ask for a patch →
- *  apply deterministically (shared engine, snapshot reality-checked) → persist
- *  version+1. Fail-soft: any failure leaves the current plan untouched. */
+ *  apply deterministically (shared engine, snapshot reality-checked) → persist the
+ *  revised steps. Fail-soft: any failure leaves the current plan untouched. */
 export async function reviseActivePlan(
   plan: ActivePlan,
   change: string,
@@ -244,7 +242,6 @@ export async function reviseActivePlan(
     steps: steps as unknown as ActivePlanStep[],
     // Keep the existing Big Picture when the patch message is empty (e.g. a no-op revision).
     overall_message: patch.overallMessage?.trim() ? patch.overallMessage : plan.overall_message,
-    version: (plan.version ?? 0) + 1,
     synced_metrics: snapshot, // the plan now reflects this snapshot → status flips to "up to date"
   };
 
