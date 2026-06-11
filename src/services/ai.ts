@@ -42,6 +42,10 @@ const DEFAULT_USER_CONTEXT: UserContext = {
   liquidSavingsBracket: 'under_500',
 };
 
+// analyze needs only the bracketed context — strip the raw `dob` the client carries for the form's date
+// picker (data minimization: the exact birthday stays in financial_context, never rides to the LLM endpoint).
+const stripDob = (c?: Partial<UserContext>) => { if (!c) return {}; const { dob: _dob, ...rest } = c as any; return rest; };
+
 export async function analyzeFinancialSituation(
   userInput: string,
   tone: RoastTone = 'savage',
@@ -72,7 +76,7 @@ export async function analyzeFinancialSituation(
         body: {
           freeText: cleaned,
           tone,
-          userContext: { ...DEFAULT_USER_CONTEXT, ...(userContext ?? {}) },
+          userContext: { ...DEFAULT_USER_CONTEXT, ...stripDob(userContext) },
         },
         signal,
       });
