@@ -37,8 +37,8 @@ describe('data-layer guard behavior (locked across the withClient refactor)', ()
 
   describe('getSubscriptions (list → [] fallback)', () => {
     it('maps rows on success', async () => {
-      __setSupabaseForTests(mockClient({ data: [{ id: 's1', name: 'Netflix', amount: '9.99', icon: '🎬', category: '', last_used: '' }], error: null }) as any);
-      expect(await getSubscriptions('u1')).toEqual([{ id: 's1', name: 'Netflix', amount: 9.99, icon: '🎬', category: '', last_used: '' }]);
+      __setSupabaseForTests(mockClient({ data: [{ id: 's1', name: 'Netflix', amount: '9.99', category: '', billing_period: 'monthly', last_used: '' }], error: null }) as any);
+      expect(await getSubscriptions('u1')).toEqual([{ id: 's1', name: 'Netflix', amount: 9.99, category: '', billing_period: 'monthly', last_used: '' }]);
     });
     it('returns [] when the client is unavailable', async () => {
       __setSupabaseForTests(null);
