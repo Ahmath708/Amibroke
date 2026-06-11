@@ -77,7 +77,7 @@ describe('shouldRevisePlan (new-user / no-plan guard)', () => {
     expect(shouldRevisePlan(null, { debtTotal: 0 })).toEqual({ revise: false, reason: expect.stringContaining('no active plan') });
   });
   it('does not revise a non-active plan', () => {
-    expect(shouldRevisePlan({ ...active, status: 'abandoned' }, { debtTotal: 0 }).revise).toBe(false);
+    expect(shouldRevisePlan({ ...active, status: 'incomplete' }, { debtTotal: 0 }).revise).toBe(false);
   });
   it('does not revise on an immaterial change', () => {
     expect(shouldRevisePlan(active, { debtTotal: 4950 }).revise).toBe(false);

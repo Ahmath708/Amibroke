@@ -32,9 +32,9 @@ export interface ActivePlan {
   id: string;
   source_analysis_id: string | null;
   started_at: string;
-  horizon_days: number;
-  status: 'active' | 'completed' | 'abandoned';
-  version: number;
+  horizon_days?: number;                              // fixed 90 (PLAN_HORIZON_DAYS) — derived, not stored
+  status: 'active' | 'completed' | 'incomplete';      // schema-v2 status set (no 'abandoned')
+  version?: number;                                   // in-memory revise counter — not persisted (dropped from action_plans)
   overall_message: string | null;
   steps: ActivePlanStep[];
   start_metrics: PlanStartMetrics | null;
@@ -45,6 +45,7 @@ export interface ActivePlan {
 }
 
 // ─── Deterministic progress (pure — no DB/LLM) ──────────────────────────────
+export const PLAN_HORIZON_DAYS = 90; // fixed plan window — ends_at = started_at + 90d (not stored as horizon_days)
 export interface PlanProgress { done: number; total: number; pct: number; daysIn: number; daysLeft: number; }
 
 export function planProgress(plan: ActivePlan, now: Date = new Date()): PlanProgress {
@@ -53,7 +54,7 @@ export function planProgress(plan: ActivePlan, now: Date = new Date()): PlanProg
   const pct = total ? Math.round((done / total) * 100) : 0;
   const DAY = 24 * 60 * 60 * 1000;
   const daysIn = Math.max(0, Math.floor((now.getTime() - new Date(plan.started_at).getTime()) / DAY));
-  const daysLeft = Math.max(0, plan.horizon_days - daysIn);
+  const daysLeft = Math.max(0, PLAN_HORIZON_DAYS - daysIn);
   return { done, total, pct, daysIn, daysLeft };
 }
 
@@ -243,7 +244,7 @@ export async function reviseActivePlan(
     steps: steps as unknown as ActivePlanStep[],
     // Keep the existing Big Picture when the patch message is empty (e.g. a no-op revision).
     overall_message: patch.overallMessage?.trim() ? patch.overallMessage : plan.overall_message,
-    version: plan.version + 1,
+    version: (plan.version ?? 0) + 1,
     synced_metrics: snapshot, // the plan now reflects this snapshot → status flips to "up to date"
   };
 

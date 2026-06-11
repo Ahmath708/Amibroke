@@ -347,7 +347,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
               <AnimatedProgressRing pct={prog!.pct} size={92} stroke={9} />
               <View style={styles.heroMeta}>
                 <Text style={styles.heroDay}>
-                  Day {Math.min(prog!.daysIn + 1, plan!.horizon_days)}<Text style={styles.heroDayTotal}> of {plan!.horizon_days}</Text>
+                  Day {Math.min(prog!.daysIn + 1, plan!.horizon_days ?? 90)}<Text style={styles.heroDayTotal}> of {plan!.horizon_days ?? 90}</Text>
                 </Text>
                 <Text style={styles.heroDone}>{prog!.done} of {prog!.total} steps done</Text>
                 <Text style={styles.heroNudge}>Finish the plan, watch your score climb.</Text>
