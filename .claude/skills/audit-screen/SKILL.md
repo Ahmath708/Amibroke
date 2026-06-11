@@ -1,6 +1,6 @@
 ---
 name: audit-screen
-description: Design-audit a single app screen (or sweep several) against the Am I Broke? design doctrine (docs/design-doctrine.md). Invoked as /audit-screen <name> (e.g. /audit-screen home) or /audit-screen --sweep <a> <b> … for cross-screen consistency. Screenshots the iPhone SE simulator, grades the doctrine's §13 gate as a rubric, and returns a prioritized, severity-tagged critique with concrete fixes citing tokens + line numbers. Recommend-only — never implements until approved.
+description: Design-audit a single app screen (or sweep several) against the Am I Broke? design doctrine (docs/design-doctrine.md). Invoked as /audit-screen <name> (e.g. /audit-screen home) or /audit-screen --sweep <a> <b> … for cross-screen consistency. Screenshots the iPhone 16e simulator, grades the doctrine's §13 gate as a rubric, and returns a prioritized, severity-tagged critique with concrete fixes citing tokens + line numbers. Recommend-only — never implements until approved.
 ---
 
 # Audit Screen
@@ -18,9 +18,9 @@ restating rules. The doctrine's **§13 gate is this skill's rubric** — they st
 
 1. **Audit & recommend ONLY.** Produce findings + STOP. Implement nothing until the user explicitly
    approves; they hash it out conceptually first.
-2. **Capture:** assume the **iPhone SE (3rd gen)** sim is booted **on the target screen**. If you
+2. **Capture:** assume the **iPhone 16e** sim is booted **on the target screen**. If you
    can't confirm it's on that screen, ask the user to navigate there — don't drive the sim yourself.
-3. **Device:** iPhone SE (3rd gen) only — smallest screen, tightest constraints.
+3. **Device:** iPhone 16e — smallest *current* screen (6.1″, the daily design driver), tightest constraints.
 4. **Restraint is a rule, not a gap** (doctrine §0/§13.10): propose "make it stand out" additions
    only when a screen feels flat *for its importance*. Leave utility screens (Settings, legal, FAQ)
    calm. Don't ding a clean utility screen for lacking motion.
@@ -60,7 +60,7 @@ Then Read the PNG. Beyond a single shot:
   (some frames legitimately catch a fade gap — don't mistake it for a bug). Judge motion against §5.
 - **Scrollable screens** (Settings, Results, ActionPlan, History, long forms): the first viewport
   isn't the whole screen. Scroll + capture multiple sections — `tools/sim-capture.sh <label> <frames>`
-  or idb swipes (`~/.idb-venv/bin/idb`, SE is **375×667** logical, swipe y 500→200 to scroll down;
+  or idb swipes (`~/.idb-venv/bin/idb`, 16e is **390×844** logical, swipe y 650→200 to scroll down;
   **don't** set `IDB_COMPANION`). Evaluate the whole scroll, and confirm content **clears the floating
   tab bar** (§11).
 - **Non-scroll screens:** verify everything fits with no clipping (usual victims pushed off-bottom:

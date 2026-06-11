@@ -67,9 +67,10 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "ios:se": "expo run:ios --device $(xcrun simctl list devices available | grep -F 'iPhone SE (3rd generation) (' | grep -oE '[0-9A-F-]{36}' | head -1)",
+    "ios:e": "expo run:ios --device $(xcrun simctl list devices available | grep -F 'iPhone 16e (' | grep -oE '[0-9A-F-]{36}' | head -1)",
+    "ios:pro": "expo run:ios --device $(xcrun simctl list devices available | grep -F 'iPhone 17 Pro (' | grep -oE '[0-9A-F-]{36}' | head -1)",
     "ios:sim": "bash tools/run-sim.sh",
-    "ios:rebuild": "expo prebuild --clean && expo run:ios --device $(xcrun simctl list devices available | grep -F 'iPhone SE (3rd generation) (' | grep -oE '[0-9A-F-]{36}' | head -1)",
+    "ios:rebuild": "expo prebuild --clean && expo run:ios --device $(xcrun simctl list devices available | grep -F 'iPhone 16e (' | grep -oE '[0-9A-F-]{36}' | head -1)",
     "test": "jest",
     "test:purchases": "jest src/services/__tests__/purchases.test.ts --runInBand"
   },

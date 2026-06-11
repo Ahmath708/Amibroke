@@ -252,7 +252,8 @@ component, hook, util, or data call, grep for an existing one.** Specifically:
 ## Common commands
 
 ```bash
-npm run ios:se                                            # build+launch on the SE sim via Expo (resolves the sim UDID — see gotcha)
+npm run ios:e                                            # build+launch on the 16e sim (6.1" small worst-case — daily design driver)
+npm run ios:pro                                          # build+launch on the iPhone 17 Pro sim (showcase / demo)
 npm run ios:sim                                           # no-Expo fallback: xcodebuild → iphonesimulator SDK directly
 npx expo start                                            # Metro (press shift+i to switch sims)
 npx tsc --noEmit                                          # typecheck the app
@@ -281,13 +282,13 @@ client-side.
   is the deploy, not the edit.
 
 - **`expo run:ios` works for the simulator — pass the sim's UDID, not its name.** Under Xcode 26 +
-  Expo SDK 55, `expo run:ios --device "iPhone SE (3rd generation)"` (the *name*, with parens)
+  Expo SDK 55, `expo run:ios --device "iPhone 16e"` (the *name*)
   mis-resolves the build destination to a device/generic target and fails with "No code signing
   certificates are available." Passing the **simulator UDID** instead (`expo run:ios --device <UDID>`)
   pins it to the simulator, where signing is local-only — so the build **ignores** the personal-team
   provisioning errors (Sign in with Apple / Push Notifications need the paid Developer Program, but
-  only for *device* builds). `npm run ios:se` now resolves the SE sim's UDID automatically, so it
-  works through Expo (Metro + dev client managed by Expo). `npm run ios:sim` (`tools/run-sim.sh`)
+  only for *device* builds). `npm run ios:e` / `ios:pro` resolve the sim's UDID automatically, so they
+  work through Expo (Metro + dev client managed by Expo). `npm run ios:sim` (`tools/run-sim.sh`)
   remains the no-Expo fallback — it builds the *iphonesimulator* SDK directly via `xcodebuild`.
 
 - **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
@@ -330,10 +331,9 @@ don't wait to be asked.
 
 | Skill | Use when |
 |---|---|
-| **audit-screen** | Grading a screen against the design doctrine — `/audit-screen <name>`. Screenshots the SE sim; checks readability/contrast/hierarchy/consistency, flags "too basic." Recommend-only; never implements until approved. **(Mac only — needs the simulator.)** |
-| **react-patterns** | Writing/reviewing React hooks, state, or component structure (web-oriented; principles transfer to RN). |
-| **react-performance** | A screen/list feels janky, re-renders too much, or you're optimizing render/scroll perf. |
-| **react-testing** | Adding jest/RTL component or hook tests, or mocking network/native modules. |
+| **audit-screen** | Grading a screen against the design doctrine — `/audit-screen <name>`. Screenshots the 16e sim; checks readability/contrast/hierarchy/consistency, flags "too basic." Recommend-only; never implements until approved. **(Mac only — needs the simulator.)** |
+| **react-native-patterns** | Writing/reviewing RN components, hooks, navigation, or animations; debugging RN-specific bugs (blank screens on tab switch, navigation lifecycle, native-driver desync, keyboard, native modules). |
+| **make-interfaces-feel-better** | Polishing UI feel — spacing, type, borders, shadows, motion, hit areas, interaction states (framework-agnostic; pairs with audit-screen). |
 | **postgres-patterns** | Designing schema, indexes, or RLS; tuning a Supabase/Postgres query. |
 | **database-migrations** | Writing or reviewing a `supabase/migrations/*` change — safe/reversible schema edits. |
 | **api-design** | Shaping an edge-function request/response contract (status codes, pagination, errors). |

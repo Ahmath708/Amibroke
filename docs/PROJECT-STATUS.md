@@ -36,6 +36,39 @@
   labeling), 6 (UI papercuts) pending.
 - **3-day-access enforcement** — built but flag-gated **off** (`FEATURES.PAYWALL_ENFORCEMENT`).
   Remaining: coverage audit + trial-expiry UX + a validated flag-flip. See the doc above.
+- **✅ Blank-screen on tab switch — RESOLVED (2026-06-11).** Roast/Community/Profile intermittently
+  rendered fully blank on navigation (Dashboard/Tools didn't). **Root cause:** the Tab.Navigator's
+  `animation: 'shift'` (RN v7 bottom-tabs) mis-composited the react-native-screens scenes — heavier
+  screens landed blank while their content sat off-screen, flashing during the reverse shift. **Fix:**
+  `screenOptions={{ … animation: 'none' }}` in `AppNavigator`. Red herrings ruled out en route: the
+  entrance animation, the focus DB fetch, a poisoned Fast-Refresh bundle. Kept from the hunt: all 15
+  screens migrated off the legacy `useEntryAnimation` (RN `Animated` native-driver desync) → Reanimated
+  `enterUp` (the right standard, not the bug); `TypingPlaceholder` now pauses off-tab; Roast's
+  "Recent Scores" section removed. (If you ever want a tab transition back, try `animation: 'fade'`, not `'shift'`.)
+- **🐞 Snapshot-merge corruption — diagnosed, deferred (plan A chosen).** A roast can write bad data
+  into `financial_snapshots`. DB-verified (2026-06-11): (1) **debt can't be cleared** —
+  `patchFromAnalysis` ([shared/financialSnapshot.ts](../shared/financialSnapshot.ts)) only writes
+  `patch.debts` when `length > 0`, so a "paid off my debts" roast (`debts: []`) is dropped and the old
+  `stated` debt persists forever; (2) **inferred income/savings overwrite brackets** — the analyze
+  fabricates numbers to fill the schema even when the input never mentions them, and they enter the
+  patch at `low` confidence, outranking the `estimated` bracket values (saw 7500→3500, 25000→250).
+  Root: the analyze can't distinguish "user stated" from "I inferred to fill the schema." **Plan A
+  (chosen) — design before code:** (a) honest per-field confidence from the analyze prompt (`stated`
+  only when the user said it; `estimated` when schema-filling), (b) `patchFromAnalysis` writes
+  `debts: []` on a confident clear + stops inferred values outranking brackets, (c) an explicit
+  "debt cleared" signal. Touches the `analyze` edge function → **testing = paid calls (rule #1)**.
+  Hidden under mocks (deterministic `SAMPLE_ANALYSIS`), so safe to defer past the demo.
+- **🔒 Rate-limiting — revisit (security/privacy risk).** `api_rate_limits` (baseline ~L507) has
+  **no RLS** — the schema comment assumes "accessed only via the SECURITY DEFINER `check_rate_limit`
+  RPC," but without RLS or revoked grants the public-schema table is **directly queryable via PostgREST**
+  by anon/authenticated. Worse, `deriveBucketKey` ([_shared/rateLimitLogic.ts](../supabase/functions/_shared/rateLimitLogic.ts))
+  stores the **raw client IP in plaintext** (`bucket_key = `${endpoint}:${ip}`` from `x-forwarded-for`) —
+  IP is PII under GDPR. So users' IPs sit in plaintext in an un-RLS'd, potentially-exposed table (the
+  `cleanup_rate_limits` RPC prunes after 1 day). **Fix:** (1) `ENABLE ROW LEVEL SECURITY` on
+  `api_rate_limits` (+ revoke anon/authenticated grants) so it's genuinely RPC-only; (2) **hash the IP**
+  (`endpoint:sha256(ip + salt)`) — the limiter only needs a stable per-caller key, not the raw IP;
+  (3) keep the short-TTL cleanup. Touchpoints: `supabase/functions/_shared/rateLimit*.ts` + the
+  baseline's `api_rate_limits` table & `check_rate_limit` RPC.
 
 ## TODO — IA cleanup (do on Mac, alongside `onboarding-v2`)
 
@@ -102,6 +135,22 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 ## Session log
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
+
+### 2026-06-11 — schema-v2 cutover LIVE; auth/forms + device polish; blank-screen hunt; skills audit
+- **schema-v2 cut over to Jason's own Supabase** (`qxybdaotduunnrjfjzbq`): `db reset` + 6 edge fns +
+  Anthropic/Groq secrets; `redesign` fast-forwarded; coworker project deprecated. Backend verified live
+  (real `analyze` + Google sign-in work). CLAUDE.md / memory / `.env` updated.
+- **LoginScreen**: inline validation (per-field + form-level banner, no Alerts), separated fields,
+  autofill, `automaticallyAdjustKeyboardInsets` keyboard fix. `DEV_FORCE_ONBOARDING` → off. **DOB
+  Birthday timezone off-by-one fixed** (local Y-M-D parse/format).
+- **Device targets off the SE** → **16e** (daily/small) + **17 Pro** (demo): run scripts, `audit-screen`,
+  `demo-app`, `sim-capture`, CLAUDE.md.
+- **Skills audit**: removed 3 web-oriented React skills (patterns/performance/testing), added
+  `make-interfaces-feel-better` + a new `react-native-patterns` skill.
+- **Two bugs logged to In-flight (above):** demo-critical **blank-screen on tab switch** (UNRESOLVED;
+  `RoastComposerScreen` in a diagnostic state with `FOCUS_FETCH_DISABLED=true`), and **snapshot-merge
+  corruption** (diagnosed, deferred, plan A).
+- ⚠️ **Everything above is UNCOMMITTED** (approve-commits-first). `USE_AI_MOCKS` is `&& true` (QA default).
 
 ### 2026-06-10 — doc cleanup (removed 2 obsolete docs)
 - Removed `docs/531_NEXT_STEPS.md` (dated May-27 iOS-readiness checklist; "next steps" now = this

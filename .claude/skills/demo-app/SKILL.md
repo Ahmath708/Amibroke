@@ -1,6 +1,6 @@
 # Demo App — record a product walkthrough
 
-Record a polished **~90s** screen recording of "Am I Broke?" on the iPhone SE simulator, from a
+Record a polished **~90s** screen recording of "Am I Broke?" on the iPhone 17 Pro simulator, from a
 signed-out cold start (native + in-app splash) all the way through the product: auth (with the
 legal pages), the AI roast + Results, history, community, a live Deep Dive upgrade, and the
 premium tools. Invoked as `/demo-app`.
@@ -9,8 +9,9 @@ The output is `/tmp/sim-rec-demo.mp4` (+ frames in `/tmp/sim-rec-demo/`).
 
 ## Owner defaults (decided — don't re-ask each run)
 
-1. **Device:** iPhone SE (3rd gen) simulator, already booted. Build/launch with `npm run ios:sim`
-   if it isn't installed (NOT `expo run:ios` — broken under Xcode 26 + SDK 55).
+1. **Device:** iPhone 17 Pro simulator (the demo showcase device — current, Dynamic Island), already
+   booted. Build/launch with `bash tools/run-sim.sh "iPhone 17 Pro"` if it isn't installed (NOT
+   `expo run:ios` — broken under Xcode 26 + SDK 55). (Daily *design* happens on the 16e; demo on the Pro.)
 2. **One continuous take** via `tools/sim-record.sh`. Pacing is "soak it in, but not too long" —
    generous dwell on hero beats (splash, Results), brisk on the rest.
 3. **AI mocks are ON** (dev). The Results beat **intentionally** submits one analysis — with mocks
@@ -27,14 +28,14 @@ The output is `/tmp/sim-rec-demo.mp4` (+ frames in `/tmp/sim-rec-demo/`).
 
 - Recorder: `tools/sim-record.sh <label> <seconds> [cold-launch-bundle-id] [fps]` →
   `/tmp/sim-rec-<label>.mp4` + `/tmp/sim-rec-<label>/frame-NNN.png` (frame N ≈ N/fps seconds).
-- Driving the sim: **idb** at `~/.idb-venv/bin/idb`. SE is **375×667 pt**. Do **NOT** set
+- Driving the sim: **idb** at `~/.idb-venv/bin/idb`. iPhone 17 Pro is **~402×874 pt** (read live, don't assume). Do **NOT** set
   `IDB_COMPANION`. Read coordinates with `idb ui describe-all --udid <udid> --json` — don't guess.
   Taps: `idb ui tap X Y`. Swipes: `idb ui swipe --duration <s> X1 Y1 X2 Y2` (swipe up = scroll down).
 - Bundle id: `com.aibroke.app`.
 
 ## Phase 0 — Pre-flight (NOT recorded)
 
-1. Confirm a booted SE sim: `xcrun simctl list devices booted`.
+1. Confirm a booted iPhone 17 Pro sim: `xcrun simctl list devices booted`.
 2. Launch the app and check auth state. **If signed in → sign out** (Profile → Settings → Sign
    Out). The take must start signed OUT.
 3. Leave the app terminated — `sim-record.sh` cold-launches from springboard, so the native splash
@@ -98,7 +99,7 @@ Total ≈ 90s of motion inside the ~100s window (buffer at the tail).
 - If a beat is off (mistimed sheet, scroll too fast, missed tap), reset to Phase 0 and re-record
   with adjusted sleeps/targets. The `.mp4` is the deliverable; frames are for QA.
 
-## Calibrated targets (SE · recalibrate on any layout change)
+## Calibrated targets (⚠️ STALE — keyed to the SE 375×667; RECALIBRATE for iPhone 17 Pro ~402×874 before recording)
 
 Captured against the current SDK-55 build. **Key finding:** `idb ui describe-all` returns
 **content-space** coords on scrollable screens (e.g. the Paywall CTA reports y≈1487 on a 667pt
@@ -109,7 +110,7 @@ confirm, Google account, Test Store) are located live too.
 **Timing (cold launch → screen):** springboard ~1s → splash (native + in-app logo) →
 **Landing ≈ 4.5s**. Begin the Landing dwell at ~4.5s.
 
-**Fixed coords (x,y @ SE 375×667):**
+**Fixed coords (x,y @ SE 375×667 — STALE; device moved to iPhone 17 Pro, so re-derive these live with `describe-all`):**
 - Tab bar (y≈643): Home `62` · Tools `188` · Community `312`.
 - Dashboard (scrolled to top): avatar→Profile `336,47` · New roast `188,340` · trend "View all"→History `327,454` · "Your plan & tools"→Tools `188,593`.
 - Landing: "Get Started" `187,586` · "Sign in" link `187,640`.

@@ -4,7 +4,7 @@
 #
 # Uses idb (Meta's iOS Debug Bridge) to inject swipe gestures directly into the
 # booted simulator (no macOS Accessibility permission needed) and `simctl` to grab
-# PNGs between swipes. Built for the "Am I Broke?" UI-polish loop on the iPhone SE.
+# PNGs between swipes. Built for the "Am I Broke?" UI-polish loop on the iPhone 16e (6.1" small worst-case).
 #
 # Usage:
 #   tools/sim-capture.sh <label> [frames] [outdir]
@@ -26,10 +26,10 @@ IDB="$HOME/.idb-venv/bin/idb"
 # Note: do NOT set IDB_COMPANION — idb auto-spawns/manages the companion via
 # `idb connect <udid>`. Setting it makes idb treat the value as a socket path.
 
-# iPhone SE (3rd gen) logical points: 375 x 667. Swipe up to scroll content down.
-SWIPE_X=187
-SWIPE_FROM_Y=520
-SWIPE_TO_Y=190
+# iPhone 16e logical points: 390 x 844 (6.1" small worst-case). Swipe up to scroll content down.
+SWIPE_X=195
+SWIPE_FROM_Y=650
+SWIPE_TO_Y=200
 SWIPE_DURATION=0.45   # slow-ish => minimal momentum => predictable, overlapping steps
 SETTLE=0.6            # seconds to let the scroll settle before the screenshot
 
