@@ -14,3 +14,6 @@ demo/
 
 # Local clips / scratch — reference videos dropped here for UI planning (not source)
 tmp/
+
+# Supabase CLI local link state
+supabase/.temp/
