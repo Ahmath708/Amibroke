@@ -35,7 +35,7 @@ export async function getCommunityFeed(
     return { posts, nextCursor: null, hasMore: false };
   }
   return withClient('fetch community feed', empty, async (client) => {
-    let query = (client as any).from(TABLES.community_posts).select('*');
+    let query = client.from(TABLES.community_posts).select('*');
 
     if (sort === 'lowest') {
       query = query.order('score', { ascending: true }).order('created_at', { ascending: true });
@@ -75,7 +75,7 @@ export async function getCommunityFeed(
     // Per-emoji counts + the current user's reactions — aggregated from post_reactions (the JSONB is gone).
     if (posts.length) {
       const ids = posts.map((p) => p.id);
-      const { data: allReactions } = await (client as any)
+      const { data: allReactions } = await client
         .from(TABLES.post_reactions)
         .select('post_id, emoji, user_id')
         .in('post_id', ids);
@@ -104,7 +104,7 @@ export async function getPostReactions(
   userId?: string,
 ): Promise<{ reactions: Record<string, number>; my_reactions: string[] } | null> {
   return withClient<{ reactions: Record<string, number>; my_reactions: string[] } | null>('fetch post reactions', null, async (client) => {
-    const { data: rows, error } = await (client as any)
+    const { data: rows, error } = await client
       .from(TABLES.post_reactions)
       .select('emoji, user_id')
       .eq('post_id', postId);
@@ -132,7 +132,7 @@ export async function shareToFeed(
     const profile = await getProfile(userId);
     // Real handle (not anonymized) — the feed renders it as @display_name.
     const displayName = profile?.username ?? `user_${userId.slice(0, 8)}`;
-    const { data, error } = await (client as any)
+    const { data, error } = await client
       .from(TABLES.community_posts)
       .insert({
         user_id: userId,
@@ -141,7 +141,7 @@ export async function shareToFeed(
         score,
         roast,
         summary,
-        share_captions: shareCaptions || null,
+        // share_captions dropped from community_posts (schema-v2) — captions live on the linked analysis
       })
       .select('id')
       .single();
@@ -153,7 +153,7 @@ export async function shareToFeed(
 /** Analysis IDs the user currently has live in the community feed (drives the share manager toggles). */
 export async function getMySharedAnalysisIds(userId: string): Promise<string[]> {
   return withClient('fetch shared analysis ids', [], async (client) => {
-    const { data, error } = await (client as any)
+    const { data, error } = await client
       .from(TABLES.community_posts)
       .select('analysis_id')
       .eq('user_id', userId);
@@ -166,7 +166,7 @@ export async function getMySharedAnalysisIds(userId: string): Promise<string[]> 
  *  post_reactions cascade-delete, so reactions are lost — re-sharing starts fresh). */
 export async function unshareFromFeed(analysisId: string, userId: string): Promise<boolean> {
   return withClient('unshare from feed', false, async (client) => {
-    const { error } = await (client as any)
+    const { error } = await client
       .from(TABLES.community_posts)
       .delete()
       .eq('analysis_id', analysisId)
@@ -178,7 +178,7 @@ export async function unshareFromFeed(analysisId: string, userId: string): Promi
 
 export async function addReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
   return withClient('add reaction', false, async (client) => {
-    const { error } = await (client as any)
+    const { error } = await client
       .from(TABLES.post_reactions)
       .insert({ post_id: postId, user_id: userId, emoji });
     if (error?.code === '23505') return false; // already reacted — not an error
@@ -189,7 +189,7 @@ export async function addReaction(postId: string, userId: string, emoji: string)
 
 export async function removeReaction(postId: string, userId: string, emoji: string): Promise<boolean> {
   return withClient('remove reaction', false, async (client) => {
-    const { error } = await (client as any)
+    const { error } = await client
       .from(TABLES.post_reactions)
       .delete()
       .eq('post_id', postId)

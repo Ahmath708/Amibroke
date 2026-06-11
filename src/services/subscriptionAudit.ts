@@ -7,7 +7,7 @@ import { withClient } from './supabaseClient';
 
 export async function getSubscriptions(userId: string): Promise<Subscription[]> {
   return withClient('fetch subscriptions', [], async (client) => {
-    const { data, error } = await (client as any)
+    const { data, error } = await client
       .from(TABLES.tracked_subscriptions)
       .select('*')
       .eq('user_id', userId)
@@ -39,7 +39,7 @@ export async function getSubscriptionContext(userId: string): Promise<string> {
 
 export async function saveSubscription(userId: string, sub: Omit<Subscription, 'id'>): Promise<string | null> {
   return withClient('save subscription', null, async (client) => {
-    const { data, error } = await (client as any)
+    const { data, error } = await client
       .from(TABLES.tracked_subscriptions)
       .insert({ user_id: userId, ...sub })
       .select('id')
@@ -51,7 +51,7 @@ export async function saveSubscription(userId: string, sub: Omit<Subscription, '
 
 export async function deleteSubscription(userId: string, subId: string): Promise<boolean> {
   return withClient('delete subscription', false, async (client) => {
-    const { error } = await (client as any)
+    const { error } = await client
       .from(TABLES.tracked_subscriptions)
       .delete()
       .eq('id', subId)

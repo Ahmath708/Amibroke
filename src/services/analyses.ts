@@ -73,7 +73,7 @@ export interface AnalysesPage { items: AnalysisHistoryItem[]; nextCursor: string
 // not on the roast row. Resilient: any error → empty Set (the "has plan" badge just won't show).
 async function planSourceIds(client: any, userId: string): Promise<Set<string>> {
   try {
-    const { data } = await client
+    const { data } = await (client as any)
       .from(TABLES.action_plans)
       .select('source_analysis_id')
       .eq('user_id', userId);
@@ -113,7 +113,7 @@ export async function getAnalysesPage(
   }
   const empty: AnalysesPage = { items: [], nextCursor: null, hasMore: false };
   return withClient('fetch analyses page', empty, async (client) => {
-    let q = (client as any)
+    let q = client
       .from(TABLES.analyses)
       .select(HISTORY_COLUMNS)
       .eq('user_id', userId)

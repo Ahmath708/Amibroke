@@ -5,7 +5,7 @@ import { TABLES, BUCKETS } from './tables';
 
 export async function getProfile(userId: string): Promise<any> {
   return withClient('fetch profile', null, async (client) => {
-    const { data, error } = await (client as any)
+    const { data, error } = await client
       .from(TABLES.profiles)
       .select('*')
       .eq('id', userId)
@@ -15,9 +15,9 @@ export async function getProfile(userId: string): Promise<any> {
   });
 }
 
-export async function updateProfile(userId: string, updates: { username?: string; display_name?: string; avatar_url?: string; preferred_tone?: string; debt_strategy?: string; first_name?: string; last_name?: string }): Promise<boolean> {
+export async function updateProfile(userId: string, updates: { username?: string; avatar_url?: string; preferred_tone?: string; debt_strategy?: string; first_name?: string; last_name?: string }): Promise<boolean> {
   return withClient('update profile', false, async (client) => {
-    const { error } = await (client as any)
+    const { error } = await client
       .from(TABLES.profiles)
       .upsert({ id: userId, ...updates, updated_at: new Date().toISOString() });
     if (error) throw error;

@@ -8,7 +8,7 @@ import { withClient } from './supabaseClient';
 /** Read the user's saved financial context (returns {} if none / signed out). */
 export async function getFinancialContext(userId: string): Promise<ContextValues> {
   return withClient('fetch financial context', {} as ContextValues, async (client) => {
-    const { data, error } = await (client as any)
+    const { data, error } = await client
       .from(TABLES.financial_context).select('*').eq('user_id', userId).maybeSingle();
     if (error) throw error;
     return valuesFromContext(data as Record<string, unknown> | null);
@@ -18,7 +18,7 @@ export async function getFinancialContext(userId: string): Promise<ContextValues
 /** Upsert the user's financial context (owner-private; 1:1 with the profile). */
 export async function saveFinancialContext(userId: string, values: ContextValues): Promise<boolean> {
   return withClient('save financial context', false, async (client) => {
-    const { error } = await (client as any)
+    const { error } = await client
       .from(TABLES.financial_context)
       .upsert({ user_id: userId, ...contextUpdateFromValues(values) }, { onConflict: 'user_id' });
     if (error) throw error;

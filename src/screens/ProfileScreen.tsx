@@ -115,7 +115,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const saveUsername = async () => {
     if (!user) return;
     setIsEditingName(false);
-    const ok = await updateProfile(user.id, { username: userName, display_name: displayName });
+    const ok = await updateProfile(user.id, { username: userName });
     if (!ok) Alert.alert('Error', 'Failed to save profile.');
   };
 

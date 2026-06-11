@@ -244,7 +244,7 @@ export async function fetchOrGenerateCaptions(
 
   try {
     if (analysisId) {
-      const { data: row } = await (client as any)
+      const { data: row } = await client
         .from(TABLES.analyses)
         .select('share_captions')
         .eq('id', analysisId)
@@ -277,7 +277,7 @@ export async function fetchOrGenerateCaptions(
     }
 
     if (analysisId) {
-      await (client as any)
+      await client
         .from(TABLES.analyses)
         .update({ share_captions: parsed.data })
         .eq('id', analysisId);
