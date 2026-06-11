@@ -74,21 +74,20 @@ serve(async (req) => {
         status = 'past_due';
         break;
       case 'SUBSCRIPTION_PAUSED':
-        status = 'paused';
+        status = 'canceled'; // no active access; 'paused' isn't in the plan_entitlements status CHECK
         break;
       default:
         // TEST, TRANSFER, etc. — acknowledge without mutating state.
         return jsonResponse({ received: true, ignored: event.type });
     }
 
-    const { error } = await supabase.from('user_subscriptions').upsert(
+    const { error } = await supabase.from('plan_entitlements').upsert(
       {
         user_id: userId,
         plan: effectivePlan,
         status,
         current_period_end: periodEnd,
         cancel_at_period_end: cancelAtPeriodEnd,
-        trial_end: isTrial ? periodEnd : null,
         store,
         product_id: event.product_id ?? null,
         rc_entitlement: effectivePlan,

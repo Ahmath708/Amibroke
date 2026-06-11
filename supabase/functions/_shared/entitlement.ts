@@ -8,7 +8,7 @@ import { getTrialStatus } from '../../../shared/entitlement.ts';
  *
  * IMPORTANT:
  *  - Flagged OFF by default. Set the `PAYWALL_ENFORCEMENT=true` function secret to
- *    enable — and only once the RevenueCat → user_subscriptions mirror is reliably
+ *    enable — and only once the RevenueCat → plan_entitlements mirror is reliably
  *    populated, since this gate reads that table (RevenueCat's customerInfo is the
  *    client-side source of truth and isn't queried here).
  *  - FAILS OPEN on any uncertainty (no token, missing env, lookup error) so a
@@ -41,9 +41,9 @@ export async function enforceEntitlement(req: Request): Promise<void> {
     // 1) Inside the 3-day free-access window? (server-set created_at, not tamperable)
     if (getTrialStatus(user.created_at).active) return;
 
-    // 2) Active paid plan? (RevenueCat → user_subscriptions mirror)
+    // 2) Active paid plan? (RevenueCat → plan_entitlements mirror)
     const { data: sub, error: subErr } = await client
-      .from('user_subscriptions')
+      .from('plan_entitlements')
       .select('plan, status')
       .eq('user_id', user.id)
       .maybeSingle();
