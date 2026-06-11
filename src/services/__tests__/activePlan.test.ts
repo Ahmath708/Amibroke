@@ -6,7 +6,7 @@ const NOW = new Date('2026-06-30T12:00:00Z');
 function plan(over: Partial<ActivePlan> = {}): ActivePlan {
   return {
     id: 'p', source_analysis_id: 'a', started_at: '2026-06-01T12:00:00Z',
-    horizon_days: 90, status: 'active', version: 1, overall_message: null,
+    horizon_days: 90, status: 'active', overall_message: null,
     steps: [], start_metrics: null, ...over,
   };
 }
@@ -71,7 +71,7 @@ describe('shouldRevisePlan (new-user / no-plan guard)', () => {
   const start: PlanStartMetrics = { debtTotal: 5000, liquidSavings: 200, monthlyIncome: 4000, monthlySavings: 300, score: 55 };
   const active: ActivePlan = {
     id: 'p', source_analysis_id: 'a', started_at: '2026-06-01T00:00:00Z', horizon_days: 90,
-    status: 'active', version: 1, overall_message: null, steps: [], start_metrics: start,
+    status: 'active', overall_message: null, steps: [], start_metrics: start,
   };
   it('NEVER revises when there is no active plan (no LLM call)', () => {
     expect(shouldRevisePlan(null, { debtTotal: 0 })).toEqual({ revise: false, reason: expect.stringContaining('no active plan') });
