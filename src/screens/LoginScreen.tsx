@@ -40,6 +40,9 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [mode, setMode] = useState<'login' | 'signup'>(route.params?.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null); // form-level: server auth failure
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
@@ -55,27 +58,45 @@ export default function LoginScreen({ navigation, route }: Props) {
     return false;
   };
 
+  // Two error zones (mobile standard): per-field inline (client validation) + a form-level banner
+  // (server auth result). Sign-up validates email FORMAT (a typo'd address = dead account); sign-in
+  // only checks non-empty — a bad email folds into the unified failure (never leak which field).
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailErrorFor = (e: string, checkFormat: boolean): string | null => {
+    const t = e.trim();
+    if (!t) return 'Enter your email';
+    if (checkFormat && !EMAIL_RE.test(t)) return 'Enter a valid email (e.g. name@example.com)';
+    return null;
+  };
+
   const handleAuth = async () => {
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      Alert.alert('Invalid email', 'Please enter a valid email address (e.g., name@example.com).');
-      return;
-    }
+    setFormError(null);
+    const eErr = emailErrorFor(email, mode === 'signup'); // format-checked on sign-up only
+    const pErr = password.trim() ? null : 'Enter your password';
+    setEmailError(eErr);
+    setPasswordError(pErr);
+    if (eErr || pErr) { notify(NotificationFeedbackType.Warning); return; }
     setLoading(true);
     const { error } = mode === 'login'
-      ? await signIn(trimmedEmail, password)
-      : await signUp(trimmedEmail, password);
+      ? await signIn(email.trim(), password)
+      : await signUp(email.trim(), password);
     setLoading(false);
     if (error) {
-      Alert.alert(mode === 'login' ? 'Sign in failed' : 'Sign up failed', error);
+      notify(NotificationFeedbackType.Error);
+      // Auth failure is form-level, not a field. Sign-in: UNIFY (never reveal which credential was
+      // wrong — account-enumeration leak). Sign-up: surface the real message (e.g. email already in use).
+      setFormError(mode === 'login' ? 'Invalid email or password' : error);
       return;
     }
     // Signed in — AppNavigator swaps to the app stack automatically (hard auth gate).
+  };
+
+  // Switching Sign In ↔ Sign Up clears errors — they're mode-specific and would otherwise stick.
+  const switchMode = (m: 'login' | 'signup') => {
+    setMode(m);
+    setEmailError(null);
+    setPasswordError(null);
+    setFormError(null);
   };
 
   const handleApple = async () => {
@@ -127,7 +148,7 @@ export default function LoginScreen({ navigation, route }: Props) {
               <TouchableOpacity
                 key={m}
                 style={[styles.segment, mode === m && styles.segmentActive]}
-                onPress={() => setMode(m)}
+                onPress={() => switchMode(m)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.segmentText, mode === m && styles.segmentTextActive]}>
@@ -168,23 +189,29 @@ export default function LoginScreen({ navigation, route }: Props) {
             <View style={styles.divLine} />
           </View>
 
-          {/* Form */}
-          <BlurView intensity={24} tint="dark" style={styles.formGroup}>
-            <View style={styles.formCell}>
+          {/* Form — separate fields so each owns its inline error (mobile standard) */}
+          <View style={styles.field}>
+            <BlurView intensity={24} tint="dark" style={[styles.fieldCard, emailError ? styles.fieldCardError : null]}>
               <Text style={styles.formLabel}>Email</Text>
               <AppTextInput
                 style={styles.formInput}
                 placeholder="you@example.com"
                 placeholderTextColor={Colors.textSecondary}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => { setEmail(t); if (emailError) setEmailError(null); if (formError) setFormError(null); }}
+                onBlur={() => { if (mode === 'signup' && email.trim()) setEmailError(emailErrorFor(email, true)); }}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
                 returnKeyType="next"
               />
-            </View>
-            <View style={styles.cellSeparator} />
-            <View style={styles.formCell}>
+            </BlurView>
+            {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
+          </View>
+
+          <View style={styles.field}>
+            <BlurView intensity={24} tint="dark" style={[styles.fieldCard, passwordError ? styles.fieldCardError : null]}>
               <Text style={styles.formLabel}>Password</Text>
               <View style={styles.passwordRow}>
                 <AppTextInput
@@ -192,8 +219,10 @@ export default function LoginScreen({ navigation, route }: Props) {
                   placeholder="••••••••"
                   placeholderTextColor={Colors.textSecondary}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(t) => { setPassword(t); if (passwordError) setPasswordError(null); if (formError) setFormError(null); }}
                   secureTextEntry={!showPassword}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  textContentType={mode === 'signup' ? 'newPassword' : 'password'}
                   returnKeyType="done"
                   onSubmitEditing={handleAuth}
                 />
@@ -203,8 +232,12 @@ export default function LoginScreen({ navigation, route }: Props) {
                     : <EyeIcon size={20} color={Colors.textSecondary} />}
                 </TouchableOpacity>
               </View>
-            </View>
-          </BlurView>
+            </BlurView>
+            {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
+          </View>
+
+          {/* Form-level banner — server auth failure (unified for sign-in; Supabase msg for sign-up) */}
+          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
 
           {mode === 'login' && (
             <TouchableOpacity style={styles.forgotRow}>
@@ -278,16 +311,20 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xs, marginBottom: Spacing.md },
   divLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator },
   divText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textMuted },
-  formGroup: {
-    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, marginBottom: Spacing.md,
+  // Separate fields (each its own blur card) so per-field errors have room + a clean red-border state.
+  field: { marginBottom: Spacing.md },
+  fieldCard: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    minHeight: Spacing.rowHeight, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: Radius.lg,
+    overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  formCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
+  fieldCardError: { borderColor: Colors.danger },
   formLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, width: 80 },
   formInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, textAlign: 'right' },
   passwordRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   passwordInput: { marginRight: Spacing.sm },
-  cellSeparator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg },
+  fieldError: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.danger, marginTop: Spacing.xs, marginLeft: Spacing.xs },
+  formError: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.danger, textAlign: 'center', marginBottom: Spacing.md },
   forgotRow: { alignItems: 'flex-end', paddingVertical: Spacing.xs, marginBottom: Spacing.sm },
   forgotText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.accent },
   termsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md, paddingHorizontal: Spacing.xs },
