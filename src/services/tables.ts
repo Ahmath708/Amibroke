@@ -7,6 +7,7 @@ export const TABLES = {
   financial_context: 'financial_context',        // NEW (schema-v2): demographics + brackets off profiles
   financial_snapshots: 'financial_snapshots',
   community_posts: 'community_posts',
+  community_posts_view: 'community_posts_with_counts', // VIEW: posts + live reaction_count (trending sort)
   post_reactions: 'post_reactions',
   check_ins: 'check_ins',
   tracked_subscriptions: 'tracked_subscriptions', // was `subscriptions`

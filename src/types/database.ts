@@ -455,6 +455,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "post_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts_with_counts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "post_reactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -551,7 +558,35 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      community_posts_with_counts: {
+        Row: {
+          analysis_id: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          reaction_count: number | null
+          roast: string | null
+          score: number | null
+          summary: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: true
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_rate_limit: {

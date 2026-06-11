@@ -76,7 +76,8 @@
 --     hard constraint). NOT NULL kept on display_name/roast/summary/score.
 --     `analysis_id` FK changed to ON DELETE CASCADE (D8) — deleting the source
 --     analysis deletes the post. `score_label` / `reactions` / `reaction_count`
---     dropped (D5/D8). No `idx_cp_trending` index (no server-side trending sort).
+--     dropped (D5/D8). Server-side trending is restored via the `community_posts_with_counts`
+--     VIEW (live reaction_count aggregate) instead of a denormalized column + sync trigger.
 --
 -- 11. `post_reactions` emoji CHECK whitelist carried forward verbatim
 --     ('🔥','😭','💀','💯','😂'). The reaction-count SYNC TRIGGER + sync_reaction_counts()
@@ -398,6 +399,20 @@ CREATE POLICY "Users can delete own reactions"
   ON post_reactions FOR DELETE USING (auth.uid() = user_id);
 
 CREATE INDEX idx_post_reactions_post ON post_reactions(post_id);
+
+
+-- =============================================================================
+-- community_posts_with_counts  (VIEW) — trending source: posts + live reaction_count
+--   Aggregates post_reactions per post on the fly — no denormalized counter / sync trigger (D8).
+--   security_invoker → the underlying tables' RLS (both public-read) applies to the caller.
+--   GROUP BY the PK lets us SELECT cp.* alongside the count (functional dependency on community_posts.id).
+--   The feed's keyset pagination orders/filters by reaction_count just like the old column.
+-- =============================================================================
+CREATE VIEW community_posts_with_counts WITH (security_invoker = true) AS
+  SELECT cp.*, COALESCE(COUNT(pr.id), 0)::int AS reaction_count
+  FROM community_posts cp
+  LEFT JOIN post_reactions pr ON pr.post_id = cp.id
+  GROUP BY cp.id;
 
 
 -- =============================================================================

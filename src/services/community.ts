@@ -16,7 +16,7 @@ export interface FeedPage { posts: CommunityPost[]; nextCursor: FeedCursor | nul
  * One page of the community feed, ordered + keyset-paginated server-side per tab:
  *   recent   → created_at DESC                       (created_at is the unique cursor)
  *   lowest   → score ASC, created_at ASC             (composite — score has heavy ties)
- *   trending → created_at DESC (recency fallback — schema-v2 dropped reaction_count; reactions aggregated post-fetch)
+ *   trending → reaction_count DESC, created_at DESC  (from the community_posts_with_counts view — live aggregate)
  * Fetches limit+1 to detect `hasMore` with no count query. created_at is double-quoted
  * inside the composite .or() so its timezone "+" survives URL encoding.
  */
@@ -35,17 +35,15 @@ export async function getCommunityFeed(
     return { posts, nextCursor: null, hasMore: false };
   }
   return withClient('fetch community feed', empty, async (client) => {
-    let query = client.from(TABLES.community_posts).select('*');
+    let query = client.from(TABLES.community_posts_view).select('*'); // view adds reaction_count for the trending sort
 
     if (sort === 'lowest') {
       query = query.order('score', { ascending: true }).order('created_at', { ascending: true });
       if (cursor) query = query.or(`score.gt.${cursor.score},and(score.eq.${cursor.score},created_at.gt."${cursor.createdAt}")`);
     } else if (sort === 'trending') {
-      // schema-v2 dropped reaction_count (no denormalized counter / sync trigger) → no server-side
-      // trending sort. Fall back to recency; reactions are aggregated from post_reactions below.
-      // (Real global trending would need reaction_count restored via a trigger — flagged.)
-      query = query.order('created_at', { ascending: false });
-      if (cursor) query = query.lt('created_at', cursor.createdAt);
+      // reaction_count comes from the community_posts_with_counts view (live aggregate of post_reactions).
+      query = query.order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
+      if (cursor) query = query.or(`reaction_count.lt.${cursor.count},and(reaction_count.eq.${cursor.count},created_at.lt."${cursor.createdAt}")`);
     } else {
       query = query.order('created_at', { ascending: false });
       if (cursor) query = query.lt('created_at', cursor.createdAt);
@@ -90,7 +88,7 @@ export async function getCommunityFeed(
 
     const last: any = pageRows[pageRows.length - 1];
     const nextCursor: FeedCursor | null = hasMore && last
-      ? { createdAt: last.created_at, score: last.score, count: 0 }
+      ? { createdAt: last.created_at, score: last.score, count: last.reaction_count ?? 0 }
       : null;
 
     return { posts, nextCursor, hasMore };
