@@ -17,10 +17,18 @@ export async function saveCheckIn(userId: string, data: {
   reflection?: string;  // the Haiku "coach's note" for this check-in (00023)
 }): Promise<string | null> {
   if (USE_AI_MOCKS) return 'mock-checkin-id';
+  // JSONB-only (schema-v2): fold the headline figures into `metrics` under their MetricKey — the
+  // check_ins table has no flat income/expenses/savings/debt columns (the snapshot keeps current state).
+  const { income, expenses, savings, debt, metrics, mood, notes, reflection } = data;
+  const merged: Record<string, number> = { ...(metrics ?? {}) };
+  if (income != null) merged.monthlyIncome = income;
+  if (expenses != null) merged.monthlyExpenses = expenses;
+  if (savings != null) merged.liquidSavings = savings;
+  if (debt != null) merged.debtTotal = debt;
   return withClient('save check-in', null, async (client) => {
     const { data: result, error } = await (client as any)
       .from(TABLES.check_ins)
-      .insert({ user_id: userId, ...data })
+      .insert({ user_id: userId, mood, notes, reflection, metrics: merged })
       .select('id')
       .single();
     if (error) throw error;
@@ -44,10 +52,6 @@ export async function getCheckIns(userId: string): Promise<CheckIn[]> {
       id: c.id,
       mood: c.mood,
       notes: c.notes,
-      income: c.income ? parseFloat(c.income) : null,
-      expenses: c.expenses ? parseFloat(c.expenses) : null,
-      savings: c.savings ? parseFloat(c.savings) : null,
-      debt: c.debt ? parseFloat(c.debt) : null,
       created_at: c.created_at,
       metrics: c.metrics ?? null,
       reflection: c.reflection ?? null,

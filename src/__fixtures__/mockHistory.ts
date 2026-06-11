@@ -109,10 +109,10 @@ export const MOCK_CHECKIN_CONFIG: CheckinConfig = {
 };
 
 export const MOCK_CHECKINS: CheckIn[] = [
-  { id: 'ci-2', mood: 4, notes: 'Paid off the Capital One card this month. Felt unreal.', income: 5000, expenses: 3900, savings: 2100, debt: 11500, created_at: '2026-05-20T12:00:00',
-    metrics: { [G_DEBT]: 11500, [G_CARD]: 0, [G_SAVINGS]: 2100, [G_EF]: 0.6 } },
-  { id: 'ci-1', mood: 2, notes: 'Tight month, car needed brakes. Held the line though.', income: 4800, expenses: 4400, savings: 900, debt: 14800, created_at: '2026-03-22T12:00:00',
-    metrics: { [G_DEBT]: 14800, [G_CARD]: 3800, [G_SAVINGS]: 900, [G_EF]: 0.4 } },
+  { id: 'ci-2', mood: 4, notes: 'Paid off the Capital One card this month. Felt unreal.', created_at: '2026-05-20T12:00:00',
+    metrics: { [G_DEBT]: 11500, [G_CARD]: 0, [G_SAVINGS]: 2100, [G_EF]: 0.6, monthlyIncome: 5000, monthlyExpenses: 3900, liquidSavings: 2100, debtTotal: 11500 } },
+  { id: 'ci-1', mood: 2, notes: 'Tight month, car needed brakes. Held the line though.', created_at: '2026-03-22T12:00:00',
+    metrics: { [G_DEBT]: 14800, [G_CARD]: 3800, [G_SAVINGS]: 900, [G_EF]: 0.4, monthlyIncome: 4800, monthlyExpenses: 4400, liquidSavings: 900, debtTotal: 14800 } },
 ];
 
 // Current financial snapshot for the mock user — a returning user mid-progress (~score 80): the

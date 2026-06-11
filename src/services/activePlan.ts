@@ -138,7 +138,7 @@ export async function getActivePlan(userId: string): Promise<ActivePlan | null> 
   if (USE_AI_MOCKS) return mockPlan;
   return withClient<ActivePlan | null>('fetch active plan', null, async (client) => {
     const { data, error } = await (client as any)
-      .from(TABLES.active_plans)
+      .from(TABLES.action_plans)
       .select('*')
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -171,10 +171,10 @@ export async function startPlan(
   }
   return withClient<ActivePlan | null>('start plan', null, async (client) => {
     // Enforce one active plan per user — retire any existing active row first.
-    await (client as any).from(TABLES.active_plans)
-      .update({ status: 'abandoned', updated_at: new Date().toISOString() })
+    await (client as any).from(TABLES.action_plans)
+      .delete()
       .eq('user_id', userId).eq('status', 'active');
-    const { data, error } = await (client as any).from(TABLES.active_plans).insert({
+    const { data, error } = await (client as any).from(TABLES.action_plans).insert({
       user_id: userId,
       source_analysis_id: sourceAnalysisId,
       overall_message: overallMessage ?? null,
@@ -193,7 +193,7 @@ export async function setStepStatus(plan: ActivePlan, stepId: string, status: St
   );
   if (USE_AI_MOCKS) { mockPlan = { ...plan, steps }; return mockPlan; }
   return withClient<ActivePlan | null>('update plan step', null, async (client) => {
-    const { data, error } = await (client as any).from(TABLES.active_plans)
+    const { data, error } = await (client as any).from(TABLES.action_plans)
       .update({ steps, updated_at: new Date().toISOString() })
       .eq('id', plan.id).select('*').single();
     if (error) throw error;
@@ -204,8 +204,8 @@ export async function setStepStatus(plan: ActivePlan, stepId: string, status: St
 export async function abandonPlan(planId: string): Promise<boolean> {
   if (USE_AI_MOCKS) { mockPlan = null; return true; }
   return withClient('abandon plan', false, async (client) => {
-    const { error } = await (client as any).from(TABLES.active_plans)
-      .update({ status: 'abandoned', updated_at: new Date().toISOString() })
+    const { error } = await (client as any).from(TABLES.action_plans)
+      .delete()
       .eq('id', planId);
     if (error) throw error;
     return true;
@@ -249,8 +249,8 @@ export async function reviseActivePlan(
 
   if (USE_AI_MOCKS) { mockPlan = revised; return { revised: true, reason: gate.reason, plan: revised }; }
   const persisted = await withClient<ActivePlan | null>('revise plan', null, async (client) => {
-    const { data, error } = await (client as any).from(TABLES.active_plans)
-      .update({ steps: revised.steps, overall_message: revised.overall_message, version: revised.version, updated_at: new Date().toISOString() })
+    const { data, error } = await (client as any).from(TABLES.action_plans)
+      .update({ steps: revised.steps, overall_message: revised.overall_message, updated_at: new Date().toISOString() })
       .eq('id', plan.id).select('*').single();
     if (error) throw error;
     return data as ActivePlan;

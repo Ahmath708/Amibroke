@@ -185,21 +185,23 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       const v = last?.metrics?.[id];
       return v != null ? `${v}` : fallback != null ? `${fallback}` : '';
     };
+    // JSONB-only (schema-v2): a prior check-in's headline figures live in metrics under their MetricKey.
+    const lastM = (k: MetricKey): number | null | undefined => last?.metrics?.[k];
     cfg.goals.forEach((g) => {
       if (g.kind === 'debt') { d[g.key] = lastVal(g.id, g.baseline); return; }
       switch (g.key as MetricKey) {
-        case 'liquidSavings': b.savings = last?.savings != null ? `${last.savings}` : `${g.baseline}`; break;
-        case 'debtTotal': b.totalDebt = last?.debt != null ? `${last.debt}` : `${g.baseline}`; break;
-        case 'monthlyIncome': b.income = last?.income != null ? `${last.income}` : `${g.baseline}`; break;
-        case 'monthlyExpenses': b.expenses = last?.expenses != null ? `${last.expenses}` : `${g.baseline}`; break;
+        case 'liquidSavings': b.savings = lastVal('liquidSavings', g.baseline); break;
+        case 'debtTotal': b.totalDebt = lastVal('debtTotal', g.baseline); break;
+        case 'monthlyIncome': b.income = lastVal('monthlyIncome', g.baseline); break;
+        case 'monthlyExpenses': b.expenses = lastVal('monthlyExpenses', g.baseline); break;
         // derived metrics need their base inputs collected too
         case 'monthlySavings': case 'savingsRate':
-          if (last?.income != null) b.income = `${last.income}`;
-          if (last?.expenses != null) b.expenses = `${last.expenses}`;
+          if (lastM('monthlyIncome') != null) b.income = `${lastM('monthlyIncome')}`;
+          if (lastM('monthlyExpenses') != null) b.expenses = `${lastM('monthlyExpenses')}`;
           break;
         case 'emergencyFundMonths':
-          if (last?.savings != null) b.savings = `${last.savings}`;
-          if (last?.expenses != null) b.expenses = `${last.expenses}`;
+          if (lastM('liquidSavings') != null) b.savings = `${lastM('liquidSavings')}`;
+          if (lastM('monthlyExpenses') != null) b.expenses = `${lastM('monthlyExpenses')}`;
           break;
       }
     });

@@ -61,8 +61,8 @@ export default function SubscriptionAuditScreen() {
       const id = await saveSubscription(user.id, {
         name: newName.trim(),
         amount: parseFloat(newAmount),
-        icon: ICONS[subs.length % ICONS.length],
         category: '',
+        billing_period: 'monthly',
         last_used: '',
       });
       if (id) {
@@ -142,7 +142,7 @@ export default function SubscriptionAuditScreen() {
                     {i > 0 && <View style={styles.subSep} />}
                     <View style={styles.subRow}>
                       <TouchableOpacity onPress={() => handleDelete(sub.id)} style={styles.subIcon}>
-                        <Text style={styles.subIconText}>{sub.icon}</Text>
+                        <Text style={styles.subIconText}>{ICONS[i % ICONS.length]}</Text>
                       </TouchableOpacity>
                       <View style={styles.subInfo}>
                         <View style={styles.subHeader}>

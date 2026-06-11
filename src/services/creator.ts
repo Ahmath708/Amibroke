@@ -1,6 +1,6 @@
 import { getSupabaseClient as getSupabase } from './supabaseClient';
 import { TABLES } from './tables';
-import { totalReactions } from '@/utils/reactions';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import { analyzeFinancialSituation } from './ai';
 import { RoastTone } from '@/types';
 
@@ -42,25 +42,23 @@ export async function getCreatorStats(userId: string): Promise<CreatorStats | nu
       .order('created_at', { ascending: false });
 
     const totalRoasts = posts?.length || 0;
-    const totalViews = posts?.reduce((sum, p) => sum + totalReactions(p.reactions) * 10, 0) || 0;
-    const totalShares = posts?.reduce((sum, p) => sum + totalReactions(p.reactions), 0) || 0;
-    const totalEarnings = 0; // PARKED: no referrals/payout table in schema-v2 (see note above)
+    const submissions: CreatorSubmission[] = (posts?.slice(0, 10) || []).map((p) => ({
+      id: p.id,
+      creator_id: p.user_id,
+      user_input: '',
+      score: p.score,
+      score_label: getScoreBand(p.score).label, // derived (community_posts.score_label dropped)
+      roast: p.roast,
+      created_at: p.created_at,
+    }));
 
     return {
       totalRoasts,
-      totalViews,
-      totalShares,
-      totalEarnings,
-      topRoast: posts?.[0] || null,
-      recentSubmissions: (posts?.slice(0, 10) || []).map((p) => ({
-        id: p.id,
-        creator_id: p.user_id,
-        user_input: '',
-        score: p.score,
-        score_label: p.score_label,
-        roast: p.roast,
-        created_at: p.created_at,
-      })),
+      totalViews: 0,    // PARKED: was a reactions×10 vanity proxy; reactions moved to post_reactions (schema-v2)
+      totalShares: 0,   // PARKED: ditto
+      totalEarnings: 0, // PARKED: no referrals/payout table
+      topRoast: submissions[0] || null,
+      recentSubmissions: submissions,
     };
   } catch {
     return null;

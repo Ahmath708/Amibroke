@@ -124,7 +124,7 @@ export async function deleteUserData(userId: string): Promise<{ success: boolean
     ];
 
     for (const [table, column] of deletions) {
-      const { error } = await client
+      const { error } = await (client as any)
         .from(table)
         .delete()
         .eq(column, userId);
