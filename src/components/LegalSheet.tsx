@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing } from '@/theme/colors';
 import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
@@ -31,9 +32,9 @@ export default function LegalSheet({ doc, onClose }: { doc: LegalDoc | null; onC
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + Spacing.sm }]}>
           <Text style={styles.title}>{doc === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={hit} style={styles.closeBtn} accessibilityLabel="Close">
+          <PressableScale onPress={onClose} hitSlop={hit} style={styles.closeBtn} accessibilityLabel="Close">
             <Text style={styles.closeText}>✕</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
         <View style={styles.body}>
           {doc === 'privacy' && <PrivacyPolicyScreen />}

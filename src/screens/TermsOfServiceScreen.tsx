@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
 
 export default function TermsOfServiceScreen() {

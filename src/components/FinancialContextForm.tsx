@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import SelectableChip from '@/components/SelectableChip';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import StateSelect from '@/components/StateSelect';
 import DobField from '@/components/DobField';
@@ -22,9 +23,6 @@ export const CONTEXT_FIELDS: { key: string; label: string; col: string; options:
 ];
 
 export type ContextValues = Record<string, string>;
-
-// financial_context columns to SELECT when loading saved context.
-export const CTX_COLUMNS = CONTEXT_FIELDS.map((f) => f.col).join(', ');
 
 // Optional exact monthly income (profiles.monthly_income, 00021) → a positive number, and the
 // bracket it falls in. Mirrors onboarding so the input behaves identically. Held in the form's
@@ -161,9 +159,9 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
         style={styles.cta}
       />
       {onSkip && (
-        <TouchableOpacity onPress={onSkip} disabled={submitting} style={styles.skipBtn} activeOpacity={0.7}>
+        <PressableScale onPress={onSkip} disabled={submitting} style={styles.skipBtn}>
           <Text style={styles.skipText}>{skipLabel ?? 'Skip for now'}</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
     </>
   );

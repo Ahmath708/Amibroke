@@ -1,11 +1,13 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, Image, Alert, ActivityIndicator,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
+import { capitalize } from '@/utils/string';
+import Toast from '@/components/Toast';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,35 +15,23 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { getScoreBand } from '@shared/scoring/bands.ts';
-import MiniScoreRing from '@/components/MiniScoreRing';
-import { Ionicons } from '@expo/vector-icons';
-import StatusPill from '@/components/StatusPill';
+import { PencilSquareIcon, ClipboardDocumentListIcon, CreditCardIcon, ArrowTrendingUpIcon, Cog6ToothIcon, SparklesIcon, ArrowTopRightOnSquareIcon } from 'react-native-heroicons/outline';
 import TierPill from '@/components/TierPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile';
 import { getAnalysisHistory } from '@/services/analyses';
-import { formatLongDate as fmtDate } from '@/utils/format';
-import { isSubscriptionPremium } from '@/services/subscriptions';
 import { manageSubscriptions } from '@/services/purchases';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
+import TopScrim from '@/components/TopScrim';
 import { UserIcon } from 'react-native-heroicons/solid';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
-// Account / app items (always available).
-const ACCOUNT_ITEMS: { icon: string; label: string; nav: string }[] = [
-  { icon: 'person-outline', label: 'Edit Profile', nav: 'EditProfile' },
-  { icon: 'clipboard-outline', label: 'Financial Context', nav: 'FinancialContext' }, // state/age/housing/employment + brackets → analyze priors
-  { icon: 'card-outline', label: 'Your Plan', nav: 'Paywall' }, // premium→manage, free→Paywall; detail = live tier (see render)
-  ...(FEATURES.CREATOR_DASHBOARD ? [{ icon: 'trending-up-outline', label: 'Creator Dashboard', nav: 'CreatorDashboard' }] : []),
-  { icon: 'settings-outline', label: 'Settings', nav: 'Settings' },
-];
 
 
 export default function ProfileScreen({ navigation }: Props) {
@@ -49,20 +39,20 @@ export default function ProfileScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analysisCount, setAnalysisCount] = useState(0);
-  const [latestScore, setLatestScore] = useState<number | null>(null);
   const [bestScore, setBestScore] = useState<number | null>(null);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const firstLoad = useRef(true); // gate the full-screen loader to the first load only
-  const [latestDate, setLatestDate] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   // Shared hook → live customerInfo listener, so the tier updates the moment a
   // purchase lands (the old one-shot fetch left Profile stuck on the old tier).
-  const { tier: purchaseTier, refresh: refreshSub } = useSubscription();
+  const { tier: purchaseTier, premium, refresh: refreshSub } = useSubscription();
 
   const fetchData = useCallback(async (silent = false) => {
     if (!user) {
@@ -78,22 +68,19 @@ export default function ProfileScreen({ navigation }: Props) {
       ]);
       if (profile) {
         setUserName(profile.username || '');
-        setDisplayName(profile.display_name || '');
+        setFirstName(profile.first_name || '');
+        setLastName(profile.last_name || '');
         if (profile.avatar_url) setAvatarUri(profile.avatar_url);
       } else {
         // Fallback if profile row doesn't exist yet
         setUserName(user.email?.split('@')[0] || 'user');
-        setDisplayName(user.email?.split('@')[0] || 'User');
       }
       if (history && history.length > 0) {
         setAnalysisCount(history.length);
-        setLatestScore(history[0].score);
-        setLatestDate(history[0].created_at);
         setBestScore(Math.max(...history.map((h) => h.score)));
         setAvgScore(Math.round(history.reduce((s, h) => s + h.score, 0) / history.length));
       } else {
         setAnalysisCount(0);
-        setLatestScore(null);
         setBestScore(null);
         setAvgScore(null);
       }
@@ -146,7 +133,7 @@ export default function ProfileScreen({ navigation }: Props) {
         const publicUrl = await uploadAvatar(user.id, pickedUri);
         if (publicUrl) {
           setAvatarUri(publicUrl);
-          Alert.alert('Success', 'Profile picture updated successfully!');
+          setToast('Profile picture updated');
         } else {
           Alert.alert('Error', 'Failed to upload profile picture.');
         }
@@ -158,9 +145,6 @@ export default function ProfileScreen({ navigation }: Props) {
       }
     }
   };
-
-
-  const scoreColor = latestScore == null ? Colors.textMuted : getScoreBand(latestScore).color;
 
   if (loading) {
     return (
@@ -178,6 +162,19 @@ export default function ProfileScreen({ navigation }: Props) {
     );
   }
 
+  const fullName = [firstName, lastName].map((s) => s.trim()).filter(Boolean).map(capitalize).join(' ');
+
+  // Quick-access rows. "Plans & Features" is in-app and visible to everyone (compare tiers /
+  // upgrade); "Manage Subscription" only appears when subscribed and hands off to the App Store.
+  const nav = navigation.navigate as (route: string, params?: object) => void;
+  const menuItems = [
+    { key: 'context', icon: ClipboardDocumentListIcon, label: 'Financial Context', onPress: () => nav('FinancialContext'), right: 'none' as const },
+    { key: 'plans', icon: SparklesIcon, label: 'Plans & Features', onPress: () => nav('Paywall'), right: 'tier' as const },
+    ...(premium ? [{ key: 'manage', icon: CreditCardIcon, label: 'Manage Subscription', onPress: () => manageSubscriptions(), right: 'external' as const }] : []),
+    ...(FEATURES.CREATOR_DASHBOARD ? [{ key: 'creator', icon: ArrowTrendingUpIcon, label: 'Creator Dashboard', onPress: () => nav('CreatorDashboard'), right: 'none' as const }] : []),
+    { key: 'settings', icon: Cog6ToothIcon, label: 'Settings', onPress: () => nav('Settings'), right: 'none' as const },
+  ];
+
   return (
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="profile" />
@@ -188,105 +185,89 @@ export default function ProfileScreen({ navigation }: Props) {
         {/* Large title */}
         <Text style={styles.largeTitle}>Profile</Text>
 
-        {/* Avatar card */}
-        <View style={styles.avatarCard}>
-          <TouchableOpacity onPress={pickImage} disabled={uploadingAvatar}>
-            <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={[styles.avatarImage, uploadingAvatar && { opacity: 0.4 }]} />
+        {/* Hero — identity + stats in one glowing card; pencil = edit profile */}
+        <View style={styles.hero}>
+          <LinearGradient
+            colors={[Colors.accentContainer, 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.65, y: 0.6 }}
+            style={styles.heroGlow}
+            pointerEvents="none"
+          />
+          <View style={styles.heroTop}>
+            <PressableScale onPress={pickImage} disabled={uploadingAvatar}>
+              <LinearGradient colors={Colors.gradientPrimary} style={styles.avatar}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={[styles.avatarImage, uploadingAvatar && { opacity: 0.4 }]} />
+                ) : (
+                  <UserIcon size={30} color={uploadingAvatar ? 'rgba(255,255,255,0.4)' : Colors.onAccent} />
+                )}
+                {uploadingAvatar && (
+                  <ActivityIndicator size="small" color={Colors.onAccent} style={StyleSheet.absoluteFill} />
+                )}
+              </LinearGradient>
+            </PressableScale>
+            <View style={styles.avatarInfo}>
+              {fullName ? <Text style={styles.fullName}>{fullName}</Text> : null}
+              {isEditingName ? (
+                <AppTextInput
+                  style={styles.nameInput}
+                  value={userName}
+                  onChangeText={setUserName}
+                  onBlur={saveUsername}
+                  onSubmitEditing={saveUsername}
+                  autoFocus
+                  selectTextOnFocus
+                />
               ) : (
-                <UserIcon size={30} color={uploadingAvatar ? 'rgba(255,255,255,0.4)' : '#fff'} />
+                <PressableScale onPress={() => setIsEditingName(true)}>
+                  <Text style={fullName ? styles.username : styles.fullName}>{userName ? `@${userName}` : user?.email || 'Guest'}</Text>
+                </PressableScale>
               )}
-              {uploadingAvatar && (
-                <ActivityIndicator size="small" color="#fff" style={StyleSheet.absoluteFill} />
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-          <View style={styles.avatarInfo}>
-            {isEditingName ? (
-              <AppTextInput
-                style={styles.nameInput}
-                value={userName}
-                onChangeText={setUserName}
-                onBlur={saveUsername}
-                onSubmitEditing={saveUsername}
-                autoFocus
-                selectTextOnFocus
-              />
-            ) : (
-              <TouchableOpacity onPress={() => setIsEditingName(true)}>
-                <Text style={styles.username}>{userName ? `@${userName}` : user?.email || 'Guest'}</Text>
-              </TouchableOpacity>
-            )}
+            </View>
             {user && (
-              <TierPill tier={purchaseTier} />
+              <PressableScale onPress={() => navigation.navigate('EditProfile')} style={styles.heroEdit} accessibilityLabel="Edit profile">
+                <PencilSquareIcon size={18} color={Colors.accentSolid} />
+              </PressableScale>
             )}
           </View>
-        </View>
-
-        {/* Stats row */}
-{user && (
-  <View style={styles.statsRow}>
-    {[
-      { label: 'Roasts', value: String(analysisCount) },
-      { label: 'Avg Score', value: avgScore != null ? String(avgScore) : '—' },
-      { label: 'Best Score', value: bestScore != null ? String(bestScore) : '—' },
-    ].map((s, i, arr) => (
-      <React.Fragment key={s.label}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{s.value}</Text>
-          <Text style={styles.statLabel}>{s.label}</Text>
-        </View>
-        {i < arr.length - 1 && <View style={styles.statDivider} />}
-      </React.Fragment>
-    ))}
-  </View>
-)}
-
-        {/* Current score */}
-        {latestScore != null && (
-          <View style={styles.currentScore}>
-            <View>
-              <Text style={styles.currentScoreLabel}>Current Score</Text>
-              <Text style={styles.currentScoreDate}>{fmtDate(latestDate)}</Text>
+          {user && (
+            <View style={styles.heroStats}>
+              {[
+                { label: 'Roasts', value: String(analysisCount) },
+                { label: 'Avg Score', value: avgScore != null ? String(avgScore) : '—' },
+                { label: 'Best Score', value: bestScore != null ? String(bestScore) : '—' },
+              ].map((s, i, arr) => (
+                <React.Fragment key={s.label}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{s.value}</Text>
+                    <Text style={styles.statLabel}>{s.label}</Text>
+                  </View>
+                  {i < arr.length - 1 && <View style={styles.statDivider} />}
+                </React.Fragment>
+              ))}
             </View>
-            <View style={styles.currentScoreRight}>
-              <MiniScoreRing score={latestScore} size={56} stroke={5} numberSize={Typography.title3.fontSize} />
-              <StatusPill label={getScoreBand(latestScore).label} color={scoreColor} />
-            </View>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Menu */}
         <SectionLabel>Quick Access</SectionLabel>
         <View style={styles.menuGroup}>
-          {ACCOUNT_ITEMS.map((item, i) => {
-            const isPlan = item.label === 'Your Plan';
-            const detail = (item as any).detail;
-            const onPress = isPlan
-              ? () => {
-                  // Subscribed → native manage sheet (cancel/change); free → the paywall.
-                  if (isSubscriptionPremium(purchaseTier)) manageSubscriptions();
-                  else navigation.navigate('Paywall');
-                }
-              : () => (navigation.navigate as any)(item.nav, (item as any).params);
+          {menuItems.map((item, i) => {
+            const Icon = item.icon;
             return (
-              <React.Fragment key={item.label}>
+              <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.menuSep} />}
-                <TouchableOpacity
-                  style={styles.menuCell}
-                  onPress={onPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuIconBadge}>
-                    <Ionicons name={item.icon as any} size={18} color={Colors.accent} />
-                  </View>
+                <PressableScale style={styles.menuCell} onPress={item.onPress}>
+                  <Icon size={22} color={Colors.textPrimary} />
                   <Text style={styles.menuLabel}>{item.label}</Text>
                   <View style={styles.menuRight}>
-                    {isPlan ? <TierPill tier={purchaseTier} size="md" /> : detail ? <Text style={styles.menuDetail}>{detail}</Text> : null}
-                    <Text style={styles.menuChevron}>›</Text>
+                    {item.right === 'tier' && <TierPill tier={purchaseTier} size="md" />}
+                    {item.right === 'external'
+                      ? <ArrowTopRightOnSquareIcon size={18} color={Colors.textSecondary} />
+                      : <Text style={styles.menuChevron}>›</Text>}
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               </React.Fragment>
             );
           })}
@@ -294,11 +275,13 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* Sign out */}
         {user && (
-          <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.7} onPress={handleSignOut}>
+          <PressableScale style={styles.signOutBtn} onPress={handleSignOut}>
             <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       </ScrollView>
+      <TopScrim variant="profile" />
+      <Toast message={toast ?? ''} emoji="✅" visible={!!toast} onHide={() => setToast(null)} />
     </ReAnimated.View>
   );
 }
@@ -311,40 +294,35 @@ const styles = StyleSheet.create({
     ...Typography.largeTitle,
     color: Colors.textPrimary, marginBottom: Spacing.xl,
   },
-  avatarCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.lg, padding: Spacing.lg,
+  hero: {
+    position: 'relative', overflow: 'hidden',
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.lg,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xxl, gap: Spacing.lg,
   },
-  avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
+  heroGlow: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  heroEdit: {
+    width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
+    backgroundColor: Colors.accentContainer,
+  },
+  heroStats: { flexDirection: 'row', paddingTop: Spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.separator },
+  avatar: {
+    width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.accentSolid, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 14, elevation: 8,
+  },
   avatarImage: { width: 60, height: 60, borderRadius: 30 },
   nameInput: {
     fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600',
     borderBottomWidth: 1, borderBottomColor: Colors.accent, paddingVertical: 0, minWidth: 120,
   },
   avatarInfo: { flex: 1, gap: Spacing.xs },
-  username: { fontFamily: Typography.fonts.headingSemi, fontSize: Typography.headline.fontSize, color: Colors.textPrimary, fontWeight: '600' },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.lg, paddingVertical: Spacing.md,
-  },
+  fullName: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
+  username: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
   statItem: { flex: 1, alignItems: 'center' },
   statValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
   statLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
   statDivider: { width: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginVertical: Spacing.xs },
-  currentScore: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.xxl,
-  },
-  currentScoreLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, fontWeight: '500' },
-  currentScoreDate: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },
-  currentScoreRight: { alignItems: 'flex-end', gap: Spacing.xs },
   menuGroup: {
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
@@ -352,11 +330,6 @@ const styles = StyleSheet.create({
   },
   menuSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.rowHeightLg },
   menuCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: Spacing.md, minHeight: 50 },
-  menuIconBadge: {
-    width: 32, height: 32, borderRadius: Radius.sm,
-    backgroundColor: Colors.accentContainer,
-    alignItems: 'center', justifyContent: 'center',
-  },
   menuLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   menuRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   menuDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },

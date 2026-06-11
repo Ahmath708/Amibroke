@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
 
@@ -69,9 +70,8 @@ export default function HelpFAQScreen() {
           return (
             <React.Fragment key={faq.q}>
               {i > 0 && <View style={styles.sep} />}
-              <TouchableOpacity
+              <PressableScale
                 style={styles.faqRow}
-                activeOpacity={0.7}
                 onPress={() => setExpanded(open ? null : faq.q)}
               >
                 <View style={styles.faqHeader}>
@@ -79,7 +79,7 @@ export default function HelpFAQScreen() {
                   <Text style={styles.faqChevron}>{open ? '−' : '+'}</Text>
                 </View>
                 {open && <Text style={styles.faqAnswer}>{faq.a}</Text>}
-              </TouchableOpacity>
+              </PressableScale>
             </React.Fragment>
           );
         })}

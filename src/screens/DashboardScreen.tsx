@@ -4,9 +4,8 @@ import {
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { PressableScale, enterUp } from '@/components/motion';
-import Svg, { Polyline } from 'react-native-svg';
 import {
-  ArrowUpIcon, ArrowDownIcon, ArrowLongRightIcon, ChevronRightIcon, WrenchScrewdriverIcon,
+  ArrowUpIcon, ArrowDownIcon, ArrowLongRightIcon, ArrowPathIcon, ChevronRightIcon,
 } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,21 +22,20 @@ import { getActivePlan, shouldRevisePlan, type ActivePlan } from '@/services/act
 import StaleBadge from '@/components/StaleBadge';
 import { FEATURES } from '@/config/features';
 import { capitalize } from '@/utils/string';
+import { formatCompactCurrency } from '@/utils/format';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import StatusPill from '@/components/StatusPill';
 import ScoreRing from '@/components/ScoreRing';
 import NeonButton from '@/components/NeonButton';
 import NotificationBell from '@/components/NotificationBell';
-import PremiumCard from '@/components/PremiumCard';
+import PlanCtaCard from '@/components/PlanCtaCard';
 import CheckinCard from '@/components/CheckinCard';
 import Skeleton from '@/components/Skeleton';
+import Sparkline from '@/components/Sparkline';
+import TopScrim from '@/components/TopScrim';
 
 type Props = { navigation: TabScreenNav<'Home'> };
-
-// Sparkline box
-const SPARK_W = 140;
-const SPARK_H = 40;
 
 // Time-of-day greeting for the home header (warmer than a static wordmark).
 function timeGreeting(): string {
@@ -47,16 +45,10 @@ function timeGreeting(): string {
   return 'Good evening';
 }
 
-// Compact money for the snapshot tiles: $0 · $250 · $5.2k · $12k.
-function fmtMoney(n: number): string {
-  if (n >= 1000) return `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
-  return `$${Math.round(n)}`;
-}
-
 export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { tier, canUseApp } = useSubscription();
+  const { canUseApp, hasAccess } = useSubscription();
 
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [snapshot, setSnapshot] = useState<FinancialSnapshot | null>(null);
@@ -124,6 +116,14 @@ export default function DashboardScreen({ navigation }: Props) {
     if (input) (navigation.navigate as any)('Processing', { userInput: input, tone });
   }, [user, canUseApp, navigation, tone, history]);
 
+  // Open the action plan: ActionPlan fetches the active plan itself, so when one exists we just
+  // navigate; with no plan yet we pass the latest analysis so it can generate one (mirrors Tools).
+  const openPlan = useCallback(async () => {
+    if (plan) { (navigation.navigate as any)('ActionPlan', { analysisId: history[0]?.id }); return; }
+    const a = history[0] ? await getAnalysisById(history[0].id) : null;
+    (navigation.navigate as any)('ActionPlan', { analysis: a, analysisId: history[0]?.id });
+  }, [plan, history, navigation]);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -142,6 +142,7 @@ export default function DashboardScreen({ navigation }: Props) {
           </View>
           <Skeleton width="100%" height={56} radius={16} style={{ marginTop: Spacing.xxl }} />
         </View>
+        <TopScrim variant="home" />
       </View>
     );
   }
@@ -191,6 +192,7 @@ export default function DashboardScreen({ navigation }: Props) {
             <NeonButton label="Start your first roast" onPress={() => navigation.navigate('Roast')} />
           </ReAnimated.View>
         </ScrollView>
+        <TopScrim variant="home" />
       </View>
     );
   }
@@ -205,6 +207,7 @@ export default function DashboardScreen({ navigation }: Props) {
     income: snapshot?.monthlyIncome?.value ?? 0,
     debt: snapshot?.debtTotal ?? 0,
     savings: snapshot?.liquidSavings?.value ?? 0,
+    expenses: snapshot?.monthlyExpenses?.value ?? 0,
   };
   const hasFinances = fin.income > 0 || fin.debt > 0 || fin.savings > 0;
   // Provenance: brackets from onboarding read 'estimated' until a roast pins them (debt is never
@@ -226,15 +229,6 @@ export default function DashboardScreen({ navigation }: Props) {
 
   // Chronological scores for the sparkline (oldest → newest), last 8.
   const series = [...history].slice(0, 8).reverse().map((h) => h.score);
-  const sMin = Math.min(...series), sMax = Math.max(...series);
-  const span = Math.max(1, sMax - sMin);
-  const points = series
-    .map((v, i) => {
-      const x = series.length === 1 ? SPARK_W / 2 : (i / (series.length - 1)) * SPARK_W;
-      const y = SPARK_H - ((v - sMin) / span) * SPARK_H;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
 
   const fmt = (iso: string) =>
     new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -282,12 +276,21 @@ export default function DashboardScreen({ navigation }: Props) {
           </PressableScale>
         </ReAnimated.View>
 
+        {/* Check-in nudge — persists across the month: actionable when a check-in is due,
+            otherwise a muted next-date line. */}
+        <ReAnimated.View entering={enterUp(2)}>
+          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} anchorFallback={history[history.length - 1]?.created_at} style={{ marginBottom: Spacing.lg }} />
+        </ReAnimated.View>
+
         {/* Score staleness — tap to re-score from the snapshot (no re-typing); paywall-gated */}
         {scoreStale && (
-          <ReAnimated.View entering={enterUp(2)}>
+          <ReAnimated.View entering={enterUp(3)}>
             <PressableScale onPress={onRescore} haptic="light" style={styles.staleBanner}>
               <StaleBadge label="Score may be out of date" />
-              <Text style={styles.refreshCta}>Refresh ↻</Text>
+              <View style={styles.refreshCta}>
+                <Text style={styles.refreshCtaText}>Refresh</Text>
+                <ArrowPathIcon size={13} color={Colors.accent} />
+              </View>
             </PressableScale>
           </ReAnimated.View>
         )}
@@ -295,26 +298,23 @@ export default function DashboardScreen({ navigation }: Props) {
         {/* Your finances — the snapshot behind the score (unified financial model read path).
             Tappable → FinancialContext: the non-roast way to update your numbers. */}
         {hasFinances && (
-          <ReAnimated.View entering={enterUp(3)}>
+          <ReAnimated.View entering={enterUp(4)}>
             <PressableScale haptic="light" onPress={() => navigation.navigate('FinancialContext')} style={styles.financeCard}>
               <View style={styles.tileHeader}>
                 <Text style={styles.tileLabel}>Your Finances</Text>
-                <View style={styles.financeEdit}>
-                  <Text style={styles.financeEditText}>Update</Text>
-                  <ChevronRightIcon size={14} color={Colors.textMuted} />
-                </View>
+                <ChevronRightIcon size={16} color={Colors.textSecondary} />
               </View>
               <View style={styles.financeRow}>
                 <View style={styles.financeStat}>
-                  <Text style={styles.financeVal}>{est.income ? '~' : ''}{fmtMoney(fin.income)}</Text>
+                  <Text style={styles.financeVal}>{est.income ? '~' : ''}{formatCompactCurrency(fin.income)}</Text>
                   <Text style={styles.financeLbl}>Income/mo</Text>
                 </View>
                 <View style={styles.financeStat}>
-                  <Text style={[styles.financeVal, { color: fin.debt > 0 ? Colors.danger : Colors.success }]}>{fmtMoney(fin.debt)}</Text>
+                  <Text style={styles.financeVal}>{formatCompactCurrency(fin.debt)}</Text>
                   <Text style={styles.financeLbl}>Debt</Text>
                 </View>
                 <View style={styles.financeStat}>
-                  <Text style={styles.financeVal}>{est.savings ? '~' : ''}{fmtMoney(fin.savings)}</Text>
+                  <Text style={styles.financeVal}>{est.savings ? '~' : ''}{formatCompactCurrency(fin.savings)}</Text>
                   <Text style={styles.financeLbl}>Savings</Text>
                 </View>
               </View>
@@ -323,21 +323,28 @@ export default function DashboardScreen({ navigation }: Props) {
           </ReAnimated.View>
         )}
 
-        {/* Check-in nudge — renders itself only when a check-in is due */}
-        <ReAnimated.View entering={enterUp(4)}>
-          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} anchorFallback={history[history.length - 1]?.created_at} style={{ marginBottom: Spacing.lg }} />
+        {/* Plan CTA — contextual: live plan progress, a build prompt, or an unlock. Above the
+            history tiles, since the active plan is the mission, not the archive. */}
+        <ReAnimated.View entering={enterUp(5)}>
+          <PlanCtaCard
+            hasAccess={hasAccess('action_plan')}
+            plan={plan}
+            planStale={planStale}
+            fin={fin}
+            onPlan={openPlan}
+            onPaywall={() => navigation.navigate('Paywall')}
+            style={{ marginBottom: Spacing.lg }}
+          />
         </ReAnimated.View>
 
         {/* Bento row: a wider Trend tile + a Roasts-count stat tile (varied weights) */}
-        <ReAnimated.View entering={enterUp(5)} style={styles.bentoRow}>
+        <ReAnimated.View entering={enterUp(6)} style={styles.bentoRow}>
           <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.trendTile]}>
             <View style={styles.tileHeader}>
               <Text style={styles.tileLabel}>Trend</Text>
               <ChevronRightIcon size={16} color={Colors.textSecondary} />
             </View>
-            <Svg width={SPARK_W} height={SPARK_H}>
-              <Polyline points={points} fill="none" stroke={band.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-            </Svg>
+            <Sparkline values={series} color={band.color} />
             <View style={styles.trendNums}>
               <Text style={styles.trendEnd}>{series[0]}</Text>
               <ArrowLongRightIcon size={16} color={Colors.textSecondary} />
@@ -354,29 +361,8 @@ export default function DashboardScreen({ navigation }: Props) {
           </PressableScale>
         </ReAnimated.View>
 
-        {/* Premium card */}
-        <ReAnimated.View entering={enterUp(6)}>
-        {tier === 'deep_dive' ? (
-          <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.toolsCard}>
-            <View style={styles.toolsIcon}><WrenchScrewdriverIcon size={18} color={Colors.accent} /></View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.toolsTitleRow}>
-                <Text style={styles.toolsTitle}>Your plan & tools</Text>
-                {planStale && <StaleBadge label="Update" />}
-              </View>
-              <Text style={styles.toolsSub}>Action plan · debt payoff · scenarios</Text>
-            </View>
-            <ChevronRightIcon size={18} color={Colors.textSecondary} />
-          </PressableScale>
-        ) : (
-          <PremiumCard
-            variant={tier === 'action_plan' ? 'upgrade' : 'go'}
-            onPress={() => navigation.navigate('Paywall')}
-            style={{ marginBottom: Spacing.lg }}
-          />
-        )}
-        </ReAnimated.View>
       </ScrollView>
+      <TopScrim variant="home" />
     </View>
   );
 }
@@ -409,18 +395,16 @@ const styles = StyleSheet.create({
   financeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
   financeStat: { flex: 1 },
   financeVal: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, letterSpacing: -0.5 },
-  financeLbl: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
+  financeLbl: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginTop: 2 },
   estFootnote: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, marginTop: Spacing.sm, fontStyle: 'italic' },
-  financeEdit: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  financeEditText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
   // Stale-state
   staleBanner: { ...card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, marginBottom: Spacing.lg },
-  refreshCta: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
-  toolsTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  refreshCta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  refreshCtaText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
   trendNums: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   trendEnd: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', color: Colors.textSecondary },
   // Bento tiles (varied-weight 2-col row)
-  bentoRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg },
+  bentoRow: { flexDirection: 'row', gap: Spacing.md },
   bentoTile: { ...card, padding: Spacing.lg },
   trendTile: { flex: 1.4, justifyContent: 'space-between' },
   statTile: { flex: 1, justifyContent: 'space-between' },
@@ -428,8 +412,4 @@ const styles = StyleSheet.create({
   tileLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
   tileStat: { fontFamily: Typography.fonts.heading, fontSize: 40, color: Colors.textPrimary, letterSpacing: -1.5, marginTop: Spacing.xs },
   tileSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
-  toolsCard: { ...card, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.lg },
-  toolsIcon: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center' },
-  toolsTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  toolsSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },
 });

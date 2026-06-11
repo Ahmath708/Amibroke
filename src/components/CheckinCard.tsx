@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View, StyleSheet, ViewStyle } from 'react-native';
-import { ChevronRightIcon } from 'react-native-heroicons/outline';
+import { ChevronRightIcon, FireIcon, FaceSmileIcon, ClockIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { useCheckinStatus } from '@/hooks/useCheckinStatus';
@@ -37,7 +37,8 @@ export default function CheckinCard({ onPress, anchorFallback, style }: Props) {
   // One calm one-liner either way, so the Dashboard hierarchy (score + finances) leads. Due → an
   // actionable "ready" line (brighter text + accent chevron); otherwise the next-check-in date.
   const monthFull = MONTHS_FULL[dueDate.getMonth()];
-  const icon = streak > 1 ? '🔥' : due ? '🔔' : '🗓️';
+  const Icon = streak > 1 ? FireIcon : due ? FaceSmileIcon : ClockIcon;
+  const iconColor = due || streak > 1 ? Colors.textPrimary : Colors.textSecondary;
   const text = due
     ? `Your ${monthFull} check-in is ready`
     : `Next check-in · ${dateLabel}${streak > 1 ? ` · ${streak}-mo streak` : ''}`;
@@ -45,9 +46,9 @@ export default function CheckinCard({ onPress, anchorFallback, style }: Props) {
   return (
     <PressableScale onPress={onPress} haptic="light" style={style}>
       <View style={styles.compact}>
-        <Text style={styles.compactIcon}>{icon}</Text>
+        <Icon size={22} color={iconColor} />
         <Text style={[styles.compactText, due && styles.compactTextDue]} numberOfLines={1}>{text}</Text>
-        <ChevronRightIcon size={16} color={due ? Colors.accent : Colors.textMuted} />
+        <ChevronRightIcon size={16} color={Colors.textSecondary} />
       </View>
     </PressableScale>
   );
@@ -60,7 +61,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  compactIcon: { fontSize: Typography.subhead.fontSize },
   compactText: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   compactTextDue: { color: Colors.textPrimary },
 });

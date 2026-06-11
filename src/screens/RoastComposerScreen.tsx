@@ -34,8 +34,7 @@ import { trackFunnelStep } from '@/services/analytics';
 import { getProfile, updateProfile } from '@/services/profile';
 import { getSubscriptionContext } from '@/services/subscriptionAudit';
 import ScreenBackground from '@/components/ScreenBackground';
-import PremiumCard from '@/components/PremiumCard';
-import CheckinCard from '@/components/CheckinCard';
+import TopScrim from '@/components/TopScrim';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 const MAX_INPUT_CHARS = 4000;
@@ -77,7 +76,7 @@ const PLACEHOLDERS = [
 export default function RoastComposerScreen({ navigation, asTab = false }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { tier, canUseApp } = useSubscription();
+  const { canUseApp } = useSubscription();
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedTone, setSelectedTone] = useState<RoastTone>('savage');
@@ -319,19 +318,9 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
               />
             ))}
           </View>
-
-          {/* Monthly check-in nudge (only for users who track goals) */}
-          <CheckinCard onPress={() => navigation.navigate('MonthlyCheckIn')} style={{ marginBottom: Spacing.xl }} />
-
-          {/* Premium teaser — hidden on Deep Dive, an upgrade CTA on Action Plan */}
-          {tier !== 'deep_dive' && (
-            <PremiumCard
-              variant={tier === 'action_plan' ? 'upgrade' : 'go'}
-              onPress={() => navigation.navigate('Paywall')}
-            />
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
+      {asTab && <TopScrim variant="home" />}
     </ReAnimated.View>
   );
 }
@@ -391,9 +380,4 @@ const styles = StyleSheet.create({
   toneWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
   cta: { marginBottom: Spacing.sm },
   ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl },
-  scoreCards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
-  scoreCard: { flex: 1, padding: Spacing.md, alignItems: 'center' },
-  scoreNum: { fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700' },
-  scoreLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.xs },
-  scoreUser: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: Spacing.xs },
 });

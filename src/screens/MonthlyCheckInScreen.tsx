@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import { sanitizeDecimal, formatDecimal } from '@/components/DecimalInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { ArrowUpIcon, ArrowDownIcon } from 'react-native-heroicons/outline';
+import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import { RootStackParamList, CheckinConfig, TrackedGoal, CheckIn, EMPTY_CHECKIN_CONFIG, MetricKey, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
@@ -25,6 +27,7 @@ import { mergeSnapshot, updateSnapshotDebts, getSnapshot } from '@/services/fina
 import type { FinancialSnapshot } from '@shared/financialSnapshot';
 import type { SnapshotPatch } from '@shared/financialSnapshot';
 import { checkinReflection } from '@/services/ai';
+import { formatCurrency } from '@/utils/format';
 import { currentStreak, daysUntilNextCheckin } from '@shared/checkinCadence';
 import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { getProfile } from '@/services/profile';
@@ -239,9 +242,9 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
       else if (g.key === 'liquidSavings') savingsGained += current - prev;
     });
     const dParts: string[] = [];
-    if (debtPaidDown > 0) dParts.push(`paid down $${Math.round(debtPaidDown).toLocaleString()} of debt`);
-    if (savingsGained > 0) dParts.push(`saved $${Math.round(savingsGained).toLocaleString()}`);
-    else if (savingsGained < 0) dParts.push(`savings dipped $${Math.round(-savingsGained).toLocaleString()}`);
+    if (debtPaidDown > 0) dParts.push(`paid down ${formatCurrency(debtPaidDown)} of debt`);
+    if (savingsGained > 0) dParts.push(`saved ${formatCurrency(savingsGained)}`);
+    else if (savingsGained < 0) dParts.push(`savings dipped ${formatCurrency(-savingsGained)}`);
     const deltaStr = dParts.join(' and ') || 'held about steady';
     setDeltaText(deltaStr);
 
@@ -340,12 +343,11 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                 return (
                   <React.Fragment key={g.id}>
                     {i > 0 && <View style={styles.cellSep} />}
-                    <TouchableOpacity style={styles.pickRow} onPress={() => toggleGoal(g.id)} activeOpacity={0.7}>
-                      <Ionicons
-                        name={on ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={24}
-                        color={on ? Colors.accent : Colors.textMuted}
-                      />
+                    <PressableScale style={styles.pickRow} onPress={() => toggleGoal(g.id)}>
+                      {on
+                        ? <CheckCircleIcon size={24} color={Colors.accent} />
+                        // ellipse-outline kept as Ionicons — no Heroicon equivalent (empty circle)
+                        : <Ionicons name="ellipse-outline" size={24} color={Colors.textMuted} />}
                       <View style={styles.pickInfo}>
                         <Text style={styles.pickLabel}>{g.label}</Text>
                         <Text style={styles.pickBaseline}>Now: {formatGoalValue(g.unit, g.baseline)}</Text>
@@ -368,7 +370,7 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                           </View>
                         </View>
                       ) : null}
-                    </TouchableOpacity>
+                    </PressableScale>
                   </React.Fragment>
                 );
               })}
@@ -389,9 +391,9 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             <SectionLabel style={{ marginTop: Spacing.md }}>How's money feeling this month?</SectionLabel>
             <View style={styles.moodRow}>
               {MOODS.map((m, i) => (
-                <TouchableOpacity key={i} style={[styles.moodBtn, mood === i && styles.moodBtnActive]} onPress={() => setMood(i)} activeOpacity={0.7}>
+                <PressableScale key={i} style={[styles.moodBtn, mood === i && styles.moodBtnActive]} onPress={() => setMood(i)}>
                   <Text style={styles.moodEmoji}>{m}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
             {mood !== null && <Text style={styles.moodLabel}>{MOOD_LABELS[mood]}</Text>}
@@ -438,7 +440,9 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
                         <Text style={styles.progBaseline}>{baseStr}</Text>
                         {noChange
                           ? <View style={[styles.noChangeBar, { backgroundColor: color }]} />
-                          : <MaterialCommunityIcons name={p.delta > 0 ? 'arrow-up-bold' : 'arrow-down-bold'} size={20} color={color} />}
+                          : (p.delta > 0
+                            ? <ArrowUpIcon size={20} color={color} />
+                            : <ArrowDownIcon size={20} color={color} />)}
                         <Text style={[styles.progCurrent, { color }]}>{curStr}</Text>
                       </View>
                     </View>
@@ -448,9 +452,9 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             </View>
 
             <NeonButton label={saving ? 'Saving…' : 'Complete check-in'} onPress={submitCheckin} loading={saving} />
-            <TouchableOpacity onPress={() => { setSelectedIds(new Set(config.goals.map((g) => g.id))); setMode('setup'); }} style={styles.editLink}>
+            <PressableScale onPress={() => { setSelectedIds(new Set(config.goals.map((g) => g.id))); setMode('setup'); }} style={styles.editLink}>
               <Text style={styles.editLinkText}>Edit what I track</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </>
         )}
 
@@ -469,17 +473,17 @@ export default function MonthlyCheckInScreen({ navigation, route }: Props) {
             {/* Handoff to the plan — the snapshot's updated, so don't re-render progress here. */}
             <NeonButton label="See your updated plan" onPress={() => navigation.navigate('ActionPlan', {})} />
             {hasAccess('action_plan') ? (
-              <TouchableOpacity onPress={runReScore} style={styles.editLink}>
+              <PressableScale onPress={runReScore} style={styles.editLink}>
                 <Text style={styles.editLinkText}>Get a fresh AI re-score 🚀</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ) : (
-              <TouchableOpacity onPress={() => navigation.navigate('Paywall')} style={styles.editLink}>
+              <PressableScale onPress={() => navigation.navigate('Paywall')} style={styles.editLink}>
                 <Text style={styles.editLinkText}>💎 Unlock an AI re-score</Text>
-              </TouchableOpacity>
+              </PressableScale>
             )}
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editLink}>
+            <PressableScale onPress={() => navigation.goBack()} style={styles.editLink}>
               <Text style={styles.editLinkText}>Done</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         )}
       </ScrollView>

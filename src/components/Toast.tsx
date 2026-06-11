@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { Text, StyleSheet, Animated } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { Durations } from '@/theme/motion';
 import { useReducedMotion } from '@/components/motion';

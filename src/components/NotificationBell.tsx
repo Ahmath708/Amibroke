@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BellIcon } from 'react-native-heroicons/outline';
@@ -12,9 +13,8 @@ export default function NotificationBell() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { items } = useNotifications();
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={() => navigation.navigate('Notifications')}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel="Notifications"
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -22,7 +22,7 @@ export default function NotificationBell() {
     >
       <BellIcon size={24} color={Colors.textPrimary} />
       {items.length > 0 && <View style={styles.dot} />}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

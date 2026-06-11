@@ -1,14 +1,15 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl,
 } from 'react-native';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import { selection } from '@/utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Durations } from '@/theme/motion';
+import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import Reanimated, { ZoomIn, ZoomOut, LinearTransition } from 'react-native-reanimated';
 import NotificationBell from '@/components/NotificationBell';
 import Fab from '@/components/Fab';
@@ -22,8 +23,8 @@ import ErrorState from '@/components/ErrorState';
 import { getCommunityFeed, getPostReactions, addReaction, removeReaction, FeedSort, FeedCursor } from '@/services/community';
 import ScreenBackground from '@/components/ScreenBackground';
 import ShareManagerSheet from '@/components/ShareManagerSheet';
+import TopScrim from '@/components/TopScrim';
 import { useAuth } from '@/context/AuthContext';
-import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -142,7 +143,7 @@ export default function CommunityFeedScreen() {
           <MiniScoreRing score={post.score} size={44} stroke={4} numberSize={Typography.subhead.fontSize} />
           <View style={styles.cardMeta}>
             <View style={styles.cardUserRow}>
-              <Text style={styles.cardUser}>@{post.display_name}</Text>
+              <Text style={styles.cardUser} numberOfLines={1}>@{post.display_name}</Text>
               {user && post.user_id === user.id && <Text style={styles.youBadge}>You</Text>}
             </View>
             <View style={styles.cardMetaRow}>
@@ -153,7 +154,7 @@ export default function CommunityFeedScreen() {
         </View>
 
         {/* Roast */}
-        <Text style={styles.roastText}>"{post.roast}"</Text>
+        <Text style={styles.roastText} numberOfLines={6}>"{post.roast}"</Text>
 
         {/* Reactions — only emojis people have used show as chips; "+ React" opens the picker */}
         <View style={styles.reactRow}>
@@ -164,29 +165,27 @@ export default function CommunityFeedScreen() {
             return (
               <Reanimated.View
                 key={emoji}
-                entering={ZoomIn.duration(180)}
-                exiting={ZoomOut.duration(140)}
-                layout={LinearTransition.duration(180)}
+                entering={ZoomIn.duration(Durations.fast)}
+                exiting={ZoomOut.duration(Durations.fast)}
+                layout={LinearTransition.duration(Durations.fast)}
               >
-                <TouchableOpacity
+                <PressableScale
                   style={[styles.reactBtn, mine && styles.reactBtnActive]}
                   onPress={() => handleReact(post.id, emoji)}
-                  activeOpacity={0.7}
                 >
                   <Text style={styles.reactEmoji}>{emoji}</Text>
                   <Text style={[styles.reactCount, mine && styles.reactCountActive]}>{count}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </Reanimated.View>
             );
           })}
-          <Reanimated.View layout={LinearTransition.duration(180)}>
-            <TouchableOpacity
+          <Reanimated.View layout={LinearTransition.duration(Durations.fast)}>
+            <PressableScale
               style={styles.reactAddBtn}
               onPress={() => setPickerFor(pickerFor === post.id ? null : post.id)}
-              activeOpacity={0.7}
             >
               <Text style={styles.reactAddText}>{totalReactions(post.reactions) === 0 ? '＋ React' : '＋'}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </Reanimated.View>
         </View>
 
@@ -196,14 +195,13 @@ export default function CommunityFeedScreen() {
             {REACTION_EMOJIS.map((emoji) => {
               const mine = post.my_reactions.includes(emoji);
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={emoji}
                   style={[styles.pickerEmoji, mine && styles.pickerEmojiActive]}
                   onPress={() => { handleReact(post.id, emoji); setPickerFor(null); }}
-                  activeOpacity={0.7}
                 >
                   <Text style={styles.pickerEmojiText}>{emoji}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>
@@ -222,7 +220,7 @@ export default function CommunityFeedScreen() {
         onEndReached={() => loadPage(false)}
         onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -237,19 +235,18 @@ export default function CommunityFeedScreen() {
               <Text style={styles.largeTitle}>Community</Text>
               <NotificationBell />
             </View>
-            <Text style={styles.subtitle}>Anonymous financial roasts from the community 💸</Text>
+            <Text style={styles.subtitle}>Everyone's a little broke. Anonymous roasts and scores from people figuring it out too.</Text>
             <View style={styles.segmentRow}>
               {(['trending', 'recent', 'lowest'] as FeedSort[]).map((t) => (
-                <TouchableOpacity
+                <PressableScale
                   key={t}
                   style={[styles.segment, tab === t && styles.segmentActive]}
                   onPress={() => onSelectTab(t)}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.segmentText, tab === t && styles.segmentTextActive]}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
           </>
@@ -280,6 +277,8 @@ export default function CommunityFeedScreen() {
         onClose={() => setManagerOpen(false)}
         onRunAnalysis={() => { setManagerOpen(false); navigation.navigate('Home'); }}
       />
+
+      <TopScrim variant="community" />
     </Reanimated.View>
   );
 }

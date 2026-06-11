@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
-import { LinearGradient } from 'expo-linear-gradient';
+import { enterUp, PressableScale } from '@/components/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { getScoreBand } from '@shared/scoring/bands.ts';
-import { scoreGradient } from '@/utils/scoreVisual';
-import GlassCard from '@/components/GlassCard';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import Skeleton from '@/components/Skeleton';
 import ErrorState from '@/components/ErrorState';
 import EmptyState from '@/components/EmptyState';
@@ -21,7 +16,7 @@ import { getAnalysisHistory, getAnalysisById } from '@/services/analyses';
 import { AnalysisHistoryItem } from '@/types';
 import ScreenBackground from '@/components/ScreenBackground';
 import HistoryChart from '@/components/HistoryChart';
-import { Granularity, itemsInPeriod } from '@/utils/historyChart';
+import { Granularity } from '@/utils/historyChart';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TrendScreen() {
@@ -88,15 +83,6 @@ export default function TrendScreen() {
     }
   };
 
-  // Deltas are computed against the full chronological history (descending), so a
-  // row's "vs previous" stays correct even when the list is filtered to a period.
-  const deltaById = new Map<string, number>();
-  history.forEach((h, i) => {
-    if (i < history.length - 1) deltaById.set(h.id, h.score - history[i + 1].score);
-  });
-  const periodItems = itemsInPeriod(granularity, anchor, history);
-
-
   if (loading) {
     return (
       <View style={styles.container}>
@@ -137,9 +123,9 @@ export default function TrendScreen() {
         }
       >
         {!user && (
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <PressableScale onPress={() => navigation.navigate('Login')}>
             <Text style={[styles.subtitle, styles.signInLink]}>Sign in to track your progress →</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         {history.length === 0 ? (

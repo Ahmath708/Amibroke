@@ -1,12 +1,11 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share,
+  View, Text, StyleSheet, ScrollView, Alert, Share,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
@@ -144,13 +143,13 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
           {/* Tone selector */}
           <View style={styles.toneRow}>
             {TONES.map((t) => (
-              <TouchableOpacity
+              <PressableScale
                 key={t}
                 style={[styles.toneBtn, selectedTone === t && styles.toneBtnActive]}
                 onPress={() => setSelectedTone(t)}
               >
                 <Text style={[styles.toneText, selectedTone === t && styles.toneTextActive]}>{t}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
@@ -166,16 +165,16 @@ export default function CreatorDashboardScreen({ navigation }: Props) {
                 multiline
               />
               {batchInputs.length > 1 && (
-                <TouchableOpacity onPress={() => removeBatchInput(i)} style={styles.removeBtn}>
+                <PressableScale onPress={() => removeBatchInput(i)} style={styles.removeBtn}>
                   <Text style={styles.removeText}>✕</Text>
-                </TouchableOpacity>
+                </PressableScale>
               )}
             </View>
           ))}
 
-          <TouchableOpacity onPress={addBatchInput} style={styles.addBtn}>
+          <PressableScale onPress={addBatchInput} style={styles.addBtn}>
             <Text style={styles.addText}>+ Add Another</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
           <NeonButton
             label={batchLoading ? 'Roasting...' : `Roast ${batchInputs.filter((i) => i.trim()).length} Situations`}

@@ -17,6 +17,8 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import NeonButton from '@/components/NeonButton';
 import { trackPaywallViewed, trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
+import TopScrim from '@/components/TopScrim';
+import { formatCurrency } from '@/utils/format';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getCurrentOffering, packageForTier, purchasePackage, restorePurchases, tierFromCustomerInfo } from '@/services/purchases';
@@ -87,7 +89,7 @@ export default function PaywallScreen({ navigation }: Props) {
   // copy before RevenueCat is configured.
   const priceLabel = (tier: 'action_plan' | 'deep_dive', fallback: number): string => {
     const pkg = packageForTier(offering, tier);
-    return pkg ? pkg.product.priceString : `$${fallback.toFixed(2)}`;
+    return pkg ? pkg.product.priceString : formatCurrency(fallback, 2);
   };
 
   const handleSubscribe = async () => {
@@ -264,6 +266,7 @@ export default function PaywallScreen({ navigation }: Props) {
           cancel anytime in your App Store settings. Payment is charged to your Apple ID.
         </Text>
       </ScrollView>
+      <TopScrim variant="paywall" />
     </ReAnimated.View>
   );
 }

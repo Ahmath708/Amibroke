@@ -1,14 +1,12 @@
 ﻿import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
-import { LinearGradient } from 'expo-linear-gradient';
+import { enterUp, PressableScale } from '@/components/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, DebtItem } from '@/types';
+import { useFocusEffect } from '@react-navigation/native';
+import { DebtItem } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { formatCurrency as fmt } from '@/utils/format';
 import GlassCard from '@/components/GlassCard';
@@ -25,6 +23,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SectionLabel from '@/components/SectionLabel';
 import EmptyState from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
+import { FireIcon } from 'react-native-heroicons/outline';
 import { simulateDebtPayoff } from '@shared/calculations.ts';
 
 type Strategy = 'avalanche' | 'snowball';
@@ -34,7 +33,6 @@ const fmtMonth = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mo
 
 export default function DebtPayoffScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'DebtPayoff'>>();
   const { user } = useAuth();
   // Source of truth = the unified snapshot (no per-roast param hand-off). Estimated onboarding
   // placeholders are ignored (no APR/min → useless for payoff).
@@ -148,23 +146,21 @@ export default function DebtPayoffScreen() {
         <SectionLabel>Strategy</SectionLabel>
         <View style={styles.segmentRow}>
           {(['avalanche', 'snowball'] as Strategy[]).map((s) => (
-            <TouchableOpacity
+            <PressableScale
               key={s}
               style={[styles.segment, strategy === s && styles.segmentActive]}
               onPress={() => selectStrategy(s)}
-              activeOpacity={0.7}
             >
               <View style={styles.segmentInner}>
-                <Ionicons
-                  name={s === 'avalanche' ? 'flame-outline' : 'snow-outline'}
-                  size={15}
-                  color={strategy === s ? Colors.textPrimary : Colors.textSecondary}
-                />
+                {s === 'avalanche'
+                  ? <FireIcon size={15} color={strategy === s ? Colors.textPrimary : Colors.textSecondary} />
+                  // snow-outline kept as Ionicons — no Heroicon equivalent (snowflake)
+                  : <Ionicons name="snow-outline" size={15} color={strategy === s ? Colors.textPrimary : Colors.textSecondary} />}
                 <Text style={[styles.segmentText, strategy === s && styles.segmentTextActive]}>
                   {s === 'avalanche' ? 'Avalanche' : 'Snowball'}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
         <GlassCard style={styles.stratDesc}>

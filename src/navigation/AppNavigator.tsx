@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, useReducedMotion } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -54,13 +54,15 @@ import FinancialContextScreen from '@/screens/FinancialContextScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
-import { TAB_BAR_HEIGHT, TAB_ROW_HEIGHT, TAB_FLOAT_MARGIN } from '@/navigation/constants';
+import { TAB_ROW_HEIGHT, TAB_FLOAT_MARGIN } from '@/navigation/constants';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
 
 // Modern iOS sheet-style modal (RNScreens UISheetPresentationController): a swipe-down
 // sheet with a visible grabber + rounded top, so the user can see it dismisses by drag.
+// NOTE (2026-06-11): temporarily unused — Paywall swapped to a card for scrollability (see the
+// TODO at the <Stack.Screen name="Paywall"> below). Kept as the target config for the proper fix.
 const sheetModal = {
   presentation: 'formSheet' as const,
   sheetGrabberVisible: true,
@@ -84,8 +86,8 @@ const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: Re
 
 // Active-indicator pill — a wide, rounded-rectangular magenta sub-pill that slides
 // behind the focused icon (Cash-App floating capsule, our brand tint).
-const PILL_H = 52;
-const PILL_GAP = 8; // horizontal inset of the pill within each slot (smaller = wider pill)
+const PILL_H = 46;
+const PILL_GAP = 4; // horizontal inset of the pill within each slot (smaller = wider pill)
 const PILL_RADIUS = 18;
 
 // A single icon-only tab. The active icon brightens + springs up a touch; the
@@ -140,9 +142,9 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View
       pointerEvents="box-none"
-      // Clamp the home-indicator inset (34pt on the 16e is over-generous for a FLOATING bar) so the
-      // capsule sits lower while still clearing the gesture area; SE-class devices (inset 0) unaffected.
-      style={[tabStyles.outerWrapper, { paddingBottom: Math.min(insets.bottom, 16) + TAB_FLOAT_MARGIN }]}
+      // Lightly clamp the home-indicator inset (34pt is a touch generous) so the floating capsule
+      // clears the gesture area with a deliberate gap below it; SE-class devices (inset 0) unaffected.
+      style={[tabStyles.outerWrapper, { paddingBottom: Math.min(insets.bottom, 26) + TAB_FLOAT_MARGIN }]}
     >
       <View style={tabStyles.capsuleShadow}>
         <BlurView intensity={40} tint="dark" style={tabStyles.capsule}>
@@ -258,7 +260,13 @@ export default function AppNavigator() {
                 only defers scroll to a ScrollView that's the screen's FIRST child — ours is
                 ScreenBackground, so the sheet gesture ate the scroll (RNScreens #2687/#3092). */}
             <Stack.Screen name="Share" component={ShareScreen} options={{ ...sharedHeader, headerShown: true, title: 'Share Result', animation: 'slide_from_bottom', presentation: 'card' }} />
-            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ ...sheetModal, headerShown: false }} />
+            {/* TEMP-FIX(scroll, 2026-06-11): the formSheet gesture ate the inner ScrollView
+                (ScreenBackground is the screen's first child, not the ScrollView — RNScreens
+                #2687/#3092), so the paywall didn't scroll on device. Swapped to ShareScreen's
+                proven card + slide_from_bottom pattern (known-scrollable; the X button dismisses).
+                TODO(paywall): restore a proper bottom-sheet that still allows inner scroll
+                (e.g. make the ScrollView the screen's first child, then re-apply `sheetModal`). */}
+            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ headerShown: false, animation: 'slide_from_bottom', presentation: 'card' }} />
             <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sharedHeader, headerShown: true, title: 'Monthly Check-In', animation: 'slide_from_right' }} />
           </>
         )}
@@ -275,7 +283,7 @@ const tabStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 36,
+    paddingHorizontal: 24,
   },
   capsuleShadow: {
     borderRadius: TAB_ROW_HEIGHT / 2,

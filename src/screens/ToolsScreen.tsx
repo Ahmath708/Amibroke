@@ -22,6 +22,7 @@ import PremiumCard from '@/components/PremiumCard';
 import TierPill from '@/components/TierPill';
 import Skeleton from '@/components/Skeleton';
 import NotificationBell from '@/components/NotificationBell';
+import TopScrim from '@/components/TopScrim';
 
 type Props = { navigation: TabScreenNav<'Tools'> };
 
@@ -114,9 +115,7 @@ export default function ToolsScreen({ navigation }: Props) {
             return (
               <PressableScale key={tool.label} style={styles.tile} onPress={onPress} haptic="light" disabled={opening}>
                 <View style={styles.tileTop}>
-                  <View style={[styles.iconBadge, !unlocked && styles.iconBadgeLocked]}>
-                    <ToolIcon size={20} color={unlocked ? Colors.accent : Colors.textMuted} />
-                  </View>
+                  <ToolIcon size={24} color={unlocked ? Colors.textPrimary : Colors.textMuted} />
                   {unlocked
                     ? (tool.soon
                         ? <Text style={styles.soon}>Soon</Text>
@@ -132,6 +131,7 @@ export default function ToolsScreen({ navigation }: Props) {
           })}
         </View>
       </ScrollView>
+      <TopScrim variant="home" />
     </ReAnimated.View>
   );
 }
@@ -157,8 +157,6 @@ const styles = StyleSheet.create({
   tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   tileText: { marginTop: Spacing.lg }, // breathing room between the icon and the title
 
-  iconBadge: { width: 36, height: 36, borderRadius: Radius.sm, backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center' },
-  iconBadgeLocked: { backgroundColor: Colors.backgroundSecondary },
   label: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   labelLocked: { color: Colors.textMuted },
   sub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 2 },

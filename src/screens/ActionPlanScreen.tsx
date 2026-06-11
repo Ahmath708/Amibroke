@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, LayoutAnimation,
+  View, Text, StyleSheet, ScrollView, Alert, Animated, LayoutAnimation,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -140,7 +140,7 @@ function FocalCard({ step, isActive, onDone }: {
   };
   return (
     <GlassCard style={styles.focalCard}>
-      <TouchableOpacity activeOpacity={0.85} onPress={toggleExpand} disabled={justDone}>
+      <PressableScale onPress={toggleExpand} disabled={justDone}>
         <View style={styles.focalTop}>
           <View style={styles.weekBadge}><Text style={styles.weekText}>{step.week}</Text></View>
         </View>
@@ -152,7 +152,7 @@ function FocalCard({ step, isActive, onDone }: {
             ? <ChevronUpIcon size={18} color={Colors.textSecondary} />
             : <ChevronDownIcon size={18} color={Colors.textSecondary} />}
         </View>
-      </TouchableOpacity>
+      </PressableScale>
       {isActive && (justDone ? (
         <Animated.View style={[styles.focalDoneRow, { transform: [{ scale: pop }] }]}>
           <Text style={styles.focalDoneText}>✓ Nice — done!</Text>
@@ -319,15 +319,15 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   // Minimized step row (collapsed This Week + Up Next): tap ○ to complete, tap the row to focus it.
   const renderCompact = (step: (typeof rows)[number]) => (
     <View key={step.id} style={styles.compactRow}>
-      <TouchableOpacity
+      <PressableScale
         onPress={() => isActive && toggle(step.id, false)} disabled={!isActive}
-        hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }} activeOpacity={0.6}
+        hitSlop={{ top: 12, bottom: 12, left: 8, right: 6 }}
       >
         <View style={styles.openCircle} />
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.compactTextHit} onPress={() => select(step.id)} activeOpacity={0.7}>
+      </PressableScale>
+      <PressableScale style={styles.compactTextHit} onPress={() => select(step.id)}>
         <Text style={styles.compactTitle} numberOfLines={1}>{step.title}</Text>
-      </TouchableOpacity>
+      </PressableScale>
       <Text style={styles.compactWeek}>{step.week}</Text>
     </View>
   );
@@ -432,22 +432,22 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
           <View style={styles.block}>
             <SectionLabel>Done</SectionLabel>
             {doneSteps.map((step) => (
-              <TouchableOpacity
+              <PressableScale
                 key={step.id} style={styles.compactRow}
                 onPress={isActive ? () => toggle(step.id, true) : undefined}
-                activeOpacity={isActive ? 0.7 : 1} disabled={!isActive}
+                disabled={!isActive}
               >
                 <View style={styles.compactCheck}><Text style={styles.compactCheckMark}>✓</Text></View>
                 <Text style={[styles.compactTitle, styles.compactTitleDone]} numberOfLines={1}>{step.title}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
         )}
 
         {isActive && (
-          <TouchableOpacity onPress={restart} activeOpacity={0.7}>
+          <PressableScale onPress={restart}>
             <Text style={styles.restartLink}>Restart plan</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         <Disclaimer style={styles.disclaimer} />

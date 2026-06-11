@@ -6,6 +6,12 @@ export function formatCurrency(n: number, decimals = 0): string {
   return '$' + n.toLocaleString('en-US', { maximumFractionDigits: decimals });
 }
 
+/** Compact money for tight tiles, e.g. "$0" · "$250" · "$5.2k" · "$12k". */
+export function formatCompactCurrency(n: number): string {
+  if (n >= 1000) return `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
+  return `$${Math.round(n)}`;
+}
+
 /** Short date, e.g. "Jun 3". */
 export function formatShortDate(iso: string): string {
   if (!iso) return '';

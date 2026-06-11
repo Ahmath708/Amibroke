@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
 import MoneyInput from '@/components/MoneyInput';
@@ -17,6 +17,7 @@ import ToolSkeleton from '@/components/ToolSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import ScreenBackground from '@/components/ScreenBackground';
+import { formatCurrency } from '@/utils/format';
 
 const ICONS = ['🎬', '🎵', '💪', '🎨', '💼', '🦜', '☁️', '🏰', '📦', '📰', '🧘', '🍿', '📺', '🎮', '📚'];
 
@@ -96,7 +97,6 @@ export default function SubscriptionAuditScreen() {
   if (loading) return <ToolSkeleton variant="subscriptions" heroHeight={96} rows={3} rowHeight={64} />;
   if (!authorized) return null;
 
-  const keepCount = Object.values(decisions).filter((v) => v === true).length;
   const cutCount = Object.values(decisions).filter((v) => v === false).length;
   const totalCutSavings = subs.filter((s) => decisions[s.id] === false)
     .reduce((sum, s) => sum + s.amount, 0);
@@ -113,12 +113,12 @@ export default function SubscriptionAuditScreen() {
         {subs.length > 0 && (
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>${totalMonthly.toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(totalMonthly, 2)}</Text>
               <Text style={styles.summaryLabel}>Total/mo</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: Colors.success }]}>${totalCutSavings.toFixed(2)}</Text>
+              <Text style={[styles.summaryValue, { color: Colors.success }]}>{formatCurrency(totalCutSavings, 2)}</Text>
               <Text style={styles.summaryLabel}>Could save</Text>
             </View>
             <View style={styles.summaryDivider} />
@@ -141,30 +141,28 @@ export default function SubscriptionAuditScreen() {
                   <React.Fragment key={sub.id}>
                     {i > 0 && <View style={styles.subSep} />}
                     <View style={styles.subRow}>
-                      <TouchableOpacity onPress={() => handleDelete(sub.id)} style={styles.subIcon}>
+                      <PressableScale onPress={() => handleDelete(sub.id)} style={styles.subIcon}>
                         <Text style={styles.subIconText}>{ICONS[i % ICONS.length]}</Text>
-                      </TouchableOpacity>
+                      </PressableScale>
                       <View style={styles.subInfo}>
                         <View style={styles.subHeader}>
                           <Text style={styles.subName}>{sub.name}</Text>
-                          <Text style={styles.subAmount}>${sub.amount.toFixed(2)}/mo</Text>
+                          <Text style={styles.subAmount}>{formatCurrency(sub.amount, 2)}/mo</Text>
                         </View>
                         <Text style={styles.subMeta}>{sub.category}{sub.last_used ? ` · Last used: ${sub.last_used}` : ''}</Text>
                         <View style={styles.subActions}>
-                          <TouchableOpacity
+                          <PressableScale
                             style={[styles.keepBtn, d === true && styles.keepBtnActive]}
                             onPress={() => decide(sub.id, true)}
-                            activeOpacity={0.7}
                           >
                             <Text style={[styles.keepBtnText, d === true && styles.keepBtnTextActive]}>Keep</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                          </PressableScale>
+                          <PressableScale
                             style={[styles.cutBtn, d === false && styles.cutBtnActive]}
                             onPress={() => decide(sub.id, false)}
-                            activeOpacity={0.7}
                           >
                             <Text style={[styles.cutBtnText, d === false && styles.cutBtnTextActive]}>Cancel</Text>
-                          </TouchableOpacity>
+                          </PressableScale>
                         </View>
                       </View>
                     </View>
@@ -192,18 +190,18 @@ export default function SubscriptionAuditScreen() {
               containerStyle={styles.amountField}
             />
             <View style={styles.addActions}>
-              <TouchableOpacity onPress={() => setShowAdd(false)}>
+              <PressableScale onPress={() => setShowAdd(false)}>
                 <Text style={styles.cancelBtn}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleAdd} style={styles.addBtn}>
+              </PressableScale>
+              <PressableScale onPress={handleAdd} style={styles.addBtn}>
                 <Text style={styles.addBtnText}>Add Subscription</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </View>
         ) : (
-          <TouchableOpacity style={styles.addRow} onPress={() => setShowAdd(true)} activeOpacity={0.7}>
+          <PressableScale style={styles.addRow} onPress={() => setShowAdd(true)}>
             <Text style={styles.addRowText}>+ Add Subscription</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         {/* Result banner */}
@@ -214,10 +212,10 @@ export default function SubscriptionAuditScreen() {
           >
             <Text style={styles.resultTitle}>
               💰 Cutting {cutCount} sub{cutCount !== 1 ? 's' : ''} saves you{' '}
-              <Text style={{ color: Colors.success }}>${totalCutSavings.toFixed(2)}/month</Text>
+              <Text style={{ color: Colors.success }}>{formatCurrency(totalCutSavings, 2)}/month</Text>
             </Text>
             <Text style={styles.resultSub}>
-              That's ${(totalCutSavings * 12).toFixed(2)} back in your pocket every year.
+              That's {formatCurrency(totalCutSavings * 12, 2)} back in your pocket every year.
             </Text>
           </LinearGradient>
         )}

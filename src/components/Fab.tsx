@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { PressableScale } from '@/components/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PlusIcon } from 'react-native-heroicons/outline';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
@@ -25,17 +26,16 @@ interface Props {
 export default function Fab({ label, onPress, Icon = PlusIcon, accessibilityLabel, style }: Props) {
   const insets = useSafeAreaInsets();
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.fab, { bottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.md }, style]}
       onPress={onPress}
-      activeOpacity={0.85}
       accessibilityLabel={accessibilityLabel ?? label}
     >
       <LinearGradient colors={Colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.fabInner}>
         <Icon size={20} color={Colors.onAccent} />
         <Text style={styles.fabText}>{label}</Text>
       </LinearGradient>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

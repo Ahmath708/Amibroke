@@ -1,5 +1,6 @@
 ﻿import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 interface Props {
@@ -16,9 +17,9 @@ export default function ErrorState({ message = 'Something went wrong.', onRetry,
       <Text style={styles.title}>Something went wrong</Text>
       <Text style={styles.body}>{message}</Text>
       {onRetry && (
-        <TouchableOpacity onPress={onRetry} style={styles.retryBtn} activeOpacity={0.7}>
+        <PressableScale onPress={onRetry} style={styles.retryBtn}>
           <Text style={styles.retryText}>{retryLabel}</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
     </View>
   );

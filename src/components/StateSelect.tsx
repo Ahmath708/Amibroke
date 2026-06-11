@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, FlatList, Pressable,
+  View, Text, StyleSheet, Modal, FlatList, Pressable,
 } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import AppTextInput from '@/components/AppTextInput';
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronDownIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 // 50 states + DC (matches shared/baselines/states.ts coverage).
@@ -88,18 +89,18 @@ export default function StateSelect({ value, onChange }: Props) {
 
   return (
     <>
-      <TouchableOpacity style={styles.field} onPress={() => setOpen(true)} activeOpacity={0.7}>
+      <PressableScale style={styles.field} onPress={() => setOpen(true)}>
         <Text style={[styles.fieldText, !selected && styles.placeholder]}>
           {selected ? `${selected.name} (${selected.code})` : 'Select your state'}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
-      </TouchableOpacity>
+        <ChevronDownIcon size={18} color={Colors.textSecondary} />
+      </PressableScale>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
         <View style={styles.sheet}>
           <View style={styles.searchRow}>
-            <Ionicons name="search" size={18} color={Colors.textMuted} />
+            <MagnifyingGlassIcon size={18} color={Colors.textMuted} />
             <AppTextInput
               style={styles.searchInput}
               placeholder="Search state or code…"
@@ -110,9 +111,9 @@ export default function StateSelect({ value, onChange }: Props) {
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <TouchableOpacity onPress={() => setOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <PressableScale onPress={() => setOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Text style={styles.cancel}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
           <FlatList
             data={results}
@@ -120,9 +121,9 @@ export default function StateSelect({ value, onChange }: Props) {
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={<Text style={styles.empty}>No match — check the spelling.</Text>}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.row} onPress={() => choose(item.code)} activeOpacity={0.7}>
+              <PressableScale style={styles.row} onPress={() => choose(item.code)}>
                 <Text style={styles.rowName}>{item.name} ({item.code})</Text>
-              </TouchableOpacity>
+              </PressableScale>
             )}
           />
         </View>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
@@ -64,32 +65,31 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
         {GRANULARITIES.map((g) => {
           const active = g === granularity;
           return (
-            <TouchableOpacity
+            <PressableScale
               key={g}
               style={[styles.segmentItem, active && styles.segmentItemActive]}
               onPress={() => onChange(g, anchor)}
-              activeOpacity={0.7}
             >
               <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{FILTER_LABELS[g]}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </View>
 
       {/* Period navigator */}
       <View style={styles.nav}>
-        <TouchableOpacity onPress={() => onChange(granularity, shiftAnchor(granularity, anchor, -1))} hitSlop={hit} style={styles.navBtn}>
+        <PressableScale onPress={() => onChange(granularity, shiftAnchor(granularity, anchor, -1))} hitSlop={hit} style={styles.navBtn}>
           <Text style={styles.navArrow}>‹</Text>
-        </TouchableOpacity>
+        </PressableScale>
         <Text style={styles.navLabel}>{periodLabel(granularity, anchor)}</Text>
-        <TouchableOpacity
+        <PressableScale
           onPress={() => !atLatest && onChange(granularity, shiftAnchor(granularity, anchor, 1))}
           disabled={atLatest}
           hitSlop={hit}
           style={styles.navBtn}
         >
           <Text style={[styles.navArrow, atLatest && styles.navArrowDisabled]}>›</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       {/* Bars */}
@@ -117,15 +117,14 @@ export default function HistoryChart({ items, granularity, anchor, now, onChange
                     const h = Math.max(4, (bar.score / 100) * BAR_MAX_H);
                     const color = barColor(bar.score);
                     return (
-                      <TouchableOpacity
+                      <PressableScale
                         key={j}
                         onPress={() => tapBar(slot, bar)}
-                        activeOpacity={0.7}
                         style={[styles.barCol, { marginLeft: j === 0 ? 0 : BAR_GAP }]}
                       >
                         <Text style={[styles.barScore, { color }]}>{bar.score}</Text>
                         <LinearGradient colors={[color, color + '55']} style={[styles.bar, { height: h }]} />
-                      </TouchableOpacity>
+                      </PressableScale>
                     );
                   })
                 )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import GlassCard from '@/components/GlassCard';
 import SectionLabel from '@/components/SectionLabel';
 import SelectableChip from '@/components/SelectableChip';

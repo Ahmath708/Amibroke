@@ -10,6 +10,9 @@ interface Props {
   style?: ViewStyle;
   /** 'go' = free→first paid tier; 'upgrade' = action_plan→Deep Dive. */
   variant?: 'go' | 'upgrade';
+  /** Optional copy overrides (e.g. the Dashboard's contextual plan CTA). */
+  title?: string;
+  body?: string;
 }
 
 // Benefit-led, not "Go Premium" (there's no "Premium" plan — tiers are Action
@@ -24,7 +27,7 @@ const COPY = {
  * accent wash, a sparkles badge (the wrench reads as "Tools" elsewhere), and a
  * benefit-led accent title.
  */
-export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
+export default function PremiumCard({ onPress, style, variant = 'go', title, body }: Props) {
   const copy = COPY[variant];
   return (
     <PressableScale onPress={onPress} haptic="light" style={style}>
@@ -34,12 +37,10 @@ export default function PremiumCard({ onPress, style, variant = 'go' }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.banner}
       >
-        <View style={styles.iconBadge}>
-          <SparklesIcon size={18} color={Colors.accent} />
-        </View>
+        <SparklesIcon size={24} color={Colors.textPrimary} style={styles.icon} />
         <View style={styles.textWrap}>
-          <Text style={styles.title}>{copy.title}</Text>
-          <Text style={styles.body}>{copy.body}</Text>
+          <Text style={styles.title}>{title ?? copy.title}</Text>
+          <Text style={styles.body}>{body ?? copy.body}</Text>
         </View>
         <ChevronRightIcon size={20} color={Colors.accent} />
       </LinearGradient>
@@ -54,11 +55,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceElevated, // elevated base under the accent wash
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  iconBadge: {
-    width: 40, height: 40, borderRadius: Radius.md,
-    backgroundColor: Colors.accentContainer,
-    alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md,
-  },
+  icon: { marginRight: Spacing.md },
   textWrap: { flex: 1, marginRight: Spacing.sm },
   title: { fontFamily: Typography.fonts.heading, fontSize: 18, color: Colors.accent, letterSpacing: -0.3, marginBottom: Spacing.xs },
   body: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18 },

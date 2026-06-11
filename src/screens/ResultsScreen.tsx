@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Alert, LayoutAnimation,
+  View, Text, StyleSheet, Animated, Alert, LayoutAnimation,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,7 +14,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { Durations } from '@/theme/motion';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
 import ScoreRing from '@/components/ScoreRing';
@@ -35,7 +34,7 @@ import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis } from '@/services/analyses';
 import { updateSnapshotFromAnalysis } from '@/services/financialSnapshot';
 import { shareToFeed } from '@/services/community';
-import { getSubscription, canAccess, getTrialStatus } from '@/services/subscriptions';
+import { useSubscription } from '@/hooks/useSubscription';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
 
 type Props = {
@@ -108,12 +107,11 @@ export default function ResultsScreen({ navigation, route }: Props) {
   // no re-save (no duplicate row) and no snapshot re-merge (no clobbering newer data).
   const viewingId = (route.params as any).analysisId as string | undefined;
   const { user } = useAuth();
-  const fadeIn = useRef(new Animated.Value(0)).current;
+  const { hasAccess } = useSubscription();
   const reduce = useReducedMotion();
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
-  const [purchaseTier, setPurchaseTier] = useState<'free' | 'action_plan' | 'deep_dive'>('free');
   const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION && !!viewingId); // dev: replay the roast animation when opening a past roast
   // Progressive disclosure: lead with the hit (score/roast/#1 fix/CTA); the full
   // report stays one tap away so the screen doesn't read as a homework packet.
@@ -124,18 +122,9 @@ export default function ResultsScreen({ navigation, route }: Props) {
   };
 
   useEffect(() => {
-    if (reduce) fadeIn.setValue(1);
-    else Animated.timing(fadeIn, { toValue: 1, duration: Durations.fast, useNativeDriver: true }).start();
     trackSnapshotGenerated(analysis.score, analysis.scoreLabel, tone, userInput.length);
     trackRoastGenerated(tone, analysis.roast.length);
     trackFunnelStep('results_viewed', { score: analysis.score });
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const { tier } = await getSubscription(user?.id ?? '');
-      setPurchaseTier(tier);
-    })();
   }, []);
 
   useEffect(() => {
@@ -193,8 +182,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
   };
 
   const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
-  const trialActive = getTrialStatus(user?.created_at).active;
-  const canDeepDive = canAccess(purchaseTier, 'deep_dive', trialActive);
+  const canDeepDive = hasAccess('deep_dive');
   const hasDebt = (analysis.debtTotal ?? 0) > 0;
 
   // Key metrics — vector icons, "N/A" rows hidden so it never looks unfinished.
@@ -226,7 +214,6 @@ export default function ResultsScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="results" />
       <Animated.ScrollView
-        style={{ opacity: fadeIn }}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -270,7 +257,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
             <GlassCard style={styles.topFixCard}>
               <Text style={styles.topFixAction}>{analysis.topFix.action}</Text>
               <Text style={styles.topFixImpact}>
-                Est. monthly improvement: ${analysis.topFix.monthlyImpact.toLocaleString()}
+                Est. monthly improvement: {fmt(analysis.topFix.monthlyImpact)}
               </Text>
             </GlassCard>
           </>
@@ -278,7 +265,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
 
         {/* Lead with the action — Plan CTA + share/track — before the deep report */}
         <View style={styles.actionsGroup}>
-          {canAccess(purchaseTier, 'action_plan', trialActive) ? (
+          {hasAccess('action_plan') ? (
             <NeonButton
               label="View 90-Day Action Plan"
               onPress={async () => {
@@ -446,7 +433,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
                   <View style={styles.metricRow}>
                     <SpendingIcon category={item.category} size={18} color={Colors.textSecondary} />
                     <Text style={styles.metricLabel}>{item.category}</Text>
-                    <Text style={styles.metricValue}>{item.amount ? `$${item.amount.toLocaleString()}` : 'mentioned'}</Text>
+                    <Text style={styles.metricValue}>{item.amount ? fmt(item.amount) : 'mentioned'}</Text>
                   </View>
                   {i < arr.length - 1 && <View style={styles.rowSep} />}
                 </React.Fragment>
@@ -477,8 +464,8 @@ export default function ResultsScreen({ navigation, route }: Props) {
                 </View>
                 {income > 0 && (
                   <View style={styles.budgetDetail}>
-                    <Text style={styles.budgetDetailText}>Current: ${Math.round(r.current).toLocaleString()}/mo</Text>
-                    <Text style={styles.budgetDetailText}>Target: ${Math.round(r.target).toLocaleString()}/mo ({r.targetPct}%)</Text>
+                    <Text style={styles.budgetDetailText}>Current: {fmt(r.current)}/mo</Text>
+                    <Text style={styles.budgetDetailText}>Target: {fmt(r.target)}/mo ({r.targetPct}%)</Text>
                   </View>
                 )}
                 {i < rows.length - 1 && <View style={styles.rowSep} />}

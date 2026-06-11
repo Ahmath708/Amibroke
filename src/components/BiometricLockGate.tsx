@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, AppStateStatus } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { LockClosedIcon } from 'react-native-heroicons/outline';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { isLockEnabled, authenticate } from '@/services/biometric';
 
@@ -59,15 +60,15 @@ export default function BiometricLockGate({ children }: { children: React.ReactN
       {gated && (
         <View style={styles.overlay}>
           <View style={styles.lockIcon}>
-            <Ionicons name="lock-closed" size={36} color={Colors.accent} />
+            <LockClosedIcon size={36} color={Colors.accent} />
           </View>
           {locked && (
             <>
               <Text style={styles.title}>Locked</Text>
               <Text style={styles.subtitle}>Unlock to access your finances.</Text>
-              <TouchableOpacity style={styles.unlockBtn} onPress={tryUnlock} activeOpacity={0.85}>
+              <PressableScale style={styles.unlockBtn} onPress={tryUnlock}>
                 <Text style={styles.unlockText}>Unlock with Face ID</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </>
           )}
         </View>

@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, ScrollView, Alert, ActivityIndicator,
+  View, Text, StyleSheet, Share, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,13 +80,12 @@ export default function ShareScreen({ route }: Props) {
         backgroundColor: Colors.background,
       },
       headerLeft: () => (
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          activeOpacity={0.7} 
+        <PressableScale
+          onPress={() => navigation.goBack()}
           style={{ padding: Spacing.xs, marginLeft: 8 }}
         >
           <Text style={{ fontSize: 24, color: Colors.accent, fontWeight: '300' }}>‹</Text>
-        </TouchableOpacity>
+        </PressableScale>
       ),
     });
   }, [navigation]);
@@ -142,18 +141,18 @@ export default function ShareScreen({ route }: Props) {
         <View style={styles.formatRow}>
           <SectionLabel>Format</SectionLabel>
           <View style={styles.formatToggle}>
-            <TouchableOpacity
+            <PressableScale
               style={[styles.formatBtn, format === 'tall' && styles.formatBtnActive]}
               onPress={() => setFormat('tall')}
             >
               <Text style={[styles.formatBtnText, format === 'tall' && styles.formatBtnTextActive]}>9:16 TikTok</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableScale>
+            <PressableScale
               style={[styles.formatBtn, format === 'square' && styles.formatBtnActive]}
               onPress={() => setFormat('square')}
             >
               <Text style={[styles.formatBtnText, format === 'square' && styles.formatBtnTextActive]}>1:1 Instagram</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
 
@@ -176,30 +175,28 @@ export default function ShareScreen({ route }: Props) {
         </ViewShot>
 
         {/* Export as PNG */}
-        <TouchableOpacity
+        <PressableScale
           style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
           onPress={handleExportPNG}
           disabled={exporting}
-          activeOpacity={0.8}
         >
           <Text style={styles.exportBtnText}>
             {exporting ? '📸 Generating...' : '📸 Export as PNG'}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* Share platforms */}
         <SectionLabel>Share To</SectionLabel>
         <View style={styles.platformGrid}>
           {PLATFORMS.map((p) => (
-            <TouchableOpacity
+            <PressableScale
               key={p.name}
               style={styles.platformBtn}
               onPress={p.action}
-              activeOpacity={0.75}
             >
               <Text style={styles.platformEmoji}>{p.emoji}</Text>
               <Text style={styles.platformName}>{p.name}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
 
@@ -211,7 +208,7 @@ export default function ShareScreen({ route }: Props) {
             <Text style={styles.captionsLoadingText}>Generating captions...</Text>
           </View>
         ) : captionsError || !captionResponse ? (
-          <TouchableOpacity style={styles.captionRetryBtn} onPress={() => {
+          <PressableScale style={styles.captionRetryBtn} onPress={() => {
             setCaptionsLoading(true);
             setCaptionsError(false);
             fetchOrGenerateCaptions(analysis, 'savage').then((r) => {
@@ -219,28 +216,27 @@ export default function ShareScreen({ route }: Props) {
               else setCaptionsError(true);
               setCaptionsLoading(false);
             });
-          }} activeOpacity={0.7}>
+          }}>
             <Text style={styles.captionRetryText}>Couldn't generate — tap to retry</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : (
           <View style={styles.captionList}>
             {captionResponse.captions.map((text, i) => (
-              <TouchableOpacity
+              <PressableScale
                 key={i}
                 style={styles.captionItem}
                 onPress={() => handleCopyCaption(text)}
-                activeOpacity={0.75}
               >
                 <Text style={styles.captionItemText}>{text}</Text>
                 <Text style={styles.captionItemCopy}>Tap to share</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
         )}
 
-        <TouchableOpacity style={styles.nativeShareBtn} onPress={handleShare} activeOpacity={0.8}>
+        <PressableScale style={styles.nativeShareBtn} onPress={handleShare}>
           <Text style={styles.nativeShareText}>📤  Share with Other Apps</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
     </ReAnimated.View>
   );

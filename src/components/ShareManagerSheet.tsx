@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
+  Modal, View, Text, StyleSheet, ScrollView, Switch, Alert,
 } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
@@ -94,9 +95,9 @@ export default function ShareManagerSheet({ visible, onClose, onRunAnalysis }: P
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Share to Community</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={HIT}>
+          <PressableScale onPress={onClose} hitSlop={HIT}>
             <Text style={styles.done}>Done</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
         <Text style={styles.subtitle}>
           Pick which roasts appear anonymously in the feed. Toggle one off to remove it.

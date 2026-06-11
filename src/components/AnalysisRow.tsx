@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
+import { ClipboardDocumentListIcon, PhotoIcon } from 'react-native-heroicons/outline';
+import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
@@ -24,7 +25,7 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
   const deltaColor = delta != null && delta > 0 ? Colors.success : Colors.danger;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={disabled} style={[styles.row, loading && { opacity: 0.6 }]}>
+    <PressableScale onPress={onPress} disabled={disabled} style={[styles.row, loading && { opacity: 0.6 }]}>
       <MiniScoreRing score={item.score} size={48} stroke={4} numberSize={Typography.callout.fontSize} />
       <View style={styles.info}>
         <View style={styles.meta}>
@@ -39,13 +40,13 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
           <View style={styles.badges}>
             {item.has_action_plan && (
               <View style={styles.badge}>
-                <Ionicons name="clipboard-outline" size={12} color={Colors.accent} />
+                <ClipboardDocumentListIcon size={12} color={Colors.accent} />
                 <Text style={styles.badgeText}>Plan</Text>
               </View>
             )}
             {item.has_captions && (
               <View style={styles.badge}>
-                <Ionicons name="images-outline" size={12} color={Colors.accent} />
+                <PhotoIcon size={12} color={Colors.accent} />
                 <Text style={styles.badgeText}>Captions</Text>
               </View>
             )}
@@ -53,7 +54,7 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
         )}
       </View>
       <Text style={styles.chevron}>{loading ? '⏳' : '›'}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

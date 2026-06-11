@@ -1,13 +1,12 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Linking, ActivityIndicator, ActionSheetIOS,
+  Alert, Linking, ActivityIndicator, ActionSheetIOS,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { enterUp } from '@/components/motion';
+import { enterUp, PressableScale } from '@/components/motion';
 import Constants from 'expo-constants';
 import Toggle from '@/components/Toggle';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, RoastTone } from '@/types';
@@ -15,7 +14,11 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { BRAND } from '@/config/brand';
 import ScreenBackground from '@/components/ScreenBackground';
 import * as Notifications from 'expo-notifications';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  CreditCardIcon, XCircleIcon, DocumentTextIcon, FingerPrintIcon,
+  QuestionMarkCircleIcon, ArrowRightOnRectangleIcon, BellIcon, ShieldCheckIcon,
+  SparklesIcon, StarIcon, TrashIcon, CalendarIcon, BoltIcon,
+} from 'react-native-heroicons/outline';
 import { useAuth, setPendingRedirect } from '@/context/AuthContext';
 import { useLegal } from '@/context/LegalContext';
 import { deleteUserData } from '@/services/gdpr';
@@ -35,10 +38,12 @@ import {
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'> };
 
+type IconComponent = React.ComponentType<{ size?: number; color?: string }>;
+
 type SettingRow =
-  | { type: 'toggle'; label: string; key: string; icon: string; detail?: string }
-  | { type: 'action'; label: string; icon: string; detail?: string; destructive?: boolean; onPress: () => void }
-  | { type: 'nav'; label: string; icon: string; detail?: string; onPress: () => void };
+  | { type: 'toggle'; label: string; key: string; icon: IconComponent; detail?: string }
+  | { type: 'action'; label: string; icon: IconComponent; detail?: string; destructive?: boolean; onPress: () => void }
+  | { type: 'nav'; label: string; icon: IconComponent; detail?: string; onPress: () => void };
 
 // The user's roast voice (profiles.preferred_tone). Labels mirror the RoastComposer tone selector.
 const TONE_OPTIONS: { key: RoastTone; label: string }[] = [
@@ -185,7 +190,7 @@ export default function SettingsScreen({ navigation }: Props) {
   // No "Profile" row here — Settings is reached *through* Profile, so linking back
   // would be circular.
   const accountRows: SettingRow[] = [
-    { type: 'nav', label: 'Subscription', icon: 'card-outline', detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
+    { type: 'nav', label: 'Subscription', icon: CreditCardIcon, detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
       if (!user) {
         setPendingRedirect('Paywall');
         navigation.navigate('Login');
@@ -209,37 +214,37 @@ export default function SettingsScreen({ navigation }: Props) {
     {
       title: 'Notifications',
       rows: [
-        { type: 'toggle', label: 'Push Notifications', key: 'notifications', icon: 'notifications-outline' },
-        { type: 'toggle', label: 'Monthly Check-In Reminder', key: 'monthlyReminder', icon: 'calendar-outline', detail: 'On your check-in date each month' },
+        { type: 'toggle', label: 'Push Notifications', key: 'notifications', icon: BellIcon },
+        { type: 'toggle', label: 'Monthly Check-In Reminder', key: 'monthlyReminder', icon: CalendarIcon, detail: 'On your check-in date each month' },
       ],
     },
     {
       title: 'Security',
       rows: [
-        { type: 'toggle', label: 'Face ID / Touch ID', key: 'faceID', icon: 'finger-print-outline', detail: 'Require unlock to open the app' },
+        { type: 'toggle', label: 'Face ID / Touch ID', key: 'faceID', icon: FingerPrintIcon, detail: 'Require unlock to open the app' },
       ],
     },
     {
       title: 'App',
       rows: [
-        { type: 'nav', label: 'Roast Voice', icon: 'sparkles-outline', detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
-        { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: 'pulse-outline' },
+        { type: 'nav', label: 'Roast Voice', icon: SparklesIcon, detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
+        { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: BoltIcon },
       ],
     },
     {
       title: 'Support',
       rows: [
-        { type: 'nav', label: 'Help & FAQ', icon: 'help-circle-outline', onPress: () => navigation.navigate('HelpFAQ') },
-        { type: 'nav', label: 'Privacy Policy', icon: 'shield-checkmark-outline', onPress: () => showLegal('privacy') },
-        { type: 'nav', label: 'Terms of Service', icon: 'document-text-outline', onPress: () => showLegal('terms') },
-        { type: 'nav', label: 'Rate Am I Broke?', icon: 'star-outline', onPress: () => Linking.openURL(BRAND.appStoreUrl) },
+        { type: 'nav', label: 'Help & FAQ', icon: QuestionMarkCircleIcon, onPress: () => navigation.navigate('HelpFAQ') },
+        { type: 'nav', label: 'Privacy Policy', icon: ShieldCheckIcon, onPress: () => showLegal('privacy') },
+        { type: 'nav', label: 'Terms of Service', icon: DocumentTextIcon, onPress: () => showLegal('terms') },
+        { type: 'nav', label: 'Rate Am I Broke?', icon: StarIcon, onPress: () => Linking.openURL(BRAND.appStoreUrl) },
       ],
     },
     {
       title: 'Danger Zone',
       rows: [
-        { type: 'action', label: 'Sign Out', icon: 'log-out-outline', destructive: true, onPress: () => signOut() },
-        { type: 'action', label: 'Clear Roast History', icon: 'trash-outline', destructive: true, onPress: () => {
+        { type: 'action', label: 'Sign Out', icon: ArrowRightOnRectangleIcon, destructive: true, onPress: () => signOut() },
+        { type: 'action', label: 'Clear Roast History', icon: TrashIcon, destructive: true, onPress: () => {
           if (!user) return;
           Alert.alert('Clear History?', 'This permanently deletes all your roasts. This cannot be undone.', [
             { text: 'Cancel', style: 'cancel' },
@@ -249,7 +254,7 @@ export default function SettingsScreen({ navigation }: Props) {
             } },
           ]);
         } },
-        { type: 'action', label: 'Delete Account', icon: 'close-circle-outline', destructive: true, onPress: handleDeleteAccount },
+        { type: 'action', label: 'Delete Account', icon: XCircleIcon, destructive: true, onPress: handleDeleteAccount },
       ],
     },
   ];
@@ -266,22 +271,18 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.group}>
               {section.rows.map((row, i) => {
+                const Icon = row.icon;
+                const isDestructive = row.type === 'action' && row.destructive;
                 const content = (
                   <>
                     {i > 0 && <View style={styles.sep} />}
                     <View style={styles.cell}>
                       <View style={styles.cellLeft}>
-                        <View style={[styles.iconBadge, row.type === 'action' && row.destructive && styles.iconBadgeDanger]}>
-                          <Ionicons
-                            name={row.icon as any}
-                            size={18}
-                            color={row.type === 'action' && row.destructive ? Colors.danger : Colors.accent}
-                          />
-                        </View>
+                        <Icon size={22} color={isDestructive ? Colors.danger : Colors.textPrimary} />
                         <View>
                           <Text style={[
                             styles.cellLabel,
-                            row.type === 'action' && row.destructive && styles.cellLabelDanger,
+                            isDestructive && styles.cellLabelDanger,
                           ]}>{row.label}</Text>
                           {row.detail && <Text style={styles.cellDetail}>{row.detail}</Text>}
                         </View>
@@ -314,9 +315,9 @@ export default function SettingsScreen({ navigation }: Props) {
                 }
 
                 return (
-                  <TouchableOpacity key={row.label} activeOpacity={0.7} onPress={row.onPress}>
+                  <PressableScale key={row.label} onPress={row.onPress}>
                     {content}
-                  </TouchableOpacity>
+                  </PressableScale>
                 );
               })}
             </View>
@@ -357,12 +358,6 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   cellLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: Spacing.md },
-  iconBadge: {
-    width: 32, height: 32, borderRadius: Radius.sm,
-    backgroundColor: Colors.accentContainer,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconBadgeDanger: { backgroundColor: Colors.dangerContainer },
   cellLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   cellLabelDanger: { color: Colors.danger },
   cellDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },

@@ -5,7 +5,7 @@
 > append a one-line entry to the Session Log at the bottom. Keep this thin — link the living
 > trackers below, don't duplicate them.
 
-**Last updated:** 2026-06-10 · **Active branch:** `better-workflow` (off `redesign`)
+**Last updated:** 2026-06-11 · **Active branch:** `redesign`
 
 ---
 
@@ -24,6 +24,17 @@
 
 ## In flight
 
+- **Audit-sweep central fixes (`redesign`) — ✅ Waves A–F done + committed.** From
+  [`redesign/post-onboarding-audit-2026-06-11.md`](redesign/post-onboarding-audit-2026-06-11.md); all
+  screens **except** AppNavigator. A (dead code) · B (ad-hoc `` `$${n}` `` → `utils/format`) · C (bare
+  `TouchableOpacity` → `PressableScale`) · D (Ionicons/MCI → Heroicons where an equivalent exists, else
+  documented) · E (`TopScrim` → **solid** opaque mask, rolled out to the header-less tab screens) · F
+  (Results P0: `useSubscription().hasAccess` + Reanimated `entering`) all landed. **Profile, Dashboard,
+  and Community are fully audit-clean** and the open `[DISCUSS]` "Your Plan → App Store" item is resolved
+  (Plans & Features + Manage Subscription split) — see Session log.
+  - Deferred (heavier, not "central"): CC-5 thin-view extractions, CC-7 `.map`→`FlatList`, EditProfile's 5
+    `supabase.*` calls → a service, CC-11 keyboard insets. Standardize the **danger** color
+    (Sign-Out border is a raw `rgba(255,69,58,0.35)` — consider a `dangerContainer`-style token).
 - **Workflow system (this branch).** Making fresh/cross-session work reliable: this status doc +
   an operating loop in `CLAUDE.md` + a `CLAUDE.md` staleness refresh. Remaining/optional: a Stop-hook
   auto-checkpoint and a skills-as-table upgrade (both unconfirmed).
@@ -69,6 +80,13 @@
   (`endpoint:sha256(ip + salt)`) — the limiter only needs a stable per-caller key, not the raw IP;
   (3) keep the short-TTL cleanup. Touchpoints: `supabase/functions/_shared/rateLimit*.ts` + the
   baseline's `api_rate_limits` table & `check_rate_limit` RPC.
+- **🩹 Paywall scroll — quick-fixed, proper fix pending (2026-06-11).** The `formSheet` presentation ate
+  the inner `ScrollView` (RNScreens #2687/#3092 — scroll passthrough needs the `ScrollView` as the screen's
+  *first child*, but `ScreenBackground` is first). **Quick-fix (done):** swapped the route to ShareScreen's
+  `card` + `slide_from_bottom` (`AppNavigator.tsx`, `name="Paywall"`; verified scrollable, `tsc` clean);
+  `sheetModal` parked with a `TODO`. **Proper fix TODO:** make the `ScrollView` the screen's first child
+  (move `ScreenBackground` inside/behind it), re-apply the `sheetModal` sheet, and drop the now-vestigial
+  grabber bar in `PaywallScreen`.
 
 ## TODO — IA cleanup (do on Mac, alongside `onboarding-v2`)
 
@@ -135,6 +153,84 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 ## Session log
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
+
+### 2026-06-11 — audit sweep complete (Waves B–F) + Profile hero glow-up + Community polish — COMMITTED
+Finished the post-onboarding audit sweep and the per-screen passes for **Profile, Dashboard, and
+Community** (now considered done). On `redesign`, `tsc` clean, committed. Sim is the other session's
+running Metro — edits hot-reload; I screenshot, don't rebuild.
+- **Sweep Waves B–F ✅** — B (`utils/format`), C (`PressableScale`), E (solid `TopScrim` rolled out to
+  all header-less tab screens), F (Results `useSubscription().hasAccess` + Reanimated `entering`), then
+  D (Ionicons/MCI → Heroicons; kept + documented `snow-outline`/`ellipse-outline` and the Results
+  financial-metric rows where no Heroicon equivalent exists).
+- **Profile hero glow-up.** Merged the avatar card + stats into one continuous hero with a soft accent
+  glow (diagonal `LinearGradient` wash, not a clipped circle); moved **Edit Profile** onto the hero
+  (magenta pencil on an `accentContainer` chip, dropping the Quick-Access row); removed the redundant
+  current-score card (lives only on Dashboard) and the duplicate tier pill; avatar success `Alert` → Toast.
+- **Resolved the audit's open `[DISCUSS]`** "Your Plan → App Store manage": split into **Plans & Features**
+  (in-app, all users → Paywall, which already marks the owned tier "Current Plan") + **Manage Subscription**
+  (premium only, explicit `↗` external affordance → StoreKit `manageSubscriptions()`).
+- **Profile icon pass + token purity** — bare white Heroicons, `isSubscriptionPremium` → hook `premium`,
+  `#fff` → `Colors.onAccent`, glow → `Colors.accentContainer`. CheckinCard bell/calendar → Fire/FaceSmile/Clock.
+- **Roast tab** — stripped the check-in + paywall-teaser cards (composer is roast-only; enforcement gate kept).
+- **Community** — stronger subtitle ("Anonymous roasts and scores from people figuring it out too."),
+  `Durations.fast` motion tokens, `TAB_BAR_HEIGHT` bottom padding, `numberOfLines` clamps. Share FAB
+  placement confirmed good (bottom-right primary create action).
+- **Landmine:** removing the Profile score card cascaded orphaned imports/state/styles — `tsc --noUnusedLocals`
+  is the fastest way to surface them.
+
+### 2026-06-11 — audit-sweep central fixes (Wave A) + Profile name bug — UNCOMMITTED
+Acting on the post-onboarding audit's cross-cutting findings, all screens **except** Dashboard (the
+parallel session owns it) and AppNavigator. On `redesign`, `tsc` clean, **not committed**. Sim is the
+other session's running Metro (`/tmp/metro.log`) — edits hot-reload; I screenshot, don't rebuild.
+- **Wave A — dead code (CC-8) ✅.** Removed the audit's named dead imports/exports/computations (Trend
+  `LinearGradient`/`Svg`/`getScoreBand`/`scoreGradient`/`GlassCard`/`Radius` + `deltaById`/`periodItems`;
+  Profile `TextInput`; Settings `LinearGradient`; FinancialContextForm `CTX_COLUMNS`; RoastComposer 5 dead
+  `score*` style keys) **plus** a one-off `tsc --noUnusedLocals` probe that caught **17 more** (CheckinTrend,
+  Skeleton, StateSelect, Toast, CommunityFeed, CreatorDashboard, DebtPayoff incl. orphaned nav imports,
+  PrivacyPolicy, Results `ScrollView`, TermsOfService, SubscriptionAudit `keepCount`). Skipped off-limits
+  files (AppNavigator/Dashboard/auth/AuthContext/tests).
+- **Profile name bug ✅.** The avatar hero only showed `@username`; `display_name` was fetched-but-never-
+  rendered (obsolete — profiles have no `display_name`). Now renders the real **first + last name**
+  (capitalized) with `@username` demoted to a secondary handle; dropped the dead `displayName` state.
+  Sim-verified ("Jason L").
+- **Also this session:** loading-animation pass committed (`a246e42` — JourneyLoading plan loader +
+  score-ring roast loader); dev mocks flipped back **on** (`USE_AI_MOCKS = __DEV__ && true`).
+
+### 2026-06-11 — Dashboard (Home) redesign pass — implemented, UNCOMMITTED
+Acting on the audit's Dashboard deep-dive. On `redesign`, `tsc` clean + sim-verified, **NOT committed**
+(a parallel Claude session is active). New components: `TopScrim`, `Sparkline`, `PlanCtaCard`.
+- **Top scrim** (`components/TopScrim.tsx`) — a gradient mask rendered above the ScrollView; fixes the
+  "transparent corners / content sliding under the status bar" on scroll. Applied to all 3 Dashboard
+  return paths; reusable for Community/Results/History to kill the issue app-wide.
+- **Extractions/cleanup**: hand-rolled SVG sparkline → `components/Sparkline.tsx`; `fmtMoney` →
+  `formatCompactCurrency` in `utils/format.ts`; stale-banner `↻` glyph → `ArrowPathIcon`.
+- **Layout/tokens**: check-in card moved directly under the hero (it PERSISTS + swaps copy — the old
+  "renders only when due" comment was wrong); its chevron `accent`→`textSecondary`. Debt figure no longer
+  `danger`-colored (semantic misuse) → `textPrimary`. Finance **labels** enlarged (caption2→footnote);
+  values left at title3.
+- **Contextual plan CTA** (`components/PlanCtaCard.tsx`) — replaces the generic "plan & tools" nav-dup and
+  moves **above** Trend/Roasts. 3 states keyed on `hasAccess('action_plan')` + `plan`: live progress
+  (Day/%/steps) · build prompt · unlock (reuses `PremiumCard`, now with optional title/body overrides →
+  Paywall). Prompt/unlock copy leads with the most salient snapshot signal (overspending → debt →
+  thin-savings → glow-up), qualitative + supportive-coach. `PremiumCard` still used by Roast/Tools.
+- **Navbar** (`IOSTabBar` in AppNavigator): selected pill → wider, shorter rounded-rectangle (capsule
+  margins 36→24, `PILL_GAP` 8→4, `PILL_H` 52→46); capsule raised ~10pt (clamp 16→26, `TAB_BAR_HEIGHT`
+  76→86) so it floats clear of the gesture area.
+- **Tier**: the temp `DEV_FORCE_DEEP_DIVE → 'free'` Paywall-viewing override has been **reverted** to `'deep_dive'`.
+
+### 2026-06-11 — post-onboarding audit (~20 screens) + Paywall scroll fix
+- **Full post-onboarding visual + code audit** on the 16e — see
+  [`redesign/post-onboarding-audit-2026-06-11.md`](redesign/post-onboarding-audit-2026-06-11.md)
+  (recommend-only). Cross-cutting: scroll/safe-area "transparent corners" (confirmed on every scroll
+  screen), ~30 bare `TouchableOpacity`→`PressableScale`, Ionicons→Heroicons, ad-hoc `$`→`format.ts`;
+  **Results** calls `getSubscription`/`canAccess`/`getTrialStatus` directly (P0) and rests an
+  `opacity:0` ScrollView (the documented blank-screen risk); **EditProfile** has 5 direct `supabase.*` calls.
+- **✅ Paywall scroll fixed** (details in In-flight): `formSheet`→`card`+`slide_from_bottom`. `tsc` clean.
+- **Roast composer:** flagged to remove the check-in card + the bottom "Fix your finances" paywall card
+  (recommendations, not yet done). **Profile→"Your Plan"** opens the StoreKit manage sheet on a premium
+  tier (shows "Cannot Connect" in-sim) — **DISCUSS**.
+- ⚠️ **Temp edit active:** `subscriptions.ts` `DEV_FORCE_DEEP_DIVE`→`'free'` (to view the paywall) — revert
+  to `'deep_dive'`. Uncommitted: `AppNavigator.tsx` (keep), `subscriptions.ts` (revert), the audit doc.
 
 ### 2026-06-11 — schema-v2 cutover LIVE; auth/forms + device polish; blank-screen hunt; skills audit
 - **schema-v2 cut over to Jason's own Supabase** (`qxybdaotduunnrjfjzbq`): `db reset` + 6 edge fns +

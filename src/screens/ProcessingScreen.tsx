@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -52,21 +53,21 @@ export default function ProcessingScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScreenBackground variant="processing" />
-      <TouchableOpacity style={[styles.backBtn, { marginTop: insets.top + 8 }]} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })} activeOpacity={0.7}>
+      <PressableScale style={[styles.backBtn, { marginTop: insets.top + 8 }]} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}>
         <Text style={styles.backBtnText}>← Back</Text>
-      </TouchableOpacity>
+      </PressableScale>
       <View style={[styles.inner, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* The roast "thinking" animation (ring + cycling steps) — also drives the success/error landing. */}
         <RoastLoading done={done} error={error} />
 
         {error ? (
           <View style={styles.errorActions}>
-            <TouchableOpacity style={styles.retryButton} onPress={doAnalysis} activeOpacity={0.7}>
+            <PressableScale style={styles.retryButton} onPress={doAnalysis}>
               <Text style={styles.retryText}>Try Again</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.retryButtonSecondary} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })} activeOpacity={0.7}>
+            </PressableScale>
+            <PressableScale style={styles.retryButtonSecondary} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}>
               <Text style={styles.retryTextSecondary}>Back to Dashboard</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         ) : (
           <Text style={styles.hint}>Roasting your finances with brutal honesty ✨</Text>
