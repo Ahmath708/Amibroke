@@ -5,6 +5,7 @@ import { TABLES } from './tables';
 import { withClient } from './supabaseClient';
 import { getProfile } from './profile';
 import { USE_AI_MOCKS } from '@/config/ai';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 
 export type FeedSort = 'recent' | 'trending' | 'lowest';
 /** Opaque keyset cursor — the caller just stores it and passes it back. */
@@ -15,7 +16,7 @@ export interface FeedPage { posts: CommunityPost[]; nextCursor: FeedCursor | nul
  * One page of the community feed, ordered + keyset-paginated server-side per tab:
  *   recent   → created_at DESC                       (created_at is the unique cursor)
  *   lowest   → score ASC, created_at ASC             (composite — score has heavy ties)
- *   trending → reaction_count DESC, created_at DESC  (composite — counts have heavy ties)
+ *   trending → created_at DESC (recency fallback — schema-v2 dropped reaction_count; reactions aggregated post-fetch)
  * Fetches limit+1 to detect `hasMore` with no count query. created_at is double-quoted
  * inside the composite .or() so its timezone "+" survives URL encoding.
  */
@@ -40,8 +41,11 @@ export async function getCommunityFeed(
       query = query.order('score', { ascending: true }).order('created_at', { ascending: true });
       if (cursor) query = query.or(`score.gt.${cursor.score},and(score.eq.${cursor.score},created_at.gt."${cursor.createdAt}")`);
     } else if (sort === 'trending') {
-      query = query.order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
-      if (cursor) query = query.or(`reaction_count.lt.${cursor.count},and(reaction_count.eq.${cursor.count},created_at.lt."${cursor.createdAt}")`);
+      // schema-v2 dropped reaction_count (no denormalized counter / sync trigger) → no server-side
+      // trending sort. Fall back to recency; reactions are aggregated from post_reactions below.
+      // (Real global trending would need reaction_count restored via a trigger — flagged.)
+      query = query.order('created_at', { ascending: false });
+      if (cursor) query = query.lt('created_at', cursor.createdAt);
     } else {
       query = query.order('created_at', { ascending: false });
       if (cursor) query = query.lt('created_at', cursor.createdAt);
@@ -60,29 +64,33 @@ export async function getCommunityFeed(
       user_id: p.user_id,
       display_name: p.display_name,
       score: p.score,
-      score_label: p.score_label,
+      score_label: getScoreBand(p.score).label, // derived (community_posts.score_label dropped)
       roast: p.roast,
       summary: p.summary,
-      reactions: p.reactions || {},
+      reactions: {},        // filled by the post_reactions aggregation below
       created_at: p.created_at,
       my_reactions: [],
     }));
 
-    if (userId && posts.length) {
+    // Per-emoji counts + the current user's reactions — aggregated from post_reactions (the JSONB is gone).
+    if (posts.length) {
       const ids = posts.map((p) => p.id);
-      const { data: myReactions } = await (client as any)
+      const { data: allReactions } = await (client as any)
         .from(TABLES.post_reactions)
-        .select('post_id, emoji')
-        .eq('user_id', userId)
+        .select('post_id, emoji, user_id')
         .in('post_id', ids);
-      const reactMap: Record<string, string[]> = {};
-      (myReactions || []).forEach((r: any) => { (reactMap[r.post_id] ||= []).push(r.emoji); });
-      posts = posts.map((p) => ({ ...p, my_reactions: reactMap[p.id] || [] }));
+      const counts: Record<string, Record<string, number>> = {};
+      const mine: Record<string, string[]> = {};
+      (allReactions || []).forEach((r: any) => {
+        (counts[r.post_id] ||= {})[r.emoji] = (counts[r.post_id][r.emoji] || 0) + 1;
+        if (userId && r.user_id === userId) (mine[r.post_id] ||= []).push(r.emoji);
+      });
+      posts = posts.map((p) => ({ ...p, reactions: counts[p.id] || {}, my_reactions: mine[p.id] || [] }));
     }
 
     const last: any = pageRows[pageRows.length - 1];
     const nextCursor: FeedCursor | null = hasMore && last
-      ? { createdAt: last.created_at, score: last.score, count: last.reaction_count ?? 0 }
+      ? { createdAt: last.created_at, score: last.score, count: 0 }
       : null;
 
     return { posts, nextCursor, hasMore };
@@ -96,23 +104,18 @@ export async function getPostReactions(
   userId?: string,
 ): Promise<{ reactions: Record<string, number>; my_reactions: string[] } | null> {
   return withClient<{ reactions: Record<string, number>; my_reactions: string[] } | null>('fetch post reactions', null, async (client) => {
-    const { data, error } = await (client as any)
-      .from(TABLES.community_posts)
-      .select('reactions')
-      .eq('id', postId)
-      .maybeSingle();
+    const { data: rows, error } = await (client as any)
+      .from(TABLES.post_reactions)
+      .select('emoji, user_id')
+      .eq('post_id', postId);
     if (error) throw error;
-    if (!data) return null;
-    let my_reactions: string[] = [];
-    if (userId) {
-      const { data: mine } = await (client as any)
-        .from(TABLES.post_reactions)
-        .select('emoji')
-        .eq('post_id', postId)
-        .eq('user_id', userId);
-      my_reactions = (mine || []).map((r: any) => r.emoji);
-    }
-    return { reactions: data.reactions || {}, my_reactions };
+    const reactions: Record<string, number> = {};
+    const my_reactions: string[] = [];
+    (rows || []).forEach((r: any) => {
+      reactions[r.emoji] = (reactions[r.emoji] || 0) + 1;
+      if (userId && r.user_id === userId) my_reactions.push(r.emoji);
+    });
+    return { reactions, my_reactions };
   });
 }
 
@@ -136,7 +139,6 @@ export async function shareToFeed(
         analysis_id: analysisId,
         display_name: displayName,
         score,
-        score_label: scoreLabel,
         roast,
         summary,
         share_captions: shareCaptions || null,
