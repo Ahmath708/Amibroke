@@ -4,15 +4,14 @@
 export const TABLES = {
   analyses: 'analyses',
   profiles: 'profiles',
+  financial_context: 'financial_context',        // NEW (schema-v2): demographics + brackets off profiles
+  financial_snapshots: 'financial_snapshots',
   community_posts: 'community_posts',
   post_reactions: 'post_reactions',
   check_ins: 'check_ins',
-  subscriptions: 'subscriptions',
-  user_subscriptions: 'user_subscriptions',
-  referrals: 'referrals',
-  payments: 'payments',
-  active_plans: 'active_plans',
-  financial_snapshots: 'financial_snapshots',
+  tracked_subscriptions: 'tracked_subscriptions', // was `subscriptions`
+  plan_entitlements: 'plan_entitlements',         // was `user_subscriptions`
+  action_plans: 'action_plans',                   // was `active_plans`
 } as const;
 
 export const BUCKETS = {
@@ -20,5 +19,5 @@ export const BUCKETS = {
 } as const;
 
 /** Columns for the analyses/history list — used by both getAnalysisHistory and
- *  getAnalysesPage (was duplicated verbatim). */
-export const HISTORY_COLUMNS = 'id, input_text, score, score_label, summary, created_at, emotional_status, share_captions';
+ *  getAnalysesPage. score_label/score_color dropped (derive via getScoreBand in the frontend). */
+export const HISTORY_COLUMNS = 'id, input_text, score, summary, created_at, emotional_status, share_captions';

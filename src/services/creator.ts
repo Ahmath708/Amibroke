@@ -23,23 +23,11 @@ export interface CreatorStats {
   recentSubmissions: CreatorSubmission[];
 }
 
+// PARKED (schema-v2): the `referrals` table was deferred (not migrated) along with the creator
+// feature, which is flag-gated off (FEATURES.CREATOR_DASHBOARD). These referral fns degrade to
+// no-ops/empties so the module compiles; restore the DB writes when the table + payout system land.
 export async function generateReferralCode(userId: string): Promise<string> {
-  const code = `BROKE-${userId.slice(0, 4).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-  const client = getSupabase();
-  if (client) {
-    try {
-      await client.from(TABLES.referrals).insert({
-        referrer_id: userId,
-        code,
-        status: 'active',
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  return code;
+  return `BROKE-${userId.slice(0, 4).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 
 export async function getCreatorStats(userId: string): Promise<CreatorStats | null> {
@@ -56,13 +44,7 @@ export async function getCreatorStats(userId: string): Promise<CreatorStats | nu
     const totalRoasts = posts?.length || 0;
     const totalViews = posts?.reduce((sum, p) => sum + totalReactions(p.reactions) * 10, 0) || 0;
     const totalShares = posts?.reduce((sum, p) => sum + totalReactions(p.reactions), 0) || 0;
-
-    const { data: referrals } = await client
-      .from(TABLES.referrals)
-      .select('payout_amount')
-      .eq('referrer_id', userId);
-
-    const totalEarnings = referrals?.reduce((sum, r) => sum + (r.payout_amount || 0), 0) || 0;
+    const totalEarnings = 0; // PARKED: no referrals/payout table in schema-v2 (see note above)
 
     return {
       totalRoasts,
@@ -85,47 +67,12 @@ export async function getCreatorStats(userId: string): Promise<CreatorStats | nu
   }
 }
 
-export async function getReferralCode(userId: string): Promise<string | null> {
-  const client = getSupabase();
-  if (!client) return null;
-
-  try {
-    const { data } = await client
-      .from(TABLES.referrals)
-      .select('code')
-      .eq('referrer_id', userId)
-      .eq('status', 'active')
-      .single();
-
-    return data?.code || null;
-  } catch {
-    return null;
-  }
+export async function getReferralCode(_userId: string): Promise<string | null> {
+  return null; // PARKED: no referrals table in schema-v2
 }
 
-export async function applyReferralCode(code: string, referredId: string): Promise<boolean> {
-  const client = getSupabase();
-  if (!client) return false;
-
-  try {
-    const { data: referral } = await client
-      .from(TABLES.referrals)
-      .select('id, referrer_id')
-      .eq('code', code)
-      .eq('status', 'active')
-      .single();
-
-    if (!referral) return false;
-
-    await client.from(TABLES.referrals).update({
-      referred_id: referredId,
-      status: 'converted',
-    }).eq('id', referral.id);
-
-    return true;
-  } catch {
-    return false;
-  }
+export async function applyReferralCode(_code: string, _referredId: string): Promise<boolean> {
+  return false; // PARKED: no referrals table in schema-v2
 }
 
 // Both delegate to the shared analyze pipeline (ai.ts) rather than re-invoking the

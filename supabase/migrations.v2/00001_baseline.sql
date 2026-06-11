@@ -299,8 +299,8 @@ CREATE TABLE action_plans (
   id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id            UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   source_analysis_id UUID REFERENCES analyses(id) ON DELETE SET NULL,
-  started_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),   -- server-set (OQ #6)
-  ends_at            TIMESTAMPTZ GENERATED ALWAYS AS (started_at + interval '90 days') STORED,
+  started_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),                       -- server-set (OQ #6); client omits it
+  ends_at            TIMESTAMPTZ NOT NULL DEFAULT (NOW() + interval '90 days'), -- = started_at + 90d (both default to the same txn NOW()); NOT GENERATED — timestamptz+interval isn't immutable
   status             TEXT NOT NULL DEFAULT 'active'
                        CHECK (status IN ('active', 'completed', 'incomplete')),
   overall_message    TEXT,

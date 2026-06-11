@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 
 /**
  * The single, session-aware Supabase client for the whole app.
@@ -30,12 +31,12 @@ const storage = Platform.OS === 'web'
       },
     };
 
-let client: SupabaseClient | null = null;
+let client: SupabaseClient<Database> | null = null;
 
 /** The shared authenticated client, or null if Supabase env vars are missing. */
-export function getSupabaseClient(): SupabaseClient | null {
+export function getSupabaseClient(): SupabaseClient<Database> | null {
   if (!client && supabaseUrl && supabaseAnonKey) {
-    client = createClient(supabaseUrl, supabaseAnonKey, {
+    client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         flowType: 'pkce',
         autoRefreshToken: true,
@@ -51,14 +52,14 @@ export function getSupabaseClient(): SupabaseClient | null {
 // Tests can inject a mock client; otherwise the data services use the shared
 // authenticated client above. Kept here so there's one injection point every
 // data module (ai, analyses, profile, community, …) shares.
-let testClient: SupabaseClient | null = null;
+let testClient: SupabaseClient<Database> | null = null;
 
-export function __setSupabaseForTests(c: SupabaseClient | null) {
+export function __setSupabaseForTests(c: SupabaseClient<Database> | null) {
   testClient = c;
 }
 
 /** The client the data services use — the injected test mock if set, else the shared client. */
-export function getSupabase(): SupabaseClient | null {
+export function getSupabase(): SupabaseClient<Database> | null {
   return testClient ?? getSupabaseClient();
 }
 
@@ -71,7 +72,7 @@ export function getSupabase(): SupabaseClient | null {
 export async function withClient<T>(
   label: string,
   fallback: T,
-  fn: (client: SupabaseClient) => Promise<T>,
+  fn: (client: SupabaseClient<Database>) => Promise<T>,
 ): Promise<T> {
   const client = getSupabase();
   if (!client) return fallback;

@@ -6,13 +6,15 @@ import { getSupabaseClient as getSupabase } from './supabaseClient';
 
 export interface UserDataExport {
   profile: Record<string, unknown> | null;
+  financialContext: Record<string, unknown>[];
+  financialSnapshot: Record<string, unknown>[];
   analyses: Record<string, unknown>[];
-  subscriptions: Record<string, unknown>[];
-  userSubscriptions: Record<string, unknown>[];
-  checkIns: Record<string, unknown>[];
+  actionPlans: Record<string, unknown>[];
   communityPosts: Record<string, unknown>[];
-  referrals: Record<string, unknown>[];
-  payments: Record<string, unknown>[];
+  postReactions: Record<string, unknown>[];
+  checkIns: Record<string, unknown>[];
+  trackedSubscriptions: Record<string, unknown>[];
+  planEntitlements: Record<string, unknown>[];
   exportedAt: string;
 }
 
@@ -23,33 +25,39 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
   try {
     const [
       profileResult,
+      contextResult,
+      snapshotResult,
       analysesResult,
-      subscriptionsResult,
-      userSubscriptionsResult,
-      checkInsResult,
+      plansResult,
       postsResult,
-      referralsResult,
-      paymentsResult,
+      reactionsResult,
+      checkInsResult,
+      subsResult,
+      entitlementsResult,
     ] = await Promise.all([
       client.from(TABLES.profiles).select('*').eq('id', userId).single(),
+      client.from(TABLES.financial_context).select('*').eq('user_id', userId),
+      client.from(TABLES.financial_snapshots).select('*').eq('user_id', userId),
       client.from(TABLES.analyses).select('*').eq('user_id', userId),
-      client.from(TABLES.subscriptions).select('*').eq('user_id', userId),
-      client.from(TABLES.user_subscriptions).select('*').eq('user_id', userId),
-      client.from(TABLES.check_ins).select('*').eq('user_id', userId),
+      client.from(TABLES.action_plans).select('*').eq('user_id', userId),
       client.from(TABLES.community_posts).select('*').eq('user_id', userId),
-      client.from(TABLES.referrals).select('*').eq('referrer_id', userId),
-      client.from(TABLES.payments).select('*').eq('user_id', userId),
+      client.from(TABLES.post_reactions).select('*').eq('user_id', userId),
+      client.from(TABLES.check_ins).select('*').eq('user_id', userId),
+      client.from(TABLES.tracked_subscriptions).select('*').eq('user_id', userId),
+      client.from(TABLES.plan_entitlements).select('*').eq('user_id', userId),
     ]);
 
     return {
       profile: profileResult.data,
+      financialContext: contextResult.data || [],
+      financialSnapshot: snapshotResult.data || [],
       analyses: analysesResult.data || [],
-      subscriptions: subscriptionsResult.data || [],
-      userSubscriptions: userSubscriptionsResult.data || [],
-      checkIns: checkInsResult.data || [],
+      actionPlans: plansResult.data || [],
       communityPosts: postsResult.data || [],
-      referrals: referralsResult.data || [],
-      payments: paymentsResult.data || [],
+      postReactions: reactionsResult.data || [],
+      checkIns: checkInsResult.data || [],
+      trackedSubscriptions: subsResult.data || [],
+      planEntitlements: entitlementsResult.data || [],
       exportedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -102,16 +110,17 @@ export async function deleteUserData(userId: string): Promise<{ success: boolean
   if (!client) return { success: false, error: 'Backend not configured' };
 
   try {
-    // [table, owning column] — referrals is keyed by referrer_id, not user_id.
+    // [table, owning column]. Children first; profiles is deleted last (FK cascades clean up the rest).
     const deletions: Array<[string, string]> = [
-      ['post_reactions', 'user_id'],
-      ['community_posts', 'user_id'],
-      ['check_ins', 'user_id'],
-      ['subscriptions', 'user_id'],
-      ['user_subscriptions', 'user_id'],
-      ['analyses', 'user_id'],
-      ['referrals', 'referrer_id'],
-      ['payments', 'user_id'],
+      [TABLES.post_reactions, 'user_id'],
+      [TABLES.community_posts, 'user_id'],
+      [TABLES.check_ins, 'user_id'],
+      [TABLES.action_plans, 'user_id'],
+      [TABLES.tracked_subscriptions, 'user_id'],
+      [TABLES.plan_entitlements, 'user_id'],
+      [TABLES.financial_snapshots, 'user_id'],
+      [TABLES.financial_context, 'user_id'],
+      [TABLES.analyses, 'user_id'],
     ];
 
     for (const [table, column] of deletions) {
@@ -154,7 +163,6 @@ export async function anonymizeUserData(userId: string): Promise<{ success: bool
       .from(TABLES.profiles)
       .update({
         username: anonUsername,
-        display_name: 'Anonymous User',
         avatar_url: null,
       })
       .eq('id', userId);

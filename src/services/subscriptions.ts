@@ -4,15 +4,11 @@ import { getCustomerInfo, tierFromCustomerInfo, isPurchasesConfigured } from './
 
 export interface SubscriptionRecord {
   user_id: string;
-  // Legacy Stripe columns, retained (nullable) for historical rows.
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
   plan: 'action_plan' | 'deep_dive' | null;
-  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
-  trial_end: string | null;
-  // RevenueCat / store columns (added in migration 00014).
+  // RevenueCat / store columns.
   store?: 'app_store' | 'play_store' | null;
   product_id?: string | null;
   rc_entitlement?: 'action_plan' | 'deep_dive' | null;
@@ -36,7 +32,7 @@ function tierFromRecord(sub: SubscriptionRecord | null): SubscriptionTier {
  * Resolve the user's tier and (for UI) their renewal record.
  *
  * RevenueCat's on-device customerInfo is the source of truth for entitlement.
- * The user_subscriptions row (kept in sync by the revenuecat-webhook) provides
+ * The plan_entitlements row (kept in sync by the revenuecat-webhook) provides
  * record details like renewal date/status, and is the fallback tier source
  * before RevenueCat is configured.
  */
@@ -58,7 +54,7 @@ export async function getSubscription(userId: string): Promise<{ tier: Subscript
   if (client) {
     try {
       const { data, error } = await (client as any)
-        .from(TABLES.user_subscriptions)
+        .from(TABLES.plan_entitlements)
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();

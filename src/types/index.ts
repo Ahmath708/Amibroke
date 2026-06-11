@@ -2,6 +2,7 @@ import type { NavigatorScreenParams, CompositeNavigationProp } from '@react-navi
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { FinalAnalysis as _FinalAnalysis, DebtItem as _DebtItem, ActionPlanStep as _ActionStep, Tone as _Tone } from '@shared/types';
+import type { BillingPeriod } from '@shared/billingPeriod';
 
 export type RoastTone = _Tone;
 export type FinancialAnalysis = _FinalAnalysis;
@@ -37,8 +38,8 @@ export interface Subscription {
   id: string;
   name: string;
   amount: number;
-  icon: string;
   category: string;
+  billing_period: BillingPeriod;   // NEW (schema-v2): cadence; normalize to monthly via @shared/billingPeriod
   last_used: string;
 }
 
@@ -46,12 +47,9 @@ export interface CheckIn {
   id: string;
   mood: number;
   notes: string | null;
-  income: number | null;
-  expenses: number | null;
-  savings: number | null;
-  debt: number | null;
   created_at: string;
-  /** Per-event values for pinned goals, keyed by TrackedGoal.id. */
+  /** All recorded figures this check-in (income/expenses/savings/debt + per-goal values), keyed.
+   *  schema-v2: the point-in-time history — the snapshot keeps only current state, no flat columns. */
   metrics?: Record<string, number> | null;
   /** The Haiku "coach's note" generated for this check-in (unified financial model §7). */
   reflection?: string | null;

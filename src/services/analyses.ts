@@ -5,6 +5,7 @@ import { TABLES, HISTORY_COLUMNS } from './tables';
 import { AnalysisHistoryItem } from '@/types';
 import { USE_AI_MOCKS } from '@/config/ai';
 import { withClient, getSupabase } from './supabaseClient';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 
 // Returns { id, error } so callers can surface the REAL DB error (no Metro console available).
 export async function saveAnalysis(userId: string, input: string, analysis: FinalAnalysis): Promise<{ id: string | null; error: string | null }> {
@@ -15,8 +16,6 @@ export async function saveAnalysis(userId: string, input: string, analysis: Fina
       user_id: userId,
       input_text: input,
       score: analysis.score,
-      score_label: analysis.scoreLabel,
-      score_color: analysis.scoreColor,
       summary: analysis.summary,
       roast: analysis.roast,
       monthly_income: analysis.monthlyIncome?.value ?? analysis.monthlyIncome,
@@ -70,15 +69,14 @@ export async function getAnalysisHistory(userId: string): Promise<AnalysisHistor
 
 export interface AnalysesPage { items: AnalysisHistoryItem[]; nextCursor: string | null; hasMore: boolean; }
 
-// Which analyses have a plan? The plan lives in `active_plans` now (keyed by source_analysis_id),
+// Which analyses have a plan? The plan lives in `action_plans` (keyed by source_analysis_id),
 // not on the roast row. Resilient: any error → empty Set (the "has plan" badge just won't show).
 async function planSourceIds(client: any, userId: string): Promise<Set<string>> {
   try {
     const { data } = await client
-      .from(TABLES.active_plans)
+      .from(TABLES.action_plans)
       .select('source_analysis_id')
-      .eq('user_id', userId)
-      .neq('status', 'abandoned');
+      .eq('user_id', userId);
     return new Set((data || []).map((r: any) => r.source_analysis_id).filter(Boolean));
   } catch {
     return new Set();
@@ -90,7 +88,7 @@ function mapAnalysisRow(row: any, planIds: Set<string> = new Set()): AnalysisHis
     id: row.id,
     input_text: row.input_text ?? null,
     score: row.score,
-    score_label: row.score_label,
+    score_label: getScoreBand(row.score).label, // derived — score_label dropped from the table
     summary: row.summary,
     created_at: row.created_at,
     emotional_status: row.emotional_status,
@@ -162,8 +160,8 @@ export async function getAnalysisById(id: string): Promise<FinalAnalysis | null>
       debtToIncomeRatio: num(data.debt_to_income_ratio),
       avgConfidence: data.avg_confidence ?? 0.5,
       score: data.score,
-      scoreLabel: data.score_label,
-      scoreColor: data.score_color,
+      scoreLabel: getScoreBand(data.score).label,
+      scoreColor: getScoreBand(data.score).color,
       summary: data.summary,
       roast: data.roast,
       debts: data.debts || [],
