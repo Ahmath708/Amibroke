@@ -17,11 +17,10 @@ Guidance for Claude Code working in this repository. Read this first.
 2. **AI mocks are ON in dev by default** (`src/config/ai.ts` → `USE_AI_MOCKS = __DEV__ && true`)
    so the frontend never burns API credits during QA. Mocks never ship to prod (`__DEV__` is
    false in release). Only flip mocks off deliberately, and mind rule #1 when you do.
-3. **The Supabase project is coworker-owned (free tier).** Project ref `zefhsplmgxefmpdqbbvv`.
-   `supabase db push` works from the CLI, but the hosted DB can lag the migration files — a
-   PGRST204 "column not found" at runtime means a migration wasn't applied remotely. Editing
-   Auth/dashboard settings needs an elevated org role the dev may not have. A separate
-   **AmIBroke-staging** project (`zgrfgzjnhkellqgqfque`) exists.
+3. **The Supabase project is self-owned now.** Project ref `qxybdaotduunnrjfjzbq` (Jason's own
+   account) — schema-v2 was cut over to it (`db reset` + functions deploy). Full dashboard/CLI
+   access, no coworker coordination. The old **coworker-owned** project (`zefhsplmgxefmpdqbbvv`,
+   free tier) and its staging (`zgrfgzjnhkellqgqfque`) are **deprecated** — don't push to them.
 4. **Branching:** active work happens on a feature branch (currently `redesign` / `better-workflow`);
    `master` is left stable. Branch before committing; don't commit/push unless asked.
 
@@ -108,9 +107,8 @@ shared/                  Framework-agnostic financial logic shared by app + edge
   schemas.ts             Zod schemas (FinalAnalysisSchema, etc.)
   calculations.ts        Pure financial math
 supabase/
-  migrations/            00001–00026, applied via `supabase db push` (00022 financial_snapshots,
-                         00023 check_ins.reflection, 00024 preferred_tone, 00025 debt_strategy,
-                         00026 drop analyses.action_plan)
+  migrations/            00001_baseline.sql — the squashed schema-v2 baseline (the old 00001–00026
+                         were squashed into it at cutover; recover them from git history if needed)
   functions/             Deno edge functions (see below)
 tools/                   Dev / test / ops scripts — NOT bundled into the app (`tsconfig` excludes it)
   eval/                  LLM eval harness: fixtures, runners, Zod assertions, cycle results in results/ (PAID — rule #1)
