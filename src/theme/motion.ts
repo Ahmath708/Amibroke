@@ -36,8 +36,8 @@ export const Easings = {
 /** Travel distances for enter/exit translate, in px. */
 export const Distance = { xs: 4, sm: 8, md: 16, lg: 24, xl: 48 } as const;
 
-/** Scale factors for press/hover-equivalents. press=0.96 per make-interfaces-feel-better. */
-export const Scale = { subtle: 0.98, press: 0.96, pop: 1.04 } as const;
+/** Scale factors. press=0.96 per make-interfaces-feel-better; bump=success-confirm pop (icon morph). */
+export const Scale = { subtle: 0.98, press: 0.96, pop: 1.04, bump: 1.2 } as const;
 
 // ── Spring presets (withSpring configs) ──
 // snappy=default UI · gentle=cards/panels landing · bouncy=playful · instant=popovers

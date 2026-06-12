@@ -291,6 +291,19 @@ client-side.
   work through Expo (Metro + dev client managed by Expo). `npm run ios:sim` (`tools/run-sim.sh`)
   remains the no-Expo fallback — it builds the *iphonesimulator* SDK directly via `xcodebuild`.
 
+- **A config-plugin's Info.plist edits need a *clean* prebuild — incremental `expo run:ios` won't apply
+  them.** When `ios/` already exists, `npm run ios:e` autolinks new native modules (via pods) but does
+  **not** re-run the config-plugin mods that write `ios/AmIBroke/Info.plist`. So adding a plugin like
+  `expo-media-library` *links the module* yet the permission string it should add
+  (`NSPhotoLibraryAddUsageDescription`) never lands → the native call throws at runtime
+  (`saveToLibraryAsync` → "missing NSPhotoLibraryAddUsageDescription"). **Tell-tale:** the running
+  Info.plist shows the *generic default* permission string, not your custom `app.json` one — proof the
+  plugin mods never re-ran. **Fix:** edit the generated `ios/AmIBroke/Info.plist` directly (fast, but
+  `ios/` is gitignored, so it's ephemeral — a `prebuild --clean` regenerates it), or run
+  `npx expo prebuild --clean` (heavy: wipes + re-pods `ios/`). The durable source of truth is the
+  `app.json` plugin config, which a clean prebuild / EAS build honors — so production is covered even
+  when the local `ios/` is stale. (Bit us on the share-card Save-to-Photos flow, 2026-06.)
+
 - **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
   timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
 - **RevenueCat IAP is testable for free in dev via the RevenueCat Test Store** (`test_…` key in

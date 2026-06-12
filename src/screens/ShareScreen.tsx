@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import ReAnimated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from 'react-native-reanimated';
-import { enterUp, PressableScale, useReducedMotion } from '@/components/motion';
+import ReAnimated from 'react-native-reanimated';
+import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
-import { ArrowUpOnSquareIcon, ArrowDownTrayIcon, LinkIcon, CheckIcon } from 'react-native-heroicons/outline';
+import { ArrowUpOnSquareIcon, ArrowDownTrayIcon, LinkIcon } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation } from '@react-navigation/native';
@@ -16,10 +16,10 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { BRAND } from '@/config/brand';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import BrokeCard from '@/components/BrokeCard';
+import ShareActionButton from '@/components/ShareActionButton';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile } from '@/services/profile';
 import ScreenBackground from '@/components/ScreenBackground';
-import Toast from '@/components/Toast';
 
 type Props = { route: RouteProp<RootStackParamList, 'Share'> };
 type CardFormat = 'story' | 'post';
@@ -30,12 +30,6 @@ export default function ShareScreen({ route }: Props) {
   const { analysis } = route.params;
   const cardRef = useRef<any>(null);
   const [format, setFormat] = useState<CardFormat>('story');
-  const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<string | null>(null); // save confirmation (copy uses the inline icon)
-  const [copied, setCopied] = useState(false);
-  const reduce = useReducedMotion();
-  const pop = useSharedValue(1);
-  const copyIconStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   const { user } = useAuth();
   const [handle, setHandle] = useState('');
   useEffect(() => {
@@ -55,67 +49,57 @@ export default function ShareScreen({ route }: Props) {
   const capture = async (): Promise<string | null> => {
     if (!cardRef.current) return null;
     try {
-      return await captureRef(cardRef, { format: 'png', quality: 1 });
+      // captureRef returns a bare /var path on iOS; expo-sharing + media-library need a file:// URI.
+      const raw = await captureRef(cardRef, { format: 'png', quality: 1 });
+      return raw.startsWith('file://') || raw.startsWith('ph://') ? raw : `file://${raw}`;
     } catch {
       Alert.alert('Export failed', 'Could not render the card image.');
       return null;
     }
   };
 
-  const handleShare = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const uri = await capture();
-      if (uri && (await Sharing.isAvailableAsync())) {
+  // Share → OS sheet. No success state: shareAsync resolves on dismissal whether posted or cancelled
+  // (iOS can't tell us which), so a "Shared!" confirm would lie — the sheet itself is the feedback.
+  const handleShare = async (): Promise<void> => {
+    const uri = await capture();
+    if (uri && (await Sharing.isAvailableAsync())) {
+      try {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share your roast' });
+      } catch {
+        // user dismissed the sheet
       }
-    } catch {
-      // user cancelled
-    } finally {
-      setBusy(false);
     }
   };
 
-  const handleSave = async () => {
-    if (busy) return;
-    setBusy(true);
+  // Save → Photos. Returns true only on a real save, so the tile morphs to "Saved" only then.
+  const handleSave = async (): Promise<boolean> => {
+    const uri = await capture();
+    if (!uri) return false;
+    const perm = await MediaLibrary.requestPermissionsAsync(true); // add-only
+    if (!perm.granted) {
+      Alert.alert('Photos access needed', 'Enable Photos access to save your card.');
+      return false;
+    }
     try {
-      const uri = await capture();
-      if (!uri) return;
-      const { status } = await MediaLibrary.requestPermissionsAsync(true); // add-only
-      if (status !== 'granted') {
-        Alert.alert('Photos access needed', 'Enable Photos access to save your card.');
-        return;
-      }
       await MediaLibrary.saveToLibraryAsync(uri);
-      setToast('Saved to Photos');
-    } catch {
-      Alert.alert('Save failed', 'Could not save the card.');
-    } finally {
-      setBusy(false);
+      return true;
+    } catch (e: any) {
+      Alert.alert('Save failed', String(e?.message ?? e));
+      return false;
     }
   };
 
-  const handleCopy = async () => {
+  const handleCopy = async (): Promise<boolean> => {
     await Clipboard.setStringAsync(BRAND.domain);
-    setCopied(true);
-    if (!reduce) pop.value = withSequence(withTiming(1.25, { duration: 130 }), withSpring(1, { damping: 9, stiffness: 180 }));
-    setTimeout(() => setCopied(false), 1600);
+    return true;
   };
 
   const band = getScoreBand(analysis.score);
   const fullRoast = analysis.roast ?? '';
-  // Cap by sentence so neither format crops: Story gets up to 3, the shorter Post just the first 2.
+  // Cap by sentence so neither format crops: Story gets up to 2, the shorter Post just the first 1.
   const cardRoast = fullRoast.split(/(?<=[.!?])\s/).slice(0, format === 'story' ? 2 : 1).join(' ');
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-  const ACTIONS = [
-    { key: 'share', label: 'Share', Icon: ArrowUpOnSquareIcon, color: Colors.textPrimary, onPress: handleShare },
-    { key: 'save', label: 'Save', Icon: ArrowDownTrayIcon, color: Colors.textPrimary, onPress: handleSave },
-    { key: 'copy', label: copied ? 'Copied' : 'Copy Link', Icon: copied ? CheckIcon : LinkIcon, color: copied ? Colors.success : Colors.textPrimary, onPress: handleCopy },
-  ];
 
   return (
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
@@ -151,20 +135,14 @@ export default function ShareScreen({ route }: Props) {
           </View>
         </ViewShot>
 
-        {/* Actions — Share (sheet → post anywhere + save), Save (Photos), Copy Link (inline confirm) */}
+        {/* Actions — Share (OS sheet, no confirm), Save + Copy confirm inline via the shared tile */}
         <View style={styles.actionRow}>
-          {ACTIONS.map((a) => (
-            <PressableScale key={a.key} style={styles.actionBtn} onPress={a.onPress} disabled={busy && a.key !== 'copy'}>
-              <ReAnimated.View style={a.key === 'copy' ? copyIconStyle : undefined}>
-                <a.Icon size={24} color={a.color} />
-              </ReAnimated.View>
-              <Text style={[styles.actionLabel, a.key === 'copy' && copied ? { color: Colors.success } : null]}>{a.label}</Text>
-            </PressableScale>
-          ))}
+          <ShareActionButton icon={ArrowUpOnSquareIcon} label="Share" onPress={handleShare} />
+          <ShareActionButton icon={ArrowDownTrayIcon} label="Save" successLabel="Saved" onPress={handleSave} />
+          <ShareActionButton icon={LinkIcon} label="Copy Link" successLabel="Copied" onPress={handleCopy} />
         </View>
         <Text style={styles.hint}>Share opens the system sheet — post anywhere, or save the image. The roast lives on the card.</Text>
       </ScrollView>
-      <Toast message={toast ?? ''} emoji="✅" visible={!!toast} onHide={() => setToast(null)} />
     </ReAnimated.View>
   );
 }
@@ -187,7 +165,5 @@ const styles = StyleSheet.create({
   roastQuote: { fontFamily: Typography.fonts.body, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontStyle: 'italic', lineHeight: 28, textAlign: 'center' },
   roastMood: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent, textAlign: 'center' },
   actionRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
-  actionBtn: { flex: 1, backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', gap: Spacing.xs, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight },
-  actionLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
   hint: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18 },
 });
