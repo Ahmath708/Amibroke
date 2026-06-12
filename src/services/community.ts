@@ -149,6 +149,20 @@ export async function shareToFeed(
   });
 }
 
+/** Whether the user currently has this specific analysis live in the feed (drives the Results post/unpost toggle). */
+export async function isSharedToFeed(analysisId: string, userId: string): Promise<boolean> {
+  return withClient('check shared to feed', false, async (client) => {
+    const { data, error } = await client
+      .from(TABLES.community_posts)
+      .select('id')
+      .eq('analysis_id', analysisId)
+      .eq('user_id', userId)
+      .limit(1);
+    if (error) throw error;
+    return (data?.length ?? 0) > 0;
+  });
+}
+
 /** Analysis IDs the user currently has live in the community feed (drives the share manager toggles). */
 export async function getMySharedAnalysisIds(userId: string): Promise<string[]> {
   return withClient('fetch shared analysis ids', [], async (client) => {

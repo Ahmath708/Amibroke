@@ -30,11 +30,12 @@ import ScreenBackground from '@/components/ScreenBackground';
 import RoastLoading from '@/components/RoastLoading';
 import { MOCK_ANIMATION, MOCK_ANIMATION_MS } from '@/config/ai';
 import Toast from '@/components/Toast';
+import ConfirmSheet from '@/components/ConfirmSheet';
 
 import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis } from '@/services/analyses';
 import { updateSnapshotFromAnalysis } from '@/services/financialSnapshot';
-import { shareToFeed } from '@/services/community';
+import { shareToFeed, unshareFromFeed, isSharedToFeed } from '@/services/community';
 import { getActivePlan } from '@/services/activePlan';
 import { shareFinancialReportPdf } from '@/services/pdf';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -115,6 +116,10 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
+  const [postBusy, setPostBusy] = useState(false);
+  const [confirmMode, setConfirmMode] = useState<'post' | 'unpost'>('post');
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [postToast, setPostToast] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION && !!viewingId); // dev: replay the roast animation when opening a past roast
   // Progressive disclosure: lead with the hit (score/roast/#1 fix/CTA); the full
@@ -161,28 +166,47 @@ export default function ResultsScreen({ navigation, route }: Props) {
     return () => clearTimeout(t);
   }, []);
 
-  const postToFeed = async () => {
+  // Reflect whether THIS roast is already live in the feed (across sessions, not just this view),
+  // so the action reads "Posted" and the toggle knows which way it's going.
+  useEffect(() => {
     if (!user || !analysisId) return;
+    isSharedToFeed(analysisId, user.id).then(setShared).catch(() => {});
+  }, [user, analysisId]);
+
+  // The post action is a toggle; both directions get a confirm (posting is public + attributable,
+  // un-posting drops the post and its reactions). The ConfirmSheet drives the actual call.
+  const openConfirm = (mode: 'post' | 'unpost') => {
+    if (!user || !analysisId) return;
+    setConfirmMode(mode);
+    setConfirmVisible(true);
+  };
+
+  const confirmPost = async () => {
+    if (!user || !analysisId) return;
+    setPostBusy(true);
     const id = await shareToFeed(user.id, analysisId, analysis.score, analysis.scoreLabel, analysis.roast, analysis.summary);
+    setPostBusy(false);
     if (id) {
       setShared(true);
-      Alert.alert('Shared!', 'Your roast is now live in the Community Feed.', [{ text: 'OK' }]);
+      setConfirmVisible(false);
+      setPostToast('Posted to the Community Feed');
     } else {
       Alert.alert('Error', 'Failed to share to feed.');
     }
   };
 
-  // Posting to the public feed is attributable (your @handle) — confirm first.
-  const handleShareToFeed = () => {
+  const confirmUnpost = async () => {
     if (!user || !analysisId) return;
-    Alert.alert(
-      'Post to the Community Feed?',
-      'Your roast goes public under your @handle — other members can see it. (We never show your exact income or debts.)',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Post publicly', onPress: postToFeed },
-      ],
-    );
+    setPostBusy(true);
+    const ok = await unshareFromFeed(analysisId, user.id);
+    setPostBusy(false);
+    if (ok) {
+      setShared(false);
+      setConfirmVisible(false);
+      setPostToast('Removed from the feed');
+    } else {
+      Alert.alert('Error', 'Failed to remove from feed.');
+    }
   };
 
   // Deep Dive perk: export the full report as a shareable PDF (Save to Files / Mail / AirDrop).
@@ -304,10 +328,10 @@ export default function ResultsScreen({ navigation, route }: Props) {
             <IconAction Icon={ShareIcon} label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
             {!user ? (
               <IconAction Icon={ArrowRightOnRectangleIcon} label="Sign in" onPress={() => navigation.navigate('Login')} />
-            ) : !shared ? (
-              <IconAction Icon={GlobeAltIcon} label="Post" onPress={handleShareToFeed} />
+            ) : shared ? (
+              <IconAction Icon={CheckCircleIcon} label="Posted" tint={Colors.success} onPress={() => openConfirm('unpost')} />
             ) : (
-              <IconAction Icon={CheckCircleIcon} label="Posted" tint={Colors.success} onPress={() => navigation.navigate('MainTabs', { screen: 'Community' })} />
+              <IconAction Icon={GlobeAltIcon} label="Post" onPress={() => openConfirm('post')} />
             )}
             {user && (
               <IconAction Icon={CalendarIcon} label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
@@ -525,6 +549,25 @@ export default function ResultsScreen({ navigation, route }: Props) {
         message="Couldn't save this roast — sharing and your plan may be unavailable."
         duration={3500}
         onHide={() => setSaveFailed(false)}
+      />
+      <Toast
+        visible={!!postToast}
+        emoji="✅"
+        message={postToast ?? ''}
+        duration={2500}
+        onHide={() => setPostToast(null)}
+      />
+      <ConfirmSheet
+        visible={confirmVisible}
+        onClose={() => { setConfirmVisible(false); }}
+        title={confirmMode === 'unpost' ? 'Remove from the feed?' : 'Post to the Community Feed?'}
+        message={confirmMode === 'unpost'
+          ? 'Your roast and its reactions will be removed from the public feed. You can re-post anytime.'
+          : 'Your roast goes public under your @handle — other members can see it. (We never show your exact income or debts.)'}
+        confirmLabel={confirmMode === 'unpost' ? 'Remove' : 'Post publicly'}
+        destructive={confirmMode === 'unpost'}
+        loading={postBusy}
+        onConfirm={confirmMode === 'unpost' ? confirmUnpost : confirmPost}
       />
     </View>
   );

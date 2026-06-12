@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, useWindowDimensions, LayoutChangeEvent } from 'react-native';
 import ReAnimated, {
-  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, useAnimatedRef,
+  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, useAnimatedRef, useAnimatedKeyboard,
   withTiming, withSpring, runOnJS, clamp, Easing, useReducedMotion,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -19,33 +19,46 @@ interface Props {
   /** Called once the close animation finishes (or immediately under reduce-motion). */
   onClose: () => void;
   children: React.ReactNode;
-  /** Optional title rendered in the grabber header. */
+  /** Optional title rendered in the grabber header. Skip it when the content has its own heading. */
   title?: string;
-  /** Fraction of the screen height the sheet occupies (0–1). Default 0.85. */
+  /** Fraction of screen height: the fixed height when scrollable, else the max cap. Default 0.85. */
   heightFraction?: number;
   /** Wrap children in a scrollable body (default true). Set false for short, fixed content. */
   scrollable?: boolean;
+  /**
+   * Hug the content's height instead of filling `heightFraction` (capped at heightFraction).
+   * Defaults to true when `!scrollable` — short sheets (confirms, small pickers) shouldn't
+   * render as a tall, mostly-empty panel.
+   */
+  fitContent?: boolean;
 }
 
 /**
  * Reusable bottom sheet — slides up over a dimmed backdrop, with a drag-handle indicator,
  * tap-outside-to-close, and swipe-down-to-dismiss (velocity-aware). When `scrollable`, the
  * body owns a ScrollView and the sheet only drags down once the list is scrolled to the top
- * (so scrolling and dismissing don't fight). Honors reduce-motion (snaps, no slide).
+ * (so scrolling and dismissing don't fight). When `fitContent`, the sheet hugs its content
+ * (good for confirms/pickers). Lifts above the keyboard when an input inside it focuses.
+ * Honors reduce-motion (snaps, no slide).
  *
  * Mounting is self-managed: the parent toggles `visible`; the Modal stays alive through the
  * close animation, then `onClose` fires.
  */
 export default function BottomSheet({
-  visible, onClose, children, title, heightFraction = 0.85, scrollable = true,
+  visible, onClose, children, title, heightFraction = 0.85, scrollable = true, fitContent,
 }: Props) {
   const reduce = useReducedMotion();
   const insets = useSafeAreaInsets();
+  const keyboard = useAnimatedKeyboard();
   const { height: screenH } = useWindowDimensions();
-  const sheetH = Math.round(screenH * heightFraction);
+  const sheetH = Math.round(screenH * heightFraction); // fixed height (scrollable) or the max cap (fitContent)
+  const fit = fitContent ?? !scrollable;
 
   const [mounted, setMounted] = useState(false); // keeps the Modal alive through the exit animation
-  const translateY = useSharedValue(sheetH); // 0 = open, sheetH = fully off-screen (closed)
+  // `closeY` = how far down to translate to sit fully off-screen = the sheet's rendered height.
+  // Fixed height → sheetH; fit-content → measured via onLayout (seeded to screenH so it starts off-screen).
+  const closeY = useSharedValue(fit ? screenH : sheetH);
+  const translateY = useSharedValue(fit ? screenH : sheetH); // 0 = open, closeY = closed
   const scrollY = useSharedValue(0);
   const scrollRef = useAnimatedRef<ReAnimated.ScrollView>();
   const closingRef = useRef(false);
@@ -58,9 +71,9 @@ export default function BottomSheet({
   // Animate up once mounted.
   useEffect(() => {
     if (!mounted) return;
-    translateY.value = sheetH; // start below the screen
+    translateY.value = closeY.value; // start below the screen
     translateY.value = reduce ? 0 : withTiming(0, { duration: Durations.normal, easing: Easing.out(Easing.cubic) });
-  }, [mounted, reduce, sheetH]);
+  }, [mounted, reduce]);
 
   const finishClose = () => { setMounted(false); onClose(); };
 
@@ -69,7 +82,7 @@ export default function BottomSheet({
     if (closingRef.current) return;
     closingRef.current = true;
     if (reduce) { finishClose(); return; }
-    translateY.value = withTiming(sheetH, { duration: Durations.fast, easing: Easing.in(Easing.cubic) }, (done) => {
+    translateY.value = withTiming(closeY.value, { duration: Durations.fast, easing: Easing.in(Easing.cubic) }, (done) => {
       if (done) runOnJS(finishClose)();
     });
   };
@@ -78,6 +91,11 @@ export default function BottomSheet({
   useEffect(() => {
     if (!visible && mounted) close();
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Measure content height in fit mode so the close translate + backdrop math track the real height.
+  const onSheetLayout = (e: LayoutChangeEvent) => {
+    if (fit) closeY.value = e.nativeEvent.layout.height;
+  };
 
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
@@ -97,9 +115,9 @@ export default function BottomSheet({
     })
     .onEnd((e) => {
       'worklet';
-      const shouldClose = translateY.value > sheetH * CLOSE_DISTANCE_RATIO || e.velocityY > CLOSE_VELOCITY;
+      const shouldClose = translateY.value > closeY.value * CLOSE_DISTANCE_RATIO || e.velocityY > CLOSE_VELOCITY;
       if (shouldClose) {
-        translateY.value = withTiming(sheetH, { duration: Durations.fast, easing: Easing.in(Easing.cubic) }, (done) => {
+        translateY.value = withTiming(closeY.value, { duration: Durations.fast, easing: Easing.in(Easing.cubic) }, (done) => {
           if (done) runOnJS(finishClose)();
         });
       } else {
@@ -108,12 +126,28 @@ export default function BottomSheet({
     });
 
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: 1 - clamp(translateY.value / sheetH, 0, 1),
+    opacity: 1 - clamp(translateY.value / closeY.value, 0, 1),
   }));
-  // Clamp ≥ 0 so a spring settle can't lift the sheet above its rest position and reveal a gap.
+  // Clamp ≥ 0 so a spring settle can't lift the sheet above rest and reveal a gap; lift by the
+  // keyboard height so a focused input inside the sheet stays visible above the keyboard.
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: Math.max(0, translateY.value) }],
+    transform: [{ translateY: Math.max(0, translateY.value) - keyboard.height.value }],
   }));
+
+  const Body = scrollable ? (
+    <ReAnimated.ScrollView
+      ref={scrollRef}
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
+      bounces={false}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + Spacing.xxl }]}
+    >
+      {children}
+    </ReAnimated.ScrollView>
+  ) : (
+    <View style={[styles.body, { paddingBottom: insets.bottom + Spacing.xl }]}>{children}</View>
+  );
 
   return (
     <Modal transparent visible={mounted} animationType="none" onRequestClose={close} statusBarTranslucent>
@@ -124,32 +158,22 @@ export default function BottomSheet({
 
         {/* Outer wrapper carries the soft accent glow — it must NOT clip (no overflow:hidden),
             so the shadow can spill past the top edge. The inner sheet does the rounded-corner
-            clipping of the scroll content. */}
-        <ReAnimated.View style={[styles.sheetWrap, { height: sheetH }, sheetStyle]}>
-          <View style={styles.sheet}>
+            clipping of the content. */}
+        <ReAnimated.View
+          onLayout={onSheetLayout}
+          style={[styles.sheetWrap, fit ? { maxHeight: sheetH } : { height: sheetH }, sheetStyle]}
+        >
+          <View style={[styles.sheet, !fit && styles.fill]}>
             {/* One pan over the whole sheet: drives the sheet down only when the body is at the top
                 (gated in the worklet), so the grabber and an at-top content-drag both dismiss, while
                 mid-scroll drags stay with the ScrollView. */}
             <GestureDetector gesture={pan}>
-              <View style={styles.fill}>
+              <View style={!fit && styles.fill}>
                 <View style={styles.header}>
                   <View style={styles.handle} />
                   {title ? <Text style={styles.title}>{title}</Text> : null}
                 </View>
-                {scrollable ? (
-                  <ReAnimated.ScrollView
-                    ref={scrollRef}
-                    onScroll={scrollHandler}
-                    scrollEventThrottle={16}
-                    bounces={false}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + Spacing.xxl }]}
-                  >
-                    {children}
-                  </ReAnimated.ScrollView>
-                ) : (
-                  <View style={[styles.body, { paddingBottom: insets.bottom + Spacing.xl }]}>{children}</View>
-                )}
+                {Body}
               </View>
             </GestureDetector>
           </View>
@@ -175,7 +199,6 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   sheet: {
-    flex: 1,
     // Elevated surface — deliberately LIGHTER than the app background so the sheet reads as
     // floating above the dimmed backdrop (groupedBackground is darker and blended in).
     backgroundColor: Colors.backgroundTertiary,
