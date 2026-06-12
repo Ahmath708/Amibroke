@@ -16,7 +16,7 @@ const FAQS = [
   },
   {
     q: 'Is this actual financial advice?',
-    a: 'No. Am I Broke? is for educational and entertainment purposes only. It provides directional insights, not personalized financial advice. Always consult a licensed professional before making financial decisions.',
+    a: 'Yes — Am I Broke? gives you grounded, personalized guidance based on what you share, not generic platitudes. The one exception is regulated areas like investing, taxes, and legal matters, where it is not a substitute for a licensed professional. For everyday budgeting, debt, and savings, it is real, actionable direction.',
   },
   {
     q: 'How is my financial health score calculated?',

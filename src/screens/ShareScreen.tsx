@@ -5,6 +5,9 @@ import {
 import ReAnimated from 'react-native-reanimated';
 import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
+import NeonButton from '@/components/NeonButton';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { LinkIcon } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation } from '@react-navigation/native';
@@ -66,7 +69,7 @@ export default function ShareScreen({ route }: Props) {
     } catch { /* user cancelled */ }
   };
 
-  // Set header with back arrow
+  // Default native back chevron (consistent with every other pushed screen) — no custom headerLeft.
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
@@ -79,14 +82,6 @@ export default function ShareScreen({ route }: Props) {
       headerStyle: {
         backgroundColor: Colors.background,
       },
-      headerLeft: () => (
-        <PressableScale
-          onPress={() => navigation.goBack()}
-          style={{ padding: Spacing.xs, marginLeft: 8 }}
-        >
-          <Text style={{ fontSize: 24, color: Colors.accent, fontWeight: '300' }}>‹</Text>
-        </PressableScale>
-      ),
     });
   }, [navigation]);
 
@@ -110,19 +105,21 @@ export default function ShareScreen({ route }: Props) {
     }
   };
 
-  const handleCopyLink = () => {
-    Alert.alert('Link Copied', `Share this link: ${BRAND.domain}`);
+  // No clipboard module installed → share the link (the share sheet's "Copy" handles a true copy).
+  const handleCopyLink = async () => {
+    try { await Share.share({ message: BRAND.domain }); } catch { /* cancelled */ }
   };
 
+  const ICON = 24;
   const PLATFORMS = [
-    { name: 'TikTok', emoji: '📱', color: '#010101', action: handleShare },
-    { name: 'Instagram', emoji: '📸', color: '#E1306C', action: handleShare },
-    { name: 'Twitter/X', emoji: '🐦', color: '#1DA1F2', action: handleShare },
-    { name: 'Copy Link', emoji: '🔗', color: Colors.accentSolid, action: handleCopyLink },
+    { name: 'TikTok', icon: <FontAwesome6 name="tiktok" size={ICON} color={Colors.textPrimary} />, action: handleExportPNG },
+    { name: 'Instagram', icon: <FontAwesome6 name="instagram" size={ICON} color={Colors.textPrimary} />, action: handleExportPNG },
+    { name: 'X', icon: <FontAwesome6 name="x-twitter" size={ICON} color={Colors.textPrimary} />, action: handleExportPNG },
+    { name: 'Copy Link', icon: <LinkIcon size={ICON} color={Colors.textPrimary} />, action: handleCopyLink },
   ];
 
   const band = getScoreBand(analysis.score);
-  // Short roast → quote it on the card; long roast → the card stands alone (full roast is the caption).
+  // Short roast → quote it on the (square) card; the tall card prints the full roast below it.
   const roast = analysis.roast ?? '';
   const firstSentence = roast.split(/(?<=[.!?])\s/)[0] ?? roast;
   const hook = roast.length <= 100 ? roast : firstSentence.length <= 100 ? firstSentence : undefined;
@@ -167,23 +164,30 @@ export default function ShareScreen({ route }: Props) {
               bandLabel={band.label}
               bandColor={band.color}
               dateStr={dateStr}
-              hook={hook}
+              hook={format === 'tall' ? undefined : hook}
               animated={false}
             />
-            <Text style={styles.frameFooter}>{BRAND.domain} · educational only</Text>
+            {/* Tall (TikTok) format gets the full roast as the hero below the card; square stays compact. */}
+            {format === 'tall' && roast ? (
+              <View style={styles.roastBlock}>
+                <Text style={styles.roastQuote} numberOfLines={8}>“{roast}”</Text>
+                {analysis.emotionalStatus?.label ? (
+                  <Text style={styles.roastMood}>{analysis.emotionalStatus.emoji} {analysis.emotionalStatus.label}</Text>
+                ) : null}
+              </View>
+            ) : null}
+            <Text style={styles.frameFooter}>{BRAND.domain}</Text>
           </View>
         </ViewShot>
 
-        {/* Export as PNG */}
-        <PressableScale
-          style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
+        {/* Export as PNG — primary action: capture the card + open the share sheet */}
+        <NeonButton
+          label={exporting ? 'Generating…' : 'Export as PNG'}
           onPress={handleExportPNG}
-          disabled={exporting}
-        >
-          <Text style={styles.exportBtnText}>
-            {exporting ? '📸 Generating...' : '📸 Export as PNG'}
-          </Text>
-        </PressableScale>
+          loading={exporting}
+          variant="primary"
+          style={{ marginBottom: Spacing.xl }}
+        />
 
         {/* Share platforms */}
         <SectionLabel>Share To</SectionLabel>
@@ -194,7 +198,7 @@ export default function ShareScreen({ route }: Props) {
               style={styles.platformBtn}
               onPress={p.action}
             >
-              <Text style={styles.platformEmoji}>{p.emoji}</Text>
+              {p.icon}
               <Text style={styles.platformName}>{p.name}</Text>
             </PressableScale>
           ))}
@@ -234,9 +238,7 @@ export default function ShareScreen({ route }: Props) {
           </View>
         )}
 
-        <PressableScale style={styles.nativeShareBtn} onPress={handleShare}>
-          <Text style={styles.nativeShareText}>📤  Share with Other Apps</Text>
-        </PressableScale>
+        <NeonButton label="Share with Other Apps" onPress={handleShare} variant="secondary" />
       </ScrollView>
     </ReAnimated.View>
   );
@@ -259,27 +261,17 @@ const styles = StyleSheet.create({
   frameTall: { aspectRatio: 9 / 16, width: '100%' },
   frameSquare: { aspectRatio: 1, width: '100%' },
   frameFooter: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textAlign: 'center' },
-  exportBtn: {
-    backgroundColor: Colors.accentContainer, borderRadius: Radius.xl,
-    paddingVertical: Spacing.lg, alignItems: 'center', marginBottom: Spacing.xl,
-    borderWidth: 1.5, borderColor: Colors.glassBorderLight,
-  },
-  exportBtnDisabled: { opacity: 0.5 },
-  exportBtnText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent, fontWeight: '600' },
+  // Tall-card roast hero — the full roast as a big quote, with the mood tag.
+  roastBlock: { gap: Spacing.sm, paddingHorizontal: Spacing.xs },
+  roastQuote: { fontFamily: Typography.fonts.body, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontStyle: 'italic', lineHeight: 28, textAlign: 'center' },
+  roastMood: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent, textAlign: 'center' },
   platformGrid: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xxl },
   platformBtn: {
     flex: 1, backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.lg, padding: Spacing.md, alignItems: 'center', gap: Spacing.xs,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  platformEmoji: { fontSize: 24 },
   platformName: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, textAlign: 'center' },
-  nativeShareBtn: {
-    backgroundColor: Colors.accentContainer, borderRadius: Radius.xl,
-    paddingVertical: Spacing.lg, alignItems: 'center',
-    borderWidth: 1.5, borderColor: Colors.glassBorderLight,
-  },
-  nativeShareText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.accent, fontWeight: '600' },
   captionsLoadingBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl },
   captionsLoadingText: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textMuted },
   captionRetryBtn: { backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight },

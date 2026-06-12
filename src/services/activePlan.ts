@@ -11,6 +11,7 @@ import { revisePlanPatch } from './ai';
 import { applyPatch } from '@shared/planRevision';
 import type { ActionStep, RoastTone } from '@/types';
 import type { FinalAnalysis } from '@shared/types';
+import { personaFirst, debtTotal } from '@/__fixtures__/demoPersona';
 
 export type StepStatus = 'pending' | 'done' | 'skipped';
 
@@ -115,22 +116,33 @@ function metricsFromAnalysis(a: FinalAnalysis): PlanStartMetrics {
 // ─── CRUD ───────────────────────────────────────────────────────────────────
 // Dev-only in-memory store (resets on reload) so the flow works without the table. Seeded with a
 // sample ACTIVE plan so mock mode shows an existing tracked plan (not the "Create my plan" CTA).
+// Seeded from the persona's Apr-12 low point (the roast the plan was built from). 3 of 5 steps done
+// through May — the card-payoff step completed the day of the ci-2 check-in. synced = start, so the
+// plan reads "stale" vs the Jun-1 snapshot (the big progress) → the Dashboard's Update nudge.
+const PLAN_START = personaFirst();
+const PLAN_START_METRICS = {
+  debtTotal: debtTotal(PLAN_START),
+  liquidSavings: PLAN_START.savings,
+  monthlyIncome: PLAN_START.income,
+  monthlySavings: PLAN_START.income - PLAN_START.expenses,
+  score: PLAN_START.score,
+};
 let mockPlan: ActivePlan | null = {
   id: 'mock-active-plan',
-  source_analysis_id: 'mock-1',
-  started_at: '2026-06-01T00:00:00.000Z',
+  source_analysis_id: PLAN_START.id,
+  started_at: PLAN_START.date,
   horizon_days: 90,
   status: 'active',
   overall_message: 'Three months to turn the leaks into a cushion — small, repeatable wins, not heroics.',
   steps: [
-    { id: 's0', week: 'Week 1', title: 'Subscription purge', description: "Cancel every subscription you haven't used in 30 days. No mercy.", impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-06-03T00:00:00.000Z' },
-    { id: 's1', week: 'Week 2', title: 'Automate savings', description: 'Set a recurring transfer on payday so savings happen before you can spend.', impact: 'Builds the cushion', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-06-08T00:00:00.000Z' },
-    { id: 's2', week: 'Weeks 3-4', title: 'Credit card minimum+', description: 'Pay minimums on all cards plus $50 extra on the highest-rate one.', impact: 'Cuts interest', category: 'debt', confidence: 'medium', status: 'pending', completed_at: null },
-    { id: 's3', week: 'Weeks 5-8', title: 'Negotiate a bill', description: 'Call your internet, phone, or insurance and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium', status: 'pending', completed_at: null },
-    { id: 's4', week: 'Weeks 9-12', title: '30-day review', description: 'Run a new roast and compare to your starting score.', impact: 'Accountability boost', category: 'mindset', confidence: 'high', status: 'pending', completed_at: null },
+    { id: 's0', week: 'Week 1', title: 'Subscription purge', description: "Cancel every subscription you haven't touched in 30 days. No mercy.", impact: 'Saves $80–200/mo', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-04-18T00:00:00.000Z' },
+    { id: 's1', week: 'Week 2', title: 'Automate savings', description: 'Recurring transfer on payday so savings happen before you can spend it.', impact: 'Builds the cushion', category: 'savings', confidence: 'high', status: 'done', completed_at: '2026-04-25T00:00:00.000Z' },
+    { id: 's2', week: 'Weeks 3-6', title: 'Kill the Capital One card', description: 'Throw every spare dollar at the 25% card until the balance hits $0.', impact: 'Ends ~$87/mo in interest', category: 'debt', confidence: 'high', status: 'done', completed_at: '2026-05-20T00:00:00.000Z' },
+    { id: 's3', week: 'Weeks 7-9', title: 'Negotiate a bill', description: 'Call your phone, internet, or insurance and ask for a better rate.', impact: 'Saves $30–80/mo', category: 'savings', confidence: 'medium', status: 'pending', completed_at: null },
+    { id: 's4', week: 'Weeks 10-12', title: '30-day re-roast', description: 'Run a fresh roast and compare to your April starting score.', impact: 'Accountability boost', category: 'mindset', confidence: 'high', status: 'pending', completed_at: null },
   ],
-  start_metrics: { debtTotal: 7200, liquidSavings: 0, monthlyIncome: 4800, monthlySavings: -150, score: 37 },
-  synced_metrics: { debtTotal: 7200, liquidSavings: 0, monthlyIncome: 4800, monthlySavings: -150, score: 37 },
+  start_metrics: PLAN_START_METRICS,
+  synced_metrics: PLAN_START_METRICS,
 };
 
 export async function getActivePlan(userId: string): Promise<ActivePlan | null> {

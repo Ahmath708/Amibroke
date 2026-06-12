@@ -6,7 +6,7 @@ export default function Disclaimer({ style }: { style?: any }) {
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.text}>
-        ⚠️ This app is for educational and entertainment purposes only and does not constitute financial advice. Always consult a qualified financial professional for personalized guidance.
+        Personalized guidance based on what you share — not a substitute for a licensed professional on investments, taxes, or legal decisions.
       </Text>
     </View>
   );

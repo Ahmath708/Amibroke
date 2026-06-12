@@ -144,7 +144,6 @@ export type RootStackParamList = {
   DebtPayoff: undefined; // reads the unified snapshot (Phase 3 — no per-roast param hand-off)
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
-  AllAnalyses: undefined;
   FinancialContext: undefined;
   Settings: undefined;
   EditProfile: undefined;

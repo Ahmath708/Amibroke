@@ -1,101 +1,174 @@
 import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
 import type { FinalAnalysis, ActionPlanResponse, CaptionResponse } from '@shared/types';
+import { getScoreBand } from '@shared/scoring/bands.ts';
+import { personaLatest, debtTotal, emojiFor, type PersonaPoint } from './demoPersona';
 
+// Shared deep fields that don't vary meaningfully per roast (the score + figures carry the story).
+const CFPB_TEMPLATE = [
+  { value: 1, confidence: 'high' }, { value: 2, confidence: 'medium' }, { value: 3, confidence: 'high' },
+  { value: 2, confidence: 'medium' }, { value: 3, confidence: 'high' }, { value: 3, confidence: 'medium' },
+  { value: 2, confidence: 'low' }, { value: 1, confidence: 'high' }, { value: 2, confidence: 'medium' },
+  { value: 3, confidence: 'high' },
+];
+const SPENDING_TEMPLATE = [
+  { category: 'Groceries', amount: 420, source: 'user_stated' },
+  { category: 'Dining out', amount: 180, source: 'user_stated' },
+  { category: 'Gas', amount: 160, source: 'user_stated' },
+  { category: 'Car insurance', amount: 165, source: 'user_stated' },
+];
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const urgencyFor = (apr: number): 'high' | 'medium' | 'low' => (apr >= 20 ? 'high' : apr >= 5 ? 'medium' : 'low');
+const minPayment = (balance: number, apr: number) => (apr === 0 ? 50 : Math.max(25, Math.round(balance * 0.025)));
+
+function roastByTier(score: number): string {
+  if (score >= 78) return "Bestie, who let you become responsible? Card in the ground, savings actually growing — respectfully, the algorithm fumbled serving you a finance-roast app.";
+  if (score >= 65) return "Momentum's real — the debt's shrinking and a buffer's forming. Don't get cocky, but yeah, maybe smile a little.";
+  if (score >= 50) return "Head's above water now. Every extra dollar you throw at the highest-rate balance is one that stops haunting you at 2am.";
+  return "It's rough — spending's outrunning income and the card is the pressure valve. But you're here, looking at the numbers. That's step one and most people skip it.";
+}
+
+/** Build a coherent FinalAnalysis for a persona point — figures from the point, qualitative text kept
+ *  generic so it never contradicts (the latest point returns the hand-authored SAMPLE_ANALYSIS). */
+export function pointToAnalysis(p: PersonaPoint): FinalAnalysis {
+  if (p.id === personaLatest().id) return SAMPLE_ANALYSIS;
+  const band = getScoreBand(p.score);
+  const debt = debtTotal(p);
+  const monthlySavings = p.income - p.expenses;
+  const debts = p.debts.map((d) => ({
+    name: d.name, balance: d.balance, interestRate: round2(d.apr) / 100,
+    minimumPayment: minPayment(d.balance, d.apr), urgency: urgencyFor(d.apr),
+  }));
+  const biggest = [...p.debts].sort((a, b) => b.balance - a.balance)[0];
+  const hasCard = p.debts.some((d) => d.apr >= 20);
+  return FinalAnalysisSchema.parse({
+    monthlyIncome: { value: p.income, confidence: 'high' },
+    monthlyExpenses: { value: p.expenses, confidence: 'high' },
+    liquidSavings: { value: p.savings, confidence: 'medium' },
+    debts,
+    cfpb_responses: CFPB_TEMPLATE,
+    scoreModifier: 0,
+    scoreModifierReason: '',
+    summary: p.note ?? `${band.label}. $${debt.toLocaleString()} in debt, $${p.savings.toLocaleString()} saved.`,
+    roast: roastByTier(p.score),
+    insights: [
+      `Your savings rate is about ${Math.round((monthlySavings / p.income) * 100)}% this month.`,
+      `You're carrying $${debt.toLocaleString()} across ${p.debts.length} account${p.debts.length > 1 ? 's' : ''}.`,
+      hasCard
+        ? `The ${biggest.name} at ${biggest.apr}% APR is the one bleeding you — kill it first.`
+        : `The ${biggest.name} at ${biggest.apr}% is your last real debt — steady payments end it.`,
+    ],
+    topProblems: [
+      hasCard
+        ? `$${biggest.balance.toLocaleString()} on the ${biggest.name} at ${biggest.apr}% APR compounds faster than minimums clear it.`
+        : `The $${biggest.balance.toLocaleString()} ${biggest.name} is the last meaningful debt to clear.`,
+      p.savings < p.expenses
+        ? `Savings of $${p.savings.toLocaleString()} is under a month of expenses — thin if something breaks.`
+        : `Your buffer is forming but isn't a full emergency fund yet.`,
+    ],
+    positiveBehaviors: [
+      'Consistent income and steady fixed costs — no mystery spending.',
+      monthlySavings > 0 ? "You're running a real monthly surplus now." : "You're facing the whole picture honestly — that's the start.",
+    ],
+    topFix: {
+      action: hasCard
+        ? `Throw every spare dollar at the ${biggest.name} until it's gone — it's the most expensive money you owe.`
+        : 'Keep the freed-up card payment flowing to savings until you have one full month of expenses parked.',
+      monthlyImpact: 200,
+    },
+    emotionalStatus: { label: band.label, emoji: emojiFor(p.score) },
+    mentionedSpending: SPENDING_TEMPLATE,
+    score: p.score,
+    scoreLabel: band.label,
+    scoreColor: band.color,
+    monthlySavings,
+    savingsRate: p.income ? round2(monthlySavings / p.income) : 0,
+    debtTotal: debt,
+    monthlyDebtService: debts.reduce((s, d) => s + d.minimumPayment, 0),
+    emergencyFundMonths: p.expenses ? round2(p.savings / p.expenses) : 0,
+    debtToIncomeRatio: p.income ? round2(debt / (p.income * 12)) : 0,
+    avgConfidence: 0.8,
+  });
+}
+
+// The current state (Jun 1, score 80) — Jason's latest roast. Hand-authored so the most-shown roast is
+// punchy + specific; everything else (snapshot, money trend, captions) lines up with these figures.
 export const SAMPLE_ANALYSIS: FinalAnalysis = FinalAnalysisSchema.parse({
-  monthlyIncome: { value: 4800, confidence: 'high' },
-  monthlyExpenses: { value: 4100, confidence: 'medium' },
-  liquidSavings: { value: 1200, confidence: 'high' },
+  monthlyIncome: { value: 5000, confidence: 'high' },
+  monthlyExpenses: { value: 3700, confidence: 'high' },
+  liquidSavings: { value: 2600, confidence: 'high' },
   debts: [
-    { name: 'Capital One Credit Card', balance: 4200, interestRate: 0.2499, minimumPayment: 126, urgency: 'high' },
-    { name: 'Car Loan', balance: 11500, interestRate: 0.079, minimumPayment: 310, urgency: 'medium' },
-    { name: 'Medical Bill', balance: 800, interestRate: 0, minimumPayment: 50, urgency: 'low' },
+    { name: 'Car Loan', balance: 9800, interestRate: 0.079, minimumPayment: 310, urgency: 'medium' },
   ],
-  cfpb_responses: [
-    { value: 0, confidence: 'high' },
-    { value: 1, confidence: 'medium' },
-    { value: 3, confidence: 'high' },
-    { value: 1, confidence: 'medium' },
-    { value: 3, confidence: 'high' },
-    { value: 3, confidence: 'medium' },
-    { value: 2, confidence: 'low' },
-    { value: 0, confidence: 'high' },
-    { value: 2, confidence: 'medium' },
-    { value: 3, confidence: 'high' },
-  ],
-  scoreModifier: -2,
-  scoreModifierReason: 'Gig-economy income is variable with no buffer against gaps.',
-  summary: 'You are treading water with $700/mo surplus but carrying $4,200 in credit card debt at 25% APR that is silently compounding. Between the car loan and medical bill, almost half your monthly surplus goes to minimum payments before you touch the high-rate card. The next 90 days are about stopping the bleed on the card before it consumes your entire wiggle room.',
-  roast: 'Bestie, you are literally paying $87 a month in credit card interest just to keep the door open. That\'s a streaming bundle, a pizza night, and half a pedicure — up in smoke, every single month, for the privilege of being in debt.',
+  cfpb_responses: CFPB_TEMPLATE,
+  scoreModifier: 0,
+  scoreModifierReason: '',
+  summary: 'The card is gone, savings are real, and you are finally ahead of your bills instead of chasing them. The $9,800 car loan is the last boss — and at 7.9% it is very beatable. The next move is turning the freed-up card payment into a full emergency fund.',
+  roast: "Bestie, who let you get responsible? Capital One card in the ground, an emergency fund forming, and you actually saved this month. Respectfully — the algorithm fumbled serving a finance-roast app to someone winning this hard.",
   insights: [
-    'Your credit card costs roughly $87/mo in interest — that\'s 17% of your monthly surplus gone before you do anything.',
-    'With only $1,200 in savings, one car repair wipes out half your buffer and sends you back to the card.',
-    'Your monthly debt minimums ($486) eat 69% of your surplus ($700), leaving just $214/mo for extra progress.',
-    'Your savings rate of 4.2% is well below the 20% guideline, but the debt drag makes it hard to fix.',
+    'You killed the Capital One card — that is roughly $87/mo in interest you no longer set on fire.',
+    'Savings of $2,600 is a real buffer now: about three weeks of expenses, climbing toward a full month.',
+    'With the card gone, the car loan at 7.9% is the only meaningful debt left — steady payments retire it.',
   ],
   topProblems: [
-    '$4,200 credit card balance at 25% APR growing faster than you can pay it down with minimums only.',
-    'Savings of $1,200 is only 9 days of expenses — well below the 3-month emergency target.',
+    'The $9,800 car loan is the last debt standing — not urgent at 7.9%, but the final step to debt-free.',
+    'Savings is building but still under a full month of expenses, so a big surprise could still sting.',
   ],
   positiveBehaviors: [
-    'You have a reliable income and your fixed expenses are consistent — no mystery spending.',
-    'Acknowledging the full picture including the medical bill is a sign of financial maturity.',
+    'You paid off a 25% APR card — the single highest-return money move available to anyone.',
+    'Spending is down and savings are automated. The hard part is genuinely behind you.',
   ],
   topFix: {
-    action: 'Put every dollar above $1,000 in savings toward the credit card until it\'s below $2,000 — roughly 5 months at $200/mo extra, saves about $420 in interest.',
-    monthlyImpact: 200,
+    action: 'Keep the old $326 card payment flowing into savings until you have one full month of expenses (~$3,700) parked, then split it between the buffer and the car loan.',
+    monthlyImpact: 326,
   },
-  emotionalStatus: { label: 'Treading but not drowning', emoji: '😬' },
-  mentionedSpending: [
-    { category: 'Car insurance', amount: 165, source: 'user_stated' },
-    { category: 'Gas', amount: 180, source: 'user_stated' },
-    { category: 'Groceries', amount: 420, source: 'user_stated' },
-    { category: 'Dining out', amount: 240, source: 'user_stated' },
-  ],
-  score: 55,
-  scoreLabel: 'Surviving',
-  scoreColor: '#FF6B00',
-  monthlySavings: 200,
-  savingsRate: 0.042,
-  debtTotal: 16500,
-  monthlyDebtService: 486,
-  emergencyFundMonths: 0.29,
-  debtToIncomeRatio: 0.34,
-  avgConfidence: 0.73,
+  emotionalStatus: { label: getScoreBand(80).label, emoji: emojiFor(80) },
+  mentionedSpending: SPENDING_TEMPLATE,
+  score: 80,
+  scoreLabel: getScoreBand(80).label,
+  scoreColor: getScoreBand(80).color,
+  monthlySavings: 1300,
+  savingsRate: 0.26,
+  debtTotal: 9800,
+  monthlyDebtService: 310,
+  emergencyFundMonths: 0.7,
+  debtToIncomeRatio: 0.16,
+  avgConfidence: 0.85,
 });
 
 export const SAMPLE_ACTION_PLAN: ActionPlanResponse = ActionPlanResponseSchema.parse({
-  overallMessage: 'You have income, a clear big problem (the credit card), and a small but real surplus. The first month is about creating a buffer so life stops resetting your progress; the rest is about momentum. You can absolutely do this.',
+  overallMessage: 'The expensive debt is dead and you are saving — now the job is turning this momentum into a real cushion and closing out the car loan. Steady beats heroic.',
   steps: [
     {
       week: 'Week 1',
-      title: 'Stop the $87/mo leak',
-      description: 'Put $200 extra toward the Capital One card on top of the $126 minimum. $326 total/month. Set up the auto-pay on payday so you never see the money.',
-      category: 'debt',
-      impact: 'Saves roughly $87/mo in interest that would otherwise go to the bank instead of your future.',
+      title: 'Redirect the old card payment',
+      description: 'You freed up ~$326/mo when the Capital One card died. Auto-transfer it to savings on payday so it never touches your checking.',
+      category: 'savings',
+      impact: 'Turns a debt payment into ~$326/mo of cushion without feeling a thing.',
       confidence: 'high',
     },
     {
-      week: 'Weeks 2-3',
-      title: 'Trim variable spending by $100/mo',
-      description: 'You\'re spending $240/mo on dining out. Cut it to $140 — eat in 2 more dinners per week. Put the $100 saved toward the credit card on top of the $200 extra.',
+      week: 'Weeks 2-4',
+      title: 'Hit a one-month emergency fund',
+      description: 'Keep the auto-transfer running until savings reach one full month of expenses (~$3,700). Park it somewhere boring you will not touch.',
       category: 'savings',
-      impact: 'Brings total extra card payment to $300/mo and saves an additional $22/mo in interest.',
-      confidence: 'medium',
+      impact: 'A full month of expenses means the next surprise goes to savings, not a new card.',
+      confidence: 'high',
     },
     {
-      week: 'Weeks 4-6',
-      title: 'Build a $1,000 mini emergency fund',
-      description: 'Once the card drops below $3,000, redirect the $300 extra to savings until you hit $1,000. Keep paying minimums on everything.',
-      category: 'savings',
-      impact: 'A $1,000 buffer means the next car repair or medical bill goes to savings, not back onto the card.',
-      confidence: 'medium',
-    },
-    {
-      week: 'Weeks 7-10',
-      title: 'Resume the debt avalanche',
-      description: 'After the mini fund is full, put the full $300 extra back toward the credit card. Once the card hits $0, roll that $426 total freed-up cash to the car loan.',
+      week: 'Weeks 5-8',
+      title: 'Throw extra at the car loan',
+      description: 'Once the buffer is full, split the $326: half stays in savings, half goes on top of the car-loan minimum.',
       category: 'debt',
-      impact: 'Credit card debt-free in about 9 months from now, saving roughly $390 in total interest.',
+      impact: 'Knocks months off the 7.9% car loan and the interest that rides with it.',
+      confidence: 'medium',
+    },
+    {
+      week: 'Weeks 9-12',
+      title: '30-day re-roast',
+      description: 'Run a fresh roast and compare to where you started in April. Lock in the habits that moved the score.',
+      category: 'mindset',
+      impact: 'Accountability + proof the system works keeps the streak alive.',
       confidence: 'high',
     },
   ],
@@ -103,8 +176,8 @@ export const SAMPLE_ACTION_PLAN: ActionPlanResponse = ActionPlanResponseSchema.p
 
 export const SAMPLE_CAPTIONS: CaptionResponse = CaptionResponseSchema.parse({
   captions: [
-    'Scored 55/100 on Am I Broke? — "Surviving." $4,200 in credit card debt at 25% APR. Check yours at aibroke.app',
-    'Paying $87/mo in credit card interest for the privilege of being in debt 💀 Am I Broke? gave me a 55. aibroke.app',
-    '"Surviving" with $700/mo surplus but $486/mo in minimums. The math is not mathing. aibroke.app',
+    'Went from 42 to 80 on Am I Broke? in three months — paid off the card, built a real cushion. aibroke.app',
+    'Killed a 25% APR credit card and my score hit 80 💪 The glow-up is real. Am I Broke? — aibroke.app',
+    'From "paycheck to paycheck" to actually saving. 80/100 and climbing. Check yours at aibroke.app',
   ],
 });

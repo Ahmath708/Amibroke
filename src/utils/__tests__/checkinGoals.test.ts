@@ -2,20 +2,23 @@ import {
   goalCandidatesFromAnalysis, goalProgress, formatGoalValue,
   metricGoalId, debtGoalId, METRIC_META, computeGoalCurrent, CheckinBase,
 } from '../checkinGoals';
-import { SAMPLE_ANALYSIS } from '@/__fixtures__/sampleAnalysis';
+import { pointToAnalysis } from '@/__fixtures__/sampleAnalysis';
+import { personaFirst } from '@/__fixtures__/demoPersona';
 import type { TrackedGoal } from '@/types';
 
 describe('goalCandidatesFromAnalysis', () => {
-  const goals = goalCandidatesFromAnalysis(SAMPLE_ANALYSIS, { analysisId: 'a1', date: '2026-04-12T00:00:00' });
+  // Apr-12 low point — the multi-debt analysis (Capital One card + car + medical) the goals seed from.
+  const analysis = pointToAnalysis(personaFirst());
+  const goals = goalCandidatesFromAnalysis(analysis, { analysisId: 'a1', date: '2026-04-12T00:00:00' });
 
   it('produces one goal per metric plus one per debt', () => {
     const metricCount = Object.keys(METRIC_META).length;
-    expect(goals).toHaveLength(metricCount + SAMPLE_ANALYSIS.debts.length);
+    expect(goals).toHaveLength(metricCount + analysis.debts.length);
   });
 
   it('captures metric baselines from the analysis', () => {
     const debtTotal = goals.find((g) => g.id === metricGoalId('debtTotal'))!;
-    expect(debtTotal.baseline).toBe(SAMPLE_ANALYSIS.debtTotal);
+    expect(debtTotal.baseline).toBe(analysis.debtTotal);
     expect(debtTotal.direction).toBe('down');
     expect(debtTotal.target).toBe(0);
   });

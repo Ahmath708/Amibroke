@@ -5,17 +5,15 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, useReducedMotio
 import * as Haptics from 'expo-haptics';
 import {
   HomeIcon as HomeOutline,
-  Squares2X2Icon as ToolsOutline,
+  CurrencyDollarIcon as ToolsOutline,
   UserGroupIcon as CommunityOutline,
   UserIcon as ProfileOutline,
-  FireIcon as FireOutline,
 } from 'react-native-heroicons/outline';
 import {
   HomeIcon as HomeSolid,
-  Squares2X2Icon as ToolsSolid,
+  CurrencyDollarIcon as ToolsSolid,
   UserGroupIcon as CommunitySolid,
   UserIcon as ProfileSolid,
-  FireIcon as FireSolid,
 } from 'react-native-heroicons/solid';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -41,6 +39,7 @@ import DebtPayoffScreen from '@/screens/DebtPayoffScreen';
 import ShareScreen from '@/screens/ShareScreen';
 import PaywallScreen from '@/screens/PaywallScreen';
 import TrendScreen from '@/screens/TrendScreen';
+import RoastIcon from '@/components/RoastIcon';
 import ProfileScreen from '@/screens/ProfileScreen';
 import CommunityFeedScreen from '@/screens/CommunityFeedScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
@@ -49,7 +48,6 @@ import NotificationsScreen from '@/screens/NotificationsScreen';
 import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
-import AllAnalysesScreen from '@/screens/AllAnalysesScreen';
 import FinancialContextScreen from '@/screens/FinancialContextScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
@@ -79,7 +77,7 @@ const sheetModal = {
 const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: React.ComponentType<any> }> = {
   Home:      { active: HomeSolid,      inactive: HomeOutline },
   Tools:     { active: ToolsSolid,     inactive: ToolsOutline },
-  Roast:     { active: FireSolid,      inactive: FireOutline },
+  Roast:     { active: RoastIcon,   inactive: RoastIcon },
   Community: { active: CommunitySolid, inactive: CommunityOutline },
   Profile:   { active: ProfileSolid,   inactive: ProfileOutline },
 };
@@ -242,7 +240,7 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
             <Stack.Screen name="Analyze" component={RoastComposerScreen} options={{ ...sharedHeader, headerShown: true, title: 'New Roast', animation: 'slide_from_right' }} />
-            <Stack.Screen name="History" component={TrendScreen} options={{ ...sharedHeader, headerShown: true, title: 'Trend', animation: 'slide_from_right' }} />
+            <Stack.Screen name="History" component={TrendScreen} options={{ ...sharedHeader, headerShown: true, title: 'History', animation: 'slide_from_right' }} />
             <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
             <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', animation: 'slide_from_right' }} />
@@ -254,7 +252,6 @@ export default function AppNavigator() {
             <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
             <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
             <Stack.Screen name="SubscriptionAudit" component={SubscriptionAuditScreen} options={{ ...sharedHeader, headerShown: true, title: 'Subscriptions', animation: 'slide_from_right' }} />
-            <Stack.Screen name="AllAnalyses" component={AllAnalysesScreen} options={{ ...sharedHeader, headerShown: true, title: 'All Roasts', animation: 'slide_from_right' }} />
             <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} options={{ ...sharedHeader, headerShown: true, title: 'Creator Dashboard', animation: 'slide_from_right' }} />
             {/* Card (slide-up), NOT a formSheet: ShareScreen is long + scrollable, and a formSheet
                 only defers scroll to a ScrollView that's the screen's FIRST child — ours is

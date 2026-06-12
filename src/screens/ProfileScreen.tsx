@@ -21,7 +21,6 @@ import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile';
-import { getAnalysisHistory } from '@/services/analyses';
 import { manageSubscriptions } from '@/services/purchases';
 import { useSubscription } from '@/hooks/useSubscription';
 import { FEATURES } from '@/config/features';
@@ -44,9 +43,6 @@ export default function ProfileScreen({ navigation }: Props) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [analysisCount, setAnalysisCount] = useState(0);
-  const [bestScore, setBestScore] = useState<number | null>(null);
-  const [avgScore, setAvgScore] = useState<number | null>(null);
   const firstLoad = useRef(true); // gate the full-screen loader to the first load only
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -62,10 +58,7 @@ export default function ProfileScreen({ navigation }: Props) {
     if (!silent) setLoading(true); // silent refetches (focus) keep content mounted — no flash, scroll preserved
     setError(null);
     try {
-      const [profile, history] = await Promise.all([
-        getProfile(user.id),
-        getAnalysisHistory(user.id),
-      ]);
+      const profile = await getProfile(user.id);
       if (profile) {
         setUserName(profile.username || '');
         setFirstName(profile.first_name || '');
@@ -74,15 +67,6 @@ export default function ProfileScreen({ navigation }: Props) {
       } else {
         // Fallback if profile row doesn't exist yet
         setUserName(user.email?.split('@')[0] || 'user');
-      }
-      if (history && history.length > 0) {
-        setAnalysisCount(history.length);
-        setBestScore(Math.max(...history.map((h) => h.score)));
-        setAvgScore(Math.round(history.reduce((s, h) => s + h.score, 0) / history.length));
-      } else {
-        setAnalysisCount(0);
-        setBestScore(null);
-        setAvgScore(null);
       }
     } catch {
       setError('Failed to load profile.');
@@ -183,7 +167,7 @@ export default function ProfileScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Large title */}
-        <Text style={styles.largeTitle}>Profile</Text>
+        <Text style={styles.largeTitle}>Your Profile</Text>
 
         {/* Hero — identity + stats in one glowing card; pencil = edit profile */}
         <View style={styles.hero}>
@@ -224,6 +208,7 @@ export default function ProfileScreen({ navigation }: Props) {
                   <Text style={fullName ? styles.username : styles.fullName}>{userName ? `@${userName}` : user?.email || 'Guest'}</Text>
                 </PressableScale>
               )}
+              {user && <View style={styles.heroTier}><TierPill tier={purchaseTier} size="md" /></View>}
             </View>
             {user && (
               <PressableScale onPress={() => navigation.navigate('EditProfile')} style={styles.heroEdit} accessibilityLabel="Edit profile">
@@ -231,23 +216,6 @@ export default function ProfileScreen({ navigation }: Props) {
               </PressableScale>
             )}
           </View>
-          {user && (
-            <View style={styles.heroStats}>
-              {[
-                { label: 'Roasts', value: String(analysisCount) },
-                { label: 'Avg Score', value: avgScore != null ? String(avgScore) : '—' },
-                { label: 'Best Score', value: bestScore != null ? String(bestScore) : '—' },
-              ].map((s, i, arr) => (
-                <React.Fragment key={s.label}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{s.value}</Text>
-                    <Text style={styles.statLabel}>{s.label}</Text>
-                  </View>
-                  {i < arr.length - 1 && <View style={styles.statDivider} />}
-                </React.Fragment>
-              ))}
-            </View>
-          )}
         </View>
 
         {/* Menu */}
@@ -306,7 +274,7 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
     backgroundColor: Colors.accentContainer,
   },
-  heroStats: { flexDirection: 'row', paddingTop: Spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.separator },
+  heroTier: { alignSelf: 'flex-start', marginTop: 2 },
   avatar: {
     width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center',
     shadowColor: Colors.accentSolid, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 14, elevation: 8,
@@ -319,10 +287,6 @@ const styles = StyleSheet.create({
   avatarInfo: { flex: 1, gap: Spacing.xs },
   fullName: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
   username: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
-  statLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
-  statDivider: { width: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginVertical: Spacing.xs },
   menuGroup: {
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,

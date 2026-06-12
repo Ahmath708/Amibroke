@@ -295,11 +295,11 @@ export default function DashboardScreen({ navigation }: Props) {
           </ReAnimated.View>
         )}
 
-        {/* Your finances — the snapshot behind the score (unified financial model read path).
-            Tappable → FinancialContext: the non-roast way to update your numbers. */}
+        {/* Your finances — a glance at the snapshot behind the score; tap to open the Finances tab
+            (the full money picture + the editor live there now). */}
         {hasFinances && (
           <ReAnimated.View entering={enterUp(4)}>
-            <PressableScale haptic="light" onPress={() => navigation.navigate('FinancialContext')} style={styles.financeCard}>
+            <PressableScale haptic="light" onPress={() => navigation.navigate('Tools')} style={styles.financeCard}>
               <View style={styles.tileHeader}>
                 <Text style={styles.tileLabel}>Your Finances</Text>
                 <ChevronRightIcon size={16} color={Colors.textSecondary} />
@@ -351,7 +351,7 @@ export default function DashboardScreen({ navigation }: Props) {
               <Text style={[styles.trendEnd, { color: band.color }]}>{series[series.length - 1]}</Text>
             </View>
           </PressableScale>
-          <PressableScale haptic="light" onPress={() => navigation.navigate('AllAnalyses')} style={[styles.bentoTile, styles.statTile]}>
+          <PressableScale haptic="light" onPress={() => navigation.navigate('History')} style={[styles.bentoTile, styles.statTile]}>
             <View style={styles.tileHeader}>
               <Text style={styles.tileLabel}>Roasts</Text>
               <ChevronRightIcon size={16} color={Colors.textSecondary} />

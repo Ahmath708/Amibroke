@@ -92,7 +92,8 @@ first child, then restore the sheet presentation).
     `buildRescoreInput` — divergence risk vs every other re-score path.
 
 - **CC-10 [P2] Repeated literals / UI to extract.** `insets.bottom + 24` (→ `Spacing.xxl`, 4+ screens),
-  a 32×32 `IconBadge` (Profile + Settings + Tools), the `›` chevron glyph. Also `getScoreBand` returns
+  a 32×32 `IconBadge` (Profile + Settings only — the **Finances/Tools** rows use **bare** Heroicons, no
+  tinted `accentContainer` badge; don't re-add one), the `›` chevron glyph. Also `getScoreBand` returns
   **off-palette hexes** (`#FF4D6D`/…) that don't exist in the theme — reconcile `bands.ts` with the tokens.
 
 - **CC-11 [P2] Keyboard handling missing on forms.** EditProfile (password fields can be covered),
