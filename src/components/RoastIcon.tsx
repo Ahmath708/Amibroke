@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const SCALE = 1.15; // nudge to match the other tab icons' optical size
 
-export default function RoastIcon({ size = 24, color = '#000' }: { size?: number; color?: string }) {
-  return <MaterialCommunityIcons name="fire" size={Math.round(size * SCALE)} color={color} />;
+export default function RoastIcon({ size = 24, color = '#000', style }: { size?: number; color?: string; style?: any }) {
+  // Forward `style` so the tab bar's inactive-dim (opacity) reaches the flame like the other tab icons.
+  return <MaterialCommunityIcons name="fire" size={Math.round(size * SCALE)} color={color} style={style} />;
 }

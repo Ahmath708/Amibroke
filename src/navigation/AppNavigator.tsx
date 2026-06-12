@@ -99,6 +99,9 @@ function TabBarButton({ route, focused, reduce, onPress }: { route: { name: stri
   // Roast is a normal tab now (flame icon, focusable, gets the pill like the others).
   const icons = TAB_ICONS[route.name];
   const TabIcon = focused ? icons.active : icons.inactive;
+  // The solid flame reads heavier than the thin outlines at the same opacity — keep it dimmer,
+  // and brighten the outline tabs up to match its presence.
+  const inactiveOpacity = route.name === 'Roast' ? 0.6 : 0.9;
   return (
     <TouchableOpacity
       style={tabStyles.tabItem}
@@ -109,7 +112,7 @@ function TabBarButton({ route, focused, reduce, onPress }: { route: { name: stri
       accessibilityState={{ selected: focused }}
     >
       <Animated.View style={iconStyle}>
-        <TabIcon size={27} color={focused ? Colors.accent : Colors.textSecondary} style={{ opacity: focused ? 1 : 0.6 }} />
+        <TabIcon size={27} color={focused ? Colors.accent : Colors.textSecondary} style={{ opacity: focused ? 1 : inactiveOpacity }} />
       </Animated.View>
     </TouchableOpacity>
   );

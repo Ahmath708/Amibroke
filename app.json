@@ -54,7 +54,14 @@
       "expo-notifications",
       "./plugins/withStoreKitConfig",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Am I Broke? to access Photos.",
+          "savePhotosPermission": "Allow Am I Broke? to save your roast card to Photos."
+        }
+      ]
     ]
   }
 }

@@ -16,6 +16,53 @@ issue, (2) pervasive **primitive-reuse drift** (`TouchableOpacity`, Ionicons, ad
 
 ---
 
+## 🔄 Handoff — resolved by session 2 (`redesign`, as of 2026-06-12)
+
+_Second Claude session's progress so the main session doesn't repeat work. Commits: `6e51818`
+(audit sweep B–F + Profile hero + Community), `e26a5ee` (Profile/Settings merge). `tsc` clean.
+**Anything not listed here is still open.**_
+
+**Cross-cutting — done:**
+- ✅ **CC-1** solid safe-area scrim (`components/TopScrim.tsx`, opaque) — Dashboard + all header-less
+  tab screens (Tools, Roast, Community, Profile, Paywall). *Pushed screens (Results/History) carry a
+  nav header — verify whether they still need it.*
+- ✅ **CC-2** `TouchableOpacity` → `PressableScale` — done across in-scope screens. Remaining are
+  out-of-scope: auth (Landing/Login), the `AppNavigator` tab bar, `ErrorBoundary`.
+- ✅ **CC-3** Ionicons → Heroicons — done, with **documented exceptions kept**: `snow-outline`
+  (Snowball, DebtPayoff), `ellipse-outline`, Results financial-metric rows, AppNavigator tab icons.
+  Residual Ionicons still in **Results / MonthlyCheckIn / DebtPayoff** — confirm they're only the exceptions.
+- ✅ **CC-4** ad-hoc `$` → `@/utils/format` (+ `formatCompactCurrency`).
+- ✅ **CC-8** dead code — Trend, Profile `TextInput`, Settings `LinearGradient`, RoastComposer `score*`
+  keys, FinancialContextForm `CTX_COLUMNS`.
+
+**Cross-cutting — partial:**
+- ◐ **CC-5** thin-view: Dashboard sparkline extracted (`components/Sparkline.tsx`). *Open:* ActionPlan
+  plan-gen, Results 50/30/20, Paywall CTA, EditProfile supabase.
+- ◐ **CC-6** entitlement: Results P0 → `useSubscription().hasAccess` ✅; Profile `isSubscriptionPremium`
+  → hook ✅. *Open:* EditProfile's 5 direct `supabase.*` calls.
+- ◐ **CC-9** correctness: Results `opacity:0` → Reanimated `entering` ✅. *Open:* Share captions
+  tone/clipboard, MonthlyCheckIn `runReScore` drift.
+- ◐ **CC-10** IconBadge removed (Profile/Settings now bare icons) ✅. *Open:* `›` chevron glyph,
+  `insets+24`, `getScoreBand` off-palette hexes.
+
+**Cross-cutting — untouched (open):** CC-7 (FlatList: SubscriptionAudit, DebtPayoff) · CC-11 (keyboard
+insets: EditProfile, FinancialContext, RoastComposer) · CC-12 (sparse space: Tools, Notifications, Trend,
+SubscriptionAudit empty-state).
+
+**Per-screen — fully done:** **Dashboard** · **Community** · **Profile** · **Settings** (merged into
+Profile as one Cash-App-style account hub — `components/AccountSettings.tsx`; `SettingsScreen.tsx` +
+the `Settings` route **deleted**) · **Roast composer** (the two removals) · **Results** (P0 + entrance +
+icons + `$`; P2 nits remain). The **[DISCUSS] Profile → Your Plan** item is resolved (split into
+**Plans & Features** + **Manage Subscription**).
+
+**Per-screen — still open for main session:** Subscription Audit · Debt Payoff (segmented control,
+FlatList) · Action Plan (plan-gen extraction) · Scenario Simulator (EmptyState reuse) · Share (demo
+caption/score mismatch, clipboard) · Edit Profile (supabase calls, Alerts, keyboard) · Financial Context
+(bracket≠exact, silent goBack) · Paywall residuals (vestigial grabber, `✓/—` glyphs) · Monthly Check-In
+(runReScore, the snapshot-merge data inconsistency — tracked in PROJECT-STATUS) · Trend (sparse) · History (P2).
+
+---
+
 ## ✅ Done this pass (approved)
 
 **Paywall scrollability** — root-caused and fixed. It was a `formSheet` whose drag gesture ate the inner

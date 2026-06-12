@@ -13,6 +13,7 @@ import ReAnimated from 'react-native-reanimated';
 import NeonButton from '@/components/NeonButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import AnalyzingHero from '@/components/AnalyzingHero';
+import RoastIcon from '@/components/RoastIcon';
 import { enterUp, useReducedMotion } from '@/components/motion';
 import { trackFunnelStep } from '@/services/analytics';
 
@@ -25,11 +26,13 @@ const HERO_LINES = [
   { text: 'are cooked.', emoji: '' },
 ];
 
-const VALUE_PROPS: { icon: IoniconsName; title: string; desc: string }[] = [
-  { icon: 'create-outline',    title: 'Type your finances', desc: 'Plain English. No spreadsheets.' },
-  { icon: 'flame-outline',     title: 'Get roasted by AI',  desc: 'Brutally honest but never cruel.' },
-  { icon: 'bar-chart-outline', title: 'See your score',     desc: '0–100 financial health rating.' },
-  { icon: 'calendar-outline',  title: 'Fix your life',      desc: 'Personalized 90-day action plan.' },
+type IconComp = (p: { size?: number; color?: string }) => React.JSX.Element;
+const ion = (name: IoniconsName): IconComp => (p) => <Ionicons name={name} {...p} />;
+const VALUE_PROPS: { Icon: IconComp; title: string; desc: string }[] = [
+  { Icon: ion('create-outline'),    title: 'Type your finances', desc: 'Plain English. No spreadsheets.' },
+  { Icon: RoastIcon,                title: 'Get roasted by AI',  desc: 'Brutally honest but never cruel.' },
+  { Icon: ion('bar-chart-outline'), title: 'See your score',     desc: '0–100 financial health rating.' },
+  { Icon: ion('calendar-outline'),  title: 'Fix your life',      desc: 'Personalized 90-day action plan.' },
 ];
 
 export default function LandingScreen({ navigation }: Props) {
@@ -92,7 +95,7 @@ export default function LandingScreen({ navigation }: Props) {
           {VALUE_PROPS.map((v, i) => (
             <ReAnimated.View key={i} entering={enterUp(i + 2)} style={styles.valueRow}>
               <View style={styles.valueIcon}>
-                <Ionicons name={v.icon} size={22} color={Colors.accent} />
+                <v.Icon size={22} color={Colors.accent} />
               </View>
               <View style={styles.valueText}>
                 <Text style={styles.valueTitle}>{v.title}</Text>

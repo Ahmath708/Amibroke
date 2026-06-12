@@ -28,7 +28,8 @@ export async function getCommunityFeed(
   if (USE_AI_MOCKS) {
     const { MOCK_FEED } = require('@/__fixtures__/mockFeed');
     const reactSum = (p: CommunityPost) => Object.values(p.reactions).reduce((s, n) => s + (n as number), 0);
-    const posts: CommunityPost[] = [...MOCK_FEED];
+    // Resolve the demo user's own posts to the real id so they render with the "You" owner badge.
+    const posts: CommunityPost[] = MOCK_FEED.map((p: CommunityPost) => (p.user_id === 'demo-self' && userId ? { ...p, user_id: userId } : p));
     if (sort === 'lowest') posts.sort((a, b) => a.score - b.score);
     else if (sort === 'trending') posts.sort((a, b) => reactSum(b) - reactSum(a));
     else posts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

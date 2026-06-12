@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withDelay, useReducedMotion, Easing } from 'react-native-reanimated';
-import { FireIcon } from 'react-native-heroicons/solid';
+import RoastIcon from '@/components/RoastIcon';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 export type StoryScene = 'peel' | 'dial' | 'bloom';
@@ -80,7 +80,7 @@ function Bloom() {
   return (
     <View style={styles.heroBox}>
       <Animated.View style={[styles.bloomOrb, bloomStyle]} />
-      <View style={styles.bloomCore}><FireIcon size={40} color={Colors.onAccent} /></View>
+      <View style={styles.bloomCore}><RoastIcon size={40} color={Colors.onAccent} /></View>
     </View>
   );
 }

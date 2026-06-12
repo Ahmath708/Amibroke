@@ -9,8 +9,9 @@ import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
 import {
   MicrophoneIcon, StopCircleIcon, SparklesIcon,
-  FireIcon, HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
+  HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
 } from 'react-native-heroicons/outline';
+import RoastIcon from '@/components/RoastIcon';
 import NotificationBell from '@/components/NotificationBell';
 import ReAnimated from 'react-native-reanimated';
 import { PressableScale, useReducedMotion, enterUp } from '@/components/motion';
@@ -58,7 +59,7 @@ const CHIPS = [
 ];
 
 const TONES: { key: RoastTone; label: string; icon: React.ComponentType<{ size?: number; color?: string }> }[] = [
-  { key: 'savage',        label: 'Savage',       icon: FireIcon },
+  { key: 'savage',        label: 'Savage',       icon: RoastIcon },
   { key: 'gentle',        label: 'Gentle',       icon: HeartIcon },
   { key: 'therapist',     label: 'Therapist',    icon: ChatBubbleLeftRightIcon },
   { key: 'older_sibling', label: 'Big Sibling',  icon: HandThumbUpIcon },

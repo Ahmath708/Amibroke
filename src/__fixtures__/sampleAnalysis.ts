@@ -104,7 +104,7 @@ export const SAMPLE_ANALYSIS: FinalAnalysis = FinalAnalysisSchema.parse({
   scoreModifier: 0,
   scoreModifierReason: '',
   summary: 'The card is gone, savings are real, and you are finally ahead of your bills instead of chasing them. The $9,800 car loan is the last boss — and at 7.9% it is very beatable. The next move is turning the freed-up card payment into a full emergency fund.',
-  roast: "Bestie, who let you get responsible? Capital One card in the ground, an emergency fund forming, and you actually saved this month. Respectfully — the algorithm fumbled serving a finance-roast app to someone winning this hard.",
+  roast: "Bestie, who let you get responsible? Credit card in the ground, an emergency fund forming, and you actually saved this month. Respectfully — the algorithm fumbled serving a finance-roast app to someone winning this hard.",
   insights: [
     'You killed the Capital One card — that is roughly $87/mo in interest you no longer set on fire.',
     'Savings of $2,600 is a real buffer now: about three weeks of expenses, climbing toward a full month.',

@@ -19,15 +19,35 @@ const RAW: Raw[] = [
   ['saver_supreme', 85, "Okay, show-off. The only thing broke about you is the algorithm that served you this app. Respectfully — log off and go enjoy it.", 'Thriving. Genuinely doing the thing.', { '🫡': 27, '🔥': 21 }, '2026-06-06T16:00:00'],
 ];
 
-export const MOCK_FEED: CommunityPost[] = RAW.map(([handle, score, roast, summary, reactions, iso], i) => ({
-  id: `mockfeed-${i + 1}`,
-  user_id: `mockuser-${i + 1}`,
-  display_name: handle,
-  score,
-  score_label: getScoreBand(score).label,
-  roast,
-  summary,
-  reactions,
-  created_at: iso,
-  my_reactions: [],
-}));
+// Jason's own posts (the demo persona) — user_id 'demo-self' is swapped for the real user id in
+// services/community, so they render with the "You" owner badge. A glow-up flex + an earlier climb.
+const JASON_POSTS: CommunityPost[] = [
+  {
+    id: 'mockfeed-self-1', user_id: 'demo-self', display_name: 'jason', score: 80, score_label: getScoreBand(80).label,
+    roast: 'Paid off the card, built an actual emergency fund, and the algorithm has nothing left to roast. Character development is real.',
+    summary: 'Out of the hole — card gone, savings building.',
+    reactions: { '🔥': 34, '🫡': 19, '😭': 3 }, created_at: '2026-06-10T10:00:00', my_reactions: [],
+  },
+  {
+    id: 'mockfeed-self-2', user_id: 'demo-self', display_name: 'jason', score: 61, score_label: getScoreBand(61).label,
+    roast: "Card's almost dead and I haven't DoorDashed in two weeks. Growth.",
+    summary: 'Mid-climb — chipping at the 25% card.',
+    reactions: { '🔥': 12, '🫡': 4 }, created_at: '2026-05-12T19:00:00', my_reactions: [],
+  },
+];
+
+export const MOCK_FEED: CommunityPost[] = [
+  ...JASON_POSTS,
+  ...RAW.map(([handle, score, roast, summary, reactions, iso], i) => ({
+    id: `mockfeed-${i + 1}`,
+    user_id: `mockuser-${i + 1}`,
+    display_name: handle,
+    score,
+    score_label: getScoreBand(score).label,
+    roast,
+    summary,
+    reactions,
+    created_at: iso,
+    my_reactions: [],
+  })),
+];
