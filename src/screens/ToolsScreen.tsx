@@ -1,17 +1,16 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { PressableScale, enterUp } from '@/components/motion';
-import {
-  ArrowTrendingDownIcon, MagnifyingGlassIcon, BeakerIcon,
-  ChevronRightIcon, LockClosedIcon,
-} from 'react-native-heroicons/outline';
+import { ChevronRightIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScrollToTopFast } from '@/hooks/useScrollToTopFast';
 import { TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { TOOLS as TOOL_CATALOG, type ToolMeta } from '@/config/tools';
 import { formatCompactCurrency } from '@/utils/format';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -31,16 +30,18 @@ import MoneyTrendCard from '@/components/MoneyTrendCard';
 
 type Props = { navigation: TabScreenNav<'Tools'> };
 
-// Premium tools. The 90-Day Action Plan intentionally lives on the Dashboard now (it's the active
-// mission, not a launcher tile), so it isn't repeated here.
-const TOOLS: { icon: React.ComponentType<any>; label: string; sub: string; requires: 'action_plan' | 'deep_dive'; soon?: boolean; nav?: string; action?: 'debt' }[] = [
-  { icon: MagnifyingGlassIcon,   label: 'Subscription Audit', sub: 'Track subscriptions & spot waste', requires: 'action_plan', nav: 'SubscriptionAudit' },
-  { icon: ArrowTrendingDownIcon, label: 'Debt Payoff',        sub: 'Avalanche vs snowball strategy',  requires: 'deep_dive',   action: 'debt' },
-  { icon: BeakerIcon,            label: 'Scenario Simulator', sub: 'Model "what if" money moves',     requires: 'deep_dive', soon: true, nav: 'ScenarioSimulator' },
+// Tools shown on this tab (the 90-Day Action Plan lives on the Dashboard, not here), each wired to
+// how it opens. Icon + copy come from the shared @/config/tools registry.
+const TOOLS: (ToolMeta & { nav?: string; action?: 'debt' })[] = [
+  { ...TOOL_CATALOG.subscription_audit, nav: 'SubscriptionAudit' },
+  { ...TOOL_CATALOG.debt_payoff, action: 'debt' },
+  { ...TOOL_CATALOG.scenario, nav: 'ScenarioSimulator' },
 ];
 
 export default function ToolsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const onScroll = useScrollToTopFast(scrollRef); // re-tap the active tab → scroll to top (snappy)
   const { user } = useAuth();
   const { tier, hasAccess, refresh, loading: subLoading } = useSubscription();
   const [opening, setOpening] = useState(false);
@@ -127,6 +128,9 @@ export default function ToolsScreen({ navigation }: Props) {
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
@@ -216,7 +220,7 @@ export default function ToolsScreen({ navigation }: Props) {
                 <ToolIcon size={24} color={unlocked ? Colors.textPrimary : Colors.textMuted} />
                 <View style={styles.toolText}>
                   <Text style={[styles.toolLabel, !unlocked && styles.labelLocked]} numberOfLines={1}>{tool.label}</Text>
-                  <Text style={styles.toolSub} numberOfLines={1}>{!unlocked ? 'Subscribe to unlock' : tool.sub}</Text>
+                  <Text style={styles.toolSub} numberOfLines={1}>{!unlocked ? 'Subscribe to unlock' : tool.desc}</Text>
                 </View>
                 {tool.soon
                   ? <Text style={styles.soon}>Soon</Text>

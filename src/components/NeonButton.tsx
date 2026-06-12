@@ -49,7 +49,7 @@ export default function NeonButton({
           colors={disabled ? [Colors.backgroundTertiary, Colors.backgroundTertiary] : Colors.gradientPrimary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={[styles.base, { height: heights[size], borderRadius: Radius.xl }]}
+          style={[styles.base, { height: heights[size], borderRadius: Radius.xl }, disabled && styles.baseDisabled]}
         >
           {loading
             ? <ActivityIndicator color={Colors.onAccent} />
@@ -128,6 +128,12 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Disabled fill is backgroundTertiary, which can match the surface behind it (e.g. a bottom
+  // sheet) and make the button vanish into floating text — a border keeps the shape readable.
+  baseDisabled: {
+    borderWidth: 1,
+    borderColor: Colors.glassBorderLight,
   },
   inner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs + 2 },
   icon: { fontSize: 17 },

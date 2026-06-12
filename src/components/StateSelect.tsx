@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, Modal, FlatList, Pressable,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { PressableScale } from '@/components/motion';
 import AppTextInput from '@/components/AppTextInput';
+import BottomSheet from '@/components/BottomSheet';
 import { ChevronDownIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
@@ -81,11 +80,8 @@ export default function StateSelect({ value, onChange }: Props) {
       .map((r) => r.s);
   }, [query]);
 
-  const choose = (code: string) => {
-    onChange(code);
-    setOpen(false);
-    setQuery('');
-  };
+  const close = () => { setOpen(false); setQuery(''); };
+  const choose = (code: string) => { onChange(code); close(); };
 
   return (
     <>
@@ -96,38 +92,41 @@ export default function StateSelect({ value, onChange }: Props) {
         <ChevronDownIcon size={18} color={Colors.textSecondary} />
       </PressableScale>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
-        <View style={styles.sheet}>
-          <View style={styles.searchRow}>
-            <MagnifyingGlassIcon size={18} color={Colors.textMuted} />
-            <AppTextInput
-              style={styles.searchInput}
-              placeholder="Search state or code…"
-              placeholderTextColor={Colors.textMuted}
-              value={query}
-              onChangeText={setQuery}
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <PressableScale onPress={() => setOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.cancel}>Cancel</Text>
-            </PressableScale>
-          </View>
-          <FlatList
-            data={results}
-            keyExtractor={(s) => s.code}
-            keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={<Text style={styles.empty}>No match — check the spelling.</Text>}
-            renderItem={({ item }) => (
-              <PressableScale style={styles.row} onPress={() => choose(item.code)}>
-                <Text style={styles.rowName}>{item.name} ({item.code})</Text>
-              </PressableScale>
-            )}
+      <BottomSheet
+        visible={open}
+        onClose={close}
+        scrollable={false}
+        fitContent={false}
+        heightFraction={0.8}
+        dragHandleOnly
+        avoidKeyboard={false} // let the keyboard overlap so a few results leak above it (search-list feel)
+      >
+        <View style={styles.searchRow}>
+          <MagnifyingGlassIcon size={18} color={Colors.textMuted} />
+          <AppTextInput
+            style={styles.searchInput}
+            placeholder="Search state or code…"
+            placeholderTextColor={Colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
-      </Modal>
+        <FlatList
+          data={results}
+          keyExtractor={(s) => s.code}
+          keyboardShouldPersistTaps="handled"
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={<Text style={styles.empty}>No match — check the spelling.</Text>}
+          renderItem={({ item }) => (
+            <PressableScale style={styles.row} onPress={() => choose(item.code)}>
+              <Text style={styles.rowName}>{item.name} ({item.code})</Text>
+            </PressableScale>
+          )}
+        />
+      </BottomSheet>
     </>
   );
 }
@@ -141,22 +140,17 @@ const styles = StyleSheet.create({
   },
   fieldText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   placeholder: { color: Colors.textMuted },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, top: '12%',
-    backgroundColor: Colors.surface, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-    paddingTop: Spacing.md,
-  },
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
+    paddingBottom: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
   },
   searchInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, paddingVertical: Spacing.xs },
-  cancel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.accent },
+  list: { flex: 1 },
+  listContent: { paddingBottom: 280 }, // lets the last rows scroll clear of the overlapping keyboard
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
   },
   rowName: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },

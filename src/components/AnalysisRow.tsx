@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { ClipboardDocumentListIcon, PhotoIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
 import { formatShortDate as fmtDate } from '@/utils/format';
@@ -18,7 +17,7 @@ interface Props {
 
 
 /** A single analysis entry — band ring + date · verdict + the user's original input (a recognizable
- *  one-liner) + summary + chips. Used by the All Analyses screen. */
+ *  one-liner) + summary. Used by the History screen. */
 export default function AnalysisRow({ item, delta, loading, disabled, onPress }: Props) {
   const band = getScoreBand(item.score);
   const deltaText = delta != null && delta > 0 ? `+${delta}` : delta != null && delta < 0 ? `${delta}` : '';
@@ -36,22 +35,6 @@ export default function AnalysisRow({ item, delta, loading, disabled, onPress }:
         </View>
         {item.input_text ? <Text style={styles.inputQuote} numberOfLines={1}>“{item.input_text}”</Text> : null}
         <Text style={styles.summary} numberOfLines={item.input_text ? 1 : 2}>{item.summary}</Text>
-        {(item.has_action_plan || item.has_captions) && (
-          <View style={styles.badges}>
-            {item.has_action_plan && (
-              <View style={styles.badge}>
-                <ClipboardDocumentListIcon size={12} color={Colors.accent} />
-                <Text style={styles.badgeText}>Plan</Text>
-              </View>
-            )}
-            {item.has_captions && (
-              <View style={styles.badge}>
-                <PhotoIcon size={12} color={Colors.accent} />
-                <Text style={styles.badgeText}>Captions</Text>
-              </View>
-            )}
-          </View>
-        )}
       </View>
       <Text style={styles.chevron}>{loading ? '⏳' : '›'}</Text>
     </PressableScale>
@@ -68,12 +51,5 @@ const styles = StyleSheet.create({
   delta: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, fontWeight: '600' },
   inputQuote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, fontStyle: 'italic', lineHeight: 18, marginTop: Spacing.xs / 2 },
   summary: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, lineHeight: 18, marginTop: Spacing.xs / 2 },
-  badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: Colors.accentContainer, paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: Radius.pill,
-  },
-  badgeText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption2.fontSize, color: Colors.accent },
   chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
 });

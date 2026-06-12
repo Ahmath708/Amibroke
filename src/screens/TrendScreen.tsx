@@ -70,7 +70,7 @@ export default function TrendScreen() {
     return (
       <View style={styles.container}>
         <ScreenBackground variant="history" />
-        <View style={[styles.scroll, { paddingTop: insets.top + 16 }]}>
+        <View style={[styles.scroll, { paddingTop: Spacing.lg }]}>
           <Skeleton width="100%" height={200} radius={16} style={{ marginBottom: Spacing.lg }} />
           <Skeleton width="100%" height={72} radius={16} style={{ marginBottom: Spacing.xxl }} />
           {[0, 1, 2].map((i) => <Skeleton key={i} width="100%" height={72} radius={12} style={{ marginBottom: Spacing.sm }} />)}
@@ -108,7 +108,7 @@ export default function TrendScreen() {
           ))}
         </View>
       )}
-      {count > 0 && <SectionLabel>History</SectionLabel>}
+      {count > 0 && <SectionLabel>Past Roasts</SectionLabel>}
     </>
   );
 
@@ -134,7 +134,7 @@ export default function TrendScreen() {
         }}
         ItemSeparatorComponent={() => <View style={styles.sep} />}
         ListEmptyComponent={<EmptyState emoji="📋" title="No roasts yet" body="Run your first roast to start tracking your financial glow-up." />}
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: Spacing.lg, paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} colors={[Colors.accentSolid]} />
@@ -156,6 +156,6 @@ const styles = StyleSheet.create({
   statItem: { flex: 1, alignItems: 'center' },
   statValue: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
   statLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textSecondary, marginTop: 2 },
-  statDivider: { width: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginVertical: Spacing.xs },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 60 },
+  statDivider: { width: 1, backgroundColor: Colors.glassBorderLight, marginVertical: Spacing.xs },
+  sep: { height: 1, backgroundColor: Colors.glassBorderLight, marginLeft: 60 },
 });

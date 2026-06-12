@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, Linking, ActivityIndicator, ActionSheetIOS } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Alert, Linking, ActivityIndicator } from 'react-native';
 import { PressableScale } from '@/components/motion';
 import Constants from 'expo-constants';
 import Toggle from '@/components/Toggle';
 import TierPill from '@/components/TierPill';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { BRAND } from '@/config/brand';
+import { TONES } from '@/config/tones';
+import { CHECK_IN_NAME } from '@/config/tools';
 import { FEATURES } from '@/config/features';
 import * as Notifications from 'expo-notifications';
 import {
@@ -23,7 +26,7 @@ import { deleteUserData } from '@/services/gdpr';
 import { setHapticsEnabled, getHapticsEnabled } from '@/utils/haptics';
 import { isBiometricAvailable, isLockEnabled, setLockEnabled, authenticate } from '@/services/biometric';
 import { getCheckinConfig, getCheckIns } from '@/services/checkins';
-import { getProfile, updateProfile } from '@/services/profile';
+import { getProfile } from '@/services/profile';
 import { deleteAllAnalyses } from '@/services/analyses';
 import { nextReminderDate } from '@/utils/checkinSchedule';
 import {
@@ -39,15 +42,6 @@ type SettingRow =
   | { type: 'toggle'; label: string; key: string; icon: IconComponent; detail?: string }
   | { type: 'action'; label: string; icon: IconComponent; detail?: string; destructive?: boolean; loadingKey?: string; onPress: () => void }
   | { type: 'nav'; label: string; icon: IconComponent; detail?: string; right?: 'tier' | 'external'; onPress: () => void };
-
-// The user's roast voice (profiles.preferred_tone). Labels mirror the RoastComposer tone selector.
-const TONE_OPTIONS: { key: RoastTone; label: string }[] = [
-  { key: 'savage', label: 'Savage' },
-  { key: 'gentle', label: 'Gentle' },
-  { key: 'therapist', label: 'Therapist' },
-  { key: 'older_sibling', label: 'Big Sibling' },
-  { key: 'finance_bro', label: 'Finance Bro' },
-];
 
 /**
  * The full account/settings list, rendered inline on the Profile tab (Cash App-style single
@@ -74,22 +68,19 @@ export default function AccountSettings({ navigation }: Props) {
     isLockEnabled().then((on) => setToggles((p) => ({ ...p, faceID: on })));
     Notifications.getPermissionsAsync().then((s) => setToggles((p) => ({ ...p, notifications: s.granted }))).catch(() => {});
     setToggles((p) => ({ ...p, haptics: getHapticsEnabled() }));
-    if (user) getProfile(user.id).then((p) => { if (p?.preferred_tone) setTone(p.preferred_tone); }).catch(() => {});
-  }, [user]);
+  }, []);
 
-  // Roast voice — the sticky tone preference, also settable from the RoastComposer selector.
-  const onChangeTone = () => {
-    const labels = TONE_OPTIONS.map((t) => t.label);
-    ActionSheetIOS.showActionSheetWithOptions(
-      { title: 'Your roast voice', options: [...labels, 'Cancel'], cancelButtonIndex: labels.length },
-      (i) => {
-        if (i < 0 || i >= labels.length) return;
-        const key = TONE_OPTIONS[i].key;
-        setTone(key);
-        if (user) updateProfile(user.id, { preferred_tone: key }).catch(() => {});
-      },
-    );
-  };
+  // Re-read the sticky roast voice whenever Profile regains focus, so it reflects a pick made on
+  // the RoastVoice modal (which persists preferred_tone and dismisses).
+  useFocusEffect(
+    useCallback(() => {
+      if (user) getProfile(user.id).then((p) => { if (p?.preferred_tone) setTone(p.preferred_tone); }).catch(() => {});
+    }, [user]),
+  );
+
+  // Roast voice — opens the on-brand voice-card picker (RoastVoiceScreen); the pick persists there
+  // and Profile re-reads it on focus (see useFocusEffect above).
+  const onChangeTone = () => nav('RoastVoice', { current: tone });
 
   // Push Notifications: iOS can't revoke permission in-app, so reflect the real
   // permission and route to iOS Settings to change it.
@@ -202,7 +193,7 @@ export default function AccountSettings({ navigation }: Props) {
   // is in-app and visible to everyone; "Manage Subscription" only when subscribed → the App Store.
   const accountRows: SettingRow[] = [
     { type: 'nav', label: 'Financial Context', icon: ClipboardDocumentListIcon, onPress: () => nav('FinancialContext') },
-    { type: 'nav', label: 'Plans & Features', icon: SparklesIcon, right: 'tier', onPress: () => nav('Paywall') },
+    { type: 'nav', label: 'Plans & Features', icon: SparklesIcon, onPress: () => nav('Paywall') }, // plan shown on the profile card, not duplicated here
     ...(premium ? [{ type: 'nav', label: 'Manage Subscription', icon: CreditCardIcon, right: 'external', onPress: () => manageSubscriptions() } as SettingRow] : []),
     ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav', label: 'Creator Dashboard', icon: ArrowTrendingUpIcon, onPress: () => nav('CreatorDashboard') } as SettingRow] : []),
   ];
@@ -216,7 +207,7 @@ export default function AccountSettings({ navigation }: Props) {
       title: 'Notifications',
       rows: [
         { type: 'toggle', label: 'Push Notifications', key: 'notifications', icon: BellIcon },
-        { type: 'toggle', label: 'Monthly Check-In Reminder', key: 'monthlyReminder', icon: CalendarIcon, detail: 'On your check-in date each month' },
+        { type: 'toggle', label: `${CHECK_IN_NAME} Reminder`, key: 'monthlyReminder', icon: CalendarIcon, detail: 'On your check-in date each month' },
       ],
     },
     {
@@ -228,7 +219,7 @@ export default function AccountSettings({ navigation }: Props) {
     {
       title: 'App',
       rows: [
-        { type: 'nav', label: 'Roast Voice', icon: ChatBubbleBottomCenterTextIcon, detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
+        { type: 'nav', label: 'Roast Voice', icon: ChatBubbleBottomCenterTextIcon, detail: TONES.find((t) => t.key === tone)?.label, onPress: onChangeTone },
         { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: BoltIcon },
       ],
     },

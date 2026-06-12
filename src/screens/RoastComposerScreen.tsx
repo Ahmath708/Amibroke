@@ -7,11 +7,8 @@ import {
 import SectionLabel from '@/components/SectionLabel';
 import SelectableChip from '@/components/SelectableChip';
 import AppTextInput from '@/components/AppTextInput';
-import {
-  MicrophoneIcon, StopCircleIcon, SparklesIcon,
-  HeartIcon, ChatBubbleLeftRightIcon, HandThumbUpIcon, ArrowTrendingUpIcon,
-} from 'react-native-heroicons/outline';
-import RoastIcon from '@/components/RoastIcon';
+import { MicrophoneIcon, StopCircleIcon, SparklesIcon } from 'react-native-heroicons/outline';
+import { TONES } from '@/config/tones';
 import NotificationBell from '@/components/NotificationBell';
 import ReAnimated from 'react-native-reanimated';
 import { PressableScale, useReducedMotion, enterUp } from '@/components/motion';
@@ -26,6 +23,7 @@ import GlassCard from '@/components/GlassCard';
 import TypingPlaceholder from '@/components/TypingPlaceholder';
 import { useAuth } from '@/context/AuthContext';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useScrollToTopFast } from '@/hooks/useScrollToTopFast';
 import { ContextValues } from '@/components/FinancialContextForm';
 import { getFinancialContext } from '@/services/financialContext';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
@@ -58,14 +56,6 @@ const CHIPS = [
   'I have no emergency fund',
 ];
 
-const TONES: { key: RoastTone; label: string; icon: React.ComponentType<{ size?: number; color?: string }> }[] = [
-  { key: 'savage',        label: 'Savage',       icon: RoastIcon },
-  { key: 'gentle',        label: 'Gentle',       icon: HeartIcon },
-  { key: 'therapist',     label: 'Therapist',    icon: ChatBubbleLeftRightIcon },
-  { key: 'older_sibling', label: 'Big Sibling',  icon: HandThumbUpIcon },
-  { key: 'finance_bro',   label: 'Finance Bro',  icon: ArrowTrendingUpIcon },
-];
-
 const PLACEHOLDERS = [
   'I make 5k/month but somehow I\'m still broke...',
   'I spend too much on Uber Eats and my credit cards hate me.',
@@ -76,6 +66,8 @@ const PLACEHOLDERS = [
 
 export default function RoastComposerScreen({ navigation, asTab = false }: Props) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const onScroll = useScrollToTopFast(scrollRef); // re-tap the active tab → scroll to top (snappy)
   const { user } = useAuth();
   const { canUseApp } = useSubscription();
   const [input, setInput] = useState('');
@@ -193,8 +185,12 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
       <ScreenBackground variant="home" />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: 'height', default: 'height' })} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: asTab ? insets.top + Spacing.lg : Spacing.lg, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
+          ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={[styles.scroll, { paddingTop: asTab ? insets.top + Spacing.lg : Spacing.lg, paddingBottom: asTab ? Spacing.xl : insets.bottom + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
+          alwaysBounceVertical={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >

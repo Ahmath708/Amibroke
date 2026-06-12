@@ -29,6 +29,7 @@ import { formatCurrency } from '@/utils/format';
 import { trackActionPlanViewed } from '@/services/analytics';
 import { MOCK_ANIMATION, MOCK_ANIMATION_MS } from '@/config/ai';
 import ScreenBackground from '@/components/ScreenBackground';
+import PreviewUnlockBar from '@/components/PreviewUnlockBar';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ActionPlan'>;
@@ -170,13 +171,14 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   const analysis = (route.params as any)?.analysis;
   const analysisId = (route.params as any)?.analysisId as string | undefined;
   const overallMessage = route.params?.overallMessage;
-  const { authorized } = useRequireEntitlement('action_plan');
+  const preview = !!(route.params as any)?.preview;
+  const { authorized } = useRequireEntitlement('action_plan', preview);
 
   const [plan, setPlan] = useState<ActivePlan | null>(null);
   const [latest, setLatest] = useState<{ debt: number | null; savings: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false); // create OR refresh in progress → full-screen loading view
-  const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION); // dev: show the building animation on open
+  const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION && !preview); // dev: building animation on open (skipped in preview)
   const [selectedId, setSelectedId] = useState<string | null>(null); // step shown in the focal card
 
   const load = useCallback(async () => {
@@ -204,6 +206,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   // Create → generate the plan (LLM, behind the loading view) and immediately start tracking it.
   // Generation is user-triggered here (not on the Tools tap) so opening the screen is instant.
   const create = async () => {
+    if (preview) { navigation.goBack(); return; }
     if (!user || generating) return;
     setGenerating(true);
     try {
@@ -221,6 +224,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   };
 
   const toggle = async (stepId: string, currentlyDone: boolean) => {
+    if (preview) { navigation.goBack(); return; }
     if (!plan) return;
     const updated = await setStepStatus(plan, stepId, currentlyDone ? 'pending' : 'done');
     if (!updated) return;
@@ -237,6 +241,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   };
 
   const restart = () => {
+    if (preview) { navigation.goBack(); return; }
     if (!plan) return;
     Alert.alert('Restart plan?', 'This clears your current 90-day plan. You can start a fresh one from your latest roast.', [
       { text: 'Cancel', style: 'cancel' },
@@ -247,6 +252,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
   // Refresh = revise the active plan to the latest numbers (keeps completed steps). Shows the
   // shared "building" loading view; the revision is gated by materiality upstream (canUpdate).
   const refresh = async () => {
+    if (preview) { navigation.goBack(); return; }
     if (!plan || generating) return;
     setGenerating(true);
     try {
@@ -336,7 +342,7 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="actionPlan" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + (preview ? 150 : 24) }]}
         showsVerticalScrollIndicator={false}
       >
         {isActive ? (
@@ -452,6 +458,9 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
 
         <Disclaimer style={styles.disclaimer} />
       </ScrollView>
+      {preview && (
+        <PreviewUnlockBar caption="Previewing your plan — unlock to track it" onUnlock={() => navigation.goBack()} />
+      )}
     </ReAnimated.View>
   );
 }

@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScrollToTopFast } from '@/hooks/useScrollToTopFast';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { PencilSquareIcon } from 'react-native-heroicons/outline';
@@ -29,10 +30,10 @@ import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
-
-
 export default function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const onScroll = useScrollToTopFast(scrollRef); // re-tap the active tab → scroll to top (snappy)
   const { user } = useAuth();
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
@@ -143,6 +144,9 @@ export default function ProfileScreen({ navigation }: Props) {
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="profile" />
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >

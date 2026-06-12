@@ -106,7 +106,7 @@ export type PurchaseTier = 'free' | 'action_plan' | 'deep_dive';
 
 export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: number; description: string } | null> = {
   free: null,
-  action_plan: { label: '90-Day Action Plan', price: 4.99, description: 'Full 90-day step-by-step plan with weekly goals' },
+  action_plan: { label: 'Action Plan', price: 4.99, description: 'Full 90-day step-by-step plan with weekly goals' }, // the TIER (what you buy); the FEATURE is "90-Day Action Plan" (config/tools.ts)
   deep_dive: { label: 'Deep Dive', price: 9.99, description: 'Everything in Action Plan plus scenario simulator, debt comparison, and PDF report' },
 };
 
@@ -140,12 +140,13 @@ export type RootStackParamList = {
   Results: { analysis: FinancialAnalysis; userInput: string; analysisId?: string }; // analysisId set when VIEWING a saved roast → read-only (no re-save/merge)
   Share: { analysis: FinancialAnalysis };
   Paywall: undefined;
-  ActionPlan: { steps?: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string };
-  DebtPayoff: undefined; // reads the unified snapshot (Phase 3 — no per-roast param hand-off)
+  ActionPlan: { steps?: ActionStep[]; analysis?: FinancialAnalysis; overallMessage?: string; analysisId?: string; preview?: boolean };
+  DebtPayoff: { preview?: boolean } | undefined; // reads the unified snapshot; preview = paywall peek (read-only)
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
   FinancialContext: undefined;
   EditProfile: undefined;
+  RoastVoice: { current: RoastTone }; // Profile → voice-card picker (modal)
   Notifications: undefined;
   HelpFAQ: undefined;
   MonthlyCheckIn: { setup?: boolean } | undefined;

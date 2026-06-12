@@ -9,6 +9,7 @@ import {
 } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScrollToTopFast } from '@/hooks/useScrollToTopFast';
 import { AnalysisHistoryItem, TabScreenNav, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
@@ -47,6 +48,8 @@ function timeGreeting(): string {
 
 export default function DashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const onScroll = useScrollToTopFast(scrollRef); // re-tap the active tab → scroll to top (snappy)
   const { user } = useAuth();
   const { canUseApp, hasAccess } = useSubscription();
 
@@ -154,6 +157,9 @@ export default function DashboardScreen({ navigation }: Props) {
       <View style={styles.container}>
         <ScreenBackground variant="home" />
         <ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xxl, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
         >
@@ -237,6 +243,9 @@ export default function DashboardScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="home" />
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xxl, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >

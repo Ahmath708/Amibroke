@@ -3,9 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import {
-  SparklesIcon, CalendarIcon, CreditCardIcon, ChartBarIcon, LockClosedIcon, XMarkIcon,
-} from 'react-native-heroicons/outline';
+import { SparklesIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import SectionLabel from '@/components/SectionLabel';
 import { PressableScale, enterUp } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +12,10 @@ import type { PurchasesOffering } from 'react-native-purchases';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, PURCHASE_PRODUCTS } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { TOOLS, CHECK_IN_NAME } from '@/config/tools';
+import { getActivePlan } from '@/services/activePlan';
+import { getSnapshot } from '@/services/financialSnapshot';
+import { isPayoffDebt } from '@shared/financialSnapshot';
 import NeonButton from '@/components/NeonButton';
 import { trackPaywallViewed, trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -25,25 +27,20 @@ import { getCurrentOffering, packageForTier, purchasePackage, restorePurchases, 
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Paywall'> };
 
-type IconCmp = React.ComponentType<{ size?: number; color?: string }>;
-// Locked features previewed on the paywall. Heroicons (no emoji) for a premium read.
-const PREVIEW: { Icon: IconCmp; title: string; desc: string; state: 'locked' | 'soon' }[] = [
-  { Icon: CalendarIcon, title: 'Your 90-Day Action Plan', desc: 'Week-by-week roadmap with specific dollar targets', state: 'locked' },
-  { Icon: CreditCardIcon, title: 'Debt Payoff Strategy', desc: "See how much interest you're burning and when you'll be free", state: 'locked' },
-  { Icon: ChartBarIcon, title: 'Scenario Simulator', desc: 'What if you got a raise? Cut DoorDash? Find out instantly', state: 'soon' },
-];
+// Locked features previewed on the paywall — icon + name + sales pitch from the shared tools registry.
+const PREVIEW = [TOOLS.action_plan, TOOLS.debt_payoff, TOOLS.scenario];
 
 // Cell state: true = included, false = not included, 'soon' = built but not shipped yet.
 // No "Free" column — after the 3-day access it's a hard paywall (no permanent free tier).
 type CompareCell = boolean | 'soon';
 const COMPARE: { feature: string; ap: CompareCell; dd: CompareCell }[] = [
   { feature: 'AI Roast & Health Score', ap: true, dd: true },
-  { feature: '90-Day Step-by-Step Plan', ap: true, dd: true },
-  { feature: 'Weekly Goals with Dollar Amounts', ap: true, dd: true },
-  { feature: 'Subscription Audit', ap: true, dd: true },
+  { feature: TOOLS.action_plan.label, ap: true, dd: true },
+  { feature: CHECK_IN_NAME, ap: true, dd: true },
+  { feature: TOOLS.subscription_audit.label, ap: true, dd: true },
   { feature: 'Prioritized Fix List', ap: true, dd: true },
-  { feature: 'Scenario Simulator', ap: false, dd: 'soon' },
-  { feature: 'Debt Payoff Planner', ap: false, dd: true },
+  { feature: TOOLS.scenario.label, ap: false, dd: 'soon' },
+  { feature: TOOLS.debt_payoff.label, ap: false, dd: true },
   { feature: 'Downloadable PDF Report', ap: false, dd: true },
 ];
 
@@ -70,6 +67,23 @@ export default function PaywallScreen({ navigation }: Props) {
   useEffect(() => {
     getCurrentOffering().then(setOffering);
   }, []);
+
+  // Which locked features the user can actually peek at (read-only preview) — gated on having real
+  // data: an active plan, or non-estimated payoff debts. New users (no data) just see the cards.
+  const [canPreview, setCanPreview] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [plan, snap] = await Promise.all([getActivePlan(user.id), getSnapshot(user.id)]);
+      const hasDebt = !!snap?.debts && snap.debts.confidence !== 'estimated' && snap.debts.value.filter(isPayoffDebt).length > 0;
+      setCanPreview({ action_plan: !!plan, debt_payoff: hasDebt });
+    })().catch(() => {});
+  }, [user]);
+
+  const openPreview = (key: string) => {
+    if (key === 'action_plan') navigation.navigate('ActionPlan', { preview: true });
+    else if (key === 'debt_payoff') navigation.navigate('DebtPayoff', { preview: true });
+  };
 
   const product = PURCHASE_PRODUCTS[selected];
   const actionPlan = PURCHASE_PRODUCTS.action_plan!;
@@ -136,10 +150,10 @@ export default function PaywallScreen({ navigation }: Props) {
   return (
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="paywall" />
-      <View style={[styles.handleRow, { marginTop: insets.top > 0 ? 8 : 16 }]}>
+      <View style={[styles.handleRow, { marginTop: insets.top + Spacing.sm }]}>
         <View style={styles.handle} />
       </View>
-      <PressableScale onPress={() => navigation.goBack()} haptic="light" style={styles.closeBtn}>
+      <PressableScale onPress={() => navigation.goBack()} haptic="light" style={[styles.closeBtn, { top: insets.top + Spacing.xs }]}>
         <XMarkIcon size={22} color={Colors.textSecondary} />
       </PressableScale>
 
@@ -171,24 +185,28 @@ export default function PaywallScreen({ navigation }: Props) {
         </View>
 
         {/* Preview locked content — consistent elevated cards (no per-card neon) */}
-        <SectionLabel>Preview What's Inside</SectionLabel>
+        <SectionLabel>What You Unlock</SectionLabel>
         <View style={styles.previewList}>
-          {PREVIEW.map(({ Icon, title, desc, state }) => (
-            <View key={title} style={styles.previewCard}>
-              <View style={styles.previewBadge}>
-                <Icon size={20} color={Colors.accent} />
-              </View>
-              <View style={styles.previewContent}>
-                <Text style={styles.previewTitle}>{title}</Text>
-                <Text style={styles.previewDesc}>{desc}</Text>
-              </View>
-              {state === 'soon' ? (
-                <View style={styles.previewSoon}><Text style={styles.previewSoonText}>SOON</Text></View>
-              ) : (
-                <View style={styles.previewLock}><LockClosedIcon size={15} color={Colors.textMuted} /></View>
-              )}
-            </View>
-          ))}
+          {PREVIEW.map((t) => {
+            const canPeek = !!canPreview[t.key];
+            const Wrap: any = canPeek ? PressableScale : View;
+            return (
+              <Wrap key={t.key} style={styles.previewCard} {...(canPeek ? { onPress: () => openPreview(t.key), haptic: 'light' } : {})}>
+                <View style={styles.previewBadge}>
+                  <t.icon size={28} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.previewContent}>
+                  <Text style={styles.previewTitle}>{t.label}</Text>
+                  <Text style={styles.previewDesc}>{t.pitch}</Text>
+                </View>
+                {t.soon ? (
+                  <View style={styles.previewSoon}><Text style={styles.previewSoonText}>SOON</Text></View>
+                ) : canPeek ? (
+                  <Text style={styles.previewPeek}>Peek →</Text>
+                ) : null}
+              </Wrap>
+            );
+          })}
         </View>
 
         {/* Product picker */}
@@ -199,9 +217,11 @@ export default function PaywallScreen({ navigation }: Props) {
             onPress={() => setSelected('action_plan')}
             haptic="light"
           >
-            {owned === 'action_plan' && (
-              <View style={styles.planBadge}><Text style={styles.planBadgeText}>CURRENT</Text></View>
-            )}
+            <View style={styles.badgeSlot}>
+              {owned === 'action_plan' && (
+                <View style={styles.planBadge}><Text style={styles.planBadgeText}>CURRENT</Text></View>
+              )}
+            </View>
             <Text style={styles.planName}>{actionPlan.label}</Text>
             <Text style={styles.planPrice}>{priceLabel('action_plan', actionPlan.price)}</Text>
             <Text style={styles.planDesc}>per month</Text>
@@ -212,8 +232,10 @@ export default function PaywallScreen({ navigation }: Props) {
             onPress={() => setSelected('deep_dive')}
             haptic="light"
           >
-            <View style={styles.planBadge}>
-              <Text style={styles.planBadgeText}>{owned === 'deep_dive' ? 'CURRENT' : 'BEST VALUE'}</Text>
+            <View style={styles.badgeSlot}>
+              <View style={styles.planBadge}>
+                <Text style={styles.planBadgeText}>{owned === 'deep_dive' ? 'CURRENT' : 'BEST VALUE'}</Text>
+              </View>
             </View>
             <Text style={styles.planName}>{deepDive.label}</Text>
             <Text style={styles.planPrice}>{priceLabel('deep_dive', deepDive.price)}</Text>
@@ -275,7 +297,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   handleRow: { alignItems: 'center', marginBottom: Spacing.sm },
   handle: { width: 36, height: 5, borderRadius: Radius.pill, backgroundColor: Colors.separator },
-  closeBtn: { position: 'absolute', top: Spacing.xl, right: Spacing.xl, zIndex: 10, padding: Spacing.sm },
+  closeBtn: { position: 'absolute', right: Spacing.xl, zIndex: 10, padding: Spacing.sm },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm },
   hero: { alignItems: 'center', marginBottom: Spacing.xl, marginTop: Spacing.xs },
   heroIcon: { width: 72, height: 72, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
@@ -284,10 +306,10 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.heading,
     color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.sm,
   },
-  heroSub: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textAlign: 'center', maxWidth: 300, lineHeight: 22 },
+  heroSub: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, textAlign: 'center', maxWidth: 300, lineHeight: 22 },
   heroUrgency: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.md },
   heroUrgencyDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success },
-  heroUrgencyText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted },
+  heroUrgencyText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
   previewList: { gap: Spacing.sm, marginBottom: Spacing.xl },
   previewCard: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
@@ -295,14 +317,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },
-  previewBadge: {
-    width: 40, height: 40, borderRadius: Radius.md,
-    backgroundColor: Colors.accentContainer, alignItems: 'center', justifyContent: 'center',
-  },
+  previewBadge: { width: 40, alignItems: 'center' }, // no accent tile — bare white glyph, sized up
   previewContent: { flex: 1 },
   previewTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   previewDesc: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
-  previewLock: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.backgroundSecondary, alignItems: 'center', justifyContent: 'center' },
+  previewPeek: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize, color: Colors.accent },
   previewSoon: {
     paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1, borderRadius: Radius.pill,
     backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.warning,
@@ -325,9 +344,10 @@ const styles = StyleSheet.create({
   },
   planCardFeatured: { borderColor: Colors.accent, borderWidth: 1.5 },
   planCardActive: { borderColor: Colors.accent, backgroundColor: Colors.accentContainer },
+  badgeSlot: { height: 20, marginBottom: Spacing.xs, justifyContent: 'center' }, // reserved on BOTH cards so names/prices align with or without a pill
   planBadge: {
     backgroundColor: Colors.accent, borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1, marginBottom: Spacing.xs,
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs - 1,
   },
   planBadgeText: { fontFamily: Typography.fonts.bodySemi, fontSize: 9, color: Colors.onAccent, fontWeight: '700', letterSpacing: 0.5 },
   planName: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textSecondary },
@@ -354,5 +374,5 @@ const styles = StyleSheet.create({
   cta: { marginBottom: Spacing.sm },
   restoreBtn: { alignItems: 'center', paddingVertical: Spacing.sm, marginBottom: Spacing.sm },
   restoreText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },
-  legal: { fontFamily: Typography.fonts.body, fontSize: Typography.caption2.fontSize, color: Colors.textMuted, textAlign: 'center', lineHeight: 16 },
+  legal: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18 },
 });

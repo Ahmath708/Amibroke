@@ -5,7 +5,7 @@ import {
 import ReAnimated from 'react-native-reanimated';
 import { enterUp, PressableScale } from '@/components/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { DebtItem } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { formatCurrency as fmt } from '@/utils/format';
@@ -20,6 +20,7 @@ import { getProfile, updateProfile } from '@/services/profile';
 import { getCheckIns, getCheckinConfig } from '@/services/checkins';
 import { isPayoffDebt } from '@shared/financialSnapshot';
 import ScreenBackground from '@/components/ScreenBackground';
+import PreviewUnlockBar from '@/components/PreviewUnlockBar';
 import SectionLabel from '@/components/SectionLabel';
 import EmptyState from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,9 @@ const fmtMonth = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mo
 
 export default function DebtPayoffScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+  const preview = !!(route.params as any)?.preview;
   const { user } = useAuth();
   // Source of truth = the unified snapshot (no per-roast param hand-off). Estimated onboarding
   // placeholders are ignored (no APR/min → useless for payoff).
@@ -53,7 +57,7 @@ export default function DebtPayoffScreen() {
       }
     }).catch(() => {}).finally(() => setDebtsLoading(false));
   }, [user]));
-  const { authorized, loading } = useRequireEntitlement('deep_dive');
+  const { authorized, loading } = useRequireEntitlement('deep_dive', preview);
   const [strategy, setStrategy] = useState<Strategy>('avalanche');
   const [extra, setExtra] = useState(100);
   const [paidDown, setPaidDown] = useState<{ amount: number; since: string } | null>(null);
@@ -75,6 +79,7 @@ export default function DebtPayoffScreen() {
   }, [user]));
 
   const selectStrategy = (s: Strategy) => {
+    if (preview) { navigation.goBack(); return; }
     setStrategy(s);
     if (user) updateProfile(user.id, { debt_strategy: s }).catch(() => {}); // sticky
   };
@@ -111,7 +116,7 @@ export default function DebtPayoffScreen() {
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="debt" />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + (preview ? 150 : 24) }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Summary */}
@@ -179,7 +184,7 @@ export default function DebtPayoffScreen() {
               key={amt}
               label={amt === 0 ? 'Min Only' : `+${fmt(amt)}`}
               active={extra === amt}
-              onPress={() => setExtra(amt)}
+              onPress={() => (preview ? navigation.goBack() : setExtra(amt))}
             />
           ))}
         </View>
@@ -214,6 +219,9 @@ export default function DebtPayoffScreen() {
           ))}
         </View>
       </ScrollView>
+      {preview && (
+        <PreviewUnlockBar caption="Previewing your payoff plan — unlock to save it" onUnlock={() => navigation.goBack()} />
+      )}
     </ReAnimated.View>
   );
 }

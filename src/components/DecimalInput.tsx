@@ -28,6 +28,7 @@ export function formatDecimal(s: string): string {
 export interface DecimalFieldProps {
   value: string;
   onChangeValue: (v: string) => void;
+  onBlur?: () => void; // fired after the on-blur format-tidy, so a parent can react (e.g. sync a bracket)
   placeholder?: string;
   autoFocus?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
@@ -40,14 +41,14 @@ interface Props extends DecimalFieldProps {
 
 /** Numeric input that lets you type a single decimal point (max 2 places) on the decimal-pad
  *  keyboard, tidying on blur (keep-whole-unless-cents). Base for MoneyInput ($) and PercentInput (%). */
-export default function DecimalInput({ value, onChangeValue, prefix, suffix, placeholder, autoFocus, containerStyle }: Props) {
+export default function DecimalInput({ value, onChangeValue, onBlur, prefix, suffix, placeholder, autoFocus, containerStyle }: Props) {
   return (
     <View style={[styles.row, containerStyle]}>
       {prefix ? <Text style={styles.affix}>{prefix}</Text> : null}
       <TextInput
         value={value}
         onChangeText={(t) => onChangeValue(sanitizeDecimal(t))}
-        onBlur={() => onChangeValue(formatDecimal(value))}
+        onBlur={() => { onChangeValue(formatDecimal(value)); onBlur?.(); }}
         keyboardType="decimal-pad"
         placeholder={placeholder}
         placeholderTextColor={Colors.textMuted}

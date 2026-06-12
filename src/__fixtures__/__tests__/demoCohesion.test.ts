@@ -2,6 +2,7 @@
 // must hold or the demo contradicts itself on camera. Also exercises the runtime FinalAnalysisSchema
 // parse (tsc can't see it) for SAMPLE_ANALYSIS + every getMockAnalysisById path.
 import { buildMoneyTrend } from '@shared/moneyTrend';
+import { computeFinalScore } from '@shared/scoring/index.ts';
 import { PERSONA_TIMELINE, personaLatest, debtTotal, personaMoneyEvents } from '../demoPersona';
 import { getMockAnalysisById, MOCK_HISTORY, MOCK_SNAPSHOT, MOCK_CHECKINS } from '../mockHistory';
 import { SAMPLE_ANALYSIS } from '../sampleAnalysis';
@@ -35,6 +36,17 @@ describe('demo persona cohesion', () => {
   it('SAMPLE_ANALYSIS == the latest point', () => {
     expect(SAMPLE_ANALYSIS.score).toBe(personaLatest().score);
     expect(SAMPLE_ANALYSIS.debtTotal).toBe(debtTotal(personaLatest()));
+  });
+
+  it('every mock score is what its own CFPB answers compute to (engine-derived, no hardcoded drift)', () => {
+    for (const p of PERSONA_TIMELINE) {
+      const a = getMockAnalysisById(p.id)!;
+      // The engine score from the fixture's OWN responses must equal the stored score (the old mock
+      // claimed 80 while its responses computed to ~43 — this guards that from ever returning)…
+      expect(computeFinalScore(a.cfpb_responses, a.scoreModifier).score).toBe(a.score);
+      // …and the score must still be the intended persona-arc value.
+      expect(a.score).toBe(p.score);
+    }
   });
 
   it('debt decreases monotonically across the arc (the glow-up)', () => {

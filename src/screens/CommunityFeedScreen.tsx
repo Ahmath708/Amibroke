@@ -6,6 +6,7 @@ import { enterUp, PressableScale } from '@/components/motion';
 import { selection } from '@/utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useScrollToTopFast } from '@/hooks/useScrollToTopFast';
 import { CommunityPost, TabScreenNav } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { Durations } from '@/theme/motion';
@@ -42,6 +43,8 @@ const PAGE_SIZE = 20;
 
 export default function CommunityFeedScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<FlatList<any>>(null);
+  const onScroll = useScrollToTopFast(scrollRef); // re-tap the active tab → scroll to top (snappy)
   const { user } = useAuth();
   const navigation = useNavigation<TabScreenNav<'Community'>>();
   const [tab, setTab] = useState<FeedSort>('recent');
@@ -214,6 +217,9 @@ export default function CommunityFeedScreen() {
     <Reanimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="community" />
       <FlatList
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         data={posts}
         keyExtractor={(p) => p.id}
         renderItem={renderPost}

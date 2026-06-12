@@ -31,6 +31,18 @@ interface Props {
    * render as a tall, mostly-empty panel.
    */
   fitContent?: boolean;
+  /**
+   * Only the grabber/header drags the sheet down — the body keeps its own gestures untouched.
+   * Use for content with its own vertical gesture (a date wheel, a list) that the dismiss-pan
+   * would otherwise fight.
+   */
+  dragHandleOnly?: boolean;
+  /**
+   * Lift the sheet to sit above the keyboard when an input inside it focuses (default true).
+   * Set false to let the keyboard overlap the sheet — e.g. a search list, where results should
+   * stay put and a few leak above the keyboard rather than the whole sheet jumping up.
+   */
+  avoidKeyboard?: boolean;
 }
 
 /**
@@ -45,7 +57,8 @@ interface Props {
  * close animation, then `onClose` fires.
  */
 export default function BottomSheet({
-  visible, onClose, children, title, heightFraction = 0.85, scrollable = true, fitContent,
+  visible, onClose, children, title, heightFraction = 0.85, scrollable = true, fitContent, dragHandleOnly,
+  avoidKeyboard = true,
 }: Props) {
   const reduce = useReducedMotion();
   const insets = useSafeAreaInsets();
@@ -131,7 +144,7 @@ export default function BottomSheet({
   // Clamp ≥ 0 so a spring settle can't lift the sheet above rest and reveal a gap; lift by the
   // keyboard height so a focused input inside the sheet stays visible above the keyboard.
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: Math.max(0, translateY.value) - keyboard.height.value }],
+    transform: [{ translateY: Math.max(0, translateY.value) - (avoidKeyboard ? keyboard.height.value : 0) }],
   }));
 
   const Body = scrollable ? (
@@ -146,7 +159,31 @@ export default function BottomSheet({
       {children}
     </ReAnimated.ScrollView>
   ) : (
-    <View style={[styles.body, { paddingBottom: insets.bottom + Spacing.xl }]}>{children}</View>
+    <View style={[styles.body, !fit && styles.fill, { paddingBottom: insets.bottom + Spacing.xl }]}>{children}</View>
+  );
+
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.handle} />
+      {title ? <Text style={styles.title}>{title}</Text> : null}
+    </View>
+  );
+
+  // dragHandleOnly: pan attaches to the grabber alone so the body's own gestures (wheel/list) are
+  // untouched. Otherwise the pan covers the whole sheet — gated to scroll-top in the worklet so a
+  // ScrollView keeps mid-scroll drags.
+  const inner = dragHandleOnly ? (
+    <View style={!fit && styles.fill}>
+      <GestureDetector gesture={pan}>{header}</GestureDetector>
+      {Body}
+    </View>
+  ) : (
+    <GestureDetector gesture={pan}>
+      <View style={!fit && styles.fill}>
+        {header}
+        {Body}
+      </View>
+    </GestureDetector>
   );
 
   return (
@@ -163,20 +200,7 @@ export default function BottomSheet({
           onLayout={onSheetLayout}
           style={[styles.sheetWrap, fit ? { maxHeight: sheetH } : { height: sheetH }, sheetStyle]}
         >
-          <View style={[styles.sheet, !fit && styles.fill]}>
-            {/* One pan over the whole sheet: drives the sheet down only when the body is at the top
-                (gated in the worklet), so the grabber and an at-top content-drag both dismiss, while
-                mid-scroll drags stay with the ScrollView. */}
-            <GestureDetector gesture={pan}>
-              <View style={!fit && styles.fill}>
-                <View style={styles.header}>
-                  <View style={styles.handle} />
-                  {title ? <Text style={styles.title}>{title}</Text> : null}
-                </View>
-                {Body}
-              </View>
-            </GestureDetector>
-          </View>
+          <View style={[styles.sheet, !fit && styles.fill]}>{inner}</View>
         </ReAnimated.View>
       </GestureHandlerRootView>
     </Modal>

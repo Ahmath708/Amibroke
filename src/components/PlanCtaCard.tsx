@@ -1,11 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { CalendarIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
+import { ChevronRightIcon } from 'react-native-heroicons/outline';
 import { PressableScale } from '@/components/motion';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { TOOLS } from '@/config/tools';
 import StaleBadge from '@/components/StaleBadge';
 import PremiumCard from '@/components/PremiumCard';
 import { planProgress, PLAN_HORIZON_DAYS, type ActivePlan } from '@/services/activePlan';
+
+const PlanIcon = TOOLS.action_plan.icon; // MapIcon — distinct from the check-in's calendar
 
 export interface PlanCtaFin { income: number; debt: number; savings: number; expenses: number; }
 
@@ -38,7 +41,7 @@ function signalTitle(fin: PlanCtaFin): string {
 export default function PlanCtaCard({ hasAccess, plan, planStale, fin, onPlan, onPaywall, style }: Props) {
   // No access → contextual unlock, framed as the fix for their salient issue.
   if (!hasAccess) {
-    return <PremiumCard title={signalTitle(fin)} body="Unlock your 90-day plan" onPress={onPaywall} style={style} />;
+    return <PremiumCard title={signalTitle(fin)} body={`Unlock your ${TOOLS.action_plan.label}`} onPress={onPaywall} style={style} />;
   }
 
   // Access + a committed plan → live progress (getActivePlan only returns active plans).
@@ -47,10 +50,10 @@ export default function PlanCtaCard({ hasAccess, plan, planStale, fin, onPlan, o
     const day = Math.min(p.daysIn + 1, plan.horizon_days ?? PLAN_HORIZON_DAYS);
     return (
       <PressableScale onPress={onPlan} haptic="light" style={[styles.card, style]}>
-        <CalendarIcon size={22} color={Colors.textPrimary} />
+        <PlanIcon size={26} color={Colors.textPrimary} />
         <View style={styles.textWrap}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>Your 90-Day Plan</Text>
+            <Text style={styles.title}>Your {TOOLS.action_plan.label}</Text>
             {planStale && <StaleBadge label="Update" />}
           </View>
           <Text style={styles.sub}>Day {day} · {p.pct}% · {p.done} of {p.total} steps</Text>
@@ -63,10 +66,10 @@ export default function PlanCtaCard({ hasAccess, plan, planStale, fin, onPlan, o
   // Access, no plan yet → contextual build prompt.
   return (
     <PressableScale onPress={onPlan} haptic="light" style={[styles.card, style]}>
-      <CalendarIcon size={22} color={Colors.textPrimary} />
+      <PlanIcon size={26} color={Colors.textPrimary} />
       <View style={styles.textWrap}>
         <Text style={styles.title}>{signalTitle(fin)}</Text>
-        <Text style={styles.sub}>Start your 90-day plan</Text>
+        <Text style={styles.sub}>Start your {TOOLS.action_plan.label}</Text>
       </View>
       <ChevronRightIcon size={18} color={Colors.textSecondary} />
     </PressableScale>

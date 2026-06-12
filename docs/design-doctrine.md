@@ -109,11 +109,20 @@ Restraint counts too: **flair must be earned.** Hero moments get motion; utility
 ## 6. Icons — Heroicons-first
 
 - **`react-native-heroicons` is the committed family.** Outline (`/outline`) for default; solid
-  (`/solid`) for active/selected/emphasis. Keep sizes to a small set (**16 / 18 / 20 / 24**) and
-  color from tokens.
-- **Ionicons (`@expo/vector-icons`) only as a last resort** — when Heroicons genuinely has no
-  suitable equivalent. Heroicons' set is large, so this should be **rare**; when you do it, leave a
-  one-line comment saying why. Existing Ionicons usages are tech debt to migrate.
+  (`/solid`) for active/selected/emphasis. Keep inline/row icon sizes to a small set
+  (**16 / 18 / 20 / 24**); a standalone feature icon that anchors a card can go larger (~28–32).
+  Color from tokens.
+- **White glyph, no accent tile.** Feature/decorative icons are **white** (`textPrimary`), never set
+  in an accent-tinted padded rectangle — drop the tile and size the glyph up instead. The brand
+  accent is reserved for genuine emphasis/active states (an active tab, a selected card), **not** as
+  icon chrome. The tab bar's active pill is the one deliberate exception — it's navigation, not a
+  decorative icon.
+- **Check for overlaps before committing an icon.** Two features sharing a glyph reads as the same
+  feature. On a clash, pick a deliberate variation or a better-fitting glyph — e.g. the 90-day plan
+  is `MapIcon` (a roadmap), which frees `CalendarIcon` to mean "check-in" everywhere.
+- **Heroicons-first, but not Heroicons-only.** Reach for another library (`@expo/vector-icons` —
+  Ionicons, MaterialCommunityIcons, …) when its glyph fits clearly better; leave a one-line comment
+  on the swap and flag the choice in the change (e.g. the roast flame is MaterialCommunityIcons `fire`).
 
 ---
 

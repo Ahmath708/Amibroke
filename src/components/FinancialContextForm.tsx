@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { PressableScale } from '@/components/motion';
 import SelectableChip from '@/components/SelectableChip';
 import { Colors, Typography, Spacing } from '@/theme/colors';
-import NeonButton from '@/components/NeonButton';
 import StateSelect from '@/components/StateSelect';
 import DobField from '@/components/DobField';
 import MoneyInput from '@/components/MoneyInput';
@@ -33,6 +31,13 @@ export const parseIncome = (s?: string): number | null => {
 };
 const incomeBracketFor = (n: number): string =>
   n < 2000 ? 'under_2k' : n < 4000 ? '2k_4k' : n < 6000 ? '4k_6k' : n < 10000 ? '6k_10k' : 'over_10k';
+
+/** Keep the income bracket in lockstep with the exact amount when one's entered (used on load + on
+ *  blur), so a stale/stored bracket never shows next to a different exact income. No exact → as-is. */
+export function syncIncomeBracket(v: ContextValues): ContextValues {
+  const n = parseIncome(v.incomeExact);
+  return n != null ? { ...v, incomeBracket: incomeBracketFor(n) } : v;
+}
 
 // Age is collected via the DOB picker and stored as the raw `dob` DATE (financial_context.dob);
 // the coarse ageBracket is DERIVED for display + the analyze input (@shared/age).
@@ -79,12 +84,9 @@ export function labelFor(opt: string): string {
 }
 
 interface Props {
-  initial?: ContextValues;
-  submitLabel: string;
-  submitting?: boolean;
-  onSubmit: (values: ContextValues) => void;
-  onSkip?: () => void;
-  skipLabel?: string;
+  /** Controlled form values (lifted to the screen so it owns dirty-tracking + the sticky Save). */
+  values: ContextValues;
+  onChange: (values: ContextValues) => void;
 }
 
 // DOB is a calendar date (no time/zone). Parse + format with LOCAL components so it never shifts a
@@ -98,15 +100,11 @@ function dateToYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function FinancialContextForm({ initial = {}, submitLabel, submitting, onSubmit, onSkip, skipLabel }: Props) {
-  const [selections, setSelections] = useState<ContextValues>(initial);
-  // Seed the picker from the saved financial_context.dob so Birthday prefills the actual date
-  // (not just the derived bracket placeholder). Null only when no DOB has ever been set.
-  const [dob, setDob] = useState<Date | null>(() => (initial.dob ? ymdToLocalDate(initial.dob) : null));
-  const handleDob = (date: Date) => {
-    setDob(date);
-    setSelections((prev) => ({ ...prev, ageBracket: ageBracketFromDob(date), dob: dateToYmd(date) }));
-  };
+export default function FinancialContextForm({ values, onChange }: Props) {
+  // DOB is held in `values.dob` (YYYY-MM-DD); derive the Date the picker needs.
+  const dob = values.dob ? ymdToLocalDate(values.dob) : null;
+  const set = (patch: ContextValues) => onChange({ ...values, ...patch });
+  const handleDob = (date: Date) => set({ ageBracket: ageBracketFromDob(date), dob: dateToYmd(date) });
 
   return (
     <>
@@ -115,26 +113,26 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
           <Text style={styles.fieldLabel}>{field.key === 'ageBracket' ? 'Birthday' : field.label}</Text>
           {field.key === 'state' ? (
             <StateSelect
-              value={selections.state ?? ''}
-              onChange={(code) => setSelections((prev) => ({ ...prev, state: code }))}
+              value={values.state ?? ''}
+              onChange={(code) => set({ state: code })}
             />
           ) : field.key === 'ageBracket' ? (
             <DobField
               value={dob}
               onChange={handleDob}
-              defaultDate={bracketMidpointDob(selections.ageBracket)}
-              placeholder={selections.ageBracket ? `Ages ${ageBracketLabel(selections.ageBracket)} · tap to set your birthday` : 'Select your birthday'}
+              defaultDate={bracketMidpointDob(values.ageBracket)}
+              placeholder={values.ageBracket ? `Ages ${ageBracketLabel(values.ageBracket)} · tap to set your birthday` : 'Select your birthday'}
             />
           ) : (
             <View style={styles.chipsRow}>
               {field.options.map((opt) => {
-                const active = selections[field.key] === opt;
+                const active = values[field.key] === opt;
                 return (
                   <SelectableChip
                     key={opt}
                     label={labelFor(opt)}
                     active={active}
-                    onPress={() => setSelections((prev) => ({ ...prev, [field.key]: active ? '' : opt }))}
+                    onPress={() => set({ [field.key]: active ? '' : opt })}
                   />
                 );
               })}
@@ -144,25 +142,14 @@ export default function FinancialContextForm({ initial = {}, submitLabel, submit
             <View style={styles.exactWrap}>
               <Text style={styles.exactLabel}>Or enter exact (optional)</Text>
               <MoneyInput
-                value={selections.incomeExact ?? ''}
-                onChangeValue={(v) => setSelections((prev) => ({ ...prev, incomeExact: v }))}
+                value={values.incomeExact ?? ''}
+                onChangeValue={(v) => set({ incomeExact: v })}
+                onBlur={() => onChange(syncIncomeBracket(values))}
               />
             </View>
           )}
         </View>
       ))}
-
-      <NeonButton
-        label={submitting ? '' : submitLabel}
-        onPress={() => onSubmit(selections)}
-        loading={submitting}
-        style={styles.cta}
-      />
-      {onSkip && (
-        <PressableScale onPress={onSkip} disabled={submitting} style={styles.skipBtn}>
-          <Text style={styles.skipText}>{skipLabel ?? 'Skip for now'}</Text>
-        </PressableScale>
-      )}
     </>
   );
 }
@@ -176,7 +163,4 @@ const styles = StyleSheet.create({
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   exactWrap: { marginTop: Spacing.md },
   exactLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.sm },
-  cta: { marginTop: Spacing.lg },
-  skipBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
-  skipText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, textDecorationLine: 'underline' },
 });

@@ -1,15 +1,58 @@
 import { FinalAnalysisSchema, ActionPlanResponseSchema, CaptionResponseSchema } from '@shared/schemas';
 import type { FinalAnalysis, ActionPlanResponse, CaptionResponse } from '@shared/types';
 import { getScoreBand } from '@shared/scoring/bands.ts';
+import { computeFinalScore } from '@shared/scoring/index.ts';
+import { scoreFromRawTotal } from '@shared/scoring/cfpb_irt.ts';
 import { personaLatest, debtTotal, emojiFor, type PersonaPoint } from './demoPersona';
 
-// Shared deep fields that don't vary meaningfully per roast (the score + figures carry the story).
-const CFPB_TEMPLATE = [
-  { value: 1, confidence: 'high' }, { value: 2, confidence: 'medium' }, { value: 3, confidence: 'high' },
-  { value: 2, confidence: 'medium' }, { value: 3, confidence: 'high' }, { value: 3, confidence: 'medium' },
-  { value: 2, confidence: 'low' }, { value: 1, confidence: 'high' }, { value: 2, confidence: 'medium' },
-  { value: 3, confidence: 'high' },
-];
+// Mock scores are DERIVED from the real engine (computeFinalScore), never hardcoded — so a fixture can
+// never claim a score its own CFPB answers don't support (the old mock drifted to an impossible 80: its
+// template answers actually computed to ~43). `scoredCfpb(target)` synthesizes 10 high-confidence
+// responses that reverse-code to the published raw total nearest `target`, plus the small modifier that
+// closes the gap; with all-high confidence the engine's attenuation is the identity, so the computed
+// score === target exactly. CFPB item layout: forward items at indices 0,1,3,7; reverse-coded at 2,4,5,6,8,9.
+const FORWARD_IDX = [0, 1, 3, 7];
+const REVERSE_IDX = [2, 4, 5, 6, 8, 9];
+
+/** Greedily place `total` across `n` slots, ≤4 each (the CFPB per-item response cap). */
+function fillN(total: number, n: number): number[] {
+  const out = new Array(n).fill(0) as number[];
+  let rem = total;
+  for (let i = 0; i < n && rem > 0; i++) { const v = Math.min(4, rem); out[i] = v; rem -= v; }
+  return out;
+}
+
+/** A 10-item high-confidence response vector that reverse-codes to raw total `raw` (0–40).
+ *  raw = 24 + Σforward − Σreverse, so load forward high (reverse 0) for high raw, and vice-versa. */
+function responsesForRaw(raw: number): { value: number; confidence: 'high' }[] {
+  const d = raw - 24;
+  const fwd = fillN(d >= 0 ? d : 0, FORWARD_IDX.length);
+  const rev = fillN(d < 0 ? -d : 0, REVERSE_IDX.length);
+  const values = new Array(10).fill(0) as number[];
+  FORWARD_IDX.forEach((idx, k) => { values[idx] = fwd[k]; });
+  REVERSE_IDX.forEach((idx, k) => { values[idx] = rev[k]; });
+  return values.map((v) => ({ value: v, confidence: 'high' as const }));
+}
+
+/** Score block (responses + modifier + engine-derived score/label/color) whose computed score === `target`. */
+function scoredCfpb(target: number) {
+  // Pick the published raw total whose table score is nearest target; the remainder becomes the modifier.
+  let best = { raw: 20, mod: target - scoreFromRawTotal(20) };
+  for (let raw = 0; raw <= 40; raw++) {
+    const mod = target - scoreFromRawTotal(raw);
+    if (Math.abs(mod) < Math.abs(best.mod)) best = { raw, mod };
+  }
+  const cfpb_responses = responsesForRaw(best.raw);
+  const { score, scoreLabel, scoreColor } = computeFinalScore(cfpb_responses, best.mod);
+  return {
+    cfpb_responses,
+    scoreModifier: best.mod,
+    scoreModifierReason: best.mod !== 0 ? 'Rounded to the nearest published CFPB score band.' : '',
+    score,
+    scoreLabel,
+    scoreColor,
+  };
+}
 const SPENDING_TEMPLATE = [
   { category: 'Groceries', amount: 420, source: 'user_stated' },
   { category: 'Dining out', amount: 180, source: 'user_stated' },
@@ -33,6 +76,7 @@ function roastByTier(score: number): string {
 export function pointToAnalysis(p: PersonaPoint): FinalAnalysis {
   if (p.id === personaLatest().id) return SAMPLE_ANALYSIS;
   const band = getScoreBand(p.score);
+  const scored = scoredCfpb(p.score); // CFPB answers + modifier whose engine score === p.score
   const debt = debtTotal(p);
   const monthlySavings = p.income - p.expenses;
   const debts = p.debts.map((d) => ({
@@ -46,9 +90,9 @@ export function pointToAnalysis(p: PersonaPoint): FinalAnalysis {
     monthlyExpenses: { value: p.expenses, confidence: 'high' },
     liquidSavings: { value: p.savings, confidence: 'medium' },
     debts,
-    cfpb_responses: CFPB_TEMPLATE,
-    scoreModifier: 0,
-    scoreModifierReason: '',
+    cfpb_responses: scored.cfpb_responses,
+    scoreModifier: scored.scoreModifier,
+    scoreModifierReason: scored.scoreModifierReason,
     summary: p.note ?? `${band.label}. $${debt.toLocaleString()} in debt, $${p.savings.toLocaleString()} saved.`,
     roast: roastByTier(p.score),
     insights: [
@@ -78,9 +122,9 @@ export function pointToAnalysis(p: PersonaPoint): FinalAnalysis {
     },
     emotionalStatus: { label: band.label, emoji: emojiFor(p.score) },
     mentionedSpending: SPENDING_TEMPLATE,
-    score: p.score,
-    scoreLabel: band.label,
-    scoreColor: band.color,
+    score: scored.score,
+    scoreLabel: scored.scoreLabel,
+    scoreColor: scored.scoreColor,
     monthlySavings,
     savingsRate: p.income ? round2(monthlySavings / p.income) : 0,
     debtTotal: debt,
@@ -93,6 +137,7 @@ export function pointToAnalysis(p: PersonaPoint): FinalAnalysis {
 
 // The current state (Jun 1, score 80) — Jason's latest roast. Hand-authored so the most-shown roast is
 // punchy + specific; everything else (snapshot, money trend, captions) lines up with these figures.
+const SAMPLE = scoredCfpb(80); // engine-derived score block for the hero roast (so 80 is real, not asserted)
 export const SAMPLE_ANALYSIS: FinalAnalysis = FinalAnalysisSchema.parse({
   monthlyIncome: { value: 5000, confidence: 'high' },
   monthlyExpenses: { value: 3700, confidence: 'high' },
@@ -100,9 +145,9 @@ export const SAMPLE_ANALYSIS: FinalAnalysis = FinalAnalysisSchema.parse({
   debts: [
     { name: 'Car Loan', balance: 9800, interestRate: 0.079, minimumPayment: 310, urgency: 'medium' },
   ],
-  cfpb_responses: CFPB_TEMPLATE,
-  scoreModifier: 0,
-  scoreModifierReason: '',
+  cfpb_responses: SAMPLE.cfpb_responses,
+  scoreModifier: SAMPLE.scoreModifier,
+  scoreModifierReason: SAMPLE.scoreModifierReason,
   summary: 'The card is gone, savings are real, and you are finally ahead of your bills instead of chasing them. The $9,800 car loan is the last boss — and at 7.9% it is very beatable. The next move is turning the freed-up card payment into a full emergency fund.',
   roast: "Bestie, who let you get responsible? Credit card in the ground, an emergency fund forming, and you actually saved this month. Respectfully — the algorithm fumbled serving a finance-roast app to someone winning this hard.",
   insights: [
@@ -124,9 +169,9 @@ export const SAMPLE_ANALYSIS: FinalAnalysis = FinalAnalysisSchema.parse({
   },
   emotionalStatus: { label: getScoreBand(80).label, emoji: emojiFor(80) },
   mentionedSpending: SPENDING_TEMPLATE,
-  score: 80,
-  scoreLabel: getScoreBand(80).label,
-  scoreColor: getScoreBand(80).color,
+  score: SAMPLE.score,
+  scoreLabel: SAMPLE.scoreLabel,
+  scoreColor: SAMPLE.scoreColor,
   monthlySavings: 1300,
   savingsRate: 0.26,
   debtTotal: 9800,

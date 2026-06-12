@@ -43,12 +43,14 @@ import RoastIcon from '@/components/RoastIcon';
 import ProfileScreen from '@/screens/ProfileScreen';
 import CommunityFeedScreen from '@/screens/CommunityFeedScreen';
 import EditProfileScreen from '@/screens/EditProfileScreen';
+import RoastVoiceScreen from '@/screens/RoastVoiceScreen';
 import NotificationsScreen from '@/screens/NotificationsScreen';
 import HelpFAQScreen from '@/screens/HelpFAQScreen';
 import ScenarioSimulatorScreen from '@/screens/ScenarioSimulatorScreen';
 import SubscriptionAuditScreen from '@/screens/SubscriptionAuditScreen';
 import FinancialContextScreen from '@/screens/FinancialContextScreen';
 import MonthlyCheckInScreen from '@/screens/MonthlyCheckInScreen';
+import { CHECK_IN_NAME } from '@/config/tools';
 import CreatorDashboardScreen from '@/screens/CreatorDashboardScreen';
 
 import { TAB_ROW_HEIGHT, TAB_FLOAT_MARGIN } from '@/navigation/constants';
@@ -249,6 +251,8 @@ export default function AppNavigator() {
             <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Notifications', animation: 'slide_from_right' }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ ...sharedHeader, headerShown: true, title: 'Edit Profile', animation: 'slide_from_right' }} />
+            {/* Renders its own BottomSheet — present transparently (no native card/header) so the sheet animates over Profile. */}
+            <Stack.Screen name="RoastVoice" component={RoastVoiceScreen} options={{ headerShown: false, presentation: 'transparentModal', animation: 'none', gestureEnabled: false }} />
             <Stack.Screen name="FinancialContext" component={FinancialContextScreen} options={{ ...sharedHeader, headerShown: true, title: 'Financial Context', animation: 'slide_from_right' }} />
             <Stack.Screen name="HelpFAQ" component={HelpFAQScreen} options={{ ...sharedHeader, headerShown: true, title: 'Help & FAQ', animation: 'slide_from_right' }} />
             <Stack.Screen name="ScenarioSimulator" component={ScenarioSimulatorScreen} options={{ ...sharedHeader, headerShown: true, title: 'Scenarios', animation: 'slide_from_right' }} />
@@ -265,7 +269,7 @@ export default function AppNavigator() {
                 TODO(paywall): restore a proper bottom-sheet that still allows inner scroll
                 (e.g. make the ScrollView the screen's first child, then re-apply `sheetModal`). */}
             <Stack.Screen name="Paywall" component={PaywallScreen} options={{ headerShown: false, animation: 'slide_from_bottom', presentation: 'card' }} />
-            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sharedHeader, headerShown: true, title: 'Monthly Check-In', animation: 'slide_from_right' }} />
+            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sharedHeader, headerShown: true, title: CHECK_IN_NAME, animation: 'slide_from_right' }} />
           </>
         )}
       </Stack.Navigator>
