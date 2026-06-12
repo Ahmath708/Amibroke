@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { enterUp, PressableScale } from '@/components/motion';
-import SectionLabel from '@/components/SectionLabel';
+import AccountSettings from '@/components/AccountSettings';
 import AppTextInput from '@/components/AppTextInput';
 import { capitalize } from '@/utils/string';
 import Toast from '@/components/Toast';
@@ -15,15 +15,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
-import { PencilSquareIcon, ClipboardDocumentListIcon, CreditCardIcon, ArrowTrendingUpIcon, Cog6ToothIcon, SparklesIcon, ArrowTopRightOnSquareIcon } from 'react-native-heroicons/outline';
+import { PencilSquareIcon } from 'react-native-heroicons/outline';
 import TierPill from '@/components/TierPill';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile';
-import { manageSubscriptions } from '@/services/purchases';
 import { useSubscription } from '@/hooks/useSubscription';
-import { FEATURES } from '@/config/features';
 import ScreenBackground from '@/components/ScreenBackground';
 import TopScrim from '@/components/TopScrim';
 import { UserIcon } from 'react-native-heroicons/solid';
@@ -35,7 +33,7 @@ type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
 export default function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -48,7 +46,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   // Shared hook → live customerInfo listener, so the tier updates the moment a
   // purchase lands (the old one-shot fetch left Profile stuck on the old tier).
-  const { tier: purchaseTier, premium, refresh: refreshSub } = useSubscription();
+  const { tier: purchaseTier, refresh: refreshSub } = useSubscription();
 
   const fetchData = useCallback(async (silent = false) => {
     if (!user) {
@@ -88,13 +86,6 @@ export default function ProfileScreen({ navigation }: Props) {
     setIsEditingName(false);
     const ok = await updateProfile(user.id, { username: userName });
     if (!ok) Alert.alert('Error', 'Failed to save profile.');
-  };
-
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: signOut },
-    ]);
   };
 
   const pickImage = async () => {
@@ -147,17 +138,6 @@ export default function ProfileScreen({ navigation }: Props) {
   }
 
   const fullName = [firstName, lastName].map((s) => s.trim()).filter(Boolean).map(capitalize).join(' ');
-
-  // Quick-access rows. "Plans & Features" is in-app and visible to everyone (compare tiers /
-  // upgrade); "Manage Subscription" only appears when subscribed and hands off to the App Store.
-  const nav = navigation.navigate as (route: string, params?: object) => void;
-  const menuItems = [
-    { key: 'context', icon: ClipboardDocumentListIcon, label: 'Financial Context', onPress: () => nav('FinancialContext'), right: 'none' as const },
-    { key: 'plans', icon: SparklesIcon, label: 'Plans & Features', onPress: () => nav('Paywall'), right: 'tier' as const },
-    ...(premium ? [{ key: 'manage', icon: CreditCardIcon, label: 'Manage Subscription', onPress: () => manageSubscriptions(), right: 'external' as const }] : []),
-    ...(FEATURES.CREATOR_DASHBOARD ? [{ key: 'creator', icon: ArrowTrendingUpIcon, label: 'Creator Dashboard', onPress: () => nav('CreatorDashboard'), right: 'none' as const }] : []),
-    { key: 'settings', icon: Cog6ToothIcon, label: 'Settings', onPress: () => nav('Settings'), right: 'none' as const },
-  ];
 
   return (
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
@@ -218,35 +198,8 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
         </View>
 
-        {/* Menu */}
-        <SectionLabel>Quick Access</SectionLabel>
-        <View style={styles.menuGroup}>
-          {menuItems.map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <React.Fragment key={item.key}>
-                {i > 0 && <View style={styles.menuSep} />}
-                <PressableScale style={styles.menuCell} onPress={item.onPress}>
-                  <Icon size={22} color={Colors.textPrimary} />
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                  <View style={styles.menuRight}>
-                    {item.right === 'tier' && <TierPill tier={purchaseTier} size="md" />}
-                    {item.right === 'external'
-                      ? <ArrowTopRightOnSquareIcon size={18} color={Colors.textSecondary} />
-                      : <Text style={styles.menuChevron}>›</Text>}
-                  </View>
-                </PressableScale>
-              </React.Fragment>
-            );
-          })}
-        </View>
-
-        {/* Sign out */}
-        {user && (
-          <PressableScale style={styles.signOutBtn} onPress={handleSignOut}>
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </PressableScale>
-        )}
+        {/* Account + settings — the full account hub lives here (no separate Settings screen) */}
+        <AccountSettings navigation={navigation} />
       </ScrollView>
       <TopScrim variant="profile" />
       <Toast message={toast ?? ''} emoji="✅" visible={!!toast} onHide={() => setToast(null)} />
@@ -287,22 +240,4 @@ const styles = StyleSheet.create({
   avatarInfo: { flex: 1, gap: Spacing.xs },
   fullName: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, color: Colors.textPrimary, fontWeight: '700' },
   username: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  menuGroup: {
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.xxl,
-  },
-  menuSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.rowHeightLg },
-  menuCell: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: Spacing.md, minHeight: 50 },
-  menuLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  menuRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  menuDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  menuChevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
-  signOutBtn: {
-    alignItems: 'center', paddingVertical: Spacing.md,
-    borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,69,58,0.35)',
-    backgroundColor: Colors.dangerContainer,
-  },
-  signOutText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.danger },
-  });
+});

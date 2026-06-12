@@ -154,6 +154,21 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
+### 2026-06-12 — Settings dedup → Profile/Settings merged into one account hub — COMMITTED
+Two passes, both on `redesign`, `tsc` clean. The user drives the sim/Metro now (I don't reload).
+- **Settings dedup (first).** Removed the redundant "Subscription" row (whole Account section — plan
+  mgmt lives in Profile) and the "Sign Out" row (duplicated Profile's button + miscategorized under
+  Danger Zone). Fixed a real bug: the Clear-History spinner never fired — the loading key was derived
+  from the row label (`'clear'` was never set); replaced with an explicit `loadingKey`.
+- **Full merge (Cash App model).** Profile looked empty after the stats row was dropped, so we
+  **eliminated the standalone Settings screen** and inlined everything into Profile. Extracted a new
+  `components/AccountSettings.tsx` (owns all toggle/biometric/notification/GDPR state so the Profile
+  view stays thin); it renders Account · Notifications · Security · App · Support · Danger Zone →
+  Sign Out → version. Profile is now just Hero → `<AccountSettings/>`. Deleted `SettingsScreen.tsx`,
+  removed the `Settings` route from `AppNavigator` + `RootStackParamList` (only Profile's Quick-Access
+  row referenced it). Icon tweaks: Plans & Features = Sparkles, Roast Voice = ChatBubble, Clear History
+  = ArchiveBoxXMark, Delete Account = Trash. Sign Out kept pure-text (it's a button, not a row).
+
 ### 2026-06-11 — audit sweep complete (Waves B–F) + Profile hero glow-up + Community polish — COMMITTED
 Finished the post-onboarding audit sweep and the per-screen passes for **Profile, Dashboard, and
 Community** (now considered done). On `redesign`, `tsc` clean, committed. Sim is the other session's

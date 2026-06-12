@@ -145,7 +145,6 @@ export type RootStackParamList = {
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
   FinancialContext: undefined;
-  Settings: undefined;
   EditProfile: undefined;
   Notifications: undefined;
   HelpFAQ: undefined;

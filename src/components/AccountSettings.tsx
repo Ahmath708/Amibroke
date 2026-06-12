@@ -1,32 +1,27 @@
-﻿import React, { useState, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView,
-  Alert, Linking, ActivityIndicator, ActionSheetIOS,
-} from 'react-native';
-import ReAnimated from 'react-native-reanimated';
-import { enterUp, PressableScale } from '@/components/motion';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Alert, Linking, ActivityIndicator, ActionSheetIOS } from 'react-native';
+import { PressableScale } from '@/components/motion';
 import Constants from 'expo-constants';
 import Toggle from '@/components/Toggle';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TierPill from '@/components/TierPill';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, RoastTone } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { BRAND } from '@/config/brand';
-import ScreenBackground from '@/components/ScreenBackground';
+import { FEATURES } from '@/config/features';
 import * as Notifications from 'expo-notifications';
 import {
-  CreditCardIcon, XCircleIcon, DocumentTextIcon, FingerPrintIcon,
-  QuestionMarkCircleIcon, ArrowRightOnRectangleIcon, BellIcon, ShieldCheckIcon,
-  SparklesIcon, StarIcon, TrashIcon, CalendarIcon, BoltIcon,
+  ClipboardDocumentListIcon, SparklesIcon, CreditCardIcon, ArrowTrendingUpIcon,
+  ArrowTopRightOnSquareIcon, BellIcon, CalendarIcon, FingerPrintIcon, ChatBubbleBottomCenterTextIcon, BoltIcon,
+  QuestionMarkCircleIcon, ShieldCheckIcon, DocumentTextIcon, StarIcon, ArchiveBoxXMarkIcon, TrashIcon,
 } from 'react-native-heroicons/outline';
-import { useAuth, setPendingRedirect } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useLegal } from '@/context/LegalContext';
+import { useSubscription } from '@/hooks/useSubscription';
+import { manageSubscriptions } from '@/services/purchases';
 import { deleteUserData } from '@/services/gdpr';
 import { setHapticsEnabled, getHapticsEnabled } from '@/utils/haptics';
 import { isBiometricAvailable, isLockEnabled, setLockEnabled, authenticate } from '@/services/biometric';
-import { useSubscription } from '@/hooks/useSubscription';
-import { manageSubscriptions } from '@/services/purchases';
-import { PURCHASE_PRODUCTS } from '@/types';
 import { getCheckinConfig, getCheckIns } from '@/services/checkins';
 import { getProfile, updateProfile } from '@/services/profile';
 import { deleteAllAnalyses } from '@/services/analyses';
@@ -36,14 +31,14 @@ import {
   getCheckinReminderEnabled, setCheckinReminderEnabledFlag,
 } from '@/services/notifications';
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'> };
+type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string }>;
 
 type SettingRow =
   | { type: 'toggle'; label: string; key: string; icon: IconComponent; detail?: string }
-  | { type: 'action'; label: string; icon: IconComponent; detail?: string; destructive?: boolean; onPress: () => void }
-  | { type: 'nav'; label: string; icon: IconComponent; detail?: string; onPress: () => void };
+  | { type: 'action'; label: string; icon: IconComponent; detail?: string; destructive?: boolean; loadingKey?: string; onPress: () => void }
+  | { type: 'nav'; label: string; icon: IconComponent; detail?: string; right?: 'tier' | 'external'; onPress: () => void };
 
 // The user's roast voice (profiles.preferred_tone). Labels mirror the RoastComposer tone selector.
 const TONE_OPTIONS: { key: RoastTone; label: string }[] = [
@@ -54,11 +49,16 @@ const TONE_OPTIONS: { key: RoastTone; label: string }[] = [
   { key: 'finance_bro', label: 'Finance Bro' },
 ];
 
-export default function SettingsScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
+/**
+ * The full account/settings list, rendered inline on the Profile tab (Cash App-style single
+ * account hub — there is no separate Settings screen). Owns its own toggle/biometric/notification/
+ * GDPR state so the Profile view layer stays thin.
+ */
+export default function AccountSettings({ navigation }: Props) {
   const { signOut, user } = useAuth();
-  const { tier, premium } = useSubscription();
   const { showLegal } = useLegal();
+  const { tier: purchaseTier, premium } = useSubscription();
+  const nav = navigation.navigate as (route: string, params?: object) => void;
   const [toggles, setToggles] = useState({
     notifications: false,
     monthlyReminder: false,
@@ -187,24 +187,25 @@ export default function SettingsScreen({ navigation }: Props) {
     );
   };
 
-  // No "Profile" row here — Settings is reached *through* Profile, so linking back
-  // would be circular.
-  const accountRows: SettingRow[] = [
-    { type: 'nav', label: 'Subscription', icon: CreditCardIcon, detail: premium ? PURCHASE_PRODUCTS[tier]?.label ?? 'Premium' : 'Free Plan', onPress: () => {
-      if (!user) {
-        setPendingRedirect('Paywall');
-        navigation.navigate('Login');
-      } else if (premium) {
-        manageSubscriptions();
-      } else {
-        navigation.navigate('Paywall');
-      }
-    }},
-  ];
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: signOut },
+    ]);
+  };
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const buildNumber = Constants.expoConfig?.ios?.buildNumber;
   const versionLabel = `Version ${appVersion}${buildNumber ? ` (${buildNumber})` : ''}`;
+
+  // Account — plan management lives here now (Profile is the single account hub). "Plans & Features"
+  // is in-app and visible to everyone; "Manage Subscription" only when subscribed → the App Store.
+  const accountRows: SettingRow[] = [
+    { type: 'nav', label: 'Financial Context', icon: ClipboardDocumentListIcon, onPress: () => nav('FinancialContext') },
+    { type: 'nav', label: 'Plans & Features', icon: SparklesIcon, right: 'tier', onPress: () => nav('Paywall') },
+    ...(premium ? [{ type: 'nav', label: 'Manage Subscription', icon: CreditCardIcon, right: 'external', onPress: () => manageSubscriptions() } as SettingRow] : []),
+    ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav', label: 'Creator Dashboard', icon: ArrowTrendingUpIcon, onPress: () => nav('CreatorDashboard') } as SettingRow] : []),
+  ];
 
   const SECTIONS: { title: string; rows: SettingRow[] }[] = [
     {
@@ -227,14 +228,14 @@ export default function SettingsScreen({ navigation }: Props) {
     {
       title: 'App',
       rows: [
-        { type: 'nav', label: 'Roast Voice', icon: SparklesIcon, detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
+        { type: 'nav', label: 'Roast Voice', icon: ChatBubbleBottomCenterTextIcon, detail: TONE_OPTIONS.find((t) => t.key === tone)?.label, onPress: onChangeTone },
         { type: 'toggle', label: 'Haptic Feedback', key: 'haptics', icon: BoltIcon },
       ],
     },
     {
       title: 'Support',
       rows: [
-        { type: 'nav', label: 'Help & FAQ', icon: QuestionMarkCircleIcon, onPress: () => navigation.navigate('HelpFAQ') },
+        { type: 'nav', label: 'Help & FAQ', icon: QuestionMarkCircleIcon, onPress: () => nav('HelpFAQ') },
         { type: 'nav', label: 'Privacy Policy', icon: ShieldCheckIcon, onPress: () => showLegal('privacy') },
         { type: 'nav', label: 'Terms of Service', icon: DocumentTextIcon, onPress: () => showLegal('terms') },
         { type: 'nav', label: 'Rate Am I Broke?', icon: StarIcon, onPress: () => Linking.openURL(BRAND.appStoreUrl) },
@@ -243,95 +244,102 @@ export default function SettingsScreen({ navigation }: Props) {
     {
       title: 'Danger Zone',
       rows: [
-        { type: 'action', label: 'Sign Out', icon: ArrowRightOnRectangleIcon, destructive: true, onPress: () => signOut() },
-        { type: 'action', label: 'Clear Roast History', icon: TrashIcon, destructive: true, onPress: () => {
+        { type: 'action', label: 'Clear Roast History', icon: ArchiveBoxXMarkIcon, destructive: true, loadingKey: 'clear', onPress: () => {
           if (!user) return;
           Alert.alert('Clear History?', 'This permanently deletes all your roasts. This cannot be undone.', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Clear', style: 'destructive', onPress: async () => {
+              setGdprLoading('clear');
               const ok = await deleteAllAnalyses(user.id);
+              setGdprLoading(null);
               Alert.alert(ok ? 'History Cleared' : 'Failed', ok ? 'All your roasts have been deleted.' : 'Could not clear your history.');
             } },
           ]);
         } },
-        { type: 'action', label: 'Delete Account', icon: XCircleIcon, destructive: true, onPress: handleDeleteAccount },
+        { type: 'action', label: 'Delete Account', icon: TrashIcon, destructive: true, loadingKey: 'delete', onPress: handleDeleteAccount },
       ],
     },
   ];
 
   return (
-    <ReAnimated.View entering={enterUp(0)} style={styles.container}>
-      <ScreenBackground variant="settings" />
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {SECTIONS.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.group}>
-              {section.rows.map((row, i) => {
-                const Icon = row.icon;
-                const isDestructive = row.type === 'action' && row.destructive;
-                const content = (
-                  <>
-                    {i > 0 && <View style={styles.sep} />}
-                    <View style={styles.cell}>
-                      <View style={styles.cellLeft}>
-                        <Icon size={22} color={isDestructive ? Colors.danger : Colors.textPrimary} />
-                        <View>
-                          <Text style={[
-                            styles.cellLabel,
-                            isDestructive && styles.cellLabelDanger,
-                          ]}>{row.label}</Text>
-                          {row.detail && <Text style={styles.cellDetail}>{row.detail}</Text>}
-                        </View>
-                      </View>
-                      <View style={styles.cellRight}>
-                        {row.type === 'toggle' && (
-                          <Toggle
-                            value={toggles[row.key as keyof typeof toggles]}
-                            onValueChange={(v) => {
-                              if (row.key === 'monthlyReminder') onToggleReminder(v);
-                              else if (row.key === 'notifications') onTogglePush(v);
-                              else if (row.key === 'haptics') onToggleHaptics(v);
-                              else if (row.key === 'faceID') onToggleFaceID(v);
-                            }}
-                          />
-                        )}
-                        {row.type === 'action' && gdprLoading === row.label.toLowerCase().split(' ')[0] && (
-                          <ActivityIndicator size="small" color={row.destructive ? Colors.danger : Colors.textMuted} />
-                        )}
-                        {(row.type === 'nav' || (row.type === 'action' && gdprLoading !== row.label.toLowerCase().split(' ')[0])) && (
-                          <Text style={styles.chevron}>›</Text>
-                        )}
+    <View>
+      {SECTIONS.map((section) => (
+        <View key={section.title} style={styles.section}>
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View style={styles.group}>
+            {section.rows.map((row, i) => {
+              const Icon = row.icon;
+              const isDestructive = row.type === 'action' && row.destructive;
+              const content = (
+                <>
+                  {i > 0 && <View style={styles.sep} />}
+                  <View style={styles.cell}>
+                    <View style={styles.cellLeft}>
+                      <Icon size={22} color={isDestructive ? Colors.danger : Colors.textPrimary} />
+                      <View>
+                        <Text style={[styles.cellLabel, isDestructive && styles.cellLabelDanger]}>{row.label}</Text>
+                        {row.detail && <Text style={styles.cellDetail}>{row.detail}</Text>}
                       </View>
                     </View>
-                  </>
-                );
+                    <View style={styles.cellRight}>
+                      {row.type === 'toggle' && (
+                        <Toggle
+                          value={toggles[row.key as keyof typeof toggles]}
+                          onValueChange={(v) => {
+                            if (row.key === 'monthlyReminder') onToggleReminder(v);
+                            else if (row.key === 'notifications') onTogglePush(v);
+                            else if (row.key === 'haptics') onToggleHaptics(v);
+                            else if (row.key === 'faceID') onToggleFaceID(v);
+                          }}
+                        />
+                      )}
+                      {row.type === 'action' && gdprLoading === row.loadingKey && (
+                        <ActivityIndicator size="small" color={row.destructive ? Colors.danger : Colors.textMuted} />
+                      )}
+                      {row.type === 'action' && gdprLoading !== row.loadingKey && (
+                        <Text style={styles.chevron}>›</Text>
+                      )}
+                      {row.type === 'nav' && row.right === 'tier' && (
+                        <>
+                          <TierPill tier={purchaseTier} size="md" />
+                          <Text style={styles.chevron}>›</Text>
+                        </>
+                      )}
+                      {row.type === 'nav' && row.right === 'external' && (
+                        <ArrowTopRightOnSquareIcon size={18} color={Colors.textSecondary} />
+                      )}
+                      {row.type === 'nav' && !row.right && (
+                        <Text style={styles.chevron}>›</Text>
+                      )}
+                    </View>
+                  </View>
+                </>
+              );
 
-                if (row.type === 'toggle') {
-                  return <React.Fragment key={row.label}>{content}</React.Fragment>;
-                }
+              if (row.type === 'toggle') {
+                return <React.Fragment key={row.label}>{content}</React.Fragment>;
+              }
 
-                return (
-                  <PressableScale key={row.label} onPress={row.onPress}>
-                    {content}
-                  </PressableScale>
-                );
-              })}
-            </View>
+              return (
+                <PressableScale key={row.label} onPress={row.onPress}>
+                  {content}
+                </PressableScale>
+              );
+            })}
           </View>
-        ))}
-        <Text style={styles.versionFooter}>{versionLabel}</Text>
-      </ScrollView>
-    </ReAnimated.View>
+        </View>
+      ))}
+      {user && (
+        <PressableScale style={styles.signOutBtn} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </PressableScale>
+      )}
+      <Text style={styles.versionFooter}>{versionLabel}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm },
   versionFooter: {
     fontFamily: Typography.fonts.body,
     fontSize: Typography.caption1.fontSize,
@@ -361,6 +369,13 @@ const styles = StyleSheet.create({
   cellLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
   cellLabelDanger: { color: Colors.danger },
   cellDetail: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
-  cellRight: { marginLeft: Spacing.sm },
+  cellRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginLeft: Spacing.sm },
   chevron: { fontSize: Typography.title2.fontSize, color: Colors.textSecondary, fontWeight: '300' },
+  signOutBtn: {
+    alignItems: 'center', paddingVertical: Spacing.md,
+    borderRadius: Radius.lg, marginBottom: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,69,58,0.35)',
+    backgroundColor: Colors.dangerContainer,
+  },
+  signOutText: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.callout.fontSize, color: Colors.danger },
 });
