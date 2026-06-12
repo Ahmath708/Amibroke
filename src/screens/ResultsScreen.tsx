@@ -7,6 +7,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   ShareIcon, ArrowRightOnRectangleIcon, GlobeAltIcon, CalendarIcon, CheckCircleIcon,
   ChevronDownIcon, ChevronUpIcon, ChevronRightIcon, LockClosedIcon, ArrowRightIcon,
+  ArrowDownTrayIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon as CheckCircleSolid, XCircleIcon as XCircleSolid } from 'react-native-heroicons/solid';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +35,8 @@ import { useAuth } from '@/context/AuthContext';
 import { saveAnalysis } from '@/services/analyses';
 import { updateSnapshotFromAnalysis } from '@/services/financialSnapshot';
 import { shareToFeed } from '@/services/community';
+import { getActivePlan } from '@/services/activePlan';
+import { shareFinancialReportPdf } from '@/services/pdf';
 import { useSubscription } from '@/hooks/useSubscription';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
 
@@ -112,6 +115,7 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
   const [shared, setShared] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [mockAnimating, setMockAnimating] = useState(MOCK_ANIMATION && !!viewingId); // dev: replay the roast animation when opening a past roast
   // Progressive disclosure: lead with the hit (score/roast/#1 fix/CTA); the full
   // report stays one tap away so the screen doesn't read as a homework packet.
@@ -179,6 +183,21 @@ export default function ResultsScreen({ navigation, route }: Props) {
         { text: 'Post publicly', onPress: postToFeed },
       ],
     );
+  };
+
+  // Deep Dive perk: export the full report as a shareable PDF (Save to Files / Mail / AirDrop).
+  // Includes the already-generated active plan if one exists — no LLM call, no cost.
+  const handleDownloadPdf = async () => {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const plan = user ? await getActivePlan(user.id) : null;
+      await shareFinancialReportPdf(analysis, { plan });
+    } catch (e) {
+      Alert.alert('Export failed', "We couldn't generate your report. Please try again.");
+    } finally {
+      setPdfBusy(false);
+    }
   };
 
   const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
@@ -292,6 +311,9 @@ export default function ResultsScreen({ navigation, route }: Props) {
             )}
             {user && (
               <IconAction Icon={CalendarIcon} label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
+            )}
+            {canDeepDive && (
+              <IconAction Icon={ArrowDownTrayIcon} label={pdfBusy ? 'Saving…' : 'PDF'} onPress={handleDownloadPdf} />
             )}
           </View>
         </View>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, StatusBar, LogBox } from 'react-native';
+import { StyleSheet, StatusBar, LogBox } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -100,7 +101,7 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container} onLayout={onLayoutRootView}>
+    <GestureHandlerRootView style={styles.container} onLayout={onLayoutRootView}>
     <SafeAreaProvider>
       <StatusBar
         barStyle="light-content"
@@ -144,7 +145,7 @@ export default function App() {
       </ErrorBoundary>
       </AuthProvider>
     </SafeAreaProvider>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
