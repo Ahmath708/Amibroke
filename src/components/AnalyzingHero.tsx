@@ -19,11 +19,11 @@ const randInt = (min: number, max: number) => min + Math.floor(Math.random() * (
  * Score range per band, aligned to getScoreBand's boundaries. We cycle through
  * all four (instead of pure 1–100) so the teaser shows a balanced spread — pure
  * random would land in the red band 40% of the time and could repeat a colour.
- * Fragile is floored at 12 so even the red sample draws a real arc (a "3" looks
+ * Cooked is floored at 12 so even the red sample draws a real arc (a "3" looks
  * like an empty/broken ring).
  */
 const BAND_RANGES: { min: number; max: number }[] = [
-  { min: 12, max: 40 },  // Financially Fragile (red)
+  { min: 12, max: 40 },  // Cooked (red)
   { min: 41, max: 60 },  // Surviving (amber)
   { min: 61, max: 80 },  // Stable (teal)
   { min: 81, max: 100 }, // Thriving (green)

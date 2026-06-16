@@ -8,9 +8,9 @@ import { getScoreBand } from '../bands';
 // their exact colors so a stray edit can't silently desync any of those surfaces.
 
 void describe('getScoreBand', () => {
-  void it('Financially Fragile for scores 0–40 (#FF4D6D)', () => {
+  void it('Cooked for scores 0–40 (#FF4D6D)', () => {
     for (const s of [0, 1, 20, 40]) {
-      assert.deepEqual(getScoreBand(s), { label: 'Financially Fragile', color: '#FF4D6D' });
+      assert.deepEqual(getScoreBand(s), { label: 'Cooked', color: '#FF4D6D' });
     }
   });
 
@@ -33,7 +33,7 @@ void describe('getScoreBand', () => {
   });
 
   void it('boundaries fall into the lower band (<= comparison)', () => {
-    assert.equal(getScoreBand(40).label, 'Financially Fragile');
+    assert.equal(getScoreBand(40).label, 'Cooked');
     assert.equal(getScoreBand(41).label, 'Surviving');
     assert.equal(getScoreBand(60).label, 'Surviving');
     assert.equal(getScoreBand(61).label, 'Stable');

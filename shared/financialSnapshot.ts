@@ -218,21 +218,54 @@ export const INCOME_MID: Record<string, number> = { under_2k: 1500, '2k_4k': 300
 export const SAVINGS_MID: Record<string, number> = { none: 0, under_500: 250, '500_2k': 1250, '2k_10k': 6000, '10k_50k': 30000, over_50k: 65000 };
 export const DEBT_MID: Record<string, number> = { none: 0, under_5k: 2500, '5k_15k': 10000, '15k_50k': 30000, over_50k: 75000 };
 
-/** Onboarding answers → snapshot patch (income + savings + debt). Exact income `stated`, else `estimated`. */
+/** An exact typed figure for any of the three onboarding money fields (incl. an explicit `$0`). */
+export interface OnboardingExact {
+  income?: number | null;
+  savings?: number | null;
+  debt?: number | null;
+}
+
+/**
+ * Onboarding answers → snapshot patch (income + savings + debt). For each field an **exact** typed
+ * figure (incl. `$0`) is `stated` and wins over the bracket; a range-chip pick is the bracket
+ * midpoint at `estimated`.
+ *
+ * `$0` is a real, user-stated value (unemployed / no savings / no debt) — NOT "no signal" — so it
+ * must land as `stated $0`, never fall through to a bracket midpoint (which would overstate exactly
+ * the most financially fragile users). A null/undefined exact means "no exact entered → use the
+ * bracket". Exact debt seeds one coarse `stated` line; the first roast itemizes real debts.
+ */
 export function patchFromOnboarding(
   ctx: { incomeBracket?: string; liquidSavingsBracket?: string; debtBracket?: string },
-  exactIncome?: number | null,
+  exact?: OnboardingExact,
 ): SnapshotPatch {
   const patch: SnapshotPatch = {};
-  if (exactIncome != null && Number.isFinite(exactIncome) && exactIncome > 0) {
-    patch.monthlyIncome = { value: exactIncome, confidence: 'stated' };
+  // A typed figure counts only when it's a finite, non-negative number — crucially INCLUDING `0`.
+  const stated = (v: number | null | undefined): number | undefined =>
+    v != null && Number.isFinite(v) && v >= 0 ? v : undefined;
+
+  const exIncome = stated(exact?.income);
+  if (exIncome !== undefined) {
+    patch.monthlyIncome = { value: exIncome, confidence: 'stated' };
   } else if (ctx.incomeBracket && ctx.incomeBracket in INCOME_MID) {
     patch.monthlyIncome = { value: INCOME_MID[ctx.incomeBracket], confidence: 'estimated' };
   }
-  if (ctx.liquidSavingsBracket && ctx.liquidSavingsBracket in SAVINGS_MID) {
+
+  const exSavings = stated(exact?.savings);
+  if (exSavings !== undefined) {
+    patch.liquidSavings = { value: exSavings, confidence: 'stated' };
+  } else if (ctx.liquidSavingsBracket && ctx.liquidSavingsBracket in SAVINGS_MID) {
     patch.liquidSavings = { value: SAVINGS_MID[ctx.liquidSavingsBracket], confidence: 'estimated' };
   }
-  if (ctx.debtBracket && ctx.debtBracket in DEBT_MID) {
+
+  const exDebt = stated(exact?.debt);
+  if (exDebt !== undefined) {
+    // One coarse, user-stated line so debtTotal is debt-aware; the first roast itemizes real debts.
+    patch.debts = {
+      value: exDebt > 0 ? [{ name: 'Debt', balance: exDebt, apr: 0, min_payment: 0, kind: 'other' }] : [],
+      confidence: 'stated',
+    };
+  } else if (ctx.debtBracket && ctx.debtBracket in DEBT_MID) {
     const bal = DEBT_MID[ctx.debtBracket];
     // One coarse line so debtTotal is debt-aware; the first roast itemizes + the merge overwrites it.
     patch.debts = { value: bal > 0 ? [{ name: 'Debt (estimated)', balance: bal, apr: 0, min_payment: 0, kind: 'other' }] : [], confidence: 'estimated' };

@@ -91,7 +91,7 @@ export default function FinancialContextScreen({ navigation }: Props) {
         await seedSnapshotFromOnboarding(
           user.id,
           { incomeBracket: values.incomeBracket, liquidSavingsBracket: values.liquidSavingsBracket, debtBracket: values.debtBracket },
-          parseIncome(values.incomeExact),
+          { income: parseIncome(values.incomeExact) },
         );
       }
     } catch (e) {

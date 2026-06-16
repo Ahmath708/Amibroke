@@ -67,7 +67,7 @@ User message (abbreviated):
 {
   "analysis": {
     "score": 33,
-    "scoreLabel": "Financially Fragile",
+    "scoreLabel": "Cooked",
     "monthlyIncome": { "value": 4800, "confidence": "high" },
     "monthlyExpenses": { "value": 3500, "confidence": "medium" },
     "monthlySavings": 1300,

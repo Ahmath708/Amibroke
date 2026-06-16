@@ -192,7 +192,7 @@ still seeds the snapshot via `seedSnapshotFromOnboarding` + `buildRescoreInput`)
 
 **Act 3 — Payoff (mint the Broke Card).** At the reveal, **mint a personalized neon "Financial
 ID"** — a credit-card/trading-card object printing the user's name, their score, their band title
-(cheeky: *"Certified: Financially Fragile"*), and date.
+(cheeky: *"Certified: Cooked"*), and date.
 - Custom visual: a designed card — neon foil gradient, a holographic sheen sweep (animated
   gradient), chip/barcode motif — with a **print/flip reveal**. The score lock-in keeps the existing
   `ScoreRing` solidify + glow bloom + heavy haptic.

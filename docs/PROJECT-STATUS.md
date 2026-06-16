@@ -154,6 +154,36 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
+### 2026-06-16 — redesign follow-ups #1/#2/#4 backend landed; #3 merge redesign discussed — UNCOMMITTED
+- **#1 ($0 income)** + **#2 (exact debt/savings)**: `patchFromOnboarding`'s second arg is now an
+  `OnboardingExact` `{ income?, savings?, debt? }`; each field accepts a finite `>= 0` exact (incl. an
+  explicit `0`) → `stated`, else the bracket midpoint stays `estimated`. `seedSnapshotFromOnboarding`
+  + both callers (`OnboardingScreen`, `FinancialContextScreen`) updated. Dormant/zero-regression:
+  `parseIncome` still drops `"0"`→`null`, so current callers hit the bracket path unchanged; the
+  **frontend wiring** (numpad "None"→0, pass exact savings/debt) is a later session.
+- **#4 (band rename "Financially Fragile" → "Cooked")**: all 7 live spots renamed (bands.ts source +
+  union type, ScoreRing, OnboardingScreen, AnalyzingHero, bands.test, action-plan prompt, doc).
+  `scoreLabel` derives from `getScoreBand().label` so the single source edit propagates to LLM output.
+- Verified: `financialSnapshot.test.ts` 26/26 (incl. new #1/#2 cases); `bands.test.ts` asserts "Cooked".
+  Pre-existing-only failures remain (4 native-module tsc errors; `ai.test.ts` saved-plan — both confirmed
+  present on a clean stash, not from this work; `node:test` shared suites aren't jest-runnable).
+- **#3 (debt-payoff merge) + #5 (manual debt CRUD) — root-caused + designed; build staged.** Core bug =
+  the empty-debts-array is overloaded: `patchFromAnalysis` drops `debts: []` as "no signal" (so "I paid
+  off all my debts" never zeroes the stale line). **Decision:** move debts to a dedicated **`debts`
+  table** mirroring `tracked_subscriptions` (per-row RLS + CRUD) **+ per-row source/confidence** (debts,
+  unlike subs, are LLM-written → need provenance + a confidence-gated reconcile). Fix = storage-agnostic
+  `debtsCleared` analyze signal (Part A, launch-blocker; **touches analyze prompt → rule #1 eval**) +
+  per-row reconcile (Part B). Full plan written → [`docs/debts-table.md`](debts-table.md); **implement
+  next dedicated backend session.**
+
+### 2026-06-15 — onboarding redesign (Claude Design) → 3 backend follow-ups logged
+- Onboarding redesign is running as screen-by-screen Claude Design briefs into one `Onboarding.html`
+  flow shell (story Act 1 + 6 build steps + loading + reveal). Brief conventions live in auto-memory.
+- Logged 3 backend follow-ups the redesign implies → [`docs/redesign/claude-redesign-6-15-2026.md`](redesign/claude-redesign-6-15-2026.md):
+  (1) capture $0/"None" income (`patchFromOnboarding` `>0` guard) — **`analyze/prompt.ts` + CFPB scoring verified safe, no change**;
+  (2) allow exact debt/savings via the new numpad screens, not just brackets (`patchFromOnboarding` has an exact path for income only today);
+  (3) 🔴 **confidence-merge mishandles a debt payoff** — "I paid off all my debts" didn't land on a ~$10k/$50k/$2k snapshot (mocks OFF); revisit the confidence ladder + the silent-vs-explicit-zero distinction **before launch**. (1)+(2) user-owned; (3) pre-launch.
+
 ### 2026-06-12 — Settings dedup → Profile/Settings merged into one account hub — COMMITTED
 Two passes, both on `redesign`, `tsc` clean. The user drives the sim/Metro now (I don't reload).
 - **Settings dedup (first).** Removed the redundant "Subscription" row (whole Account section — plan

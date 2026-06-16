@@ -52,7 +52,7 @@ const CALC_MESSAGES = [
 
 function reactionFor(score: number): string {
   const label = getScoreBand(score).label;
-  if (label === 'Financially Fragile') return "Oof. We've got work to do.";
+  if (label === 'Cooked') return "Oof. We've got work to do.";
   if (label === 'Surviving') return "Middle of the pack. Let's climb.";
   if (label === 'Stable') return "Not bad — let's make it better.";
   return "Okay, show-off.";
@@ -126,7 +126,7 @@ export default function OnboardingScreen() {
         incomeBracket: sel.incomeBracket,
         liquidSavingsBracket: sel.liquidSavingsBracket,
         debtBracket: sel.debtBracket,
-      }, exact);
+      }, { income: exact });
     } catch (e) {
       console.warn('[onboarding] save failed:', e);
     }

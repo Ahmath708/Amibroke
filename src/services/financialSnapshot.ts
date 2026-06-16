@@ -12,6 +12,7 @@ import { USE_AI_MOCKS } from '@/config/ai';
 import {
   mergeIntoSnapshot, applyDebtUpdates, fromRow, toRow, patchFromAnalysis, patchFromOnboarding,
   type FinancialSnapshot, type SnapshotPatch, type SnapshotSource, type SnapshotRow,
+  type OnboardingExact,
 } from '@shared/financialSnapshot';
 import type { FinalAnalysis } from '@shared/types';
 
@@ -90,9 +91,9 @@ export async function mergeSnapshot(
 export function seedSnapshotFromOnboarding(
   userId: string,
   ctx: { incomeBracket?: string; liquidSavingsBracket?: string; debtBracket?: string },
-  exactIncome?: number | null,
+  exact?: OnboardingExact,
 ): Promise<FinancialSnapshot | null> {
-  return mergeSnapshot(userId, patchFromOnboarding(ctx, exactIncome), 'onboarding');
+  return mergeSnapshot(userId, patchFromOnboarding(ctx, exact), 'onboarding');
 }
 
 /** Merge a roast's numbers into the snapshot (confidence-aware; debts only when listed). */

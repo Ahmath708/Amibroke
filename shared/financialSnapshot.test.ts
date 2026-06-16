@@ -1,6 +1,6 @@
 import {
   mergeIntoSnapshot, applyDebtUpdates, emptySnapshot, patchFromAnalysis, patchFromOnboarding,
-  fromRow, toRow, INCOME_MID, isPayoffDebt, type FinancialSnapshot, type SnapshotRow,
+  fromRow, toRow, INCOME_MID, DEBT_MID, isPayoffDebt, type FinancialSnapshot, type SnapshotRow,
 } from './financialSnapshot';
 
 const NOW = '2026-06-04T00:00:00.000Z';
@@ -111,13 +111,47 @@ describe('patchFromOnboarding', () => {
   });
 
   it('exact income is stated and wins over the bracket', () => {
-    const patch = patchFromOnboarding({ incomeBracket: '2k_4k' }, 4800);
+    const patch = patchFromOnboarding({ incomeBracket: '2k_4k' }, { income: 4800 });
     expect(patch.monthlyIncome).toEqual({ value: 4800, confidence: 'stated' });
   });
 
-  it('never seeds debt — onboarding does not collect it (first roast itemizes)', () => {
+  it('omits a field when neither exact nor bracket is given', () => {
     const patch = patchFromOnboarding({ incomeBracket: '4k_6k', liquidSavingsBracket: '2k_10k' });
     expect(patch.debts).toBeUndefined();
+  });
+
+  // #1 — capture an explicit $0 (the most financially fragile users) instead of bucketing to a midpoint.
+  it('exact $0 income is stated $0 (not bucketed to a bracket midpoint)', () => {
+    const patch = patchFromOnboarding({ incomeBracket: 'under_2k' }, { income: 0 });
+    expect(patch.monthlyIncome).toEqual({ value: 0, confidence: 'stated' });
+  });
+
+  it('a null exact falls through to the bracket (no exact entered)', () => {
+    const patch = patchFromOnboarding({ incomeBracket: '2k_4k' }, { income: null });
+    expect(patch.monthlyIncome).toEqual({ value: INCOME_MID['2k_4k'], confidence: 'estimated' });
+  });
+
+  // #2 — exact savings/debt typed on the numpad screens beat the bracket midpoint.
+  it('exact savings is stated and wins over the savings bracket', () => {
+    const patch = patchFromOnboarding({ liquidSavingsBracket: '2k_10k' }, { savings: 4200 });
+    expect(patch.liquidSavings).toEqual({ value: 4200, confidence: 'stated' });
+  });
+
+  it('exact debt seeds one stated coarse line (not a bracket midpoint)', () => {
+    const patch = patchFromOnboarding({ debtBracket: '5k_15k' }, { debt: 8000 });
+    expect(patch.debts?.confidence).toBe('stated');
+    expect(patch.debts?.value).toEqual([{ name: 'Debt', balance: 8000, apr: 0, min_payment: 0, kind: 'other' }]);
+  });
+
+  it('exact $0 debt is stated and seeds no debt line', () => {
+    const patch = patchFromOnboarding({ debtBracket: 'over_50k' }, { debt: 0 });
+    expect(patch.debts).toEqual({ value: [], confidence: 'stated' });
+  });
+
+  it('debt bracket (no exact) still seeds an estimated coarse line', () => {
+    const patch = patchFromOnboarding({ debtBracket: '5k_15k' });
+    expect(patch.debts?.confidence).toBe('estimated');
+    expect(patch.debts?.value[0].balance).toBe(DEBT_MID['5k_15k']);
   });
 });
 
