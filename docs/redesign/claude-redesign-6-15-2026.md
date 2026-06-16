@@ -165,3 +165,85 @@ same confidence-ladder / user-stated-is-authoritative work as the #3 payoff bug 
 `src/services/financialSnapshot.ts` (a manual `upsertDebt` / `removeDebt` service) · the Financials
 "The Debt" UI (inline editor). The `kind` selector is load-bearing — it gates mortgage-vs-payoff
 treatment.
+
+---
+
+## 6. Editable snapshot scalars (income / expenses / savings) + spending stays light — 🔵 to build · merge-stickiness coupled to #3 / #5
+
+Companion to #5 (manual debt CRUD): same underlying need — **let users correct their snapshot facts** —
+but the right UI depends on the data shape.
+
+- **Lists** (debts #5, subscriptions) → list CRUD.
+- **Scalars** (`monthlyIncome`, `monthlyExpenses`, `liquidSavings`) → **tap-to-edit a single number, NOT a
+  list.** Savings currently has **no editable access point anywhere**; income/expenses none either. Make
+  each snapshot figure tap-to-edit on the Financials tab (income + expenses live in "The Bleed"; the
+  **savings balance isn't shown today** — surface it as a tap-to-edit figure too). All three are
+  **dual-mode** (exact or range).
+  - **⚠️ Savings metric-corruption guard:** keep `liquidSavings` a single number and **never** let it
+    become a list — an itemized savings breakdown drives no tool AND tempts users to add **non-liquid**
+    accounts (IRA / 401k / trust), inflating `liquidSavings` and breaking the emergency-fund math
+    (`emergencyFundMonths = liquid / expenses`). Frame the field as **"liquid — cash you can reach, not
+    retirement."**
+- **Spending breakdown** (`mentionedSpending`) → stays a **derived, capped infographic + a CTA to a LIGHT
+  "correct your named categories" surface.** Do NOT build full spending CRUD: (1) reconciliation —
+  `mentionedSpending` (~$925) is a *subset* of `monthlyExpenses` (~$3,700), so forcing items to sum to the
+  total means itemizing rent/everything; (2) it pushes the app toward budgeting, against the "no
+  spreadsheets" promise. `monthlyExpenses` stays the separate top-line total; the breakdown stays partial.
+  **Lowest priority** of the three.
+
+**Merge-stickiness — SAME as #3 / #5:** a manual scalar edit writes **`stated`/manual confidence and must
+be sticky** (an inferred roast value can't overwrite it). Build with #3 / #5.
+
+**Touch-points:** `shared/financialSnapshot.ts` (merge + a manual scalar-patch path) ·
+`src/services/financialSnapshot.ts` (manual `setIncome` / `setExpenses` / `setSavings`) · Financials tab
+UI (tap-to-edit figures; the spending CTA → a light correction screen).
+
+> **💡 Refinement (2026-06-16): the backend is nearly free here — no merge change.** Unlike #5 (which
+> needs a new table + reconcile), the scalar merge-stickiness **already exists** in the engine:
+> `SnapshotSource` includes `'manual'`, and `mergeIntoSnapshot` takes any scalar patch + source, gated by
+> `RANK[incoming] >= RANK[existing]`. A manual `stated` write (rank 4) always lands; a later *inferred*
+> roast (`medium`=2) can't overwrite it (`2 < 4`) — sticky, for free. So the only new **backend** code is
+> three thin service setters wrapping the existing call, e.g.
+> `mergeSnapshot(userId, { monthlyIncome: { value, confidence: 'stated' } }, 'manual')` — **no
+> `shared/` merge edit, and independent of the debts-table build** (can ship before or after it). The bulk
+> of the work is the **frontend** tap-to-edit UI. (Nuance: income already has a *partial* edit path via
+> `FinancialContextScreen`'s exact-income field → snapshot; expenses + savings have none. The redesign
+> unifies all three as tap-to-edit on the Financials tab.) One derived-metric note: a manual `stated`
+> expenses edit will *enable* the `monthlySavings`/`savingsRate` computation (`deriveMetrics` gates it on
+> income AND expenses both being `stated|high`) — correct behavior, just flag it so it's expected.
+
+---
+
+## 7. Money-representation decision rule (refines #5 + #6) — 🔵 governing principle
+
+The one rule that decides list-vs-number-vs-partial-breakdown for all the "correct your facts" work:
+**itemize only when itemization (a) drives a tool AND (b) the items completely decompose the total.**
+That cleanly splits the three money types:
+
+- **Debt → ONE list (`total = sum`).** Itemization drives the **Debt Payoff tool** (per-debt APR/balance)
+  and items fully decompose the total → list. **Not two modes** — a coarse total is just a list with one
+  line. Granularity (collapse-to-total ↔ itemize) is **user-chosen and user-initiated**, NEVER
+  auto-switched by a roast, NEVER silent data loss. A stated total above the itemized sum → an **`other`
+  line** for the remainder. Mechanics live in [`docs/debts-table.md`](../debts-table.md) §3.1; lives on
+  the **Debt screen** (FinContext stays demographics-only).
+- **Savings → a single NUMBER.** Itemizing drives no tool (no "savings strategy") → no analytical value;
+  the total is all the metrics need. See #6 for the metric-corruption guard.
+- **Expenses → a scalar TOTAL + a PARTIAL, now-PERSISTENT breakdown.** `monthlyExpenses` is the
+  authoritative total; the named-spending breakdown is a partial list that does **not** sum to it
+  (rent/unnamed are the rest). Forcing `total = sum` is full budgeting — against the "no spreadsheets"
+  promise. See #6.
+
+Net: **list-with-`other` for debt · single number for savings · scalar-total + partial-breakdown for
+expenses.** All scalars are **dual-mode** (exact or range).
+
+> **🟢 Expenses backend implemented (2026-06-16) — REVISES the earlier "no spending CRUD" call.** Decision
+> updated: the named-spending breakdown now **persists + roast-merges** in a dedicated **`spending`
+> table** (00003) with light CRUD — but the budgeting-creep guard holds because **`sum(spending) ≠
+> monthlyExpenses`** (still a partial list; the total stays separate). It's much simpler than debts:
+> every item is `user_stated`, so **no confidence gate, no tombstone, no snapshot mirror, no derived
+> metric**. Built: `shared/spending.ts` `mergeSpending` (upsert-by-category, keep-silent; 8/8 tests) ·
+> `src/services/spending.ts` (CRUD + `reconcileSpendingFromAnalysis` + mock store) · wired into
+> `updateSnapshotFromAnalysis` · GDPR. **Also:** `monthlyExpenses` is now seedable from onboarding
+> (`OnboardingExact.expenses` → `patchFromOnboarding` writes it `stated`). Read sites unchanged —
+> Results still shows the per-roast `analysis.mentionedSpending`; the editable spending surface is
+> frontend (later). **Deferred:** the spending frontend surface.

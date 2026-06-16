@@ -1,6 +1,8 @@
 import {
   mergeIntoSnapshot, applyDebtUpdates, emptySnapshot, patchFromAnalysis, patchFromOnboarding,
-  fromRow, toRow, INCOME_MID, DEBT_MID, isPayoffDebt, type FinancialSnapshot, type SnapshotRow,
+  incomingDebtsFromAnalysis, onboardingDebtSeed, reconcileDebts, debtTotalFromRows,
+  fromRow, toRow, INCOME_MID, DEBT_MID, isPayoffDebt,
+  type FinancialSnapshot, type SnapshotRow, type DebtRecord,
 } from './financialSnapshot';
 
 const NOW = '2026-06-04T00:00:00.000Z';
@@ -72,19 +74,17 @@ describe('monthly savings — only when deterministically known (Finding B)', ()
 });
 
 describe('patchFromAnalysis', () => {
-  it('maps numbers with their confidence and debts when present', () => {
+  it('maps the scalar fields with their confidence', () => {
     const patch = patchFromAnalysis({
       monthlyIncome: { value: 5000, confidence: 'high' },
       liquidSavings: { value: 1200, confidence: 'low' },
-      debts: [{ name: 'Loan', balance: 8000, interestRate: 0.07, minimumPayment: 150 }],
     });
     expect(patch.monthlyIncome).toEqual({ value: 5000, confidence: 'high' });
     expect(patch.liquidSavings?.confidence).toBe('low');
-    expect(patch.debts?.value[0]).toEqual({ name: 'Loan', balance: 8000, apr: 0.07, min_payment: 150 });
   });
 
-  it('treats an empty debts array as no signal (omits it)', () => {
-    const patch = patchFromAnalysis({ monthlyIncome: { value: 4000, confidence: 'medium' }, debts: [] });
+  it('no longer emits debts (the table reconcile owns them)', () => {
+    const patch = patchFromAnalysis({ monthlyIncome: { value: 4000, confidence: 'medium' }, debts: [{ name: 'Card', balance: 3000 }] });
     expect(patch.debts).toBeUndefined();
   });
 
@@ -96,10 +96,19 @@ describe('patchFromAnalysis', () => {
     expect(patch.monthlyIncome?.confidence).toBe('stated');
     expect(patch.monthlyExpenses?.confidence).toBe('high');
   });
+});
 
-  it('option B: debts the user stated → stated confidence', () => {
-    const patch = patchFromAnalysis({ debts: [{ name: 'Card', balance: 3000, source: 'user_stated' }] });
-    expect(patch.debts?.confidence).toBe('stated');
+describe('incomingDebtsFromAnalysis', () => {
+  it('maps a roast debts[] into the reconcile incoming shape (apr/min/kind/source)', () => {
+    const incoming = incomingDebtsFromAnalysis({
+      debts: [{ name: 'Loan', balance: 8000, interestRate: 0.07, minimumPayment: 150, kind: 'student_loan', source: 'user_stated' }],
+    });
+    expect(incoming).toEqual([{ name: 'Loan', balance: 8000, apr: 0.07, min_payment: 150, kind: 'student_loan', source: 'user_stated', confidence: undefined }]);
+  });
+
+  it('returns [] when the roast lists no debts', () => {
+    expect(incomingDebtsFromAnalysis({ monthlyIncome: 4000 })).toEqual([]);
+    expect(incomingDebtsFromAnalysis({ debts: [] })).toEqual([]);
   });
 });
 
@@ -115,8 +124,8 @@ describe('patchFromOnboarding', () => {
     expect(patch.monthlyIncome).toEqual({ value: 4800, confidence: 'stated' });
   });
 
-  it('omits a field when neither exact nor bracket is given', () => {
-    const patch = patchFromOnboarding({ incomeBracket: '4k_6k', liquidSavingsBracket: '2k_10k' });
+  it('never emits debts (onboarding debt now seeds the table, not the snapshot patch)', () => {
+    const patch = patchFromOnboarding({ incomeBracket: '4k_6k', debtBracket: '5k_15k' }, { debt: 8000 });
     expect(patch.debts).toBeUndefined();
   });
 
@@ -131,27 +140,44 @@ describe('patchFromOnboarding', () => {
     expect(patch.monthlyIncome).toEqual({ value: INCOME_MID['2k_4k'], confidence: 'estimated' });
   });
 
-  // #2 — exact savings/debt typed on the numpad screens beat the bracket midpoint.
+  // #2 — exact savings typed on the numpad screens beats the bracket midpoint.
   it('exact savings is stated and wins over the savings bracket', () => {
     const patch = patchFromOnboarding({ liquidSavingsBracket: '2k_10k' }, { savings: 4200 });
     expect(patch.liquidSavings).toEqual({ value: 4200, confidence: 'stated' });
   });
 
-  it('exact debt seeds one stated coarse line (not a bracket midpoint)', () => {
-    const patch = patchFromOnboarding({ debtBracket: '5k_15k' }, { debt: 8000 });
-    expect(patch.debts?.confidence).toBe('stated');
-    expect(patch.debts?.value).toEqual([{ name: 'Debt', balance: 8000, apr: 0, min_payment: 0, kind: 'other' }]);
+  // Expenses — onboarding can now seed a stated total expenses (numpad exact).
+  it('exact expenses is stated', () => {
+    const patch = patchFromOnboarding({}, { expenses: 3500 });
+    expect(patch.monthlyExpenses).toEqual({ value: 3500, confidence: 'stated' });
   });
 
-  it('exact $0 debt is stated and seeds no debt line', () => {
-    const patch = patchFromOnboarding({ debtBracket: 'over_50k' }, { debt: 0 });
-    expect(patch.debts).toEqual({ value: [], confidence: 'stated' });
+  it('omits expenses when none is given', () => {
+    const patch = patchFromOnboarding({ incomeBracket: '4k_6k' });
+    expect(patch.monthlyExpenses).toBeUndefined();
+  });
+});
+
+describe('onboardingDebtSeed', () => {
+  it('exact debt → one stated coarse row (not a midpoint)', () => {
+    expect(onboardingDebtSeed({ debtBracket: '5k_15k' }, { debt: 8000 })).toEqual(
+      { name: 'Debt', balance: 8000, apr: 0, min_payment: 0, kind: 'other', source: 'user_stated' },
+    );
   });
 
-  it('debt bracket (no exact) still seeds an estimated coarse line', () => {
-    const patch = patchFromOnboarding({ debtBracket: '5k_15k' });
-    expect(patch.debts?.confidence).toBe('estimated');
-    expect(patch.debts?.value[0].balance).toBe(DEBT_MID['5k_15k']);
+  it('exact $0 debt → no row', () => {
+    expect(onboardingDebtSeed({ debtBracket: 'over_50k' }, { debt: 0 })).toBeNull();
+  });
+
+  it('bracket (no exact) → an estimated coarse row at the midpoint', () => {
+    const seed = onboardingDebtSeed({ debtBracket: '5k_15k' });
+    expect(seed?.confidence).toBe('estimated');
+    expect(seed?.balance).toBe(DEBT_MID['5k_15k']);
+  });
+
+  it('no debt info → null', () => {
+    expect(onboardingDebtSeed({})).toBeNull();
+    expect(onboardingDebtSeed({ debtBracket: 'none' })).toBeNull();
   });
 });
 
@@ -168,9 +194,74 @@ describe('debt kind — mortgage exclusion (Finding A)', () => {
     expect(payoff.map((d) => d.name)).toEqual(['Visa']);
   });
 
-  it('patchFromAnalysis carries kind through', () => {
-    const patch = patchFromAnalysis({ debts: [{ name: 'Car', balance: 18000, kind: 'auto' }] });
-    expect(patch.debts?.value[0].kind).toBe('auto');
+  it('incomingDebtsFromAnalysis carries kind through', () => {
+    const [d] = incomingDebtsFromAnalysis({ debts: [{ name: 'Car', balance: 18000, kind: 'auto' }] });
+    expect(d.kind).toBe('auto');
+  });
+
+  it('debtTotalFromRows excludes mortgages and tombstoned rows', () => {
+    const rows: DebtRecord[] = [
+      { name: 'Mortgage', balance: 220000, kind: 'mortgage', source: 'roast', confidence: 'medium' },
+      { name: 'Visa', balance: 3000, kind: 'credit_card', source: 'roast', confidence: 'medium' },
+      { name: 'Old card', balance: 999, kind: 'credit_card', source: 'manual', confidence: 'stated', deletedAt: NOW },
+    ];
+    expect(debtTotalFromRows(rows)).toBe(3000);
+  });
+});
+
+describe('reconcileDebts', () => {
+  const row = (over: Partial<DebtRecord> & { name: string; balance: number }): DebtRecord =>
+    ({ source: 'roast', confidence: 'medium', ...over });
+
+  it('inserts a genuinely new debt', () => {
+    const ops = reconcileDebts([], [{ name: 'Visa', balance: 3000, source: 'user_stated' }], 'roast');
+    expect(ops.inserts).toHaveLength(1);
+    expect(ops.inserts[0]).toMatchObject({ name: 'Visa', balance: 3000, confidence: 'stated', source: 'roast' });
+    expect(ops.updates).toEqual([]);
+    expect(ops.deleteIds).toEqual([]);
+  });
+
+  it('updates a matched active row when incoming confidence >= stored (by normalized name)', () => {
+    const existing = [row({ id: 'a', name: 'Credit Card', balance: 3000, confidence: 'medium' })];
+    const ops = reconcileDebts(existing, [{ name: 'credit card', balance: 2400, source: 'user_stated' }], 'roast');
+    expect(ops.inserts).toEqual([]);
+    expect(ops.updates[0]).toMatchObject({ id: 'a', balance: 2400, confidence: 'stated' });
+  });
+
+  it('does NOT let an inferred roast clobber a stated row (gate)', () => {
+    const existing = [row({ id: 'a', name: 'Card', balance: 3000, confidence: 'stated' })];
+    const ops = reconcileDebts(existing, [{ name: 'Card', balance: 9999, source: 'inferred', confidence: 'medium' }], 'roast');
+    expect(ops.updates).toEqual([]); // blocked
+    expect(ops.inserts).toEqual([]);
+  });
+
+  it('keeps a silent existing row (no op)', () => {
+    const existing = [row({ id: 'a', name: 'Card', balance: 3000 })];
+    const ops = reconcileDebts(existing, [], 'roast');
+    expect(ops).toEqual({ inserts: [], updates: [], deleteIds: [] });
+  });
+
+  it('debtsCleared soft-deletes all non-mortgage active rows and ignores incoming', () => {
+    const existing = [
+      row({ id: 'a', name: 'Card', balance: 3000, kind: 'credit_card' }),
+      row({ id: 'm', name: 'Mortgage', balance: 200000, kind: 'mortgage' }),
+    ];
+    const ops = reconcileDebts(existing, [{ name: 'Card', balance: 3000, source: 'inferred' }], 'roast', { debtsCleared: true });
+    expect(ops.deleteIds).toEqual(['a']); // mortgage kept
+    expect(ops.inserts).toEqual([]);
+    expect(ops.updates).toEqual([]);
+  });
+
+  it('tombstone: suppresses an inferred re-add of a deleted debt', () => {
+    const existing = [row({ id: 'a', name: 'Card', balance: 3000, confidence: 'stated', deletedAt: NOW })];
+    const ops = reconcileDebts(existing, [{ name: 'Card', balance: 3000, source: 'inferred' }], 'roast');
+    expect(ops).toEqual({ inserts: [], updates: [], deleteIds: [] }); // stays deleted
+  });
+
+  it('tombstone: a user_stated re-mention lifts it (deletedAt cleared)', () => {
+    const existing = [row({ id: 'a', name: 'Card', balance: 3000, confidence: 'stated', deletedAt: NOW })];
+    const ops = reconcileDebts(existing, [{ name: 'Card', balance: 1500, source: 'user_stated' }], 'roast');
+    expect(ops.updates[0]).toMatchObject({ id: 'a', balance: 1500, confidence: 'stated', deletedAt: null });
   });
 });
 

@@ -154,6 +154,47 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
+### 2026-06-16 — Claude Design briefs for the remaining app screens — UNCOMMITTED
+- Wrote [`docs/redesign/screen-briefs-for-claude-design.md`](redesign/screen-briefs-for-claude-design.md):
+  one brief each for the 9 still-to-design screens (**Roast Me composer, Results, Share, Community,
+  History/Trend, 90-Day Plan, Check-In, Paywall, Profile**) so Claude Design can build them, paired with the
+  existing [`mock-content-for-claude-design.md`](redesign/mock-content-for-claude-design.md) persona data.
+- Followed the established brief conventions (auto-memory `claude-design-onboarding-prompt-style`):
+  **no hardcoded colors except the 4 semantic score-band colors**, reuse established templates
+  (score ring / list-group / segmented control / pill), describe only each screen's unique content +
+  states, don't re-specify shared chrome. Added a recommended build order (templates cascade:
+  Results→Share→Community→…) + a cross-screen consistency checklist. Derived structure from the live
+  screens (`ResultsScreen`, `ActionPlanScreen`, `CommunityFeedScreen`, `MonthlyCheckInScreen`,
+  `TrendScreen`, `PaywallScreen`, `ShareScreen`, `ProfileScreen`+`AccountSettings`) so the briefs
+  match what the RN port will need. (`RoastComposerScreen` added in a follow-up — the Roast Me
+  composer, entry to the core loop.) Doc-only; no code touched.
+
+### 2026-06-16 (pm) — spending table (expenses backend) IMPLEMENTED — UNCOMMITTED
+- Persistent named-spending breakdown (revises the earlier "no spending CRUD" call): new `spending`
+  table (00003) is the source of truth, light CRUD, each roast merges its `mentionedSpending` in.
+  Much simpler than debts — every item is `user_stated` → no confidence gate / tombstone / mirror /
+  derived metric; **partial breakdown preserved (`sum != monthly_expenses`)** so no budgeting creep.
+  `shared/spending.ts` `mergeSpending` (8/8) · `src/services/spending.ts` (CRUD + reconcile + mock) ·
+  wired into `updateSnapshotFromAnalysis` · GDPR · `tables.ts`. **Also:** `monthlyExpenses` now seedable
+  from onboarding (`OnboardingExact.expenses` → `patchFromOnboarding`, `stated`). `tsc` clean; `npm test`
+  161 pass (+10), only the pre-existing `ai.test.ts` fail. Read sites unchanged (Results keeps the
+  per-roast breakdown); editable spending surface is frontend (later). **Gated:** push 00003 with 00002.
+
+### 2026-06-16 (pm) — debts table + reconcile (#3 + #5 backend) IMPLEMENTED — UNCOMMITTED
+- Built the debt backend per [`docs/debts-table.md`](debts-table.md): new `debts` table (00002) is the
+  source of truth (per-row source/confidence + soft-delete `deleted_at`); `financial_snapshots.debts`
+  kept as a **denormalized mirror** the service syncs (chose this over "drop the JSONB" so read sites
+  didn't change). Shared `reconcileDebts` (gate + tombstone suppress/lift + `debtsCleared` clear) +
+  `debtTotalFromRows` + `withDebtsMirror` (36/36 tests). New `src/services/debts.ts` (CRUD/soft-delete +
+  `reconcileFromAnalysis` + `applyCheckinBalances` + `getDebtContext` + mock store). Snapshot service
+  rewired (roast reconciles debts; onboarding seeds a debt row; check-in delegates; rescore input +=
+  debt context). `debtsCleared` added to `AIRawOutputSchema` + analyze prompt. GDPR export/delete.
+  `npx tsc` clean; `npm test` +10 passing, only the pre-existing `ai.test.ts` saved-plan failure remains.
+- **Gated / not done:** push migration `00002` to the live DB, redeploy `analyze` (prompt changed →
+  must redeploy; rule about static-import deploy), and a **paid eval** of `debtsCleared` (rule #1). Dev
+  runs on the mock store without any of these. **Deferred fast-follow:** `other`-line / `debtTotalStated`
+  stated-total reconciliation (§3.1 / §8 Q5a).
+
 ### 2026-06-16 — redesign follow-ups #1/#2/#4 backend landed; #3 merge redesign discussed — UNCOMMITTED
 - **#1 ($0 income)** + **#2 (exact debt/savings)**: `patchFromOnboarding`'s second arg is now an
   `OnboardingExact` `{ income?, savings?, debt? }`; each field accepts a finite `>= 0` exact (incl. an
@@ -175,6 +216,11 @@ _Newest first. One short entry per meaningful unit of work: what changed + any l
   `debtsCleared` analyze signal (Part A, launch-blocker; **touches analyze prompt → rule #1 eval**) +
   per-row reconcile (Part B). Full plan written → [`docs/debts-table.md`](debts-table.md); **implement
   next dedicated backend session.**
+- **#6 logged (editable snapshot scalars: income/expenses/savings tap-to-edit; spending stays a light,
+  capped infographic — no full CRUD).** Companion to #5 but lighter: the scalar merge-stickiness **already
+  works** in the engine (`'manual'` source + `stated` confidence, gated so an inferred roast can't
+  clobber it) — backend = three thin service setters, no `shared/` merge change, independent of the
+  debts table. Bulk is frontend tap-to-edit. → redesign doc §6.
 
 ### 2026-06-15 — onboarding redesign (Claude Design) → 3 backend follow-ups logged
 - Onboarding redesign is running as screen-by-screen Claude Design briefs into one `Onboarding.html`

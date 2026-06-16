@@ -6,6 +6,8 @@ export const TABLES = {
   profiles: 'profiles',
   financial_context: 'financial_context',        // NEW (schema-v2): demographics + brackets off profiles
   financial_snapshots: 'financial_snapshots',
+  debts: 'debts',                                 // itemized debts (source of truth; snapshot.debts is a mirror)
+  spending: 'spending',                           // partial named-spending breakdown (light CRUD; sum != monthlyExpenses)
   community_posts: 'community_posts',
   community_posts_view: 'community_posts_with_counts', // VIEW: posts + live reaction_count (trending sort)
   post_reactions: 'post_reactions',

@@ -187,9 +187,9 @@ const numField = (f: NumberWithConfidence | number | undefined): { value: number
 };
 
 /**
- * A roast → snapshot patch. Numbers carry the analysis's own low/medium/high confidence.
- * Debts only update when the roast actually listed some — an empty `debts` is treated as
- * "no signal" (keep existing), not "you have no debt", to avoid zeroing a silent field.
+ * A roast → snapshot patch for the SCALAR fields only. Debts are no longer merged here — they're
+ * reconciled into the `debts` table (the source of truth) by `reconcileDebts` / the debts service,
+ * which mirrors the result back into `snapshot.debts` + `debt_total`. See docs/debts-table.md.
  */
 export function patchFromAnalysis(a: AnalysisLike): SnapshotPatch {
   const patch: SnapshotPatch = {};
@@ -199,15 +199,21 @@ export function patchFromAnalysis(a: AnalysisLike): SnapshotPatch {
   if (inc) patch.monthlyIncome = inc;
   if (exp) patch.monthlyExpenses = exp;
   if (liq) patch.liquidSavings = liq;
-  if (Array.isArray(a.debts) && a.debts.length > 0) {
-    // Debts field confidence: `stated` if the user stated any of them, else `medium`.
-    const confidence: Confidence = a.debts.some((d) => d.source === 'user_stated') ? 'stated' : 'medium';
-    patch.debts = {
-      value: a.debts.map((d) => ({ name: d.name, balance: d.balance, apr: d.interestRate ?? 0, min_payment: d.minimumPayment ?? 0, kind: d.kind })),
-      confidence,
-    };
-  }
   return patch;
+}
+
+/** Map a roast's `debts[]` into the `reconcileDebts` incoming shape (provenance-aware). */
+export function incomingDebtsFromAnalysis(a: AnalysisLike): IncomingDebt[] {
+  if (!Array.isArray(a.debts)) return [];
+  return a.debts.map((d) => ({
+    name: d.name,
+    balance: d.balance,
+    apr: d.interestRate ?? 0,
+    min_payment: d.minimumPayment ?? 0,
+    kind: d.kind,
+    source: d.source,
+    confidence: d.confidence,
+  }));
 }
 
 // ─── Mapping from onboarding (income/savings/debt brackets → estimated midpoints, exact → stated) ──
@@ -218,11 +224,12 @@ export const INCOME_MID: Record<string, number> = { under_2k: 1500, '2k_4k': 300
 export const SAVINGS_MID: Record<string, number> = { none: 0, under_500: 250, '500_2k': 1250, '2k_10k': 6000, '10k_50k': 30000, over_50k: 65000 };
 export const DEBT_MID: Record<string, number> = { none: 0, under_5k: 2500, '5k_15k': 10000, '15k_50k': 30000, over_50k: 75000 };
 
-/** An exact typed figure for any of the three onboarding money fields (incl. an explicit `$0`). */
+/** An exact typed figure for the onboarding money fields (incl. an explicit `$0`). */
 export interface OnboardingExact {
   income?: number | null;
   savings?: number | null;
   debt?: number | null;
+  expenses?: number | null;
 }
 
 /**
@@ -257,20 +264,146 @@ export function patchFromOnboarding(
   } else if (ctx.liquidSavingsBracket && ctx.liquidSavingsBracket in SAVINGS_MID) {
     patch.liquidSavings = { value: SAVINGS_MID[ctx.liquidSavingsBracket], confidence: 'estimated' };
   }
-
-  const exDebt = stated(exact?.debt);
-  if (exDebt !== undefined) {
-    // One coarse, user-stated line so debtTotal is debt-aware; the first roast itemizes real debts.
-    patch.debts = {
-      value: exDebt > 0 ? [{ name: 'Debt', balance: exDebt, apr: 0, min_payment: 0, kind: 'other' }] : [],
-      confidence: 'stated',
-    };
-  } else if (ctx.debtBracket && ctx.debtBracket in DEBT_MID) {
-    const bal = DEBT_MID[ctx.debtBracket];
-    // One coarse line so debtTotal is debt-aware; the first roast itemizes + the merge overwrites it.
-    patch.debts = { value: bal > 0 ? [{ name: 'Debt (estimated)', balance: bal, apr: 0, min_payment: 0, kind: 'other' }] : [], confidence: 'estimated' };
+  // Total monthly expenses, when onboarding collects it (numpad exact → `stated`). Once income AND
+  // expenses are both stated, deriveMetrics starts computing monthlySavings/savingsRate right away.
+  const exExpenses = stated(exact?.expenses);
+  if (exExpenses !== undefined) {
+    patch.monthlyExpenses = { value: exExpenses, confidence: 'stated' };
   }
+  // NOTE: debt is no longer a snapshot patch field — onboarding seeds the `debts` table via
+  // `onboardingDebtSeed` (below) + the debts service. Income/savings stay scalar snapshot fields.
   return patch;
+}
+
+/**
+ * Onboarding answers → the single coarse debt row to seed into the `debts` table (or `null` for none).
+ * Exact (incl. an explicit `$0` → no row) is `stated`; a bracket pick is the midpoint at `estimated`.
+ * The first roast itemizes real debts; the table reconcile takes it from there.
+ */
+export function onboardingDebtSeed(
+  ctx: { debtBracket?: string },
+  exact?: OnboardingExact,
+): IncomingDebt | null {
+  const exDebt = exact?.debt != null && Number.isFinite(exact.debt) && exact.debt >= 0 ? exact.debt : undefined;
+  if (exDebt !== undefined) {
+    return exDebt > 0
+      ? { name: 'Debt', balance: exDebt, apr: 0, min_payment: 0, kind: 'other', source: 'user_stated' }
+      : null; // explicit $0 → no debt row
+  }
+  if (ctx.debtBracket && ctx.debtBracket in DEBT_MID) {
+    const bal = DEBT_MID[ctx.debtBracket];
+    return bal > 0 ? { name: 'Debt (estimated)', balance: bal, apr: 0, min_payment: 0, kind: 'other', confidence: 'estimated' } : null;
+  }
+  return null;
+}
+
+// ─── Debt reconcile — the `debts` table is the source of truth ───────────────
+// The snapshot's `debts` field is now a denormalized MIRROR (cheap reads); per-row provenance +
+// tombstones live in the table. The reconcile below is pure + framework-agnostic; the debts service
+// applies the ops to the table then mirrors the active rows back (`withDebtsMirror`). See
+// docs/debts-table.md §3 / §3.2.
+
+/** A debt row as the reconcile sees it (table row shape, framework-agnostic). */
+export interface DebtRecord {
+  id?: string;             // table row id (absent = a new row to insert)
+  name: string;
+  balance: number;
+  apr?: number;
+  min_payment?: number;
+  kind?: DebtKind;
+  source: SnapshotSource;  // 'onboarding' | 'roast' | 'checkin' | 'manual'
+  confidence: Confidence;
+  deletedAt?: string | null; // tombstone — null/undefined = active
+}
+
+/** An incoming debt from a roast/onboarding seed (provenance hints, not yet a row). */
+export interface IncomingDebt {
+  name: string;
+  balance: number;
+  apr?: number;
+  min_payment?: number;
+  kind?: DebtKind;
+  source?: 'user_stated' | 'inferred';
+  confidence?: Confidence;
+}
+
+/** Ops the debts service applies to the table. A lift is an update with `deletedAt: null`. */
+export interface DebtOps {
+  inserts: DebtRecord[];  // new rows (no id)
+  updates: DebtRecord[];  // existing rows to update (id set)
+  deleteIds: string[];    // active row ids to soft-delete
+}
+
+const debtConfidence = (d: IncomingDebt): Confidence =>
+  d.source === 'user_stated' ? 'stated' : (d.confidence ?? 'medium');
+const normName = (n: string): string => n.trim().toLowerCase();
+
+/**
+ * Reconcile incoming debts (from a roast) against the user's existing rows.
+ * - Active name-match → update only when incoming confidence >= stored (inferred can't clobber stated).
+ * - Tombstoned name-match → lift+update only when the user explicitly re-stated it (`user_stated`);
+ *   an inferred re-add is suppressed (§3.2).
+ * - No match → insert (genuinely new).
+ * - Silent existing rows → kept (no op — silence ≠ deletion).
+ * - `debtsCleared` → clear-only: soft-delete all non-mortgage active rows, ignore incoming (§5).
+ */
+export function reconcileDebts(
+  existing: DebtRecord[],
+  incoming: IncomingDebt[],
+  source: SnapshotSource,
+  opts: { debtsCleared?: boolean } = {},
+): DebtOps {
+  const active = existing.filter((d) => d.deletedAt == null);
+  if (opts.debtsCleared) {
+    return { inserts: [], updates: [], deleteIds: active.filter(isPayoffDebt).map((d) => d.id).filter((id): id is string => !!id) };
+  }
+
+  const activeByName = new Map(active.map((d) => [normName(d.name), d]));
+  const tombByName = new Map(existing.filter((d) => d.deletedAt != null).map((d) => [normName(d.name), d]));
+  const ops: DebtOps = { inserts: [], updates: [], deleteIds: [] };
+
+  for (const d of incoming) {
+    if (!Number.isFinite(d.balance) || d.balance < 0) continue;
+    const conf = debtConfidence(d);
+    const n = normName(d.name);
+
+    const hit = activeByName.get(n);
+    if (hit) {
+      if (RANK[conf] >= RANK[hit.confidence]) {
+        ops.updates.push({ ...hit, balance: d.balance, apr: d.apr ?? hit.apr, min_payment: d.min_payment ?? hit.min_payment, kind: d.kind ?? hit.kind, source, confidence: conf });
+      }
+      continue; // gate blocked → keep existing
+    }
+
+    const tomb = tombByName.get(n);
+    if (tomb) {
+      if (d.source === 'user_stated') {
+        ops.updates.push({ ...tomb, balance: d.balance, apr: d.apr ?? tomb.apr, min_payment: d.min_payment ?? tomb.min_payment, kind: d.kind ?? tomb.kind, source, confidence: conf, deletedAt: null });
+      }
+      continue; // inferred re-add of a deleted debt → suppressed
+    }
+
+    ops.inserts.push({ name: d.name, balance: d.balance, apr: d.apr ?? 0, min_payment: d.min_payment ?? 0, kind: d.kind, source, confidence: conf });
+  }
+  return ops;
+}
+
+/** Sum of non-mortgage balances among ACTIVE rows (mortgage excluded — Finding A). */
+export function debtTotalFromRows(rows: DebtRecord[]): number {
+  return rows.filter((d) => d.deletedAt == null && isPayoffDebt(d)).reduce((sum, d) => sum + (d.balance || 0), 0);
+}
+
+/** Map active table rows → the `SnapshotDebt[]` mirror stored on the snapshot for cheap reads. */
+export function debtsToMirror(rows: DebtRecord[]): SnapshotDebt[] {
+  return rows
+    .filter((d) => d.deletedAt == null)
+    .map((d) => ({ id: d.id, name: d.name, balance: d.balance, apr: d.apr, min_payment: d.min_payment, kind: d.kind }));
+}
+
+/** Write the active rows into the snapshot's denormalized mirror (`debts` + `debt_total`) and re-derive. */
+export function withDebtsMirror(snap: FinancialSnapshot, rows: DebtRecord[], source: SnapshotSource, now: string): FinancialSnapshot {
+  const field: ProvField<SnapshotDebt[]> = { value: debtsToMirror(rows), source, confidence: 'stated', updatedAt: now };
+  return deriveMetrics({ ...snap, debts: field }, now);
 }
 
 // ─── DB row <-> working snapshot ─────────────────────────────────────────────

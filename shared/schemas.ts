@@ -73,6 +73,10 @@ export const AIRawOutputSchema = z.object({
   monthlyExpenses: NumberWithConfidence,
   liquidSavings: NumberWithConfidence,
   debts: z.array(DebtItemSchema).max(8),
+  // True ONLY when the user explicitly states all consumer debt is now gone ("paid off all my
+  // debts", "I'm debt-free"). Distinct from an empty `debts` (which means "not mentioned"); the
+  // debts reconcile clears the user's non-mortgage rows on this signal. Optional → back-compatible.
+  debtsCleared: z.boolean().optional(),
   cfpb_responses: z.array(CfpbResponse).length(10),
 
   scoreModifier: z.number().int().min(-10).max(10),

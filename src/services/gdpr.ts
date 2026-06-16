@@ -15,6 +15,8 @@ export interface UserDataExport {
   checkIns: Record<string, unknown>[];
   trackedSubscriptions: Record<string, unknown>[];
   planEntitlements: Record<string, unknown>[];
+  debts: Record<string, unknown>[];
+  spending: Record<string, unknown>[];
   exportedAt: string;
 }
 
@@ -34,6 +36,8 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       checkInsResult,
       subsResult,
       entitlementsResult,
+      debtsResult,
+      spendingResult,
     ] = await Promise.all([
       client.from(TABLES.profiles).select('*').eq('id', userId).single(),
       client.from(TABLES.financial_context).select('*').eq('user_id', userId),
@@ -45,6 +49,8 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       client.from(TABLES.check_ins).select('*').eq('user_id', userId),
       client.from(TABLES.tracked_subscriptions).select('*').eq('user_id', userId),
       client.from(TABLES.plan_entitlements).select('*').eq('user_id', userId),
+      (client as any).from(TABLES.debts).select('*').eq('user_id', userId),
+      (client as any).from(TABLES.spending).select('*').eq('user_id', userId),
     ]);
 
     return {
@@ -58,6 +64,8 @@ export async function exportUserData(userId: string): Promise<UserDataExport | n
       checkIns: checkInsResult.data || [],
       trackedSubscriptions: subsResult.data || [],
       planEntitlements: entitlementsResult.data || [],
+      debts: debtsResult.data || [],
+      spending: spendingResult.data || [],
       exportedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -118,6 +126,8 @@ export async function deleteUserData(userId: string): Promise<{ success: boolean
       [TABLES.action_plans, 'user_id'],
       [TABLES.tracked_subscriptions, 'user_id'],
       [TABLES.plan_entitlements, 'user_id'],
+      [TABLES.debts, 'user_id'],
+      [TABLES.spending, 'user_id'],
       [TABLES.financial_snapshots, 'user_id'],
       [TABLES.financial_context, 'user_id'],
       [TABLES.analyses, 'user_id'],

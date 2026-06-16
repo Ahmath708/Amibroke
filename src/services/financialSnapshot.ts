@@ -8,11 +8,13 @@ import { withClient } from './supabaseClient';
 import { TABLES } from './tables';
 import { getAnalysisById } from './analyses';
 import { getSubscriptionContext } from './subscriptionAudit';
+import { reconcileFromAnalysis, seedOnboardingDebt, applyCheckinBalances, getDebtContext } from './debts';
+import { reconcileSpendingFromAnalysis } from './spending';
 import { USE_AI_MOCKS } from '@/config/ai';
 import {
-  mergeIntoSnapshot, applyDebtUpdates, fromRow, toRow, patchFromAnalysis, patchFromOnboarding,
+  mergeIntoSnapshot, emptySnapshot, withDebtsMirror, fromRow, toRow, patchFromAnalysis, patchFromOnboarding,
   type FinancialSnapshot, type SnapshotPatch, type SnapshotSource, type SnapshotRow,
-  type OnboardingExact,
+  type OnboardingExact, type DebtRecord,
 } from '@shared/financialSnapshot';
 import type { FinalAnalysis } from '@shared/types';
 
@@ -40,10 +42,11 @@ export async function getSnapshot(userId: string): Promise<FinancialSnapshot | n
  * (paywall-gated like any roast). Returns null when there's no snapshot to refresh from.
  */
 export async function buildRescoreInput(userId: string, latestAnalysisId?: string): Promise<string | null> {
-  const [snap, latest, subCtx] = await Promise.all([
+  const [snap, latest, subCtx, debtCtx] = await Promise.all([
     getSnapshot(userId),
     latestAnalysisId ? getAnalysisById(latestAnalysisId) : Promise.resolve(null),
     getSubscriptionContext(userId).catch(() => ''),
+    getDebtContext(userId).catch(() => ''),
   ]);
   if (!snap) return null;
   const income = Math.round(snap.monthlyIncome?.value ?? 0);
@@ -59,7 +62,7 @@ export async function buildRescoreInput(userId: string, latestAnalysisId?: strin
     else if (dSave <= -1) parts.push(`savings dropped $${(-dSave).toLocaleString()}`);
   }
   const delta = parts.length ? ` Since my last roast I ${parts.join(' and ')}.` : '';
-  return `Updated check-in on my finances. Right now: about $${income.toLocaleString()}/mo income, $${debt.toLocaleString()} in total debt, and $${savings.toLocaleString()} in savings.${delta}${subCtx}`;
+  return `Updated check-in on my finances. Right now: about $${income.toLocaleString()}/mo income, $${debt.toLocaleString()} in total debt, and $${savings.toLocaleString()} in savings.${delta}${subCtx}${debtCtx}`;
 }
 
 /** Confident-merge a patch into the user's snapshot and persist it. Returns the new snapshot. */
@@ -87,36 +90,57 @@ export async function mergeSnapshot(
   });
 }
 
-/** Seed (or refine) the snapshot from onboarding answers — brackets `estimated`, exact `stated`. */
-export function seedSnapshotFromOnboarding(
+/**
+ * Seed (or refine) the snapshot from onboarding answers — income/savings brackets `estimated`,
+ * exact `stated`. Debt is seeded into the `debts` table (idempotent — only when none exist yet).
+ */
+export async function seedSnapshotFromOnboarding(
   userId: string,
   ctx: { incomeBracket?: string; liquidSavingsBracket?: string; debtBracket?: string },
   exact?: OnboardingExact,
 ): Promise<FinancialSnapshot | null> {
-  return mergeSnapshot(userId, patchFromOnboarding(ctx, exact), 'onboarding');
-}
-
-/** Merge a roast's numbers into the snapshot (confidence-aware; debts only when listed). */
-export function updateSnapshotFromAnalysis(userId: string, analysis: FinalAnalysis): Promise<FinancialSnapshot | null> {
-  return mergeSnapshot(userId, patchFromAnalysis(analysis as Parameters<typeof patchFromAnalysis>[0]), 'roast', analysis.score);
+  await mergeSnapshot(userId, patchFromOnboarding(ctx, exact), 'onboarding');
+  await seedOnboardingDebt(userId, ctx, exact).catch((e) => console.warn('[snapshot] onboarding debt seed failed:', e));
+  return getSnapshot(userId);
 }
 
 /**
- * Update specific debts' balances from a check-in (the per-debt path, §7). `updates` is a map of
- * debt name → new balance, matched by name. No snapshot yet → no-op (debts come from a roast).
+ * Merge a roast's SCALAR numbers into the snapshot, then reconcile its debts into the `debts` table
+ * (which mirrors `debt_total` / `debts` back). Debts are no longer part of the snapshot patch.
+ */
+export async function updateSnapshotFromAnalysis(userId: string, analysis: FinalAnalysis): Promise<FinancialSnapshot | null> {
+  await mergeSnapshot(userId, patchFromAnalysis(analysis as Parameters<typeof patchFromAnalysis>[0]), 'roast', analysis.score);
+  await reconcileFromAnalysis(userId, analysis).catch((e) => console.warn('[snapshot] debt reconcile failed:', e));
+  await reconcileSpendingFromAnalysis(userId, analysis).catch((e) => console.warn('[snapshot] spending reconcile failed:', e));
+  return getSnapshot(userId);
+}
+
+/**
+ * Update specific debts' balances from a check-in (matched by name). Delegates to the debts service
+ * (the `debts` table is the source of truth); the mirror is resynced. No matching debt → no-op.
  */
 export async function updateSnapshotDebts(userId: string, updates: Record<string, number>): Promise<FinancialSnapshot | null> {
+  await applyCheckinBalances(userId, updates);
+  return getSnapshot(userId);
+}
+
+/**
+ * Sync the snapshot's denormalized debt mirror (`debts` + derived `debt_total`/`debt_to_income`)
+ * from the debts table's active rows. Called by the debts service after every debt change. Bypasses
+ * the confidence merge — the table is authoritative; this just reflects it for cheap reads.
+ */
+export async function syncDebtsMirror(userId: string, rows: DebtRecord[], source: SnapshotSource): Promise<FinancialSnapshot | null> {
   const now = new Date().toISOString();
   if (USE_AI_MOCKS) {
-    if (mockSnapshot) mockSnapshot = applyDebtUpdates(mockSnapshot, updates, 'checkin', now);
+    mockSnapshot = withDebtsMirror(mockSnapshot ?? emptySnapshot(now), rows, source, now);
     return mockSnapshot;
   }
-  return withClient<FinancialSnapshot | null>('update snapshot debts', null, async (client) => {
+  return withClient<FinancialSnapshot | null>('sync debts mirror', null, async (client) => {
     const { data: row, error: readErr } = await (client as any)
       .from(TABLES.financial_snapshots).select('*').eq('user_id', userId).maybeSingle();
     if (readErr) throw readErr;
-    if (!row) return null;
-    const next = applyDebtUpdates(fromRow(row as SnapshotRow), updates, 'checkin', now);
+    const current = row ? fromRow(row as SnapshotRow) : emptySnapshot(now);
+    const next = withDebtsMirror(current, rows, source, now);
     const { error } = await (client as any)
       .from(TABLES.financial_snapshots).upsert(toRow(next, userId), { onConflict: 'user_id' });
     if (error) throw error;

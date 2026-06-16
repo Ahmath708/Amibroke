@@ -59,6 +59,20 @@ app excludes mortgages from the payoff planner. Two rules:
 - If you do include a mortgage or auto loan, set its kind correctly so the app treats it as
   secured, long-term debt rather than something to attack in a 90-day payoff.
 
+# Debt cleared — the "I paid it all off" signal
+
+Return \`"debtsCleared": true\` ONLY when the user explicitly states that ALL of their consumer debt is
+now gone — e.g. "I paid off all my debts", "I'm finally debt-free", "cleared the last of my credit
+cards". In that case also return \`debts: []\`. This is a deliberate signal: the app stores the user's
+debts and an empty \`debts\` array normally means "the user didn't mention debt" (so it KEEPS what it
+has) — \`debtsCleared: true\` is how you say "they explicitly have none now," which wipes their stored
+consumer debt to $0.
+- Do NOT set it just because the user didn't mention debt — silence is not a payoff.
+- Do NOT set it for a PARTIAL payoff ("paid off my car"). For partial, list the debts that REMAIN
+  (as \`user_stated\`) and leave \`debtsCleared\` unset/false.
+- A mortgage is not "consumer debt," so "I paid off all my debts" does not imply the mortgage is gone;
+  the app keeps secured debt regardless.
+
 # How to use the baselines block
 
 The user message contains a \`baselines\` object with reference numbers for the user's state and demographic context. When the user did not state a value explicitly, use the baselines as priors. Adjust based on user-specific signals — someone who says "I overspend on takeout" lands slightly above the baseline; someone who says "I live frugally" lands below.
