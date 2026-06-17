@@ -10,6 +10,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { trackFunnelStep, trackError } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
 import RoastLoading from '@/components/RoastLoading';
+import { USE_AI_MOCKS } from '@/config/ai';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Processing'>;
@@ -53,9 +54,13 @@ export default function ProcessingScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScreenBackground variant="processing" />
-      <PressableScale style={[styles.backBtn, { marginTop: insets.top + 8 }]} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}>
-        <Text style={styles.backBtnText}>← Back</Text>
-      </PressableScale>
+      {/* Escape mid-roast is a DEV affordance only — in production the roast must finish (no bail-out
+          back button). The error state below still offers "Back to Dashboard" for recovery. */}
+      {USE_AI_MOCKS && (
+        <PressableScale style={[styles.backBtn, { marginTop: insets.top + 8 }]} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}>
+          <Text style={styles.backBtnText}>← Back</Text>
+        </PressableScale>
+      )}
       <View style={[styles.inner, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* The roast "thinking" animation (ring + cycling steps) — also drives the success/error landing. */}
         <RoastLoading done={done} error={error} />

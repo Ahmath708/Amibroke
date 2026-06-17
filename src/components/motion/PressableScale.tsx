@@ -55,12 +55,12 @@ export function PressableScale({
       {...rest}
       style={[style, animatedStyle]}
       onPressIn={(e: GestureResponderEvent) => {
-        if (!reduce) scale.value = withSpring(scaleTo, Springs.snappy);
+        if (!reduce) scale.value = withSpring(scaleTo, Springs.press);
         if (haptic) impact(impactFor(haptic));
         onPressIn?.(e);
       }}
       onPressOut={(e: GestureResponderEvent) => {
-        if (!reduce) scale.value = withSpring(1, Springs.snappy);
+        if (!reduce) scale.value = withSpring(1, Springs.press);
         onPressOut?.(e);
       }}
     />

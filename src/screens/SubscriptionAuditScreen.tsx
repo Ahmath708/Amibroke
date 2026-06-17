@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
+import { ArrowPathRoundedSquareIcon } from 'react-native-heroicons/solid';
 import { enterUp, PressableScale } from '@/components/motion';
 import SectionLabel from '@/components/SectionLabel';
 import AppTextInput from '@/components/AppTextInput';
@@ -14,7 +15,8 @@ import { Subscription } from '@/types';
 import { getSubscriptions, saveSubscription, deleteSubscription } from '@/services/subscriptionAudit';
 import { useAuth } from '@/context/AuthContext';
 import ToolSkeleton from '@/components/ToolSkeleton';
-import EmptyState from '@/components/EmptyState';
+import EmptyAddButton from '@/components/EmptyAddButton';
+import ConfirmSheet from '@/components/ConfirmSheet';
 import { useRequireEntitlement } from '@/hooks/useRequireEntitlement';
 import ScreenBackground from '@/components/ScreenBackground';
 import { formatCurrency } from '@/utils/format';
@@ -33,6 +35,8 @@ export default function SubscriptionAuditScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('');
+  const [delSub, setDelSub] = useState<Subscription | null>(null);
+  const [delBusy, setDelBusy] = useState(false);
 
   const fetchSubs = async () => {
     if (!user) return;
@@ -77,21 +81,18 @@ export default function SubscriptionAuditScreen() {
     }
   };
 
-  const handleDelete = (subId: string) => {
-    if (!user) return;
-    Alert.alert('Delete', 'Remove this subscription?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try {
-            await deleteSubscription(user.id, subId);
-            fetchSubs();
-          } catch {
-            Alert.alert('Error', 'Failed to delete subscription.');
-          }
-        },
-      },
-    ]);
+  const doDelete = async () => {
+    if (!user || !delSub) return;
+    setDelBusy(true);
+    try {
+      await deleteSubscription(user.id, delSub.id);
+      setDelSub(null);
+      fetchSubs();
+    } catch {
+      Alert.alert('Error', 'Failed to delete subscription.');
+    } finally {
+      setDelBusy(false);
+    }
   };
 
   if (loading) return <ToolSkeleton variant="subscriptions" heroHeight={96} rows={3} rowHeight={64} />;
@@ -129,9 +130,15 @@ export default function SubscriptionAuditScreen() {
           </View>
         )}
 
-        {subs.length === 0 ? (
-          <EmptyState emoji="🗂️" title="No subscriptions yet" body="Add your subscriptions manually to audit your monthly spending." />
-        ) : (
+        {subs.length === 0 && !showAdd && (
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIco}><ArrowPathRoundedSquareIcon size={26} color={Colors.accentSolid} /></View>
+            <Text style={styles.emptyTitle}>No subscriptions yet</Text>
+            <Text style={styles.emptyNote}>Add your recurring charges to see the real monthly damage.</Text>
+            <EmptyAddButton label="Add your first subscription" onPress={() => setShowAdd(true)} style={{ marginTop: Spacing.lg }} />
+          </View>
+        )}
+        {subs.length > 0 && (
           <>
             <SectionLabel>Your Subscriptions · {subs.length} found</SectionLabel>
             <View style={styles.subGroup}>
@@ -141,7 +148,7 @@ export default function SubscriptionAuditScreen() {
                   <React.Fragment key={sub.id}>
                     {i > 0 && <View style={styles.subSep} />}
                     <View style={styles.subRow}>
-                      <PressableScale onPress={() => handleDelete(sub.id)} style={styles.subIcon}>
+                      <PressableScale onPress={() => setDelSub(sub)} style={styles.subIcon}>
                         <Text style={styles.subIconText}>{ICONS[i % ICONS.length]}</Text>
                       </PressableScale>
                       <View style={styles.subInfo}>
@@ -198,11 +205,11 @@ export default function SubscriptionAuditScreen() {
               </PressableScale>
             </View>
           </View>
-        ) : (
+        ) : subs.length > 0 ? (
           <PressableScale style={styles.addRow} onPress={() => setShowAdd(true)}>
             <Text style={styles.addRowText}>+ Add Subscription</Text>
           </PressableScale>
-        )}
+        ) : null}
 
         {/* Result banner */}
         {cutCount > 0 && (
@@ -220,6 +227,17 @@ export default function SubscriptionAuditScreen() {
           </LinearGradient>
         )}
       </ScrollView>
+
+      <ConfirmSheet
+        visible={delSub != null}
+        onClose={() => setDelSub(null)}
+        title={`Delete ${delSub?.name ?? 'this subscription'}?`}
+        message="This removes it from your subscriptions. You can always add it back later."
+        confirmLabel="Delete"
+        destructive
+        loading={delBusy}
+        onConfirm={doDelete}
+      />
     </ReAnimated.View>
   );
 }
@@ -227,6 +245,11 @@ export default function SubscriptionAuditScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  // Claude-Design empty state (matches the Debt / Spending managers)
+  emptyWrap: { alignItems: 'center', paddingTop: 56, paddingHorizontal: Spacing.lg },
+  emptyIco: { width: 60, height: 60, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accentContainer, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.accentBorder, marginBottom: 12 },
+  emptyTitle: { fontFamily: Typography.fonts.extrabold, fontSize: 19, letterSpacing: -0.5, color: Colors.textPrimary },
+  emptyNote: { fontFamily: Typography.fonts.body, fontSize: 13, color: Colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 19, maxWidth: 280 },
   summaryRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, paddingVertical: Spacing.lg,

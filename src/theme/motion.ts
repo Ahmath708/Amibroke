@@ -41,13 +41,15 @@ export const Scale = { subtle: 0.98, press: 0.96, pop: 1.04, bump: 1.2 } as cons
 
 // ── Spring presets (withSpring configs) ──
 // snappy=default UI · gentle=cards/panels landing · bouncy=playful · instant=popovers
-// · release=drag/overshoot-settle (used by the score-reveal landing).
+// · release=drag/overshoot-settle (used by the score-reveal landing) · press=tactile
+// button press-in/out (critically damped → a clean snap with NO release-bounce).
 export const Springs = {
   snappy: { stiffness: 300, damping: 30, mass: 1 },
   gentle: { stiffness: 120, damping: 14, mass: 1 },
   bouncy: { stiffness: 400, damping: 10, mass: 1 },
   instant: { stiffness: 600, damping: 35, mass: 1 },
   release: { stiffness: 200, damping: 20, mass: 1 },
+  press: { stiffness: 400, damping: 40, mass: 1 }, // damping ratio 1.0 — no overshoot
 } satisfies Record<string, WithSpringConfig>;
 
 export type SpringName = keyof typeof Springs;

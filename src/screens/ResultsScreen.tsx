@@ -9,7 +9,9 @@ import {
   ChevronDownIcon, ChevronUpIcon, ChevronRightIcon, LockClosedIcon, ArrowRightIcon,
   ArrowDownTrayIcon,
 } from 'react-native-heroicons/outline';
-import { CheckCircleIcon as CheckCircleSolid, XCircleIcon as XCircleSolid } from 'react-native-heroicons/solid';
+import {
+  CheckCircleIcon as CheckCircleSolid, XCircleIcon as XCircleSolid, BoltIcon,
+} from 'react-native-heroicons/solid';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -18,7 +20,8 @@ import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import GlassCard from '@/components/GlassCard';
 import ScoreRing from '@/components/ScoreRing';
-import StatusPill from '@/components/StatusPill';
+import BandPill from '@/components/BandPill';
+import { ListGroup, ListRow } from '@/components/ListGroup';
 import SeverityPill from '@/components/SeverityPill';
 import ConfidenceBadge, { confidenceLevel } from '@/components/ConfidenceBadge';
 import SectionLabel from '@/components/SectionLabel';
@@ -40,6 +43,7 @@ import { getActivePlan } from '@/services/activePlan';
 import { shareFinancialReportPdf } from '@/services/pdf';
 import { useSubscription } from '@/hooks/useSubscription';
 import { trackSnapshotGenerated, trackRoastGenerated, trackFunnelStep } from '@/services/analytics';
+import { PURCHASE_PRODUCTS } from '@/types';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Results'>;
@@ -83,22 +87,24 @@ function spendingIcon(category: string): SpendIcon {
   return ion('pricetag-outline');
 }
 
-// Renders the right icon family for a spending category.
-function SpendingIcon({ category, size, color }: { category: string; size: number; color: string }) {
+// A small rounded-square icon tile holding the right icon family for a spending category.
+function SpendingIconTile({ category }: { category: string }) {
   const ic = spendingIcon(category);
-  return ic.lib === 'mci'
-    ? <MaterialCommunityIcons name={ic.name} size={size} color={color} style={styles.metricIcon} />
-    : <Ionicons name={ic.name} size={size} color={color} style={styles.metricIcon} />;
+  return (
+    <View style={styles.lgIco}>
+      {ic.lib === 'mci'
+        ? <MaterialCommunityIcons name={ic.name} size={16} color="rgba(255,255,255,0.7)" />
+        : <Ionicons name={ic.name} size={16} color="rgba(255,255,255,0.7)" />}
+    </View>
+  );
 }
 
-// A compact icon-button for the secondary actions row (Heroicons UI chrome).
-function IconAction({ Icon, label, onPress, tint = Colors.accent }: { Icon: React.ComponentType<any>; label: string; onPress: () => void; tint?: string }) {
+// A square quick-action tile (icon + label) for the secondary actions row.
+function QuickAction({ Icon, label, onPress, tint = Colors.textSecondary }: { Icon: React.ComponentType<any>; label: string; onPress: () => void; tint?: string }) {
   return (
-    <PressableScale style={iaStyles.btn} onPress={onPress} haptic="light">
-      <View style={[iaStyles.badge, { backgroundColor: Colors.accentContainer }]}>
-        <Icon size={20} color={tint} />
-      </View>
-      <Text style={iaStyles.label}>{label}</Text>
+    <PressableScale style={qaStyles.tile} onPress={onPress} haptic="light">
+      <Icon size={20} color={tint} />
+      <Text style={qaStyles.label}>{label}</Text>
     </PressableScale>
   );
 }
@@ -227,20 +233,23 @@ export default function ResultsScreen({ navigation, route }: Props) {
   const scoreColor = analysis.scoreColor ?? getScoreBand(analysis.score).color;
   const canDeepDive = hasAccess('deep_dive');
   const hasDebt = (analysis.debtTotal ?? 0) > 0;
+  const planPrice = PURCHASE_PRODUCTS.action_plan?.price ?? 4.99;
+  const deepPrice = PURCHASE_PRODUCTS.deep_dive?.price ?? 9.99;
 
-  // Key metrics — vector icons, "N/A" rows hidden so it never looks unfinished.
+  // Key metrics — "N/A" rows hidden so it never looks unfinished.
   const income = analysis.monthlyIncome?.value ?? analysis.monthlyIncome ?? 0;
   const expenses = analysis.monthlyExpenses?.value ?? analysis.monthlyExpenses ?? 0;
-  const allMetrics: { label: string; value: string; icon: IoniconsName; highlight?: boolean }[] = [
-    { label: 'Monthly Income', value: fmt(income), icon: 'cash-outline' },
-    { label: 'Monthly Expenses', value: fmt(expenses), icon: 'card-outline' },
-    { label: 'Liquid Savings', value: fmt(analysis.liquidSavings?.value ?? analysis.liquidSavings ?? 0), icon: 'wallet-outline' },
-    { label: 'Monthly Savings', value: fmt(analysis.monthlySavings ?? 0), icon: 'save-outline', highlight: (analysis.monthlySavings ?? 0) < 0 },
-    { label: 'Total Debt', value: fmt(analysis.debtTotal ?? 0), icon: 'trending-down-outline', highlight: (analysis.debtTotal ?? 0) > 0 },
-    { label: 'Savings Rate', value: analysis.savingsRate != null ? `${Math.round(analysis.savingsRate * 100)}%` : 'N/A', icon: 'trending-up-outline' },
-    { label: 'Emergency Fund', value: analysis.emergencyFundMonths != null ? `${analysis.emergencyFundMonths.toFixed(1)} mo` : 'N/A', icon: 'shield-checkmark-outline' },
-    { label: 'Debt-to-Income', value: analysis.debtToIncomeRatio != null ? `${(analysis.debtToIncomeRatio * 100).toFixed(0)}%` : 'N/A', icon: 'pie-chart-outline' },
-    { label: 'Monthly Debt Service', value: fmt(analysis.monthlyDebtService ?? 0), icon: 'calendar-outline' },
+  const monthlySavings = analysis.monthlySavings ?? 0;
+  const allMetrics: { label: string; value: string; color?: string }[] = [
+    { label: 'Monthly Income', value: fmt(income) },
+    { label: 'Monthly Expenses', value: fmt(expenses) },
+    { label: 'Liquid Savings', value: fmt(analysis.liquidSavings?.value ?? analysis.liquidSavings ?? 0) },
+    { label: 'Monthly Savings', value: (monthlySavings >= 0 ? '+' : '') + fmt(monthlySavings), color: monthlySavings > 0 ? Colors.success : monthlySavings < 0 ? Colors.danger : undefined },
+    { label: 'Total Debt', value: fmt(analysis.debtTotal ?? 0), color: (analysis.debtTotal ?? 0) > 0 ? Colors.danger : undefined },
+    { label: 'Savings Rate', value: analysis.savingsRate != null ? `${Math.round(analysis.savingsRate * 100)}%` : 'N/A' },
+    { label: 'Emergency Fund', value: analysis.emergencyFundMonths != null ? `${analysis.emergencyFundMonths.toFixed(1)} mo` : 'N/A' },
+    { label: 'Debt-to-Income', value: analysis.debtToIncomeRatio != null ? `${(analysis.debtToIncomeRatio * 100).toFixed(0)}%` : 'N/A' },
+    { label: 'Monthly Debt Service', value: fmt(analysis.monthlyDebtService ?? 0) },
   ];
   const metrics = allMetrics.filter((m) => m.value !== 'N/A');
 
@@ -260,12 +269,12 @@ export default function ResultsScreen({ navigation, route }: Props) {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Score hero — score + /100 inside the ring; band + data confidence beside it */}
+        {/* Score hero — the signature count-up reveal; band pill + data-confidence beside it */}
         <GlassSection delay={0}>
           <View style={styles.scoreHero}>
-            <ScoreRing score={analysis.score} size={140} showOutOf reveal />
+            <ScoreRing score={analysis.score} size={150} showOutOf reveal />
             <View style={styles.scoreInfo}>
-              <StatusPill label={analysis.scoreLabel} color={scoreColor} size="md" />
+              <BandPill label={analysis.scoreLabel} color={scoreColor} size="md" />
               {analysis.avgConfidence > 0 && (
                 <View style={styles.confidenceSlot}>
                   <SectionLabel style={styles.confidenceLabel}>Data Confidence</SectionLabel>
@@ -276,76 +285,79 @@ export default function ResultsScreen({ navigation, route }: Props) {
           </View>
         </GlassSection>
 
-        {/* TODO(redesign Phase 2): confetti burst when a *good* score lands (e.g.
-            score >= 70), synced to the ScoreRing reveal completion. Stubbed for now —
-            needs react-native-fast-confetti (Skia dep), deferred to keep the slice
-            dependency-light. */}
-
-        {/* Roast */}
-        <GlassSection delay={120}>
-          <Text style={styles.roastLabel}>Roast</Text>
+        {/* Roast — the personality; oversized + accent-washed */}
+        <GlassSection delay={80}>
           <LinearGradient
             colors={[Colors.accentContainer, 'transparent']}
             style={styles.roastCard}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
           >
-            <Text style={styles.roastText}>"{analysis.roast}"</Text>
+            <Text style={styles.qmark}>&rdquo;</Text>
+            <Text style={styles.roastLabel}>Roast</Text>
+            <Text style={styles.roastText}>{analysis.roast}</Text>
           </LinearGradient>
         </GlassSection>
 
         {/* #1 Thing To Fix — the single most actionable line, part of the hit */}
         {analysis.topFix && (
-          <>
-            <SectionLabel>#1 Thing To Fix</SectionLabel>
-            <GlassCard style={styles.topFixCard}>
-              <Text style={styles.topFixAction}>{analysis.topFix.action}</Text>
-              <Text style={styles.topFixImpact}>
-                Est. monthly improvement: {fmt(analysis.topFix.monthlyImpact)}
-              </Text>
-            </GlassCard>
-          </>
+          <GlassSection delay={140}>
+            <View style={styles.fixCard}>
+              <View style={styles.fixIco}><BoltIcon size={20} color={Colors.success} /></View>
+              <View style={styles.fixBody}>
+                <Text style={styles.fixLabel}>#1 Thing To Fix</Text>
+                <Text style={styles.fixAction}>{analysis.topFix.action}</Text>
+                <Text style={styles.fixImpact}>Est. monthly improvement: {fmt(analysis.topFix.monthlyImpact)}</Text>
+              </View>
+            </View>
+          </GlassSection>
         )}
 
-        {/* Lead with the action — Plan CTA + share/track — before the deep report */}
-        <View style={styles.actionsGroup}>
-          {hasAccess('action_plan') ? (
-            <NeonButton
-              label="View 90-Day Action Plan"
-              onPress={async () => {
-                const { fetchOrGenerateActionPlan } = await import('@/services/ai');
-                const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
-                navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage, analysisId: analysisId ?? undefined });
-              }}
-            />
-          ) : (
-            <NeonButton
-              label="Unlock 90-Day Action Plan — $4.99"
-              onPress={() => navigation.navigate('Paywall')}
-            />
-          )}
-
-          <View style={styles.iconRow}>
-            <IconAction Icon={ShareIcon} label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
-            {!user ? (
-              <IconAction Icon={ArrowRightOnRectangleIcon} label="Sign in" onPress={() => navigation.navigate('Login')} />
-            ) : shared ? (
-              <IconAction Icon={CheckCircleIcon} label="Posted" tint={Colors.success} onPress={() => openConfirm('unpost')} />
+        {/* Lead with the action — Plan CTA + quick actions — before the deep report */}
+        <GlassSection delay={200}>
+          <View style={styles.actionsGroup}>
+            {hasAccess('action_plan') ? (
+              <NeonButton
+                label="View 90-Day Action Plan"
+                glow
+                onPress={async () => {
+                  const { fetchOrGenerateActionPlan } = await import('@/services/ai');
+                  const plan = analysisId ? await fetchOrGenerateActionPlan(analysis, tone, analysisId) : null;
+                  navigation.navigate('ActionPlan', { steps: (plan?.steps ?? []) as any, analysis, overallMessage: plan?.overallMessage, analysisId: analysisId ?? undefined });
+                }}
+              />
             ) : (
-              <IconAction Icon={GlobeAltIcon} label="Post" onPress={() => openConfirm('post')} />
+              <NeonButton
+                label={`Unlock 90-Day Action Plan — $${planPrice}`}
+                onPress={() => navigation.navigate('Paywall')}
+              />
             )}
-            {user && (
-              <IconAction Icon={CalendarIcon} label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
-            )}
-            {canDeepDive && (
-              <IconAction Icon={ArrowDownTrayIcon} label={pdfBusy ? 'Saving…' : 'PDF'} onPress={handleDownloadPdf} />
-            )}
+
+            <View style={styles.quickRow}>
+              <QuickAction Icon={ShareIcon} label="Share" onPress={() => navigation.navigate('Share', { analysis })} />
+              {!user ? (
+                <QuickAction Icon={ArrowRightOnRectangleIcon} label="Sign in" onPress={() => navigation.navigate('Login')} />
+              ) : shared ? (
+                <QuickAction Icon={CheckCircleIcon} label="Posted" tint={Colors.success} onPress={() => openConfirm('unpost')} />
+              ) : (
+                <QuickAction Icon={GlobeAltIcon} label="Post" onPress={() => openConfirm('post')} />
+              )}
+              {user && (
+                <QuickAction Icon={CalendarIcon} label="Track" onPress={() => navigation.navigate('MonthlyCheckIn', { setup: true })} />
+              )}
+              {canDeepDive && (
+                <QuickAction Icon={ArrowDownTrayIcon} label={pdfBusy ? 'Saving…' : 'PDF'} onPress={handleDownloadPdf} />
+              )}
+            </View>
           </View>
-        </View>
+        </GlassSection>
 
         {/* Progressive disclosure — the full report is one tap away */}
-        <PressableScale style={styles.expandToggle} onPress={toggleBreakdown} haptic="light">
-          <Text style={styles.expandToggleText}>{expanded ? 'Hide the full breakdown' : 'See the full breakdown'}</Text>
-          {expanded ? <ChevronUpIcon size={18} color={Colors.accent} /> : <ChevronDownIcon size={18} color={Colors.accent} />}
+        <PressableScale style={styles.bdToggle} onPress={toggleBreakdown} haptic="light">
+          <View style={styles.bdToggleText}>
+            <Text style={styles.bdToggleTitle}>{expanded ? 'Hide the full breakdown' : 'See the full breakdown'}</Text>
+            <Text style={styles.bdToggleSub}>{expanded ? 'Tap to hide the homework' : 'Metrics, debts, budget & insights'}</Text>
+          </View>
+          {expanded ? <ChevronUpIcon size={18} color={Colors.textTertiary} /> : <ChevronDownIcon size={18} color={Colors.textTertiary} />}
         </PressableScale>
 
         {expanded && (
@@ -356,188 +368,168 @@ export default function ResultsScreen({ navigation, route }: Props) {
               <Text style={styles.summaryText}>{analysis.summary}</Text>
             </GlassCard>
 
-        {/* Key metrics */}
-        <SectionLabel>Key Metrics</SectionLabel>
-        <View style={styles.metricsGroup}>
-          {metrics.map((m, i) => (
-            <React.Fragment key={m.label}>
-              <View style={styles.metricRow}>
-                <Ionicons name={m.icon} size={18} color={Colors.textSecondary} style={styles.metricIcon} />
-                <Text style={styles.metricLabel}>{m.label}</Text>
-                <Text style={[styles.metricValue, m.highlight && { color: Colors.danger }]}>{m.value}</Text>
-              </View>
-              {i < metrics.length - 1 && <View style={styles.rowSep} />}
-            </React.Fragment>
-          ))}
-        </View>
-
-        {/* Emotional status (AI-provided emoji is content, kept as-is) */}
-        {analysis.emotionalStatus && (
-          <>
-            <SectionLabel>Emotional Status</SectionLabel>
-            <GlassCard style={styles.emotionCard}>
-              <Text style={styles.emotionEmoji}>{analysis.emotionalStatus.emoji}</Text>
-              <Text style={styles.emotionText}>{analysis.emotionalStatus.label}</Text>
-            </GlassCard>
-          </>
-        )}
-
-        {/* Score adjustment */}
-        {analysis.scoreModifierReason && (
-          <>
-            <SectionLabel>Score Adjustment</SectionLabel>
-            <GlassCard style={styles.modifierCard}>
-              <Text style={styles.modifierText}>{analysis.scoreModifierReason}</Text>
-            </GlassCard>
-          </>
-        )}
-
-        {/* What you're doing right */}
-        {analysis.positiveBehaviors && analysis.positiveBehaviors.length > 0 && (
-          <>
-            <SectionLabel>What You're Doing Right</SectionLabel>
-            <View style={styles.listCard}>
-              {analysis.positiveBehaviors.map((pb, i, arr) => (
-                <React.Fragment key={i}>
-                  <View style={styles.listRow}>
-                    <CheckCircleSolid size={18} color={Colors.success} style={styles.bullet} />
-                    <Text style={styles.listText}>{pb}</Text>
-                  </View>
-                  {i < arr.length - 1 && <View style={styles.rowSep} />}
-                </React.Fragment>
+            {/* Key metrics */}
+            <SectionLabel>Key Metrics</SectionLabel>
+            <ListGroup style={styles.groupGap}>
+              {metrics.map((m) => (
+                <ListRow key={m.label} label={m.label} value={m.value} valueColor={m.color} />
               ))}
-            </View>
-          </>
-        )}
+            </ListGroup>
 
-        {/* Biggest problems */}
-        {analysis.topProblems && analysis.topProblems.length > 0 && (
-          <>
-            <SectionLabel>Biggest Problems</SectionLabel>
-            <View style={styles.listCard}>
-              {analysis.topProblems.map((p, i, arr) => (
-                <React.Fragment key={i}>
-                  <View style={styles.listRow}>
-                    <XCircleSolid size={18} color={Colors.danger} style={styles.bullet} />
-                    <Text style={styles.listText}>{p}</Text>
-                  </View>
-                  {i < arr.length - 1 && <View style={styles.rowSep} />}
-                </React.Fragment>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Debts */}
-        {analysis.debts && analysis.debts.length > 0 && (
-          <>
-            <SectionLabel>Debts</SectionLabel>
-            <GlassCard style={styles.debtsCard}>
-            <View style={styles.debtsHeader}>
-              <Text style={styles.debtsTitle}>{analysis.debts.length} {analysis.debts.length === 1 ? 'Debt' : 'Debts'}</Text>
-              <Text style={styles.debtsTotal}>{fmt(analysis.debtTotal ?? 0)} total</Text>
-            </View>
-            {analysis.debts.slice(0, 3).map((d: any) => (
-              <View key={d.name} style={styles.debtMiniRow}>
-                <Text style={styles.debtMiniName}>{d.name}</Text>
-                <SeverityPill level={d.urgency} />
-              </View>
-            ))}
-            {analysis.debts.length > 3 && (
-              <Text style={styles.debtsMore}>+{analysis.debts.length - 3} more</Text>
+            {/* Emotional status (AI-provided emoji is content, kept as-is) */}
+            {analysis.emotionalStatus && (
+              <>
+                <SectionLabel>Emotional Status</SectionLabel>
+                <GlassCard style={styles.emotionCard}>
+                  <Text style={styles.emotionEmoji}>{analysis.emotionalStatus.emoji}</Text>
+                  <Text style={styles.emotionText}>{analysis.emotionalStatus.label}</Text>
+                </GlassCard>
+              </>
             )}
-            {hasDebt && (
-              canDeepDive ? (
-                <NeonButton
-                  label="View Debt Payoff Plan"
-                  onPress={() => navigation.navigate('DebtPayoff')}
-                  variant="secondary"
-                  style={styles.debtsCta}
-                />
-              ) : (
-                <PressableScale style={styles.lockedCta} onPress={() => navigation.navigate('Paywall')} haptic="light">
-                  <LockClosedIcon size={16} color={Colors.accent} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.lockedCtaTitle}>Upgrade to Deep Dive</Text>
-                    <Text style={styles.lockedCtaSub}>Unlock your full debt payoff plan</Text>
-                  </View>
-                  <ChevronRightIcon size={16} color={Colors.textSecondary} />
-                </PressableScale>
-              )
+
+            {/* Score adjustment */}
+            {analysis.scoreModifierReason && (
+              <>
+                <SectionLabel>Score Adjustment</SectionLabel>
+                <GlassCard style={styles.modifierCard}>
+                  <Text style={styles.modifierText}>{analysis.scoreModifierReason}</Text>
+                </GlassCard>
+              </>
             )}
-            </GlassCard>
-          </>
-        )}
 
-        {/* What you mentioned spending */}
-        {analysis.mentionedSpending && analysis.mentionedSpending.length > 0 && (
-          <>
-            <SectionLabel>What You Mentioned Spending</SectionLabel>
-            <View style={styles.metricsGroup}>
-              {analysis.mentionedSpending.map((item: any, i: number, arr: any[]) => (
-                <React.Fragment key={item.category}>
-                  <View style={styles.metricRow}>
-                    <SpendingIcon category={item.category} size={18} color={Colors.textSecondary} />
-                    <Text style={styles.metricLabel}>{item.category}</Text>
-                    <Text style={styles.metricValue}>{item.amount ? fmt(item.amount) : 'mentioned'}</Text>
-                  </View>
-                  {i < arr.length - 1 && <View style={styles.rowSep} />}
-                </React.Fragment>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Recommended budget (50/30/20) */}
-        <SectionLabel>Recommended Budget</SectionLabel>
-        <View style={styles.metricsGroup}>
-          {(() => {
-            const savings = analysis.monthlySavings ?? 0;
-            const needsPct = income > 0 ? (expenses / income) * 100 : 0;
-            const wantsPct = income > 0 ? Math.max(0, ((income - expenses - savings) / income) * 100) : 0;
-            const savingsPct = income > 0 ? (savings / income) * 100 : 0;
-            const rows: { icon: IoniconsName; label: string; pct: number; current: number; target: number; targetPct: number; danger?: boolean }[] = [
-              { icon: 'home-outline', label: 'Needs', pct: needsPct, current: expenses, target: income * 0.5, targetPct: 50 },
-              { icon: 'game-controller-outline', label: 'Wants', pct: wantsPct, current: Math.max(0, income - expenses - savings), target: income * 0.3, targetPct: 30 },
-              { icon: 'wallet-outline', label: 'Savings / Debt', pct: savingsPct, current: savings, target: income * 0.2, targetPct: 20, danger: savingsPct < 20 },
-            ];
-            return rows.map((r, i) => (
-              <React.Fragment key={r.label}>
-                <View style={styles.metricRow}>
-                  <Ionicons name={r.icon} size={18} color={Colors.textSecondary} style={styles.metricIcon} />
-                  <Text style={styles.metricLabel}>{r.label}</Text>
-                  <Text style={[styles.metricValue, r.danger && { color: Colors.danger }]}>{r.pct.toFixed(0)}%</Text>
+            {/* What you're doing right */}
+            {analysis.positiveBehaviors && analysis.positiveBehaviors.length > 0 && (
+              <>
+                <SectionLabel>What You're Doing Right</SectionLabel>
+                <View style={styles.markCard}>
+                  {analysis.positiveBehaviors.map((pb, i, arr) => (
+                    <View key={i} style={[styles.markRow, i < arr.length - 1 && styles.markRowBorder]}>
+                      <View style={[styles.markIco, { backgroundColor: Colors.successContainer }]}><CheckCircleSolid size={15} color={Colors.success} /></View>
+                      <Text style={styles.markText}>{pb}</Text>
+                    </View>
+                  ))}
                 </View>
-                {income > 0 && (
-                  <View style={styles.budgetDetail}>
-                    <Text style={styles.budgetDetailText}>Current: {fmt(r.current)}/mo</Text>
-                    <Text style={styles.budgetDetailText}>Target: {fmt(r.target)}/mo ({r.targetPct}%)</Text>
-                  </View>
-                )}
-                {i < rows.length - 1 && <View style={styles.rowSep} />}
-              </React.Fragment>
-            ));
-          })()}
-        </View>
+              </>
+            )}
 
-        {/* Key insights */}
-        {analysis.insights?.length > 0 && (
-          <>
-            <SectionLabel>Key Insights</SectionLabel>
-            <View style={styles.listCard}>
-              {analysis.insights.map((insight, i, arr) => (
-                <React.Fragment key={i}>
-                  <View style={styles.listRow}>
-                    <ArrowRightIcon size={16} color={Colors.accent} style={styles.bullet} />
-                    <Text style={styles.listText}>{insight}</Text>
-                  </View>
-                  {i < arr.length - 1 && <View style={styles.rowSep} />}
-                </React.Fragment>
-              ))}
-            </View>
-          </>
-        )}
+            {/* Biggest problems */}
+            {analysis.topProblems && analysis.topProblems.length > 0 && (
+              <>
+                <SectionLabel>Biggest Problems</SectionLabel>
+                <View style={styles.markCard}>
+                  {analysis.topProblems.map((p, i, arr) => (
+                    <View key={i} style={[styles.markRow, i < arr.length - 1 && styles.markRowBorder]}>
+                      <View style={[styles.markIco, { backgroundColor: Colors.dangerContainer }]}><XCircleSolid size={15} color={Colors.danger} /></View>
+                      <Text style={styles.markText}>{p}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
 
+            {/* Debts */}
+            {analysis.debts && analysis.debts.length > 0 && (
+              <>
+                <SectionLabel>Debts</SectionLabel>
+                <GlassCard style={styles.debtsCard}>
+                  <View style={styles.debtsHeader}>
+                    <Text style={styles.debtsTitle}>{analysis.debts.length} {analysis.debts.length === 1 ? 'Debt' : 'Debts'}</Text>
+                    <Text style={styles.debtsTotal}>{fmt(analysis.debtTotal ?? 0)} total</Text>
+                  </View>
+                  {analysis.debts.slice(0, 3).map((d: any) => (
+                    <View key={d.name} style={styles.debtMiniRow}>
+                      <Text style={styles.debtMiniName}>{d.name}</Text>
+                      <SeverityPill level={d.urgency} />
+                    </View>
+                  ))}
+                  {analysis.debts.length > 3 && (
+                    <Text style={styles.debtsMore}>+{analysis.debts.length - 3} more</Text>
+                  )}
+                  {hasDebt && (
+                    canDeepDive ? (
+                      <NeonButton
+                        label="View Debt Payoff Plan"
+                        onPress={() => navigation.navigate('DebtPayoff')}
+                        variant="secondary"
+                        style={styles.debtsCta}
+                      />
+                    ) : (
+                      <PressableScale style={styles.lockedCta} onPress={() => navigation.navigate('Paywall')} haptic="light">
+                        <LockClosedIcon size={16} color={Colors.accent} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.lockedCtaTitle}>Upgrade to Deep Dive — ${deepPrice}</Text>
+                          <Text style={styles.lockedCtaSub}>Unlock your full debt payoff plan</Text>
+                        </View>
+                        <ChevronRightIcon size={16} color={Colors.textSecondary} />
+                      </PressableScale>
+                    )
+                  )}
+                </GlassCard>
+              </>
+            )}
+
+            {/* What you mentioned spending */}
+            {analysis.mentionedSpending && analysis.mentionedSpending.length > 0 && (
+              <>
+                <SectionLabel>What You Mentioned Spending</SectionLabel>
+                <ListGroup style={styles.groupGap}>
+                  {analysis.mentionedSpending.map((item: any) => (
+                    <ListRow
+                      key={item.category}
+                      label={item.category}
+                      value={item.amount ? fmt(item.amount) : 'mentioned'}
+                      mono={!!item.amount}
+                      left={<SpendingIconTile category={item.category} />}
+                    />
+                  ))}
+                </ListGroup>
+              </>
+            )}
+
+            {/* Recommended budget (50/30/20) */}
+            <SectionLabel>Recommended Budget · 50/30/20</SectionLabel>
+            <GlassCard style={styles.budgetCard}>
+              {(() => {
+                const savings = monthlySavings;
+                const wants = Math.max(0, income - expenses - savings);
+                const rows: { label: string; targetPct: number; current: number; target: number; over?: boolean; good?: boolean }[] = [
+                  { label: 'Needs', targetPct: 50, current: expenses, target: income * 0.5, over: income > 0 && expenses > income * 0.5 },
+                  { label: 'Wants', targetPct: 30, current: wants, target: income * 0.3, over: income > 0 && wants > income * 0.3 },
+                  { label: 'Savings / Debt', targetPct: 20, current: savings, target: income * 0.2, good: income > 0 && savings >= income * 0.2 },
+                ];
+                return rows.map((r, i) => {
+                  const fillPct = income > 0 ? Math.min(100, Math.max(0, (r.current / income) * 100)) : 0;
+                  const youColor = r.good ? Colors.success : r.over ? Colors.danger : Colors.textPrimary;
+                  return (
+                    <View key={r.label} style={[styles.budRow, i < rows.length - 1 && styles.budRowBorder]}>
+                      <View style={styles.budTop}>
+                        <Text style={styles.budName}>{r.label} <Text style={styles.budPct}>{r.targetPct}%</Text></Text>
+                        <Text style={styles.budNums}>target {fmt(r.target)} · <Text style={{ color: youColor }}>you {fmt(r.current)}</Text></Text>
+                      </View>
+                      <View style={styles.budTrack}>
+                        <View style={[styles.budFill, { width: `${fillPct}%` }]} />
+                        <View style={[styles.budTarget, { left: `${r.targetPct}%` }]} />
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
+            </GlassCard>
+
+            {/* Key insights */}
+            {analysis.insights?.length > 0 && (
+              <>
+                <SectionLabel>Key Insights</SectionLabel>
+                <View style={styles.markCard}>
+                  {analysis.insights.map((insight, i, arr) => (
+                    <View key={i} style={[styles.markRow, i < arr.length - 1 && styles.markRowBorder]}>
+                      <ArrowRightIcon size={16} color={Colors.accentSolid} style={styles.insightArrow} />
+                      <Text style={styles.markText}>{insight}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -573,70 +565,94 @@ export default function ResultsScreen({ navigation, route }: Props) {
   );
 }
 
-const iaStyles = StyleSheet.create({
-  btn: { flex: 1, alignItems: 'center', gap: Spacing.xs },
-  badge: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  label: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+const qaStyles = StyleSheet.create({
+  tile: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 7,
+    paddingVertical: 13, paddingHorizontal: 4, borderRadius: Radius.lg,
+    backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+  },
+  label: { fontFamily: Typography.fonts.bodySemi, fontSize: 11.5, color: Colors.textSecondary, letterSpacing: -0.1 },
 });
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
-  scoreHero: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.xl,
-    marginBottom: Spacing.xl,
-  },
+  scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.md },
+
+  // Score hero
+  scoreHero: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: Spacing.xl, marginTop: Spacing.xs },
   scoreInfo: { flex: 1, gap: Spacing.md },
   confidenceSlot: { gap: Spacing.xs, alignItems: 'flex-start' },
   confidenceLabel: { marginBottom: 0 },
+
+  // Roast
   roastCard: {
-    borderRadius: Radius.xl, padding: Spacing.xl, marginBottom: Spacing.xxl,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    borderRadius: Radius.xxl, paddingVertical: 20, paddingHorizontal: 20, marginBottom: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.accentBorder, overflow: 'hidden',
   },
-  roastLabel: {
-    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.footnote.fontSize,
-    color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.6,
-    marginBottom: Spacing.sm,
+  qmark: { position: 'absolute', top: 6, right: 18, fontSize: 60, lineHeight: 60, fontFamily: Typography.fonts.heading, color: 'rgba(255,0,122,0.16)' },
+  roastLabel: { fontFamily: Typography.fonts.extrabold, fontSize: 11, color: Colors.accentSolid, textTransform: 'uppercase', letterSpacing: 2, marginBottom: Spacing.md },
+  roastText: { fontFamily: Typography.fonts.extrabold, fontSize: 25, color: Colors.textPrimary, lineHeight: 30, letterSpacing: -0.9, maxWidth: '94%' },
+
+  // #1 Thing To Fix
+  fixCard: {
+    flexDirection: 'row', gap: 13, alignItems: 'flex-start',
+    borderRadius: 18, padding: 16, marginBottom: Spacing.lg,
+    backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.success + '4D',
   },
-  // The roast is the personality — give it real presence (oversized, tight).
-  roastText: {
-    fontFamily: Typography.fonts.headingMed,
-    fontSize: 23, color: Colors.textPrimary, lineHeight: 31, letterSpacing: -0.4,
+  fixIco: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.successContainer },
+  fixBody: { flex: 1 },
+  fixLabel: { fontFamily: Typography.fonts.extrabold, fontSize: 10.5, letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.success, marginBottom: 5 },
+  fixAction: { fontFamily: Typography.fonts.bodySemi, fontSize: 16, color: Colors.textPrimary, lineHeight: 21, letterSpacing: -0.3 },
+  fixImpact: { fontFamily: Typography.fonts.monoSemi, fontSize: 13, color: Colors.success, marginTop: 9 },
+
+  // Actions
+  actionsGroup: { gap: Spacing.md, marginTop: Spacing.xs },
+  quickRow: { flexDirection: 'row', gap: 9 },
+
+  // Breakdown toggle
+  bdToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md,
+    paddingVertical: 16, paddingHorizontal: 18, borderRadius: Radius.xl, marginTop: Spacing.xl, marginBottom: Spacing.sm,
+    backgroundColor: Colors.backgroundSecondary, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
-  summaryCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
-  summaryText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 22 },
-  metricsGroup: {
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.xxl,
-  },
-  metricRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, minHeight: Spacing.rowHeight },
-  metricIcon: { marginRight: Spacing.xs },
-  metricLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  metricValue: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  rowSep: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.lg + 22 },
-  // Carded lists (positives / problems / insights) — consistent with the metric groups.
-  listCard: {
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    marginBottom: Spacing.xxl,
-  },
-  listRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  bullet: { marginTop: 1 },
-  listText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, lineHeight: 20 },
-  emotionCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, marginBottom: Spacing.xxl },
-  emotionEmoji: { fontSize: Typography.title2.fontSize },
-  emotionText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  modifierCard: { padding: Spacing.md, marginBottom: Spacing.xxl },
+  bdToggleText: { flex: 1 },
+  bdToggleTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: 15, color: Colors.textPrimary, letterSpacing: -0.2 },
+  bdToggleSub: { fontFamily: Typography.fonts.bodyMed, fontSize: 12, color: Colors.textSecondary, marginTop: 3 },
+
+  groupGap: { marginBottom: Spacing.xxl },
+
+  // The breakdown summary
+  summaryCard: { padding: 18, marginBottom: Spacing.xxl, borderRadius: 18 },
+  summaryText: { fontFamily: Typography.fonts.body, fontSize: 14.5, color: 'rgba(255,255,255,0.78)', lineHeight: 22 },
+
+  // lg icon tile (mentioned spending)
+  lgIco: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder },
+
+  // Emotional status
+  emotionCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 17, marginBottom: Spacing.xxl, borderRadius: 18 },
+  emotionEmoji: { fontSize: 34 },
+  emotionText: { fontFamily: Typography.fonts.bodySemi, fontSize: 18, color: Colors.textPrimary, letterSpacing: -0.4 },
+
+  // Score adjustment
+  modifierCard: { padding: Spacing.md, marginBottom: Spacing.xxl, borderRadius: 18 },
   modifierText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, fontStyle: 'italic', lineHeight: 18 },
-  topFixCard: { padding: Spacing.lg, marginBottom: Spacing.xxl, borderLeftWidth: 3, borderLeftColor: Colors.tertiarySolid },
-  topFixAction: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, lineHeight: 22, marginBottom: Spacing.xs },
-  topFixImpact: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.success },
-  debtsCard: { padding: Spacing.lg, marginBottom: Spacing.xxl },
+
+  // mark lists (positives / problems / insights)
+  markCard: {
+    backgroundColor: Colors.backgroundSecondary, borderRadius: 18, paddingHorizontal: 17, marginBottom: Spacing.xxl,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
+  },
+  markRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 11 },
+  markRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator },
+  markIco: { width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  markText: { flex: 1, fontFamily: Typography.fonts.bodyMed, fontSize: 14, color: 'rgba(255,255,255,0.84)', lineHeight: 20, letterSpacing: -0.2 },
+  insightArrow: { marginTop: 2 },
+
+  // Debts
+  debtsCard: { padding: Spacing.lg, marginBottom: Spacing.xxl, borderRadius: 18 },
   debtsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   debtsTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  debtsTotal: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  debtsTotal: { fontFamily: Typography.fonts.monoSemi, fontSize: 14, color: Colors.textSecondary },
   debtMiniRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.xs },
   debtMiniName: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textPrimary, flex: 1 },
   debtsMore: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: Spacing.xs },
@@ -645,20 +661,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     marginTop: Spacing.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
     borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.backgroundTertiary,
   },
   lockedCtaTitle: { fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize, color: Colors.accent },
   lockedCtaSub: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, marginTop: 1 },
-  budgetDetail: { paddingLeft: Spacing.lg, paddingBottom: Spacing.sm, gap: 1 },
-  budgetDetailText: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, lineHeight: 17 },
-  actionsGroup: { gap: Spacing.lg, marginTop: Spacing.xs },
-  iconRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-start' },
-  expandToggle: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
-    paddingVertical: Spacing.lg, marginTop: Spacing.lg, marginBottom: Spacing.sm,
-  },
-  expandToggleText: {
-    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.subhead.fontSize,
-    color: Colors.accent, letterSpacing: -0.2,
-  },
+
+  // Recommended budget
+  budgetCard: { paddingVertical: 4, paddingHorizontal: 17, marginBottom: Spacing.xxl, borderRadius: 18 },
+  budRow: { paddingVertical: 13 },
+  budRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator },
+  budTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 },
+  budName: { fontFamily: Typography.fonts.bodySemi, fontSize: 14, color: Colors.textPrimary },
+  budPct: { fontFamily: Typography.fonts.bodyMed, fontSize: 12, color: Colors.textSecondary },
+  budNums: { fontFamily: Typography.fonts.mono, fontSize: 12, color: Colors.textSecondary },
+  budTrack: { height: 7, borderRadius: Radius.pill, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'visible', position: 'relative' },
+  budFill: { height: '100%', borderRadius: Radius.pill, backgroundColor: Colors.accentSolid },
+  budTarget: { position: 'absolute', top: -1, width: 2, height: 9, backgroundColor: Colors.textPrimary, borderRadius: 1 },
 });

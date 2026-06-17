@@ -17,7 +17,7 @@ import Fab from '@/components/Fab';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import MiniScoreRing from '@/components/MiniScoreRing';
 import { REACTION_EMOJIS, totalReactions } from '@/utils/reactions';
-import StatusPill from '@/components/StatusPill';
+import BandPill from '@/components/BandPill';
 import Skeleton from '@/components/Skeleton';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
@@ -150,7 +150,7 @@ export default function CommunityFeedScreen() {
               {user && post.user_id === user.id && <Text style={styles.youBadge}>You</Text>}
             </View>
             <View style={styles.cardMetaRow}>
-              <StatusPill label={band.label} color={scoreColor} />
+              <BandPill label={band.label} color={scoreColor} size="sm" />
               <Text style={styles.cardTime}>{timeAgo(post.created_at)}</Text>
             </View>
           </View>
@@ -297,59 +297,61 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.heading, ...Typography.screenTitle,
     color: Colors.textPrimary,
   },
-  subtitle: { fontFamily: Typography.fonts.body, ...Typography.subhead, color: Colors.textSecondary, marginBottom: Spacing.xl },
+  subtitle: { fontFamily: Typography.fonts.body, ...Typography.subhead, color: Colors.textSecondary, marginBottom: Spacing.lg, lineHeight: 20 },
+  // Segmented control (Claude Design seg-ctrl): tinted track + accent-washed active segment.
   segmentRow: {
     flexDirection: 'row',
-    backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.md,
-    padding: 3, marginBottom: Spacing.xl, gap: 2,
+    backgroundColor: Colors.backgroundSecondary, borderRadius: 13,
+    padding: 4, marginBottom: Spacing.lg, gap: 4,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
-  segment: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: Radius.sm, borderWidth: 1, borderColor: 'transparent' },
-  segmentActive: { backgroundColor: Colors.accentContainer, borderColor: Colors.accent },
-  segmentText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  segmentTextActive: { color: Colors.textPrimary, fontFamily: Typography.fonts.bodyMed },
+  segment: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9 },
+  segmentActive: { backgroundColor: Colors.accentContainer },
+  segmentText: { fontFamily: Typography.fonts.bodySemi, fontSize: 13, color: Colors.textSecondary, letterSpacing: -0.2 },
+  segmentTextActive: { color: Colors.accent },
   card: {
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 18, padding: 16, marginBottom: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
     gap: Spacing.md,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   cardMeta: { flex: 1, gap: Spacing.xs },
-  cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  cardUser: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, fontWeight: '500' },
+  cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' },
+  cardUser: { fontFamily: Typography.fonts.bodySemi, fontSize: 14.5, color: Colors.textPrimary, letterSpacing: -0.2 },
   youBadge: {
-    fontFamily: Typography.fonts.bodySemi, fontSize: Typography.caption2.fontSize, color: Colors.accent,
-    backgroundColor: Colors.accentContainer, paddingHorizontal: 6, paddingVertical: 1,
-    borderRadius: Radius.pill, overflow: 'hidden',
+    fontFamily: Typography.fonts.extrabold, fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase', color: Colors.accent,
+    backgroundColor: Colors.accentContainer, paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: Radius.sm, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.accentBorder,
   },
-  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  cardTime: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 4 },
+  cardTime: { fontFamily: Typography.fonts.mono, fontSize: 12, color: Colors.textTertiary },
   roastText: {
     fontFamily: Typography.fonts.body,
-    fontSize: Typography.subhead.fontSize, color: Colors.textPrimary,
+    fontSize: 14.5, color: 'rgba(255,255,255,0.82)',
     lineHeight: 22, fontStyle: 'italic',
   },
-  reactRow: { flexDirection: 'row', gap: Spacing.sm },
+  reactRow: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
   reactBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 6,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    backgroundColor: Colors.backgroundTertiary, height: 32,
+    borderRadius: Radius.pill, paddingHorizontal: 11,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder,
   },
-  reactBtnActive: { backgroundColor: Colors.accentContainer, borderColor: Colors.accent },
-  reactEmoji: { fontSize: Typography.callout.fontSize },
-  reactCount: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
-  reactCountActive: { color: Colors.accent, fontFamily: Typography.fonts.bodyMed },
+  reactBtnActive: { backgroundColor: Colors.accentContainer, borderColor: Colors.accentBorder },
+  reactEmoji: { fontSize: 14 },
+  reactCount: { fontFamily: Typography.fonts.mono, fontSize: 12, color: 'rgba(255,255,255,0.8)' },
+  reactCountActive: { color: Colors.accent },
   reactAddBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 6,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    flexDirection: 'row', alignItems: 'center', height: 32,
+    borderRadius: Radius.pill, paddingHorizontal: 12,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorder, borderStyle: 'dashed',
   },
-  reactAddText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary },
+  reactAddText: { fontFamily: Typography.fonts.bodySemi, fontSize: 13, color: Colors.textSecondary },
   pickerRow: {
     flexDirection: 'row', alignSelf: 'flex-start', gap: Spacing.xs,
-    backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.pill,
+    backgroundColor: Colors.backgroundTertiary, borderRadius: Radius.pill,
     paddingHorizontal: Spacing.sm, paddingVertical: 6,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
   },

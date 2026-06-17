@@ -110,12 +110,13 @@ export const PURCHASE_PRODUCTS: Record<PurchaseTier, { label: string; price: num
   deep_dive: { label: 'Deep Dive', price: 9.99, description: 'Everything in Action Plan plus scenario simulator, debt comparison, and PDF report' },
 };
 
-// Bottom-tab routes (live inside MainTabs). Five tabs: Home (dashboard), Tools (premium hub),
-// Roast (the composer), Community (social), Profile. History is a pushed route (dashboard "View all").
+// Bottom-tab routes (live inside MainTabs). Four tabs + a center action FAB (Claude Design):
+// Home (dashboard), Financials (the money hub, formerly Tools), Community (social), Profile.
+// The center FAB is NOT a tab — it opens an action menu (Roast Me / Check-In / Update Plan)
+// that pushes the Analyze / MonthlyCheckIn / ActionPlan stack routes. History is a pushed route.
 export type MainTabsParamList = {
   Home: undefined;
-  Tools: undefined;
-  Roast: undefined;     // a real dwell tab — renders the composer (RoastComposerScreen with asTab)
+  Financials: undefined;
   Community: undefined;
   Profile: undefined;
 };
@@ -144,6 +145,8 @@ export type RootStackParamList = {
   DebtPayoff: { preview?: boolean } | undefined; // reads the unified snapshot; preview = paywall peek (read-only)
   ScenarioSimulator: undefined;
   SubscriptionAudit: undefined;
+  SpendingEditor: undefined;    // Financials → "Edit spending" (named-spending CRUD)
+  DebtManager: undefined;       // Financials → "Debts" (per-debt CRUD)
   FinancialContext: undefined;
   EditProfile: undefined;
   RoastVoice: { current: RoastTone }; // Profile → voice-card picker (modal)

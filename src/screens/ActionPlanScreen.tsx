@@ -27,7 +27,7 @@ import {
 import { getSnapshot } from '@/services/financialSnapshot';
 import { formatCurrency } from '@/utils/format';
 import { trackActionPlanViewed } from '@/services/analytics';
-import { MOCK_ANIMATION, MOCK_ANIMATION_MS } from '@/config/ai';
+import { MOCK_ANIMATION, MOCK_ANIMATION_MS, USE_AI_MOCKS } from '@/config/ai';
 import ScreenBackground from '@/components/ScreenBackground';
 import PreviewUnlockBar from '@/components/PreviewUnlockBar';
 
@@ -202,6 +202,13 @@ export default function ActionPlanScreen({ navigation, route }: Props) {
     const t = setTimeout(() => setMockAnimating(false), MOCK_ANIMATION_MS);
     return () => clearTimeout(t);
   }, []);
+
+  // Escaping the "building your plan" loader (header back + swipe-back) is a DEV affordance only —
+  // in production a real generation is in flight, so the user waits it out and can't bail.
+  useEffect(() => {
+    const lockEscape = (generating || mockAnimating) && !USE_AI_MOCKS;
+    navigation.setOptions({ headerBackVisible: !lockEscape, gestureEnabled: !lockEscape });
+  }, [navigation, generating, mockAnimating]);
 
   // Create → generate the plan (LLM, behind the loading view) and immediately start tracking it.
   // Generation is user-triggered here (not on the Tools tap) so opening the screen is instant.
