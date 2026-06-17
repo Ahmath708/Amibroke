@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Keyboard } from 'react-native';
 import { PressableScale } from '@/components/motion';
 import AppTextInput from '@/components/AppTextInput';
 import BottomSheet from '@/components/BottomSheet';
-import { ChevronDownIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
+import PickerField from '@/components/PickerField';
+import { CheckIcon } from 'react-native-heroicons/outline';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 
 // 50 states + DC (matches shared/baselines/states.ts coverage).
@@ -64,11 +65,21 @@ function scoreState(query: string, s: { code: string; name: string }): number {
 interface Props {
   value: string; // state code or ''
   onChange: (code: string) => void;
+  /** Floating field label (default "State"). */
+  label?: string;
 }
 
-export default function StateSelect({ value, onChange }: Props) {
+export default function StateSelect({ value, onChange, label = 'State' }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // The keyboard overlaps the sheet (avoidKeyboard=false); pad the list by its height while typing so
+  // the last rows can scroll clear, but collapse to nothing when it's down (no dead over-scroll space).
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (e) => setKbHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKbHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const selected = US_STATES.find((s) => s.code === value);
 
@@ -85,12 +96,7 @@ export default function StateSelect({ value, onChange }: Props) {
 
   return (
     <>
-      <PressableScale style={styles.field} onPress={() => setOpen(true)}>
-        <Text style={[styles.fieldText, !selected && styles.placeholder]}>
-          {selected ? `${selected.name} (${selected.code})` : 'Select your state'}
-        </Text>
-        <ChevronDownIcon size={18} color={Colors.textSecondary} />
-      </PressableScale>
+      <PickerField label={label} value={selected?.name} placeholder="Choose your state" onPress={() => setOpen(true)} active={open} />
 
       <BottomSheet
         visible={open}
@@ -101,30 +107,31 @@ export default function StateSelect({ value, onChange }: Props) {
         dragHandleOnly
         avoidKeyboard={false} // let the keyboard overlap so a few results leak above it (search-list feel)
       >
-        <View style={styles.searchRow}>
-          <MagnifyingGlassIcon size={18} color={Colors.textMuted} />
-          <AppTextInput
-            style={styles.searchInput}
-            placeholder="Search state or code…"
-            placeholderTextColor={Colors.textMuted}
-            value={query}
-            onChangeText={setQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
+        <AppTextInput
+          style={styles.search}
+          placeholder="Search states"
+          placeholderTextColor={Colors.textTertiary}
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="words"
+          autoCorrect={false}
+        />
         <FlatList
           data={results}
           keyExtractor={(s) => s.code}
           keyboardShouldPersistTaps="handled"
           style={styles.list}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={<Text style={styles.empty}>No match — check the spelling.</Text>}
-          renderItem={({ item }) => (
-            <PressableScale style={styles.row} onPress={() => choose(item.code)}>
-              <Text style={styles.rowName}>{item.name} ({item.code})</Text>
-            </PressableScale>
-          )}
+          contentContainerStyle={[styles.listContent, { paddingBottom: kbHeight + Spacing.sm }]}
+          ListEmptyComponent={<Text style={styles.empty}>No states match “{query}”.</Text>}
+          renderItem={({ item }) => {
+            const sel = item.code === value;
+            return (
+              <PressableScale style={[styles.row, sel && styles.rowSel]} onPress={() => choose(item.code)}>
+                <Text style={[styles.rowName, sel && styles.rowNameSel]}>{item.name}</Text>
+                {sel && <CheckIcon size={19} color={Colors.accentSolid} strokeWidth={2.6} />}
+              </PressableScale>
+            );
+          }}
         />
       </BottomSheet>
     </>
@@ -132,27 +139,22 @@ export default function StateSelect({ value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  field: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.groupedRow, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm + 2,
-    borderWidth: 1.5, borderColor: Colors.glassBorder,
+  search: {
+    height: 50, borderRadius: Radius.lg, backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1, borderColor: Colors.glassBorder, paddingHorizontal: 16, marginBottom: Spacing.md,
+    fontFamily: Typography.fonts.bodyMed, fontSize: 16, color: Colors.textPrimary,
   },
-  fieldText: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary },
-  placeholder: { color: Colors.textMuted },
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
-  },
-  searchInput: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary, paddingVertical: Spacing.xs },
-  list: { flex: 1 },
-  listContent: { paddingBottom: 280 }, // lets the last rows scroll clear of the overlapping keyboard
+  // bleed rows a touch wider than the sheet body padding, and reclaim its bottom Spacing.xl so the
+  // list ends just above the safe area (no big dead gap under the last row, Wyoming).
+  list: { flex: 1, marginHorizontal: -Spacing.xl + 2, marginBottom: -Spacing.xl },
+  listContent: { paddingHorizontal: Spacing.xl - 2, gap: 6 },
   row: {
+    height: 52, borderRadius: 13, paddingHorizontal: 16,
+    borderWidth: 1, borderColor: 'transparent',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
   },
-  rowName: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
-  empty: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textMuted, textAlign: 'center', padding: Spacing.xl },
+  rowSel: { backgroundColor: 'rgba(255,0,122,0.12)', borderColor: Colors.accentSolid },
+  rowName: { fontFamily: Typography.fonts.bodySemi, fontSize: 16, color: Colors.textPrimary },
+  rowNameSel: { color: Colors.accentSolid },
+  empty: { fontFamily: Typography.fonts.body, fontSize: 14, color: Colors.textTertiary, textAlign: 'center', padding: Spacing.xl },
 });

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { CalendarDaysIcon } from 'react-native-heroicons/outline';
-import { PressableScale } from '@/components/motion';
 import BottomSheet from '@/components/BottomSheet';
 import NeonButton from '@/components/NeonButton';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import PickerField from '@/components/PickerField';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import { latestAdultDob } from '@shared/age';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -26,12 +25,14 @@ interface Props {
   defaultDate?: Date;
   /** Shown when no exact date is set (e.g. an existing coarse bracket, or a prompt). */
   placeholder?: string;
+  /** Floating field label (default "Birthday"). */
+  label?: string;
 }
 
-/** Birthday field: a tappable row that opens the date wheel in a bottom sheet. Tap-outside / swipe
- *  dismiss without committing; "Set birthday" commits. Strict 18+ (the wheel can't scroll younger
- *  than 18). Emits a Date; the caller derives what it stores. */
-export default function DobField({ value, onChange, defaultDate, placeholder = 'Select your birthday' }: Props) {
+/** Birthday field: a tappable Claude-Design field that opens the date wheel in a bottom sheet.
+ *  Tap-outside / swipe dismiss without committing; "Set birthday" commits. Strict 18+ (the wheel
+ *  can't scroll younger than 18). Emits a Date; the caller derives what it stores. */
+export default function DobField({ value, onChange, defaultDate, placeholder = 'Select your birthday', label = 'Birthday' }: Props) {
   const seed = () => value ?? defaultDate ?? new Date(2000, 0, 1);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(seed);
@@ -45,18 +46,16 @@ export default function DobField({ value, onChange, defaultDate, placeholder = '
   };
   const commit = () => { onChange(draft); setOpen(false); };
   const onPickerChange = (_e: DateTimePickerEvent, date?: Date) => { if (date) setDraft(date); };
-  const changed = !sameYmd(draft, baseline); // disabled until the wheel actually moves off where it opened
+  // A fresh set (no birthday yet) can confirm the wheel as-is — even at the default seed; only an
+  // EDIT of an existing value is gated to an actual change (so "Set birthday" never opens disabled).
+  const canCommit = value == null || !sameYmd(draft, baseline);
 
   return (
-    <View style={styles.container}>
-      <PressableScale haptic="light" onPress={openSheet} style={styles.row}>
-        <Text style={[styles.text, !value && styles.placeholder]} numberOfLines={1}>
-          {value ? formatDob(value) : placeholder}
-        </Text>
-        <CalendarDaysIcon size={18} color={Colors.textSecondary} />
-      </PressableScale>
+    <>
+      <PickerField label={label} value={value ? formatDob(value) : undefined} placeholder={placeholder} onPress={openSheet} active={open} />
 
       <BottomSheet visible={open} onClose={() => setOpen(false)} scrollable={false} dragHandleOnly>
+        <Text style={styles.heading}>When’s your birthday?</Text>
         <DateTimePicker
           value={draft}
           mode="date"
@@ -67,21 +66,13 @@ export default function DobField({ value, onChange, defaultDate, placeholder = '
           themeVariant="dark"
           textColor={Colors.textPrimary}
         />
-        <NeonButton label="Update Birthday" onPress={commit} disabled={!changed} style={styles.cta} />
+        <NeonButton label="Set birthday" onPress={commit} disabled={!canCommit} style={styles.cta} />
       </BottomSheet>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignSelf: 'stretch' },
-  row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm,
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
-  },
-  text: { flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textPrimary },
-  placeholder: { color: Colors.textMuted },
+  heading: { fontFamily: Typography.fonts.heading, fontSize: 22, letterSpacing: -0.6, color: Colors.textPrimary, marginBottom: Spacing.xs, marginHorizontal: 2 },
   cta: { marginTop: Spacing.sm },
 });

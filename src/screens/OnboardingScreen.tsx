@@ -1,38 +1,37 @@
-// Onboarding — Story → Build → Payoff (the Plan 2 rebuild, now the only onboarding). Data/score
-// spine: collect names + ctx_* (+ optional exact income) → persist to profiles + seed the snapshot →
-// buildRescoreInput → analyzeFinances (score-only) → mergeSnapshot('onboarding', score) → reveal →
-// refreshProfile.
+// Onboarding — Act 1 Story → Act 2 Build → Act 3 Payoff (Claude Design rebuild). Data/score spine:
+// collect names + ctx_* + exact money (income/expenses/debt/savings) → persist to profiles +
+// financial_context + seed the snapshot → buildRescoreInput → analyzeFinances (score-only) →
+// mergeSnapshot('onboarding', score) → reveal → refreshProfile.
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, StyleProp, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LockClosedIcon } from 'react-native-heroicons/outline';
-import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
+import { Colors, Typography, Spacing } from '@/theme/colors';
 import { PressableScale, enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
-import AppTextInput from '@/components/AppTextInput';
-import MoneyInput from '@/components/MoneyInput';
-import UsernameField from '@/components/UsernameField';
-import SelectableChip from '@/components/SelectableChip';
 import StateSelect from '@/components/StateSelect';
 import DobField from '@/components/DobField';
 import { ageBracketFromDob, bracketMidpointDob } from '@shared/age';
 import NeonButton from '@/components/NeonButton';
-import ScoreRing from '@/components/ScoreRing';
 import { getScoreBand } from '@shared/scoring/bands.ts';
 import { CONTEXT_FIELDS, ContextValues, labelFor, parseIncome } from '@/components/FinancialContextForm';
 import { saveFinancialContext } from '@/services/financialContext';
 import { seedSnapshotFromOnboarding, buildRescoreInput, mergeSnapshot } from '@/services/financialSnapshot';
 import { analyzeFinances } from '@/services/ai';
 import { useAuth } from '@/context/AuthContext';
-import { estimateScore } from '@/components/onboarding/estimateScore';
-import InputGlyph, { type GlyphKind } from '@/components/onboarding/InputGlyph';
-import CoinProgress from '@/components/onboarding/CoinProgress';
 import StoryHero, { type StoryScene } from '@/components/onboarding/StoryHero';
-import BrokeCard, { monthYear } from '@/components/BrokeCard';
 import StoryProgress from '@/components/onboarding/StoryProgress';
+import BuildProgress from '@/components/onboarding/BuildProgress';
+import FormShell from '@/components/onboarding/FormShell';
+import OField, { type FieldStatus } from '@/components/onboarding/OField';
+import MoneyStep, { type MoneyValue } from '@/components/onboarding/MoneyStep';
+import { type RangeOption } from '@/components/onboarding/RangeSheet';
+import LoadingStage from '@/components/onboarding/LoadingStage';
+import RevealStage from '@/components/onboarding/RevealStage';
+import { monthYear } from '@/components/BrokeCard';
 
-const STEP_COUNT = 5;
+const STEP_COUNT = 7;
 const optsFor = (key: string) => CONTEXT_FIELDS.find((f) => f.key === key)?.options ?? [];
 
 const STORY: { hero: StoryScene; title: string; sub: string }[] = [
@@ -41,9 +40,36 @@ const STORY: { hero: StoryScene; title: string; sub: string }[] = [
   { hero: 'bloom', title: 'And we don’t sugarcoat it.', sub: 'Answer honestly and watch your real score build. Brutal, but yours.' },
 ];
 
-const STEP_GLYPH: GlyphKind[] = ['name', 'location', 'housing', 'income', 'debt'];
+// ── Money step range options (canonical brackets → display labels). "None" reads as a typed $0. ──
+const NONE_OPT: RangeOption = { label: 'None', value: 'none' };
+const optsFrom = (keys: string[]): RangeOption[] => keys.map((b) => ({ label: labelFor(b), value: b }));
+const INCOME_OPTS: RangeOption[] = [NONE_OPT, ...optsFrom(['under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k'])];
+const EXPENSE_OPTS: RangeOption[] = optsFrom(['under_2k', '2k_4k', '4k_6k', '6k_10k', 'over_10k']);
+const DEBT_OPTS: RangeOption[] = [NONE_OPT, ...optsFrom(['under_5k', '5k_15k', '15k_50k', 'over_50k'])];
+const SAVINGS_OPTS: RangeOption[] = [NONE_OPT, ...optsFrom(['under_500', '500_2k', '2k_10k', '10k_50k', 'over_50k'])];
 
-// Cycled while the real score computes — keeps the personality going (Gemini: no dead spinner).
+// Expenses has no financial_context bracket column — a range pick lands in the snapshot as an
+// estimated midpoint (mirrors INCOME_MID); a typed exact lands as `stated` (see persist()).
+const EXPENSES_MID: Record<string, number> = { under_2k: 1500, '2k_4k': 3000, '4k_6k': 5000, '6k_10k': 8000, over_10k: 12000 };
+
+// Exact $ → bracket key (for financial_context, when the user typed instead of picking a range).
+const toExact = (s: string): number | undefined => { const n = parseFloat(s); return s !== '' && Number.isFinite(n) ? n : undefined; };
+const incomeBracketFor = (n: number) => (n < 2000 ? 'under_2k' : n < 4000 ? '2k_4k' : n < 6000 ? '4k_6k' : n < 10000 ? '6k_10k' : 'over_10k');
+const debtBracketFor = (n: number) => (n <= 0 ? 'none' : n < 5000 ? 'under_5k' : n < 15000 ? '5k_15k' : n < 50000 ? '15k_50k' : 'over_50k');
+const savingsBracketFor = (n: number) => (n <= 0 ? 'none' : n < 500 ? 'under_500' : n < 2000 ? '500_2k' : n < 10000 ? '2k_10k' : n < 50000 ? '10k_50k' : 'over_50k');
+
+const moneyHas = (m: MoneyValue) => (m.exact !== '' && m.exact !== '.') || m.range !== null;
+const EMPTY_MONEY: MoneyValue = { exact: '', range: null };
+
+// Reveal snapshot cell text: the picked range label, or the typed exact as currency.
+function moneyLabel(m: MoneyValue, opts: RangeOption[]): string {
+  if (m.range) return opts.find((o) => o.value === m.range)?.label ?? '—';
+  if (m.exact === '') return '—';
+  const n = parseFloat(m.exact);
+  return Number.isFinite(n) ? `$${n.toLocaleString('en-US')}` : '—';
+}
+
+// Cycled while the real score computes — keeps the personality going (no dead spinner).
 const CALC_MESSAGES = [
   "Doing the math you've been avoiding…",
   'Tallying the damage…',
@@ -59,16 +85,6 @@ function reactionFor(score: number): string {
   return "Okay, show-off.";
 }
 
-// Light reactive line under the live ring during Act 2.
-function microcopy(step: number, sel: ContextValues, estimate: number | null): string {
-  if (step === 0) return 'Let’s make this personal.';
-  if (step === 4 && sel.debtBracket && sel.debtBracket !== 'none') return "Debt logged — that's pulling the number down.";
-  if (step === 4 && sel.liquidSavingsBracket && sel.liquidSavingsBracket !== 'none') return 'A cushion helps. Noted.';
-  if (step === 3 && sel.incomeBracket) return 'Money in, logged.';
-  if (estimate != null) return 'Your score is taking shape…';
-  return 'Answer honestly — the number reacts.';
-}
-
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { user, supabase, refreshProfile } = useAuth();
@@ -79,10 +95,13 @@ export default function OnboardingScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
-  const [usernameValid, setUsernameValid] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<FieldStatus>('idle');
   const [sel, setSel] = useState<ContextValues>({});
-  const [incomeExact, setIncomeExact] = useState('');
   const [dob, setDob] = useState<Date | null>(null);
+  const [income, setIncome] = useState<MoneyValue>(EMPTY_MONEY);
+  const [expenses, setExpenses] = useState<MoneyValue>(EMPTY_MONEY);
+  const [debt, setDebt] = useState<MoneyValue>(EMPTY_MONEY);
+  const [savings, setSavings] = useState<MoneyValue>(EMPTY_MONEY);
   const [saving, setSaving] = useState(false);
   const [startScore, setStartScore] = useState<number | null>(null);
 
@@ -90,44 +109,69 @@ export default function OnboardingScreen() {
   // Birthday → derive + store the age bracket (the analyze contract takes a bracket; @shared/age).
   const handleDob = (date: Date) => { setDob(date); setSel((p) => ({ ...p, ageBracket: ageBracketFromDob(date), dob: date.toISOString() })); };
 
+  // Debounced @handle availability check (ported from UsernameField → drives the OField status).
+  useEffect(() => {
+    const v = username.trim();
+    if (v.length < 3 || v.length > 24 || !/^[a-z0-9_]+$/.test(v)) { setUsernameStatus('idle'); return; }
+    setUsernameStatus('checking');
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc('is_username_available', { p_username: v });
+        if (cancelled) return;
+        setUsernameStatus(error ? 'idle' : data !== false ? 'available' : 'taken');
+      } catch { if (!cancelled) setUsernameStatus('idle'); }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [username, supabase]);
+
   const stepValid = [
-    firstName.trim().length > 0 && lastName.trim().length > 0 && usernameValid,
-    !!sel.state && !!sel.ageBracket,
+    firstName.trim().length > 0 && lastName.trim().length > 0 && usernameStatus === 'available',
+    !!sel.state && !!dob,
     !!sel.livingSituation && !!sel.employmentStatus,
-    !!sel.incomeBracket || parseIncome(incomeExact) != null,
-    !!sel.debtBracket && !!sel.liquidSavingsBracket,
+    moneyHas(income),
+    moneyHas(expenses),
+    moneyHas(debt),
+    moneyHas(savings),
   ][step];
 
-  const estimate = estimateScore(sel, parseIncome(incomeExact));
-
-  // ── Act 1 nav (Stories-style) ── StoryProgress fills the active segment over 7s and drives the
-  // auto-advance (looping). Tap-zones step manually: left third = back, right two-thirds = forward.
-  // Entering Act 2 is a separate, persistent "Get started" CTA. (Stable callbacks for the worklet.)
+  // ── Act 1 nav (Stories-style) ──
   const nextStory = useCallback(() => setStoryStep((s) => (s + 1) % STORY.length), []);
   const prevStory = useCallback(() => setStoryStep((s) => (s - 1 + STORY.length) % STORY.length), []);
 
-  // ── Data spine (identical to legacy) ──
+  // ── Data spine ──
   const persist = async () => {
     if (!user) return;
-    const exact = parseIncome(incomeExact);
-    const values: ContextValues = { ...sel, incomeExact }; // saveFinancialContext derives the bracket from incomeExact
+    const incNum = toExact(income.exact);
+    const expNum = toExact(expenses.exact);
+    const debtNum = toExact(debt.exact);
+    const savNum = toExact(savings.exact);
+
+    // Brackets for financial_context (range pick → that bracket; typed exact → derived bracket).
+    const incomeBracket = income.range ?? (incNum != null ? incomeBracketFor(incNum) : undefined);
+    const debtBracket = debt.range ?? (debtNum != null ? debtBracketFor(debtNum) : undefined);
+    const liquidSavingsBracket = savings.range ?? (savNum != null ? savingsBracketFor(savNum) : undefined);
+
+    const values: ContextValues = {
+      ...sel,
+      ...(incomeBracket ? { incomeBracket } : {}),
+      ...(debtBracket ? { debtBracket } : {}),
+      ...(liquidSavingsBracket ? { liquidSavingsBracket } : {}),
+      ...(incNum != null ? { incomeExact: String(incNum) } : {}),
+    };
+
     try {
-      // Claim the @handle (authoritative; availability was checked live in step 0). A rare collision
-      // (taken between check + claim) is recoverable via Edit Profile.
+      // Claim the @handle (availability was checked live; a rare race is recoverable via Edit Profile).
       const { data: uData } = await supabase.rpc('set_username', { p_username: username.trim().toLowerCase() });
       if (!(uData as { ok?: boolean } | null)?.ok) console.warn('[onboarding] username not claimed:', (uData as { error?: string } | null)?.error);
-      await supabase.from('profiles').update({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        onboarded: true,
-      }).eq('id', user.id);
-      // Demographics + brackets (incl. raw dob) → financial_context; exact income → the snapshot (stated, below).
+      await supabase.from('profiles').update({ first_name: firstName.trim(), last_name: lastName.trim(), onboarded: true }).eq('id', user.id);
       await saveFinancialContext(user.id, values);
-      await seedSnapshotFromOnboarding(user.id, {
-        incomeBracket: sel.incomeBracket,
-        liquidSavingsBracket: sel.liquidSavingsBracket,
-        debtBracket: sel.debtBracket,
-      }, { income: exact });
+      // income/savings exact → stated; debt exact → debts table; brackets → estimated midpoints.
+      await seedSnapshotFromOnboarding(user.id, { incomeBracket, liquidSavingsBracket, debtBracket }, { income: incNum, savings: savNum, debt: debtNum, expenses: expNum });
+      // Expenses range pick → estimated midpoint (patchFromOnboarding only seeds exact expenses).
+      if (expNum == null && expenses.range && expenses.range in EXPENSES_MID) {
+        await mergeSnapshot(user.id, { monthlyExpenses: { value: EXPENSES_MID[expenses.range], confidence: 'estimated' } }, 'onboarding');
+      }
     } catch (e) {
       console.warn('[onboarding] save failed:', e);
     }
@@ -170,13 +214,17 @@ export default function OnboardingScreen() {
     else setStep((s) => s - 1);
   };
 
-  const band = startScore != null ? getScoreBand(startScore) : null;
   const now = new Date();
+  const revealSnapshot = [
+    { label: 'Income', value: moneyLabel(income, INCOME_OPTS) },
+    { label: 'Debt', value: moneyLabel(debt, DEBT_OPTS) },
+    { label: 'Savings', value: moneyLabel(savings, SAVINGS_OPTS) },
+  ];
 
   return (
     <View style={styles.container}>
       <ScreenBackground variant="onboarding" />
-      <View style={[styles.body, { paddingTop: insets.top + Spacing.xl, paddingBottom: insets.bottom + Spacing.lg }]}>
+      <View style={[styles.body, { paddingTop: insets.top + Spacing.md, paddingBottom: insets.bottom + Spacing.lg }]}>
 
         {/* ───────── ACT 1 — STORY ───────── */}
         {stage === 'story' && (
@@ -188,7 +236,6 @@ export default function OnboardingScreen() {
                 <Text style={styles.storyTitle}>{STORY[storyStep].title}</Text>
                 <Text style={styles.storySub}>{STORY[storyStep].sub}</Text>
               </ReAnimated.View>
-              {/* Stories tap-zones: left third = back, right two-thirds = forward */}
               <Pressable style={[styles.tapZone, styles.tapLeft]} onPress={prevStory} accessibilityLabel="Previous scene" />
               <Pressable style={[styles.tapZone, styles.tapRight]} onPress={nextStory} accessibilityLabel="Next scene" />
             </View>
@@ -205,102 +252,64 @@ export default function OnboardingScreen() {
         {/* ───────── ACT 2 — BUILD ───────── */}
         {stage === 'build' && (
           <>
-            <CoinProgress total={STEP_COUNT} filled={step + (stepValid ? 1 : 0)} />
-
-            {/* Pinned live estimate */}
-            <View style={styles.liveRing}>
-              <ScoreRing score={estimate ?? 0} size={104} showOutOf glow />
-              <Text style={styles.liveLabel}>{microcopy(step, sel, estimate)}</Text>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <ReAnimated.View key={step} entering={enterUp(0)} style={styles.stepInner}>
-                <InputGlyph kind={STEP_GLYPH[step]} />
-                {step === 0 && (
-                  <Q title="What do we call you?" sub="So the roast hits personal.">
-                    <Label>First name</Label>
-                    <AppTextInput value={firstName} onChangeText={setFirstName} placeholder="First" placeholderTextColor={Colors.textMuted} autoCapitalize="words" returnKeyType="next" style={styles.input} />
-                    <Label gap>Last name</Label>
-                    <AppTextInput value={lastName} onChangeText={setLastName} placeholder="Last" placeholderTextColor={Colors.textMuted} autoCapitalize="words" style={styles.input} />
-                    <Label gap>Username</Label>
-                    <UsernameField value={username} onChangeText={setUsername} onValidChange={setUsernameValid} />
-                    <Text style={styles.handleNote}>Your public @handle — other members see it when you share a roast.</Text>
-                  </Q>
-                )}
-                {step === 1 && (
-                  <Q title={firstName.trim() ? `Where you at, ${firstName.trim()}?` : 'Where you at?'} sub="Tunes your score to your actual life — not some average.">
-                    <Label>State</Label>
-                    <View style={styles.field}><StateSelect value={sel.state ?? ''} onChange={(c) => pick('state', c)} /></View>
-                    <Label gap>Birthday</Label>
-                    <DobField
-                      value={dob}
-                      onChange={handleDob}
-                      defaultDate={bracketMidpointDob(sel.ageBracket)}
-                      placeholder="Select your birthday"
-                    />
-                  </Q>
-                )}
-                {step === 2 && (
-                  <Q title="Your setup" sub="Rent, mortgage, or mom's basement — it all counts.">
-                    <Chips label="Housing" fieldKey="livingSituation" sel={sel} pick={pick} />
-                    <Chips label="Employment" fieldKey="employmentStatus" sel={sel} pick={pick} />
-                  </Q>
-                )}
-                {step === 3 && (
-                  <Q title="The money in" sub="Ballpark's fine. Exact if you're feeling brave.">
-                    <Chips label="Monthly income" fieldKey="incomeBracket" sel={sel} pick={pick} />
-                    <Label gap>Or enter exact (optional)</Label>
-                    <MoneyInput value={incomeExact} onChangeValue={setIncomeExact} />
-                  </Q>
-                )}
-                {step === 4 && (
-                  <Q title="The damage" sub="Debt and savings — the make-or-break inputs. Then we're in.">
-                    <Chips label="Total debt" fieldKey="debtBracket" sel={sel} pick={pick} />
-                    <Chips label="Liquid savings" fieldKey="liquidSavingsBracket" sel={sel} pick={pick} />
-                  </Q>
-                )}
-              </ReAnimated.View>
-            </ScrollView>
-
-            <View style={styles.footer}>
-              <NeonButton label={step < STEP_COUNT - 1 ? 'Continue' : 'Calculate my score'} onPress={advance} disabled={!stepValid} />
-              <PressableScale onPress={goBack} style={styles.backBtn}>
-                <Text style={styles.backText}>Back</Text>
-              </PressableScale>
-            </View>
+            <BuildProgress step={step + 1} total={STEP_COUNT} />
+            <ReAnimated.View key={step} entering={enterUp(0)} style={styles.flex}>
+              {step === 0 && (
+                <FormShell headline="What do we call you?" sub="So the roast hits personal." onBack={goBack} onNext={advance} canNext={!!stepValid}>
+                  <OField label="First name" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" returnKeyType="next" />
+                  <OField label="Last name" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" returnKeyType="next" />
+                  <OField label="Username" value={username} prefix="@" status={usernameStatus} autoCapitalize="none" autoCorrect={false} autoComplete="off" maxLength={24}
+                    onChangeText={(t) => setUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24))} />
+                  <Text style={styles.fieldNote}>
+                    {usernameStatus === 'taken' ? 'That handle’s taken — try another.' : 'Your public @handle — other members see it when you share a roast.'}
+                  </Text>
+                </FormShell>
+              )}
+              {step === 1 && (
+                <FormShell headline={firstName.trim() ? `Where you at, ${firstName.trim()}?` : 'Where you at?'} sub="Tunes your score to your actual life — not some average." onBack={goBack} onNext={advance} canNext={!!stepValid}>
+                  <StateSelect value={sel.state ?? ''} onChange={(c) => pick('state', c)} />
+                  <DobField value={dob} onChange={handleDob} defaultDate={bracketMidpointDob(sel.ageBracket)} placeholder="Select your birthday" />
+                </FormShell>
+              )}
+              {step === 2 && (
+                <FormShell headline="Your setup" sub="Rent, mortgage, or mom’s basement — it all counts." onBack={goBack} onNext={advance} canNext={!!stepValid}>
+                  <ChipGroup label="Housing" fieldKey="livingSituation" sel={sel} pick={pick} />
+                  <ChipGroup label="Employment" fieldKey="employmentStatus" sel={sel} pick={pick} />
+                </FormShell>
+              )}
+              {step === 3 && (
+                <MoneyStep headline="The money in" sub="Your monthly income — ballpark’s fine, exact if you’re feeling brave." sheetTitle="Roughly how much comes in each month?"
+                  options={INCOME_OPTS} value={income} onChange={setIncome} onBack={goBack} onNext={advance} />
+              )}
+              {step === 4 && (
+                <MoneyStep headline="The money out" sub="What you spend in a month — rent, food, the works. Ballpark’s fine, exact if you’re feeling brave." sheetTitle="Roughly how much goes out each month?"
+                  options={EXPENSE_OPTS} value={expenses} onChange={setExpenses} onBack={goBack} onNext={advance} />
+              )}
+              {step === 5 && (
+                <MoneyStep headline="What’s the damage?" sub="Combine all your credit cards, loans, and bad decisions into one number." sheetTitle="Roughly how much do you owe?"
+                  options={DEBT_OPTS} value={debt} onChange={setDebt} onBack={goBack} onNext={advance} />
+              )}
+              {step === 6 && (
+                <MoneyStep headline="The cushion" sub="Liquid savings — cash you could reach tomorrow. Not retirement or investments." sheetTitle="Roughly how much have you got saved?"
+                  options={SAVINGS_OPTS} value={savings} onChange={setSavings} onBack={goBack} onNext={advance} />
+              )}
+            </ReAnimated.View>
           </>
         )}
 
-        {/* ───────── CALCULATING ───────── */}
-        {stage === 'calculating' && (
-          <View style={[styles.stage, styles.stageCenter]}>
-            <StoryHero scene="dial" />
-            <CyclingText messages={CALC_MESSAGES} style={[styles.storySub, styles.calcText]} />
-          </View>
-        )}
+        {/* ───────── ACT 3 — CALCULATING ───────── */}
+        {stage === 'calculating' && <LoadingStage messages={CALC_MESSAGES} />}
 
-        {/* ───────── ACT 3 — PAYOFF ───────── */}
-        {stage === 'reveal' && startScore != null && band && (
-          <ScrollView contentContainerStyle={styles.revealScroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.revealTop}>
-              <ScoreRing score={startScore} size={150} showOutOf reveal />
-              <Text style={[styles.revealBand, { color: band.color }]}>{band.label}</Text>
-              <Text style={styles.revealReaction}>{reactionFor(startScore)}</Text>
-            </View>
-
-            <BrokeCard
-              name={firstName.trim() || lastName.trim()}
-              score={startScore}
-              bandLabel={band.label}
-              bandColor={band.color}
-              dateStr={monthYear({ month: now.getMonth(), year: now.getFullYear() })}
-            />
-
-            <Text style={styles.revealNote}>Your starting estimate — built from ranges. Your first real roast sharpens it.</Text>
-            <View style={styles.footer}>
-              <NeonButton label="See the real roast →" onPress={exitToApp} />
-            </View>
-          </ScrollView>
+        {/* ───────── ACT 3 — REVEAL ───────── */}
+        {stage === 'reveal' && startScore != null && (
+          <RevealStage
+            score={startScore}
+            reaction={reactionFor(startScore)}
+            name={firstName.trim() || lastName.trim()}
+            dateStr={monthYear({ month: now.getMonth(), year: now.getFullYear() })}
+            snapshot={revealSnapshot}
+            onSeeRoast={exitToApp}
+          />
         )}
       </View>
     </View>
@@ -308,38 +317,28 @@ export default function OnboardingScreen() {
 }
 
 // ── small presentational helpers ──
-function Q({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
-  return (<><Text style={styles.title}>{title}</Text><Text style={styles.subtitle}>{sub}</Text>{children}</>);
-}
-function Label({ children, gap }: { children: React.ReactNode; gap?: boolean }) {
-  return <Text style={[styles.fieldLabel, gap && styles.fieldLabelGap]}>{children}</Text>;
-}
-function Chips({ label, fieldKey, sel, pick }: { label: string; fieldKey: string; sel: ContextValues; pick: (k: string, o: string) => void }) {
+function ChipGroup({ label, fieldKey, sel, pick }: { label: string; fieldKey: string; sel: ContextValues; pick: (k: string, o: string) => void }) {
   return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.chipsWrap}>
-        {optsFor(fieldKey).map((opt) => (
-          <SelectableChip key={opt} label={labelFor(opt)} active={sel[fieldKey] === opt} onPress={() => pick(fieldKey, opt)} />
-        ))}
+    <View style={styles.chipBlock}>
+      <Text style={styles.chipLabel}>{label}</Text>
+      <View style={styles.chipGroup}>
+        {optsFor(fieldKey).map((opt) => {
+          const active = sel[fieldKey] === opt;
+          return (
+            <PressableScale key={opt} onPress={() => pick(fieldKey, opt)} style={[styles.chip, active && styles.chipSel]}>
+              <Text style={[styles.chipText, active && styles.chipTextSel]}>{labelFor(opt)}</Text>
+            </PressableScale>
+          );
+        })}
       </View>
     </View>
   );
 }
 
-// Rotates through loading messages so the score calc keeps its personality (vs a dead spinner).
-function CyclingText({ messages, style }: { messages: string[]; style?: StyleProp<TextStyle> }) {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % messages.length), 1700);
-    return () => clearInterval(t);
-  }, [messages.length]);
-  return <Text style={style}>{messages[i]}</Text>;
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   body: { flex: 1, paddingHorizontal: Spacing.xl },
+  flex: { flex: 1 },
   // Story (Act 1)
   storyArea: { flex: 1, justifyContent: 'center', marginTop: Spacing.lg },
   storyInner: { alignItems: 'center', gap: Spacing.lg },
@@ -348,36 +347,16 @@ const styles = StyleSheet.create({
   tapRight: { right: 0, width: '67%' },
   storyTitle: { fontFamily: Typography.fonts.extrabold, fontSize: 38, color: Colors.textPrimary, textAlign: 'center', letterSpacing: -1.6, lineHeight: 38, marginTop: Spacing.lg },
   storySub: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.md, maxWidth: 312 },
-  // Story bottom (trust strip + CTA)
   storyBottom: { paddingTop: Spacing.sm },
   trustStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: Spacing.lg },
   trustText: { fontFamily: Typography.fonts.bodyMed, fontSize: 12, color: 'rgba(255,255,255,0.42)', letterSpacing: -0.1 },
-  // Build — live ring
-  liveRing: { alignItems: 'center', marginTop: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.xs },
-  liveLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center' },
-  scroll: { flexGrow: 1, paddingBottom: Spacing.lg },
-  stepInner: { alignItems: 'flex-start' },
-  // Shared text
-  title: { fontFamily: Typography.fonts.heading, fontSize: Typography.title2.fontSize, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.md, marginBottom: Spacing.xs, letterSpacing: -0.5 },
-  subtitle: { fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary, lineHeight: 21, marginBottom: Spacing.lg },
-  field: { marginBottom: Spacing.lg, alignSelf: 'stretch' },
-  handleNote: { alignSelf: 'stretch', fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textMuted, marginTop: Spacing.sm, lineHeight: 16 },
-  fieldLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm },
-  fieldLabelGap: { marginTop: Spacing.md },
-  input: { alignSelf: 'stretch', backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontFamily: Typography.fonts.body, fontSize: Typography.body.fontSize, color: Colors.textPrimary },
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  // Footer / back
-  footer: { paddingTop: Spacing.sm },
-  backBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
-  backText: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textSecondary },
-  // Calculating
-  stage: { flex: 1 },
-  stageCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  calcText: { marginTop: Spacing.lg, textAlign: 'center', marginBottom: 0 },
-  // Reveal
-  revealScroll: { flexGrow: 1, paddingBottom: Spacing.lg },
-  revealTop: { alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.md, marginBottom: Spacing.xl },
-  revealBand: { fontFamily: Typography.fonts.heading, fontSize: Typography.title3.fontSize, fontWeight: '700', marginTop: Spacing.md },
-  revealReaction: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.subhead.fontSize, color: Colors.textPrimary, textAlign: 'center' },
-  revealNote: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.xl, paddingHorizontal: Spacing.lg, lineHeight: 18 },
+  // Build (Act 2)
+  fieldNote: { fontFamily: Typography.fonts.body, fontSize: 12, color: Colors.textTertiary, lineHeight: 17, marginTop: 11, marginHorizontal: 4 },
+  chipBlock: { marginBottom: 28 },
+  chipLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: 12, color: Colors.textTertiary, letterSpacing: 0.2, marginBottom: 13, marginHorizontal: 2 },
+  chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  chip: { height: 50, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundSecondary, borderWidth: 1, borderColor: Colors.glassBorder },
+  chipSel: { backgroundColor: 'rgba(255,0,122,0.12)', borderColor: Colors.accentSolid },
+  chipText: { fontFamily: Typography.fonts.bodySemi, fontSize: 15, letterSpacing: -0.2, color: Colors.textPrimary },
+  chipTextSel: { color: Colors.accentSolid },
 });

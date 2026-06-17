@@ -147,7 +147,7 @@ function Dial() {
         {/* comet tip at the arc head (rotated to the leading edge) */}
         <Animated.View style={[StyleSheet.absoluteFill, tipStyle]}>
           <Svg width={226} height={226} viewBox="0 0 200 200">
-            <Circle cx={100} cy={18} r={9} fill={Colors.accentSolid} opacity={0.4} />
+            <Circle cx={100} cy={18} r={9} fill="#fff" opacity={0.2} />
             <Circle cx={100} cy={18} r={5.5} fill="#fff" />
           </Svg>
         </Animated.View>

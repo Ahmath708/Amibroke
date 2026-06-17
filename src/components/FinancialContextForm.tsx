@@ -110,7 +110,10 @@ export default function FinancialContextForm({ values, onChange }: Props) {
     <>
       {CONTEXT_FIELDS.map((field) => (
         <View key={field.key} style={styles.field}>
-          <Text style={styles.fieldLabel}>{field.key === 'ageBracket' ? 'Birthday' : field.label}</Text>
+          {/* state + birthday self-label via PickerField; only chip groups need a section label */}
+          {field.key !== 'state' && field.key !== 'ageBracket' && (
+            <Text style={styles.fieldLabel}>{field.label}</Text>
+          )}
           {field.key === 'state' ? (
             <StateSelect
               value={values.state ?? ''}
