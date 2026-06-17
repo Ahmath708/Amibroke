@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StyleProp, TextStyle } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LockClosedIcon } from 'react-native-heroicons/outline';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { PressableScale, enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -36,8 +37,8 @@ const optsFor = (key: string) => CONTEXT_FIELDS.find((f) => f.key === key)?.opti
 
 const STORY: { hero: StoryScene; title: string; sub: string }[] = [
   { hero: 'peel', title: 'Your bank app shows balances.', sub: 'It hides the truth — what you owe, and where it’s quietly going.' },
-  { hero: 'dial', title: 'We turn your money into one number.', sub: 'A 0–100 score for how broke you actually are. No spreadsheets.' },
-  { hero: 'bloom', title: 'And we don’t sugarcoat it.', sub: 'Answer honestly and watch your score build. Let’s get into it.' },
+  { hero: 'dial', title: 'We turn it into one number.', sub: 'Everything you earn, owe, and waste — distilled into a single 0–100 score.' },
+  { hero: 'bloom', title: 'And we don’t sugarcoat it.', sub: 'Answer honestly and watch your real score build. Brutal, but yours.' },
 ];
 
 const STEP_GLYPH: GlyphKind[] = ['name', 'location', 'housing', 'income', 'debt'];
@@ -180,7 +181,7 @@ export default function OnboardingScreen() {
         {/* ───────── ACT 1 — STORY ───────── */}
         {stage === 'story' && (
           <>
-            <StoryProgress total={STORY.length} index={storyStep} duration={7000} onComplete={nextStory} />
+            <StoryProgress total={STORY.length} index={storyStep} duration={9000} onComplete={nextStory} />
             <View style={styles.storyArea}>
               <ReAnimated.View key={storyStep} entering={enterUp(0)} style={styles.storyInner}>
                 <StoryHero scene={STORY[storyStep].hero} />
@@ -191,8 +192,12 @@ export default function OnboardingScreen() {
               <Pressable style={[styles.tapZone, styles.tapLeft]} onPress={prevStory} accessibilityLabel="Previous scene" />
               <Pressable style={[styles.tapZone, styles.tapRight]} onPress={nextStory} accessibilityLabel="Next scene" />
             </View>
-            <View style={styles.footer}>
-              <NeonButton label="Get started" onPress={() => setStage('build')} />
+            <View style={styles.storyBottom}>
+              <View style={styles.trustStrip}>
+                <LockClosedIcon size={13} color={Colors.textSecondary} />
+                <Text style={styles.trustText}>No bank login · Private & encrypted · Delete anytime</Text>
+              </View>
+              <NeonButton label="Build my score →" onPress={() => setStage('build')} />
             </View>
           </>
         )}
@@ -341,8 +346,12 @@ const styles = StyleSheet.create({
   tapZone: { position: 'absolute', top: 0, bottom: 0 },
   tapLeft: { left: 0, width: '33%' },
   tapRight: { right: 0, width: '67%' },
-  storyTitle: { fontFamily: Typography.fonts.heading, fontSize: Typography.title1.fontSize, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center', letterSpacing: -0.5, marginTop: Spacing.lg },
-  storySub: { fontFamily: Typography.fonts.body, fontSize: Typography.callout.fontSize, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.md },
+  storyTitle: { fontFamily: Typography.fonts.extrabold, fontSize: 38, color: Colors.textPrimary, textAlign: 'center', letterSpacing: -1.6, lineHeight: 38, marginTop: Spacing.lg },
+  storySub: { fontFamily: Typography.fonts.body, fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.md, maxWidth: 312 },
+  // Story bottom (trust strip + CTA)
+  storyBottom: { paddingTop: Spacing.sm },
+  trustStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: Spacing.lg },
+  trustText: { fontFamily: Typography.fonts.bodyMed, fontSize: 12, color: 'rgba(255,255,255,0.42)', letterSpacing: -0.1 },
   // Build — live ring
   liveRing: { alignItems: 'center', marginTop: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.xs },
   liveLabel: { fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, textAlign: 'center' },
