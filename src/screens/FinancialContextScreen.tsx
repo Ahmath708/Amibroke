@@ -8,12 +8,14 @@ import { Colors, Typography, Spacing } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
 import NeonButton from '@/components/NeonButton';
 import ConfirmSheet from '@/components/ConfirmSheet';
-import FinancialContextForm, { ContextValues, parseIncome, syncIncomeBracket } from '@/components/FinancialContextForm';
+import FinancialContextForm, { ContextValues } from '@/components/FinancialContextForm';
 import { getFinancialContext, saveFinancialContext } from '@/services/financialContext';
-import { getSnapshot, seedSnapshotFromOnboarding } from '@/services/financialSnapshot';
 import { useAuth } from '@/context/AuthContext';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'FinancialContext'> };
+
+// Life Context collects demographics only — money (income/debt/savings) lives on the Financials tab.
+const LIFE_FIELDS = ['state', 'ageBracket', 'livingSituation', 'employmentStatus'];
 
 /** Same non-empty entries → not dirty. Treats missing and '' as equal. */
 function sameValues(a: ContextValues, b: ContextValues): boolean {
@@ -44,16 +46,8 @@ export default function FinancialContextScreen({ navigation }: Props) {
     (async () => {
       try {
         const loaded = await getFinancialContext(user.id);
-        // Optional exact income lives on the snapshot now (stated) — prefill it if present.
-        const snap = await getSnapshot(user.id);
-        const inc = snap?.monthlyIncome?.value;
-        if (typeof inc === 'number' && inc > 0) loaded.incomeExact = String(Math.round(inc));
-        // Re-derive the bracket from that exact amount so a stale stored bracket never shows next
-        // to a different exact income (the chip is just a coarse view of the exact figure). Applied
-        // to both initial + values so it's a silent display fix, not a phantom unsaved change.
-        const synced = syncIncomeBracket(loaded);
-        setInitial(synced);
-        setValues(synced);
+        setInitial(loaded);
+        setValues(loaded);
       } catch {
         setInitial({});
         setValues({});
@@ -85,17 +79,11 @@ export default function FinancialContextScreen({ navigation }: Props) {
   const doSave = async () => {
     setSaving(true);
     try {
-      if (user) {
-        await saveFinancialContext(user.id, values);
-        // Refresh the snapshot from the brackets (estimated) + the optional exact income (stated).
-        await seedSnapshotFromOnboarding(
-          user.id,
-          { incomeBracket: values.incomeBracket, liquidSavingsBracket: values.liquidSavingsBracket, debtBracket: values.debtBracket },
-          { income: parseIncome(values.incomeExact) },
-        );
-      }
+      // Life Context edits demographics only; money lives on the Financials tab, so this no longer
+      // re-seeds the snapshot.
+      if (user) await saveFinancialContext(user.id, values);
     } catch (e) {
-      console.warn('[financial-context] save failed:', e);
+      console.warn('[life-context] save failed:', e);
     }
     setSaving(false);
     setSaveVisible(false);
@@ -111,20 +99,20 @@ export default function FinancialContextScreen({ navigation }: Props) {
       ) : (
         <>
           <ScrollView
-            contentContainerStyle={[styles.scroll, { paddingTop: Spacing.lg, paddingBottom: Spacing.xxl }]}
+            contentContainerStyle={[styles.scroll, { paddingTop: Spacing.xs, paddingBottom: Spacing.sm }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
             <Text style={styles.subtitle}>
-              This personalizes your score and plan against state and demographic baselines. All optional.
+              Tunes your score to your actual life — not some average.
             </Text>
-            <FinancialContextForm values={values} onChange={setValues} />
+            <FinancialContextForm values={values} onChange={setValues} only={LIFE_FIELDS} />
           </ScrollView>
 
           {/* Sticky footer — Save is always reachable, and stays disabled until something changes. */}
           <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md }]}>
             <NeonButton
-              label="Save"
+              label="Save Changes"
               onPress={() => setSaveVisible(true)}
               disabled={!dirty || saving}
               loading={saving}
@@ -137,7 +125,7 @@ export default function FinancialContextScreen({ navigation }: Props) {
         visible={discardVisible}
         onClose={() => setDiscardVisible(false)}
         title="Discard changes?"
-        message="You've edited your numbers but haven't saved. Leaving now drops those changes."
+        message="You've edited your details but haven't saved. Leaving now drops those changes."
         confirmLabel="Discard"
         cancelLabel="Keep editing"
         destructive
@@ -146,8 +134,8 @@ export default function FinancialContextScreen({ navigation }: Props) {
       <ConfirmSheet
         visible={saveVisible}
         onClose={() => { if (!saving) setSaveVisible(false); }}
-        title="Update your numbers?"
-        message="This refreshes the financial baseline your score and plan are measured against."
+        title="Update your context?"
+        message="This refreshes the life details your score and plan are tuned to."
         confirmLabel="Save changes"
         loading={saving}
         onConfirm={doSave}

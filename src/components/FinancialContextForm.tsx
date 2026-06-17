@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import SelectableChip from '@/components/SelectableChip';
+import OptionChip from '@/components/OptionChip';
 import { Colors, Typography, Spacing } from '@/theme/colors';
 import StateSelect from '@/components/StateSelect';
 import DobField from '@/components/DobField';
@@ -87,6 +87,8 @@ interface Props {
   /** Controlled form values (lifted to the screen so it owns dirty-tracking + the sticky Save). */
   values: ContextValues;
   onChange: (values: ContextValues) => void;
+  /** Restrict to these field keys (e.g. Life Context = state/birthday/housing/employment, no money). */
+  only?: string[];
 }
 
 // DOB is a calendar date (no time/zone). Parse + format with LOCAL components so it never shifts a
@@ -100,16 +102,17 @@ function dateToYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function FinancialContextForm({ values, onChange }: Props) {
+export default function FinancialContextForm({ values, onChange, only }: Props) {
   // DOB is held in `values.dob` (YYYY-MM-DD); derive the Date the picker needs.
   const dob = values.dob ? ymdToLocalDate(values.dob) : null;
   const set = (patch: ContextValues) => onChange({ ...values, ...patch });
   const handleDob = (date: Date) => set({ ageBracket: ageBracketFromDob(date), dob: dateToYmd(date) });
+  const fields = only ? CONTEXT_FIELDS.filter((f) => only.includes(f.key)) : CONTEXT_FIELDS;
 
   return (
     <>
-      {CONTEXT_FIELDS.map((field) => (
-        <View key={field.key} style={styles.field}>
+      {fields.map((field, idx) => (
+        <View key={field.key} style={[styles.field, idx === fields.length - 1 && styles.fieldLast]}>
           {/* state + birthday self-label via PickerField; only chip groups need a section label */}
           {field.key !== 'state' && field.key !== 'ageBracket' && (
             <Text style={styles.fieldLabel}>{field.label}</Text>
@@ -131,7 +134,7 @@ export default function FinancialContextForm({ values, onChange }: Props) {
               {field.options.map((opt) => {
                 const active = values[field.key] === opt;
                 return (
-                  <SelectableChip
+                  <OptionChip
                     key={opt}
                     label={labelFor(opt)}
                     active={active}
@@ -159,11 +162,12 @@ export default function FinancialContextForm({ values, onChange }: Props) {
 
 const styles = StyleSheet.create({
   field: { marginBottom: Spacing.xl + Spacing.xs }, // a touch more air between fields
+  fieldLast: { marginBottom: 0 }, // no trailing gap below the last field (no empty scroll-rest)
   fieldLabel: {
-    fontFamily: Typography.fonts.bodyMed, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.sm,
+    fontFamily: Typography.fonts.bodySemi, fontSize: 12, color: Colors.textTertiary,
+    letterSpacing: 0.2, marginBottom: 13,
   },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   exactWrap: { marginTop: Spacing.md },
   exactLabel: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.textSecondary, marginBottom: Spacing.sm },
 });

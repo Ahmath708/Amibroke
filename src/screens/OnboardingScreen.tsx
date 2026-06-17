@@ -8,8 +8,9 @@ import ReAnimated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LockClosedIcon } from 'react-native-heroicons/outline';
 import { Colors, Typography, Spacing } from '@/theme/colors';
-import { PressableScale, enterUp } from '@/components/motion';
+import { enterUp } from '@/components/motion';
 import ScreenBackground from '@/components/ScreenBackground';
+import OptionChip from '@/components/OptionChip';
 import StateSelect from '@/components/StateSelect';
 import DobField from '@/components/DobField';
 import { ageBracketFromDob, bracketMidpointDob } from '@shared/age';
@@ -322,14 +323,9 @@ function ChipGroup({ label, fieldKey, sel, pick }: { label: string; fieldKey: st
     <View style={styles.chipBlock}>
       <Text style={styles.chipLabel}>{label}</Text>
       <View style={styles.chipGroup}>
-        {optsFor(fieldKey).map((opt) => {
-          const active = sel[fieldKey] === opt;
-          return (
-            <PressableScale key={opt} onPress={() => pick(fieldKey, opt)} style={[styles.chip, active && styles.chipSel]}>
-              <Text style={[styles.chipText, active && styles.chipTextSel]}>{labelFor(opt)}</Text>
-            </PressableScale>
-          );
-        })}
+        {optsFor(fieldKey).map((opt) => (
+          <OptionChip key={opt} label={labelFor(opt)} active={sel[fieldKey] === opt} onPress={() => pick(fieldKey, opt)} />
+        ))}
       </View>
     </View>
   );
@@ -355,8 +351,4 @@ const styles = StyleSheet.create({
   chipBlock: { marginBottom: 28 },
   chipLabel: { fontFamily: Typography.fonts.bodySemi, fontSize: 12, color: Colors.textTertiary, letterSpacing: 0.2, marginBottom: 13, marginHorizontal: 2 },
   chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  chip: { height: 50, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.backgroundSecondary, borderWidth: 1, borderColor: Colors.glassBorder },
-  chipSel: { backgroundColor: 'rgba(255,0,122,0.12)', borderColor: Colors.accentSolid },
-  chipText: { fontFamily: Typography.fonts.bodySemi, fontSize: 15, letterSpacing: -0.2, color: Colors.textPrimary },
-  chipTextSel: { color: Colors.accentSolid },
 });

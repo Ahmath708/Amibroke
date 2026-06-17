@@ -192,7 +192,7 @@ export default function AccountSettings({ navigation }: Props) {
   // Account — plan management lives here now (Profile is the single account hub). "Plans & Features"
   // is in-app and visible to everyone; "Manage Subscription" only when subscribed → the App Store.
   const accountRows: SettingRow[] = [
-    { type: 'nav', label: 'Financial Context', icon: ClipboardDocumentListIcon, onPress: () => nav('FinancialContext') },
+    { type: 'nav', label: 'Life Context', icon: ClipboardDocumentListIcon, onPress: () => nav('FinancialContext') },
     { type: 'nav', label: 'Plans & Features', icon: SparklesIcon, onPress: () => nav('Paywall') }, // plan shown on the profile card, not duplicated here
     ...(premium ? [{ type: 'nav', label: 'Manage Subscription', icon: CreditCardIcon, right: 'external', onPress: () => manageSubscriptions() } as SettingRow] : []),
     ...(FEATURES.CREATOR_DASHBOARD ? [{ type: 'nav', label: 'Creator Dashboard', icon: ArrowTrendingUpIcon, onPress: () => nav('CreatorDashboard') } as SettingRow] : []),
