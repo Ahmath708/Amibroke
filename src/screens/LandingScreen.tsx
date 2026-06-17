@@ -110,7 +110,7 @@ export default function LandingScreen({ navigation }: Props) {
             <Text style={styles.microDot}>●</Text> Results in seconds
           </Text>
           <Animated.View style={{ width: '100%', transform: [{ scale: pulseAnim }] }}>
-            <NeonButton label="Get Started" onPress={handleStart} style={styles.ctaBtn} />
+            <NeonButton label="Get Started" onPress={handleStart} glow />
           </Animated.View>
           <TouchableOpacity onPress={handleSignIn} style={styles.signInBtn} activeOpacity={0.7}>
             <Text style={styles.signInText}>
@@ -180,13 +180,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   microDot: { color: Colors.textTertiary, fontSize: 9 },
-  // Pink glow under the primary CTA (matches the reference box-shadow).
-  ctaBtn: {
-    shadowColor: Colors.accentSolid,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.42,
-    shadowRadius: 17,
-  },
   signInBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   signInText: {
     fontFamily: Typography.fonts.bodyMed,

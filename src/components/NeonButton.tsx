@@ -19,6 +19,8 @@ interface Props {
   loading?: boolean;
   style?: ViewStyle;
   icon?: string;
+  /** Soft pink glow under a primary CTA (the design's hero-button bloom). Suppressed when disabled. */
+  glow?: boolean;
 }
 
 export default function NeonButton({
@@ -30,6 +32,7 @@ export default function NeonButton({
   loading,
   style,
   icon,
+  glow,
 }: Props) {
   const handlePress = () => {
     if (disabled || loading) return;
@@ -43,10 +46,17 @@ export default function NeonButton({
   const fontSizes = { lg: 17, md: 15, sm: 13 };
 
   if (variant === 'primary') {
+    const showGlow = glow && !disabled && !loading;
     return (
-      <PressableScale onPress={handlePress} disabled={disabled || loading} haptic={haptic} style={[styles.wrapper, style]}>
+      <PressableScale
+        onPress={handlePress}
+        disabled={disabled || loading}
+        haptic={haptic}
+        style={[styles.wrapper, showGlow && styles.glow, style]}
+      >
+        {/* Claude Design disabled = the same accent fill at 42% (no gray swap, no glow). */}
         <LinearGradient
-          colors={disabled ? [Colors.backgroundTertiary, Colors.backgroundTertiary] : Colors.gradientPrimary}
+          colors={Colors.gradientPrimary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.base, { height: heights[size], borderRadius: Radius.xl }, disabled && styles.baseDisabled]}
@@ -55,7 +65,7 @@ export default function NeonButton({
             ? <ActivityIndicator color={Colors.onAccent} />
             : <View style={styles.inner}>
                 {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-                <Text style={[styles.label, { fontSize: fontSizes[size] }, disabled && styles.labelDisabled]}>
+                <Text style={[styles.label, { fontSize: fontSizes[size] }]}>
                   {label}
                 </Text>
               </View>
@@ -125,15 +135,20 @@ export default function NeonButton({
 
 const styles = StyleSheet.create({
   wrapper: {},
+  // Soft pink bloom under the CTA (opt-in via `glow`; the design's hero-button shadow).
+  glow: {
+    shadowColor: Colors.accentSolid,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 17,
+  },
   base: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Disabled fill is backgroundTertiary, which can match the surface behind it (e.g. a bottom
-  // sheet) and make the button vanish into floating text — a border keeps the shape readable.
+  // Disabled = the accent fill dimmed to 42% (Claude Design), label dims with it.
   baseDisabled: {
-    borderWidth: 1,
-    borderColor: Colors.glassBorderLight,
+    opacity: 0.42,
   },
   inner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs + 2 },
   icon: { fontSize: 17 },
@@ -143,7 +158,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.3,
   },
-  labelDisabled: { opacity: 0.45 },
 
   secondaryBtn: {
     borderRadius: Radius.xl,

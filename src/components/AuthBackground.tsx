@@ -1,65 +1,68 @@
 import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing, useReducedMotion,
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, useReducedMotion,
 } from 'react-native-reanimated';
+import Svg, { Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
 import { Colors } from '@/theme/colors';
 import { resolveAccent } from '@/theme/palettes/accents';
 
 const A = resolveAccent();
 
-interface OrbProps {
-  colors: [string, string];
-  size: number;
-  top?: number; left?: number; right?: number; bottom?: number;
-  range: number;      // px drift amplitude
-  duration: number;   // ms per half-cycle
-  delay: number;
-  opacity: number;
-}
+// Soft neon bloom — a feathered radial ellipse (matches the Claude Design auth screen's
+// `radial-gradient(closest-side, rgba(255,0,122,0.16), transparent 75%)`, not a hard disc).
+const BLOOM_W = 360;
+const BLOOM_H = 230;
 
-/** A single slowly-drifting, gently-scaling gradient orb. */
-function Orb({ colors, size, top, left, right, bottom, range, duration, delay, opacity }: OrbProps) {
-  const p = useSharedValue(0);
+/**
+ * Auth background: a flat dark field with ONE restrained, slowly-drifting neon bloom anchored LOW —
+ * behind the primary CTA (matches the Claude Design auth screen). The doctrine bans *multiple*
+ * drifting orbs as vibe-coded; a single subtle brand bloom on this first-impression surface is the
+ * agreed-on exception. SVG radial gradient so the glow is feathered (RN has no CSS radial). Drift is
+ * gentle and self-contained; reduce-motion pins it static.
+ */
+export default function AuthBackground() {
+  const { width } = useWindowDimensions();
   const reduce = useReducedMotion();
-  useEffect(() => {
-    if (reduce) { p.value = 0.5; return; } // reduce-motion: a static, centered glow (no drift)
-    p.value = withDelay(delay, withRepeat(withTiming(1, { duration, easing: Easing.inOut(Easing.ease) }), -1, true));
-  }, [p, delay, duration, reduce]);
+  const drift = useSharedValue(0.5);
 
-  const animStyle = useAnimatedStyle(() => ({
+  useEffect(() => {
+    if (reduce) { drift.value = 0.5; return; }
+    drift.value = withRepeat(withTiming(1, { duration: 13000, easing: Easing.inOut(Easing.ease) }), -1, true);
+  }, [drift, reduce]);
+
+  const bloomStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: (p.value - 0.5) * range },
-      { translateY: (p.value - 0.5) * range * 0.7 },
-      { scale: 0.95 + p.value * 0.18 },
+      { translateX: (drift.value - 0.5) * 28 },
+      { translateY: (drift.value - 0.5) * 16 },
     ],
-    opacity,
   }));
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.orb, { width: size, height: size, top, left, right, bottom }, animStyle]}>
-      <LinearGradient colors={colors} style={StyleSheet.absoluteFill} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} />
-    </Animated.View>
-  );
-}
-
-/**
- * Auth background: a flat dark field with ONE restrained, slow, anchored accent
- * glow. (Research 2026-06-03: multiple drifting orbs read as vibe-coded; a single
- * subtle brand-colored glow on a first-impression surface is the defensible
- * config.) Self-contained Reanimated so only auth gets the motion. The fuller
- * branded entrance is finalized in the Phase 3 login reskin.
- */
-export default function AuthBackground() {
-  return (
     <Animated.View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={[Colors.groupedBackground, Colors.background]} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-      <Orb colors={[A.solid, A.gradient[1]]} size={360} top={-120} left={-80} range={40} duration={14000} delay={0} opacity={0.16} />
+      <LinearGradient
+        colors={[Colors.groupedBackground, Colors.background]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+      <Animated.View style={[styles.bloom, { left: (width - BLOOM_W) / 2 }, bloomStyle]}>
+        <Svg width={BLOOM_W} height={BLOOM_H}>
+          <Defs>
+            <RadialGradient id="authBloom" cx="50%" cy="50%" rx="50%" ry="50%">
+              <Stop offset="0" stopColor={A.solid} stopOpacity={0.16} />
+              <Stop offset="0.5" stopColor={A.solid} stopOpacity={0.06} />
+              <Stop offset="1" stopColor={A.solid} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Ellipse cx={BLOOM_W / 2} cy={BLOOM_H / 2} rx={BLOOM_W / 2} ry={BLOOM_H / 2} fill="url(#authBloom)" />
+        </Svg>
+      </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  orb: { position: 'absolute', borderRadius: 9999, overflow: 'hidden' },
+  bloom: { position: 'absolute', bottom: 120 }, // anchored a bit above the CTA
 });
