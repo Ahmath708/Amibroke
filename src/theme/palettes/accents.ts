@@ -9,8 +9,8 @@
 //   • set EXPO_PUBLIC_NEON_ACCENT=lime|cyan|magenta|purple and rebuild.
 //
 // "Disciplined neon" = ONE of these is the hero; the others are demoted to small
-// semantic-only roles (see palettes/neon.ts). Magenta is the chosen default —
-// playful/irreverent, best fit for the roast voice.
+// semantic-only roles (see palettes/neon.ts). Pink (#FF007A) is the chosen default —
+// it is the single accent in the Claude Design system (CTA / FAB + active/focus only).
 
 export type AccentRamp = {
   name: string;
@@ -24,10 +24,23 @@ export type AccentRamp = {
   gradient: [string, string];
   /** Text/icon color that sits ON a solid-accent fill (contrast-safe). */
   on: string;
+  /** Faint accent hairline for accent-tinted chips / icon tiles (alpha ~0.18). */
+  border: string;
 };
 
 export const ACCENTS = {
-  // Hero default — hot magenta. Playful, irreverent, on-brand for a roast app.
+  // Hero default — Claude Design pink (#FF007A). The single accent across every
+  // screen: primary action (CTA / FAB) + active / focus states only.
+  pink: {
+    name: 'pink',
+    tint: '#ff5fa6',          // accent text/icon on a dark surface
+    solid: '#FF007A',         // CTA / FAB / score-ring fill / icon glyphs / key emphasis
+    container: 'rgba(255, 0, 122, 0.12)', // chips, selected states, subtle washes
+    gradient: ['#FF007A', '#c70060'],
+    on: '#ffffff',
+    border: 'rgba(255, 0, 122, 0.18)',
+  },
+  // Hero alt — hot magenta. Playful, irreverent, on-brand for a roast app.
   magenta: {
     name: 'magenta',
     tint: '#ff8fb8',
@@ -35,6 +48,7 @@ export const ACCENTS = {
     container: 'rgba(255, 45, 120, 0.20)',
     gradient: ['#ff2d78', '#e7006e'],
     on: '#ffffff',
+    border: 'rgba(255, 45, 120, 0.18)',
   },
   // Bold "money" energy — Cash App / Robinhood lane.
   lime: {
@@ -44,6 +58,7 @@ export const ACCENTS = {
     container: 'rgba(198, 255, 0, 0.16)',
     gradient: ['#c6ff00', '#8fcc00'],
     on: '#0c1200',
+    border: 'rgba(198, 255, 0, 0.18)',
   },
   // Cool / techy / fresh — cleanest escape from the purple cliché.
   cyan: {
@@ -53,6 +68,7 @@ export const ACCENTS = {
     container: 'rgba(0, 224, 255, 0.18)',
     gradient: ['#00e0ff', '#0080ff'],
     on: '#00181f',
+    border: 'rgba(0, 224, 255, 0.18)',
   },
   // Legacy fallback — the original electric purple (the "AI-slop" look we're leaving).
   purple: {
@@ -62,12 +78,13 @@ export const ACCENTS = {
     container: 'rgba(189, 0, 255, 0.22)',
     gradient: ['#bd00ff', '#e7006e'],
     on: '#ffffff',
+    border: 'rgba(189, 0, 255, 0.18)',
   },
 } satisfies Record<string, AccentRamp>;
 
 export type AccentName = keyof typeof ACCENTS;
 
-export const DEFAULT_ACCENT: AccentName = 'magenta';
+export const DEFAULT_ACCENT: AccentName = 'pink';
 
 /** Resolve the active accent ramp (env override → default). */
 export function resolveAccent(): AccentRamp {

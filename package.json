@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "dependencies": {
+    "@expo-google-fonts/geist": "^0.4.2",
+    "@expo-google-fonts/geist-mono": "^0.4.2",
     "@expo-google-fonts/inter": "^0.2.3",
     "@expo-google-fonts/space-grotesk": "^0.2.3",
     "@expo/vector-icons": "^15.1.1",

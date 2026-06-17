@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Am I Broke? — Welcome</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0B0B0F;
+    --card: #16161F;
+    --neon: #FF007A;
+    --line: rgba(255,255,255,0.08);
+    --text: #FFFFFF;
+    --muted: rgba(255,255,255,0.50);
+    --faint: rgba(255,255,255,0.34);
+    /* score-band semantic colors */
+    --cooked: #FF4D6D;
+    --surviving: #FFB020;
+    --stable: #00C2A8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(900px 600px at 50% -10%, #15151d 0%, #0a0a0d 55%, #07070a 100%);
+    font-family: 'Geist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #scaler { transform-origin: center center; }
+
+  .screen {
+    height: 100%; width: 100%; background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column;
+    padding: 60px 24px 26px; position: relative; overflow: hidden;
+  }
+
+  /* ---------- hero headline ---------- */
+  .hero {
+    font-size: 38px; font-weight: 800; line-height: 1.0; letter-spacing: -1.6px;
+    text-align: left; margin: 6px 0 0; text-wrap: balance;
+  }
+  .hero .nz { color: var(--cooked); }
+
+  /* ---------- analyzing score hero ---------- */
+  .slot {
+    position: relative; flex: 1 1 auto; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .analyze-card {
+    width: 100%;
+    background: var(--card); border: 1px solid var(--line); border-radius: 24px;
+    padding: 22px; display: flex; align-items: center; gap: 20px;
+    position: relative; overflow: hidden;
+  }
+  .az-ringwrap { position: relative; width: 104px; height: 104px; flex-shrink: 0; display: grid; place-items: center; }
+  .az-glow { position: absolute; inset: 4px; border-radius: 50%; pointer-events: none; filter: blur(7px); }
+  .az-ring { display: block; position: relative; z-index: 1; }
+  .az-num { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+  .az-num .v { font-family: 'Geist', sans-serif; font-size: 31px; font-weight: 800; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
+  .az-den { margin-top: 3px; font-family: 'Geist Mono', monospace; font-size: 9.5px; font-weight: 600; color: var(--faint); }
+  .az-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 13px; }
+  .az-status { font-size: 22px; font-weight: 800; letter-spacing: -0.6px; line-height: 1; }
+  .az-status.roasting { color: var(--muted); }
+  .az-spark { width: 100%; height: 40px; display: block; }
+
+  /* ---------- value props 2x2 ---------- */
+  .vp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 8px; }
+  .vp-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 14px 14px 15px; display: flex; flex-direction: column; gap: 12px;
+    position: relative; overflow: hidden;
+  }
+  .vp-card::after {
+    content: ''; position: absolute; top: -40px; right: -40px; width: 80px; height: 80px;
+    border-radius: 50%; background: radial-gradient(closest-side, rgba(255,0,122,0.08), transparent 70%);
+  }
+  .vp-ico {
+    width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+    background: rgba(255,0,122,0.11); border: 1px solid rgba(255,0,122,0.18);
+    display: grid; place-items: center; color: var(--neon);
+  }
+  .vp-label { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.2px; line-height: 1.25; }
+
+  /* ---------- conversion ---------- */
+  .conversion { margin-top: 22px; display: flex; flex-direction: column; align-items: center; }
+  .micro {
+    font-size: 12.5px; font-weight: 500; color: var(--muted); letter-spacing: -0.1px;
+    margin-bottom: 16px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .micro .sep { color: var(--faint); font-size: 9px; }
+  .cta {
+    width: 100%; height: 58px; border-radius: 18px; border: none;
+    background: var(--neon); color: #fff; font-family: inherit;
+    font-size: 17px; font-weight: 700; letter-spacing: -0.3px; cursor: pointer;
+    box-shadow: 0 10px 34px rgba(255,0,122,0.42);
+    transition: transform .14s ease, filter .2s ease; -webkit-tap-highlight-color: transparent;
+  }
+  .cta:hover { filter: brightness(1.06); }
+  .cta:active { transform: scale(.975); }
+  .signin {
+    margin-top: 16px; font-size: 13.5px; font-weight: 500; color: var(--muted);
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .signin b { color: #fff; font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <div id="stage"><div id="scaler"><div id="root"></div></div></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+
+  <script type="text/babel">
+    /* ---- animated "analyzing" score hero ---- */
+    const AZ_SAMPLES = [
+      { score: 22, color: '#FF4D6D', label: 'Cooked',    spark: '4,7 30,13 58,9 86,18 114,15 142,25 170,31 206,37' },
+      { score: 48, color: '#FFB020', label: 'Surviving', spark: '4,17 30,12 58,21 86,16 114,24 142,18 170,26 206,29' },
+      { score: 72, color: '#00C2A8', label: 'Stable',    spark: '4,27 30,30 58,23 86,26 114,18 142,21 170,14 206,11' },
+      { score: 91, color: '#00E676', label: 'Thriving',  spark: '4,34 30,28 58,31 86,21 114,19 142,12 170,9 206,3' },
+    ];
+    const azEase = (x) => 1 - Math.pow(1 - x, 3); // easeOutCubic
+
+    function AnalyzeHero() {
+      const SWEEP = 1500, HOLD = 1500, FADE = 350, TOTAL = SWEEP + HOLD + FADE;
+      const reduce = React.useRef(window.matchMedia('(prefers-reduced-motion: reduce)').matches).current;
+      const [, force] = React.useState(0);
+      const idx = React.useRef(0);
+      const start = React.useRef(performance.now());
+
+      React.useEffect(() => {
+        if (reduce) { idx.current = 2; force((x) => x + 1); return; } // static "Stable"
+        let raf;
+        const loop = () => {
+          if (performance.now() - start.current >= TOTAL) {
+            idx.current = (idx.current + 1) % AZ_SAMPLES.length; // cycle all four, no repeats
+            start.current = performance.now();
+          }
+          force((x) => x + 1);
+          raf = requestAnimationFrame(loop);
+        };
+        raf = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(raf);
+      }, []);
+
+      const s = AZ_SAMPLES[idx.current];
+      let progress = 1, landed = true, opacity = 1;
+      if (!reduce) {
+        const t = Math.min(TOTAL, performance.now() - start.current);
+        if (t < SWEEP) { progress = azEase(t / SWEEP); landed = false; }
+        if (t < FADE) opacity = t / FADE;                                 // fade in
+        else if (t > SWEEP + HOLD) opacity = Math.max(0, 1 - (t - (SWEEP + HOLD)) / FADE); // fade out
+      }
+
+      const R = 42, C = 2 * Math.PI * R;
+      const frac = (s.score / 100) * progress;
+      const disp = Math.round(progress * s.score);
+      const ang = (-90 + frac * 360) * Math.PI / 180;
+      const cx = 50 + R * Math.cos(ang), cy = 50 + R * Math.sin(ang);
+
+      return (
+        <div className="analyze-card" style={{ opacity }}>
+          <div className="az-ringwrap">
+            <div className="az-glow" style={{ background: 'radial-gradient(closest-side, ' + s.color + ', transparent 70%)', opacity: 0.24 }} />
+            <svg className="az-ring" width="104" height="104" viewBox="0 0 100 100">
+              <defs>
+                <filter id="azglow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="2.4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="9" />
+              <circle cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth="9" strokeLinecap="round"
+                strokeDasharray={C} strokeDashoffset={C * (1 - frac)} filter="url(#azglow)"
+                transform="rotate(-90 50 50)" />
+              <circle cx={cx} cy={cy} r="4.2" fill="#fff" filter="url(#azglow)"
+                style={{ opacity: landed ? 0 : 1, transition: 'opacity .3s ease' }} />
+            </svg>
+            <div className="az-num">
+              <span className="v" style={{ color: s.color }}>{disp}</span>
+              <span className="az-den">/100</span>
+            </div>
+          </div>
+
+          <div className="az-right">
+            <div className={'az-status' + (landed ? '' : ' roasting')} style={landed ? { color: s.color } : undefined}>
+              {landed ? s.label : 'Roasting\u2026'}
+            </div>
+            <svg className="az-spark" viewBox="0 0 210 40" preserveAspectRatio="none" fill="none">
+              <polyline points={s.spark} stroke={s.color} strokeWidth="2.6"
+                strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+                pathLength="1" strokeDasharray="1" strokeDashoffset={1 - progress} />
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    /* ---- value-prop icons ---- */
+    const KeyboardIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2.5" />
+        <path d="M6 10h0M10 10h0M14 10h0M18 10h0M6 13.5h0M18 13.5h0M9 13.5h6" />
+      </svg>
+    );
+    const FireIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+      </svg>
+    );
+    const GaugeIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3.5 18a8.5 8.5 0 0 1 17 0" />
+        <path d="M12 18l4.2-4.6" />
+        <circle cx="12" cy="18" r="1.4" fill="currentColor" stroke="none" />
+      </svg>
+    );
+    const TrendIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 16.5l5.5-5.5 3.5 3.5L21 7" />
+        <path d="M16 7h5v5" />
+      </svg>
+    );
+
+    const PROPS = [
+      { Icon: KeyboardIcon, label: 'Type your finances' },
+      { Icon: FireIcon, label: 'Get roasted by AI' },
+      { Icon: GaugeIcon, label: 'See your score' },
+      { Icon: TrendIcon, label: 'Fix your life' },
+    ];
+
+    function Landing() {
+      return (
+        <div className="screen">
+          <h1 className="hero">Find out if your finances are <span className="nz">cooked</span></h1>
+
+          {/* animated "analyzing" score hero */}
+          <div className="slot">
+            <AnalyzeHero />
+          </div>
+
+          {/* value props 2x2 */}
+          <div className="vp-grid">
+            {PROPS.map((p, i) => (
+              <div className="vp-card" key={i}>
+                <span className="vp-ico"><p.Icon /></span>
+                <span className="vp-label">{p.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* conversion */}
+          <div className="conversion">
+            <div className="micro">
+              3 days free <span className="sep">●</span> Brutally honest <span className="sep">●</span> Results in seconds
+            </div>
+            <button className="cta" type="button">Get Started</button>
+            <button className="signin" type="button">Already have an account? <b>Sign In</b></button>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <IOSDevice dark>
+          <Landing />
+        </IOSDevice>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+    function fit() {
+      const W = 402, H = 874, pad = 36;
+      const s = Math.min((window.innerWidth - pad) / W, (window.innerHeight - pad) / H, 1);
+      document.getElementById('scaler').style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    fit();
+  </script>
+</body>
+</html>

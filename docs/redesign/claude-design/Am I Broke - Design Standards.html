@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Am I Broke? — Design Standards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* ===== Canvas & surfaces ===== */
+    --bg: #0B0B0F;
+    --card: #16161F;
+    --raised: #1C1C24;
+    --line: rgba(255,255,255,0.08);
+    /* ===== Ink ===== */
+    --text: #FFFFFF;
+    --muted: rgba(255,255,255,0.50);
+    --faint: rgba(255,255,255,0.30);
+    /* ===== Accent (pink) ===== */
+    --neon: #FF007A;
+    /* ===== Score bands (semantic) ===== */
+    --cooked: #FF4D6D;
+    --surviving: #FFB020;
+    --stable: #00C2A8;
+    --thriving: #00E676;
+    /* ===== Status ===== */
+    --ok: #3DDC97;
+    --info: #6AA6FF;
+    --danger: #FF5470;
+    /* ===== Spacing rhythm ===== */
+    --s: 10px;
+    --m: 14px;
+    --l: 24px;
+    --xl: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 700px at 50% -8%, #15151d 0%, #0a0a0d 52%, #07070a 100%) fixed,
+      var(--bg);
+    color: var(--text);
+    font-family: 'Geist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .mono { font-family: 'Geist Mono', monospace; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 64px 40px 120px; }
+
+  /* ---------- masthead ---------- */
+  .masthead { border-bottom: 1px solid var(--line); padding-bottom: 38px; margin-bottom: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 22px;
+    padding: 7px 13px 7px 11px; border-radius: 9999px;
+    background: rgba(255,0,122,0.10); border: 1px solid rgba(255,0,122,0.28);
+    font-size: 12px; font-weight: 600; color: #ff5fa6; letter-spacing: 0.2px;
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
+  .masthead h1 { margin: 0; font-size: 54px; font-weight: 800; letter-spacing: -2.4px; line-height: 0.98; }
+  .masthead p { margin: 16px 0 0; font-size: 17px; color: var(--muted); font-weight: 450; max-width: 640px; text-wrap: pretty; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .meta {
+    display: inline-flex; align-items: center; gap: 9px; padding: 10px 15px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--line); font-size: 13px; color: rgba(255,255,255,0.78); font-weight: 500;
+  }
+  .meta b { color: #fff; font-weight: 700; }
+  .meta .sw { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+
+  /* ---------- section scaffolding ---------- */
+  section { padding-top: 64px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }
+  .sec-no { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; color: var(--neon); letter-spacing: 1px; }
+  .sec-head h2 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+  .sec-head .rule { flex: 1; height: 1px; background: var(--line); align-self: center; }
+
+  .note { font-size: 13.5px; color: var(--muted); font-weight: 450; line-height: 1.55; text-wrap: pretty; }
+  .note b { color: rgba(255,255,255,0.82); font-weight: 650; }
+  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--faint); margin-bottom: 16px; }
+
+  .grid { display: grid; gap: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px;
+  }
+  .card.pad-l { padding: 26px; }
+
+  /* ---------- TYPE ---------- */
+  .fam-grid { grid-template-columns: 1fr 1fr; }
+  .fam-name { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; }
+  .fam-name.mono { font-size: 34px; letter-spacing: -1px; }
+  .fam-role { margin-top: 6px; font-size: 13.5px; color: var(--muted); }
+  .fam-glyphs { margin-top: 16px; font-size: 19px; color: rgba(255,255,255,0.6); letter-spacing: 1px; }
+  .fam-weights { margin-top: 4px; font-size: 13px; color: var(--faint); }
+
+  .spec { display: grid; grid-template-columns: 130px 1fr; gap: 28px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .spec:last-child { border-bottom: none; }
+  .spec-meta .role { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+  .spec-meta .specs { margin-top: 6px; font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--faint); line-height: 1.6; }
+  .spec-sample { min-width: 0; overflow: hidden; }
+
+  .t-display { font-family: 'Geist Mono', monospace; font-size: 64px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
+  .t-headline { font-size: 38px; font-weight: 800; letter-spacing: -1.6px; line-height: 1; }
+  .t-sub { font-size: 15px; font-weight: 450; color: var(--muted); line-height: 1.5; }
+  .t-label { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); }
+  .t-body { font-size: 15px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,0.86); }
+  .t-caption { font-size: 12.5px; font-weight: 450; color: var(--muted); line-height: 1.45; }
+
+  /* ---------- SPACING ---------- */
+  .space-grid { grid-template-columns: 1fr; gap: 12px; }
+  .space-row { display: grid; grid-template-columns: 64px 90px 1fr; gap: 20px; align-items: center; }
+  .space-bar { height: 26px; border-radius: 7px; background: linear-gradient(90deg, var(--neon), rgba(255,0,122,0.5)); box-shadow: 0 0 14px -6px var(--neon); }
+  .space-tok { font-weight: 800; font-size: 17px; letter-spacing: -0.3px; }
+  .space-px { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--muted); }
+  .space-use { font-size: 13px; color: var(--muted); }
+
+  /* ---------- COLOR ---------- */
+  .sw-grid { grid-template-columns: repeat(4, 1fr); }
+  .swatch { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+  .swatch .chip { height: 78px; }
+  .swatch .lbl { padding: 12px 13px 13px; }
+  .swatch .name { font-size: 13.5px; font-weight: 700; letter-spacing: -0.2px; }
+  .swatch .hex { margin-top: 3px; font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--muted); }
+  .swatch .chip.bordered { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10); }
+
+  .band-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .band {
+    border-radius: 16px; padding: 18px 16px; background: var(--card); border: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .band .arc { width: 38px; height: 38px; }
+  .band .bname { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  .band .brange { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--faint); }
+
+  .usage { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: 13px; background: rgba(255,255,255,0.025); border: 1px solid var(--line); margin-top: 14px; }
+  .usage .tag { flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; }
+  .tag.rule { background: rgba(255,0,122,0.14); color: #ff5fa6; border: 1px solid rgba(255,0,122,0.3); }
+  .usage .txt { font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.5; }
+  .usage .txt b { color: #fff; }
+
+  .dots { display: flex; gap: 18px; flex-wrap: wrap; }
+  .dotitem { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.7); }
+  .dotitem .d { width: 9px; height: 9px; border-radius: 50%; }
+
+  /* ---------- COMPONENTS ---------- */
+  .comp-grid { grid-template-columns: repeat(3, 1fr); }
+  .comp { display: flex; flex-direction: column; }
+  .comp-stage {
+    background: linear-gradient(180deg, #101017, #0c0c11); border: 1px solid var(--line); border-radius: 18px;
+    height: 260px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+  }
+  .comp-name { margin-top: 14px; font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+  .comp-desc { margin-top: 5px; font-size: 12.5px; color: var(--muted); line-height: 1.5; text-wrap: pretty; }
+
+  /* mini phone frame for component thumbnails */
+  .mini { width: 188px; height: 224px; border-radius: 26px; background: var(--bg); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 18px 40px -22px #000; padding: 16px 14px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .mini .bar { display: flex; align-items: center; justify-content: space-between; }
+  .mini .pelt { width: 30px; height: 7px; border-radius: 99px; background: rgba(255,255,255,0.14); }
+  .mini .pelt.sm { width: 16px; }
+  .mini .pdot { width: 18px; height: 18px; border-radius: 50%; }
+  .mini .pdot.neon { background: rgba(255,0,122,0.16); border: 1px solid rgba(255,0,122,0.4); }
+  .mini .pdot.ghost { background: rgba(255,255,255,0.05); border: 1px solid var(--line); }
+  .mini .mtitle { height: 13px; width: 64%; border-radius: 5px; background: rgba(255,255,255,0.82); margin-top: 16px; }
+  .mini .msub { height: 7px; width: 84%; border-radius: 4px; background: rgba(255,255,255,0.2); margin-top: 9px; }
+  .mini .grow { flex: 1; }
+
+  .mini .bignum { font-family: 'Geist Mono', monospace; font-size: 34px; font-weight: 800; letter-spacing: -1.5px; color: rgba(255,255,255,0.9); text-align: center; }
+  .mini .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .mini .pad span { height: 17px; border-radius: 5px; background: var(--card); border: 1px solid var(--line); }
+  .mini .fab { position: absolute; right: 16px; bottom: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--neon); box-shadow: 0 4px 14px rgba(255,0,122,0.5); }
+  .mini .fab::before, .mini .fab::after { content:''; position:absolute; background:#fff; border-radius:2px; }
+  .mini .fab::before { width: 12px; height: 2.4px; top: 13.8px; left: 9px; }
+  .mini .fab::after { width: 2.4px; height: 12px; top: 9px; left: 13.8px; }
+  .mini .fab.arrow::after { display: none; }
+  .mini .fab.arrow::before { width:12px;height:2.4px;top:13.8px;left:9px; box-shadow: 3px -3px 0 -0.6px #fff, 3px 3px 0 -0.6px #fff; }
+
+  .mini .inp { height: 30px; border-radius: 9px; background: var(--card); border: 1px solid var(--line); margin-top: 9px; position: relative; }
+  .mini .inp.focus { border-color: var(--neon); box-shadow: 0 0 0 2px rgba(255,0,122,0.18); }
+  .mini .foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
+
+  .mini .tcard { border-radius: 12px; background: var(--card); border: 1px solid var(--line); padding: 10px; margin-top: 12px; }
+  .mini .tcard .tn { font-family:'Geist Mono',monospace; font-size: 18px; font-weight: 800; color:#fff; letter-spacing:-0.5px; }
+  .mini .tcard .tl { height: 6px; width: 50%; border-radius: 3px; background: rgba(255,255,255,0.2); margin-top: 6px; }
+  .mini .lrow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .mini .lrow .ic { width: 20px; height: 20px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid var(--line); flex-shrink: 0; }
+  .mini .lrow .lt { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.3); }
+  .mini .lrow .chev { width: 6px; height: 6px; border-right: 2px solid var(--faint); border-top: 2px solid var(--faint); transform: rotate(45deg); flex-shrink: 0; }
+
+  /* near-real component demos */
+  .demo-cta { width: 100%; max-width: 280px; height: 54px; border-radius: 16px; border: none; background: var(--neon); color: #fff; font-family: inherit; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; box-shadow: 0 10px 30px rgba(255,0,122,0.4); cursor: pointer; transition: transform .14s ease, filter .2s; }
+  .demo-cta:hover { filter: brightness(1.06); }
+  .demo-cta:active { transform: scale(.97); }
+
+  .chipset { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+  .dchip { height: 44px; padding: 0 18px; border-radius: 13px; background: var(--card); border: 1px solid var(--line); color: #fff; font-size: 14px; font-weight: 600; display: flex; align-items: center; letter-spacing: -0.2px; }
+  .dchip.sel { background: rgba(255,0,122,0.12); border-color: var(--neon); color: #ff5fa6; }
+
+  .summary { width: 280px; display: flex; align-items: center; gap: 13px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 15px; }
+  .summary .sic { width: 40px; height: 40px; border-radius: 11px; background: rgba(255,0,122,0.1); border: 1px solid rgba(255,0,122,0.22); display: grid; place-items: center; color: var(--neon); flex-shrink: 0; }
+  .summary .sbody { flex: 1; min-width: 0; }
+  .summary .stitle { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+  .summary .scount { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .summary .strail { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .summary .samt { font-family: 'Geist Mono', monospace; font-size: 19px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; }
+  .summary .schev { width: 8px; height: 8px; border-right: 2px solid var(--faint); border-top: 2px solid var(--faint); transform: rotate(45deg); }
+
+  /* bullets */
+  .bullets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .bullet { display: flex; gap: 12px; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .bullet .bi { flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; background: rgba(255,0,122,0.12); border: 1px solid rgba(255,0,122,0.28); display: grid; place-items: center; color: var(--neon); }
+  .bullet .bt { font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,0.78); }
+  .bullet .bt b { color: #fff; font-weight: 700; }
+
+  @media (max-width: 880px) {
+    .wrap { padding: 44px 22px 90px; }
+    .masthead h1 { font-size: 40px; }
+    .fam-grid, .comp-grid, .sw-grid, .band-row, .bullets { grid-template-columns: 1fr 1fr; }
+    .spec { grid-template-columns: 1fr; gap: 12px; }
+  }
+  @media (max-width: 560px) {
+    .fam-grid, .comp-grid, .sw-grid, .band-row, .bullets { grid-template-columns: 1fr; }
+  }
+  @media print {
+    html, body { background: #0B0B0F !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ===================== MASTHEAD ===================== -->
+    <header class="masthead">
+      <span class="badge"><span class="dot"></span> House rules · v1</span>
+      <h1>Am I Broke?<br />Design Standards</h1>
+      <p>One system across every screen — Landing, Sign-up, Onboarding, and the app. Reuse these named tokens and templates; never introduce a new font, color, or spacing value per screen. If something isn't covered, match the closest existing pattern.</p>
+      <div class="meta-row">
+        <span class="meta"><b>2</b> typefaces — Geist · Geist Mono</span>
+        <span class="meta"><span class="sw" style="background:#0B0B0F;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12)"></span> Dark canvas</span>
+        <span class="meta"><span class="sw" style="background:#FF007A"></span> One accent</span>
+        <span class="meta"><b>4</b> score bands</span>
+        <span class="meta"><b>S·M·L·XL</b> spacing</span>
+      </div>
+    </header>
+
+    <!-- ===================== TYPE ===================== -->
+    <section>
+      <div class="sec-head"><span class="sec-no">01</span><h2>Type</h2><span class="rule"></span></div>
+
+      <p class="kicker">Two families — everywhere</p>
+      <div class="grid fam-grid">
+        <div class="card pad-l">
+          <div class="fam-name">Geist</div>
+          <div class="fam-role">Headlines, sub-heads, labels, body, captions. The one sans for everything.</div>
+          <div class="fam-glyphs">AaBbCc · 0123456789</div>
+          <div class="fam-weights mono">450 · 500 · 600 · 700 · 800</div>
+        </div>
+        <div class="card pad-l">
+          <div class="fam-name mono">Geist Mono</div>
+          <div class="fam-role">Numbers, money figures, the score, and spec labels only.</div>
+          <div class="fam-glyphs mono">$1,300 · −$9,800 · 55/100</div>
+          <div class="fam-weights mono">400 · 500 · 600</div>
+        </div>
+      </div>
+
+      <p class="kicker" style="margin-top:34px">One shared scale — don't resize per screen</p>
+      <div class="card pad-l">
+        <div class="spec">
+          <div class="spec-meta"><div class="role">Number display</div><div class="specs">Geist Mono<br>60–76px · 800 · −3px</div></div>
+          <div class="spec-sample"><span class="t-display">$1,300</span></div>
+        </div>
+        <div class="spec">
+          <div class="spec-meta"><div class="role">Headline</div><div class="specs">Geist · 38px<br>800 · −1.6px · lh 1.0</div></div>
+          <div class="spec-sample"><span class="t-headline">What do we call you?</span></div>
+        </div>
+        <div class="spec">
+          <div class="spec-meta"><div class="role">Sub-headline</div><div class="specs">Geist · 15px<br>450 · lh 1.5 · muted</div></div>
+          <div class="spec-sample"><span class="t-sub">So the roast hits personal.</span></div>
+        </div>
+        <div class="spec">
+          <div class="spec-meta"><div class="role">Section label</div><div class="specs">Geist · 12px<br>700 · +0.6px · UPPER</div></div>
+          <div class="spec-sample"><span class="t-label">Your subscriptions</span></div>
+        </div>
+        <div class="spec">
+          <div class="spec-meta"><div class="role">Body</div><div class="specs">Geist · 15px<br>500 · lh 1.5</div></div>
+          <div class="spec-sample"><span class="t-body">Liquid savings — cash you could reach tomorrow.</span></div>
+        </div>
+        <div class="spec">
+          <div class="spec-meta"><div class="role">Caption</div><div class="specs">Geist · 12.5px<br>450 · muted</div></div>
+          <div class="spec-sample"><span class="t-caption">Your public @handle — other members see it when you share a roast.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SPACING ===================== -->
+    <section>
+      <div class="sec-head"><span class="sec-no">02</span><h2>Spacing</h2><span class="rule"></span></div>
+      <p class="note" style="margin-bottom:22px">One rhythm for <b>all</b> gaps, margins, and padding — no ad-hoc values. <b>Horizontal screen padding = L (24px)</b> on every screen.</p>
+      <div class="card pad-l">
+        <div class="grid space-grid">
+          <div class="space-row">
+            <span class="space-tok">S <span class="space-px">10</span></span>
+            <div class="space-bar" style="width:10px"></div>
+            <span class="space-use">Tight gaps — list rows, chips, card internals</span>
+          </div>
+          <div class="space-row">
+            <span class="space-tok">M <span class="space-px">14</span></span>
+            <div class="space-bar" style="width:14px"></div>
+            <span class="space-use">Heading → sub, control gaps, dock margins</span>
+          </div>
+          <div class="space-row">
+            <span class="space-tok">L <span class="space-px">24</span></span>
+            <div class="space-bar" style="width:24px"></div>
+            <span class="space-use">Screen horizontal padding, sheet &amp; card padding</span>
+          </div>
+          <div class="space-row">
+            <span class="space-tok">XL <span class="space-px">30</span></span>
+            <div class="space-bar" style="width:30px"></div>
+            <span class="space-use">Header → content, major section breaks</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== COLOR ===================== -->
+    <section>
+      <div class="sec-head"><span class="sec-no">03</span><h2>Color</h2><span class="rule"></span></div>
+
+      <p class="kicker">Canvas &amp; surfaces</p>
+      <div class="grid sw-grid">
+        <div class="swatch"><div class="chip bordered" style="background:#0B0B0F"></div><div class="lbl"><div class="name">Canvas</div><div class="hex">#0B0B0F</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#16161F"></div><div class="lbl"><div class="name">Card</div><div class="hex">#16161F</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#1C1C24"></div><div class="lbl"><div class="name">Raised</div><div class="hex">#1C1C24</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#1a1a22;box-shadow:inset 0 -1px 0 0 rgba(255,255,255,0.10)"></div><div class="lbl"><div class="name">Hairline</div><div class="hex">#FFFFFF · 8%</div></div></div>
+      </div>
+
+      <p class="kicker" style="margin-top:30px">Ink</p>
+      <div class="grid sw-grid">
+        <div class="swatch"><div class="chip" style="background:#FFFFFF"></div><div class="lbl"><div class="name">Primary</div><div class="hex">#FFFFFF</div></div></div>
+        <div class="swatch"><div class="chip" style="background:rgba(255,255,255,0.5)"></div><div class="lbl"><div class="name">Muted</div><div class="hex">#FFFFFF · 50%</div></div></div>
+        <div class="swatch"><div class="chip" style="background:rgba(255,255,255,0.3)"></div><div class="lbl"><div class="name">Faint</div><div class="hex">#FFFFFF · 30%</div></div></div>
+        <div class="swatch"><div class="chip bordered" style="background:#FF007A"></div><div class="lbl"><div class="name">Accent · Pink</div><div class="hex">#FF007A</div></div></div>
+      </div>
+      <div class="usage">
+        <span class="tag rule">Accent rule</span>
+        <span class="txt">Pink is for the <b>primary action</b> (CTA / FAB) and <b>active / focus</b> states <b>only</b> — never a resting fill or decorative element.</span>
+      </div>
+
+      <p class="kicker" style="margin-top:30px">Score bands — the one intentional non-accent color</p>
+      <div class="band-row">
+        <div class="band">
+          <svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FF4D6D" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="28 94" transform="rotate(-90 18 18)"/></svg>
+          <div><div class="bname" style="color:#FF4D6D">Cooked</div><div class="brange">0–40 · alarm red</div></div>
+        </div>
+        <div class="band">
+          <svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB020" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="52 94" transform="rotate(-90 18 18)"/></svg>
+          <div><div class="bname" style="color:#FFB020">Surviving</div><div class="brange">41–60 · amber</div></div>
+        </div>
+        <div class="band">
+          <svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#00C2A8" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="72 94" transform="rotate(-90 18 18)"/></svg>
+          <div><div class="bname" style="color:#00C2A8">Stable</div><div class="brange">61–80 · teal</div></div>
+        </div>
+        <div class="band">
+          <svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#00E676" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="88 94" transform="rotate(-90 18 18)"/></svg>
+          <div><div class="bname" style="color:#00E676">Thriving</div><div class="brange">81–100 · green</div></div>
+        </div>
+      </div>
+      <div class="usage">
+        <span class="tag rule">Band rule</span>
+        <span class="txt">Only the <b>score ring + band label</b> use a band color. CTAs stay pink — a band is never an action.</span>
+      </div>
+
+      <p class="kicker" style="margin-top:30px">Status — small dots &amp; labels, never a flooded element</p>
+      <div class="card">
+        <div class="dots">
+          <span class="dotitem"><span class="d" style="background:#3DDC97;box-shadow:0 0 8px rgba(61,220,151,0.6)"></span> Positive / income — #3DDC97</span>
+          <span class="dotitem"><span class="d" style="background:#6AA6FF;box-shadow:0 0 8px rgba(106,166,255,0.55)"></span> Info / savings — #6AA6FF</span>
+          <span class="dotitem"><span class="d" style="background:#FF5470;box-shadow:0 0 8px rgba(255,84,112,0.6)"></span> Alert / debt — #FF5470</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== COMPONENTS ===================== -->
+    <section>
+      <div class="sec-head"><span class="sec-no">04</span><h2>Components</h2><span class="rule"></span></div>
+      <p class="note" style="margin-bottom:24px">Reuse these — don't reinvent. Each screen is assembled from the templates below.</p>
+
+      <div class="grid comp-grid">
+        <!-- money screen -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div class="mini">
+              <div class="bar"><div class="pelt"></div></div>
+              <div class="mtitle"></div>
+              <div class="grow" style="display:flex;align-items:center;justify-content:center"><div class="bignum">$0</div></div>
+              <div class="pad">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="fab arrow"></div>
+            </div>
+          </div>
+          <div class="comp-name">Money-screen</div>
+          <div class="comp-desc">Giant number display + custom numpad + quiet "Not sure? Pick a range →" sheet fallback + glowing circular → button. (income / expenses / debt / savings)</div>
+        </div>
+
+        <!-- form chrome -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div class="mini">
+              <div class="bar"><div class="pdot ghost"></div><div class="pelt sm"></div><div class="pdot neon"></div></div>
+              <div class="mtitle"></div>
+              <div class="msub"></div>
+              <div class="inp focus"></div>
+              <div class="inp"></div>
+              <div class="foot"><div class="pelt sm"></div><div class="pdot neon"></div></div>
+            </div>
+          </div>
+          <div class="comp-name">Form-chrome</div>
+          <div class="comp-desc">Pinned header (back + title + optional top-right action) → conversational header → content → footer (Continue + Back). Keyboard-aware.</div>
+        </div>
+
+        <!-- managed list -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div class="mini">
+              <div class="bar"><div class="pdot ghost"></div><div class="pelt sm"></div><div class="pdot neon"></div></div>
+              <div class="tcard"><div class="tn">$89<span style="font-size:11px;color:var(--muted)">/mo</span></div><div class="tl"></div></div>
+              <div class="lrow"><span class="ic"></span><span class="lt"></span><span class="chev"></span></div>
+              <div class="lrow"><span class="ic"></span><span class="lt"></span><span class="chev"></span></div>
+              <div class="lrow" style="border-bottom:none"><span class="ic"></span><span class="lt"></span><span class="chev"></span></div>
+            </div>
+          </div>
+          <div class="comp-name">Managed-list / CRUD</div>
+          <div class="comp-desc">Pinned header (back + title + "+") → total card → rows with trailing chevron → add/edit bottom sheet → empty state. Swipe-to-delete + delete confirm.</div>
+        </div>
+
+        <!-- summary card -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div class="summary">
+              <span class="sic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.5l3 3-3 3"/><path d="M20 5.5H8.5A4.5 4.5 0 0 0 4 10v.8"/><path d="M7 21.5l-3-3 3-3"/><path d="M4 18.5h11.5A4.5 4.5 0 0 0 20 14v-.8"/></svg>
+              </span>
+              <span class="sbody"><span class="stitle">Subscriptions</span><span class="scount">7 active</span></span>
+              <span class="strail"><span class="samt">$89<span style="font-size:11px;color:var(--muted)">/mo</span></span><span class="schev"></span></span>
+            </div>
+          </div>
+          <div class="comp-name">Summary card</div>
+          <div class="comp-desc">Icon · title · count · amount · chevron. Amount + chevron vertically centered together as one right-side cluster.</div>
+        </div>
+
+        <!-- chips -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div class="chipset">
+              <span class="dchip sel">Renting</span>
+              <span class="dchip">Owning</span>
+              <span class="dchip">With Family</span>
+              <span class="dchip">Dorm</span>
+            </div>
+          </div>
+          <div class="comp-name">Chips</div>
+          <div class="comp-desc">Selected = accent border + faint accent-tint fill. Unselected = neutral card. Used for single-select groups.</div>
+        </div>
+
+        <!-- bottom sheet -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div class="mini" style="justify-content:flex-end;padding:0">
+              <div style="position:absolute;inset:0;background:rgba(7,7,10,0.55)"></div>
+              <div style="position:relative;background:#14141c;border:1px solid var(--line);border-bottom:none;border-radius:20px 20px 0 0;padding:10px 14px 16px">
+                <div style="width:30px;height:4px;border-radius:99px;background:rgba(255,255,255,0.2);margin:0 auto 12px"></div>
+                <div style="height:11px;width:55%;border-radius:5px;background:rgba(255,255,255,0.75);margin-bottom:12px"></div>
+                <div style="height:26px;border-radius:8px;background:var(--card);border:1px solid var(--line);margin-bottom:7px"></div>
+                <div style="height:26px;border-radius:8px;background:rgba(255,0,122,0.12);border:1px solid var(--neon)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="comp-name">Bottom sheet</div>
+          <div class="comp-desc">Rounded top, grab handle, dimmed scrim. Range pickers, add/edit forms, and delete confirms all use it.</div>
+        </div>
+
+        <!-- score ring -->
+        <div class="comp">
+          <div class="comp-stage">
+            <div style="position:relative;width:150px;height:150px;display:grid;place-items:center">
+              <svg width="150" height="150" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="9"/>
+                <circle cx="100" cy="100" r="82" fill="none" stroke="#00C2A8" stroke-width="9" stroke-linecap="round" stroke-dasharray="370 515" transform="rotate(-90 100 100)" style="filter:drop-shadow(0 0 5px rgba(0,194,168,0.6))"/>
+              </svg>
+              <div style="position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1">
+                <span style="font-family:'Geist Mono',monospace;font-size:44px;font-weight:800;letter-spacing:-2px">72</span>
+                <span class="mono" style="font-size:11px;color:var(--faint);margin-top:4px">/100</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp-name">Score ring / dial</div>
+          <div class="comp-desc">Band-colored, clean arc, no metered ticks. 0° origin, leading dot only while moving (none at rest), locks in on settle.</div>
+        </div>
+
+        <!-- CTA / FAB -->
+        <div class="comp">
+          <div class="comp-stage" style="flex-direction:column;gap:20px">
+            <button class="demo-cta">Build my score →</button>
+            <div style="width:58px;height:58px;border-radius:50%;background:var(--neon);box-shadow:0 8px 26px rgba(255,0,122,0.5);display:grid;place-items:center">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <div class="comp-name">Primary action — CTA &amp; FAB</div>
+          <div class="comp-desc">Pink, pill/rounded, soft glow shadow. The only place the accent fills a resting element. Press = scale-down.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MOTION ===================== -->
+    <section>
+      <div class="sec-head"><span class="sec-no">05</span><h2>Motion</h2><span class="rule"></span></div>
+      <div class="bullets">
+        <div class="bullet"><span class="bi">↺</span><span class="bt"><b>Press feedback</b> on every tappable element — a quick scale / spring on tap.</span></div>
+        <div class="bullet"><span class="bi">◷</span><span class="bt"><b>Continuous dial motif:</b> forming / hunting on loading → lock-in on reveal, with the <b>same</b> position, size &amp; geometry — no jump between screens.</span></div>
+        <div class="bullet"><span class="bi">⤳</span><span class="bt"><b>Cinematic transitions</b> between screens — never a hard cut.</span></div>
+        <div class="bullet"><span class="bi">●</span><span class="bt">Leading dot appears <b>only during motion</b>; at rest the arc is clean.</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== LAYOUT ===================== -->
+    <section>
+      <div class="sec-head"><span class="sec-no">06</span><h2>Layout</h2><span class="rule"></span></div>
+      <div class="bullets">
+        <div class="bullet"><span class="bi">⌂</span><span class="bt">Headers <b>float / pin</b>. Always a <b>custom back control</b> — never the native iOS back button (its long-press menu leaks previous screen titles).</span></div>
+        <div class="bullet"><span class="bi">▭</span><span class="bt">Scroll content has a <b>bottom inset</b> so the last row clears the floating bottom nav.</span></div>
+        <div class="bullet"><span class="bi">⇅</span><span class="bt"><b>Hide scroll indicators</b> everywhere.</span></div>
+        <div class="bullet"><span class="bi">⊤</span><span class="bt">Form content is <b>top-anchored</b>; the footer (Continue + Back) is <b>pinned</b>.</span></div>
+        <div class="bullet"><span class="bi">›</span><span class="bt"><b>Discoverability:</b> tappable rows get a trailing chevron; editable figures get a subtle edit cue.</span></div>
+        <div class="bullet"><span class="bi">▦</span><span class="bt">Same <b>horizontal screen padding (L · 24px)</b> on every screen — content never reflows its left edge.</span></div>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

@@ -16,13 +16,20 @@ export const Colors = neonPalette;
 
 // ── iOS Typography Scale ──────────────────────────────────────────────────────
 export const Typography = {
+  // Claude Design type system: Geist (everything) + Geist Mono (numbers, money,
+  // the score, spec labels). Weight roles map 1:1 to the old Space Grotesk / Inter
+  // roles so every existing `Typography.fonts.*` reference keeps its weight.
   fonts: {
-    heading: 'SpaceGrotesk_700Bold',
-    headingSemi: 'SpaceGrotesk_600SemiBold',
-    headingMed: 'SpaceGrotesk_500Medium',
-    body: 'Inter_400Regular',
-    bodyMed: 'Inter_500Medium',
-    bodySemi: 'Inter_600SemiBold',
+    heading: 'Geist_700Bold',
+    headingSemi: 'Geist_600SemiBold',
+    headingMed: 'Geist_500Medium',
+    body: 'Geist_400Regular',
+    bodyMed: 'Geist_500Medium',
+    bodySemi: 'Geist_600SemiBold',
+    // New roles for the Claude system:
+    extrabold: 'Geist_800ExtraBold', // oversized hero headlines / screen titles
+    mono: 'GeistMono_500Medium', // numbers, money figures
+    monoSemi: 'GeistMono_600SemiBold', // the score, emphasized figures
   },
   // iOS HIG sizes
   largeTitle:  { fontSize: 34, fontWeight: '700' as const, letterSpacing: 0.37 },

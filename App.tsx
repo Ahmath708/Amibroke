@@ -7,16 +7,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import {
-  SpaceGrotesk_400Regular,
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  SpaceGrotesk_700Bold,
-} from '@expo-google-fonts/space-grotesk';
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+  Geist_800ExtraBold,
+} from '@expo-google-fonts/geist';
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from '@expo-google-fonts/inter';
+  GeistMono_400Regular,
+  GeistMono_500Medium,
+  GeistMono_600SemiBold,
+} from '@expo-google-fonts/geist-mono';
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
@@ -60,13 +61,14 @@ export default function App() {
     async function bootstrap() {
       try {
         await Font.loadAsync({
-          SpaceGrotesk_400Regular,
-          SpaceGrotesk_500Medium,
-          SpaceGrotesk_600SemiBold,
-          SpaceGrotesk_700Bold,
-          Inter_400Regular,
-          Inter_500Medium,
-          Inter_600SemiBold,
+          Geist_400Regular,
+          Geist_500Medium,
+          Geist_600SemiBold,
+          Geist_700Bold,
+          Geist_800ExtraBold,
+          GeistMono_400Regular,
+          GeistMono_500Medium,
+          GeistMono_600SemiBold,
         });
       } catch (e) {
         console.warn('Font loading error:', e);
@@ -130,10 +132,10 @@ export default function App() {
             notification: Colors.accent,
           },
           fonts: {
-            regular: { fontFamily: 'Inter_400Regular', fontWeight: '400' },
-            medium: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
-            bold: { fontFamily: 'SpaceGrotesk_700Bold', fontWeight: '700' },
-            heavy: { fontFamily: 'SpaceGrotesk_700Bold', fontWeight: '900' },
+            regular: { fontFamily: 'Geist_400Regular', fontWeight: '400' },
+            medium: { fontFamily: 'Geist_500Medium', fontWeight: '500' },
+            bold: { fontFamily: 'Geist_700Bold', fontWeight: '700' },
+            heavy: { fontFamily: 'Geist_800ExtraBold', fontWeight: '900' },
           },
         }}
       >

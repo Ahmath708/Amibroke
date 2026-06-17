@@ -14,52 +14,53 @@ import { resolveAccent } from './accents';
 const A = resolveAccent();
 
 export const neonPalette = {
-  // ── Backgrounds (dark, lifted off pure #000 to avoid halation) ──
-  background: '#19101c', // systemBackground
-  backgroundSecondary: '#211824', // secondarySystemBackground
-  backgroundTertiary: '#261c28', // tertiarySystemBackground
-  groupedBackground: '#130b16', // systemGroupedBackground
-  groupedRow: '#1e1221', // secondarySystemGroupedBackground
+  // ── Backgrounds (Claude Design: neutral near-black canvas + lifted surfaces) ──
+  background: '#0B0B0F', // canvas
+  backgroundSecondary: '#16161F', // card
+  backgroundTertiary: '#1C1C24', // raised
+  groupedBackground: '#08080B', // grouped canvas (a touch under the card field)
+  groupedRow: '#16161F', // grouped row = card
 
   // ── Surfaces / Glass ──
-  surface: 'rgba(38, 28, 40, 0.72)',
-  surfaceElevated: 'rgba(50, 36, 54, 0.85)',
-  glassBackground: 'rgba(38, 28, 40, 0.60)',
-  glassBorder: 'rgba(255, 255, 255, 0.08)',
+  surface: 'rgba(22, 22, 31, 0.72)', // card-tinted
+  surfaceElevated: 'rgba(28, 28, 36, 0.85)', // raised-tinted
+  glassBackground: 'rgba(22, 22, 31, 0.60)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)', // hairline
   glassBorderLight: 'rgba(255, 255, 255, 0.14)',
 
   // ── Separators ──
-  separator: 'rgba(255, 255, 255, 0.10)',
+  separator: 'rgba(255, 255, 255, 0.08)', // hairline
 
-  // ── Labels (iOS label hierarchy) ──
-  textPrimary: '#eeddee', // label
-  textSecondary: '#a897ab', // secondaryLabel
-  textTertiary: '#8a7b8d', // tertiaryLabel — bumped for WCAG AA (4.7:1 on bg; was 3.1 fail)
-  textMuted: '#7a6b7c', // quaternaryLabel — bumped to pass AA-large (3.7:1; was 1.8 fail)
-  textInverse: '#19101c',
+  // ── Labels (Claude ink hierarchy: white → 50% → 30%) ──
+  textPrimary: '#FFFFFF', // label
+  textSecondary: 'rgba(255, 255, 255, 0.50)', // muted
+  textTertiary: 'rgba(255, 255, 255, 0.30)', // faint
+  textMuted: 'rgba(255, 255, 255, 0.30)', // faint
+  textInverse: '#0B0B0F',
 
   // ── Signature accent (semantic roles — swap the ramp, not these) ──
   accent: A.tint,
   accentSolid: A.solid,
   accentContainer: A.container,
+  accentBorder: A.border,
   onAccent: A.on,
 
   // Demoted: no longer co-equal brand neons. Kept as muted/semantic supports.
-  secondary: '#9fb6c2', // was neon cyan — demoted to a neutral info-blue
+  secondary: '#6AA6FF', // info-blue (Claude "info / savings")
   tertiary: A.tint, // collapse the old hot-pink role into the accent family
   tertiaryContainer: A.container,
   tertiarySolid: A.solid,
 
-  // ── Semantic status (unchanged — these are meaning, not brand) ──
-  success: '#39FF14',
-  successContainer: 'rgba(57, 255, 20, 0.14)',
-  warning: '#FF6B00',
-  warningContainer: 'rgba(255, 107, 0, 0.14)',
-  caution: '#FFCC00', // iOS systemYellow — confidence-medium
-  danger: '#ff453a', // iOS systemRed
-  dangerContainer: 'rgba(255, 69, 58, 0.16)',
-  info: '#9fb6c2',
-  infoContainer: 'rgba(159, 182, 194, 0.16)',
+  // ── Semantic status (Claude status palette — meaning, not brand) ──
+  success: '#3DDC97', // positive / income
+  successContainer: 'rgba(61, 220, 151, 0.14)',
+  warning: '#FFB020', // amber
+  warningContainer: 'rgba(255, 176, 32, 0.14)',
+  caution: '#FFB020', // confidence-medium — amber
+  danger: '#FF5470', // alert / debt
+  dangerContainer: 'rgba(255, 84, 112, 0.16)',
+  info: '#6AA6FF', // info / savings
+  infoContainer: 'rgba(106, 166, 255, 0.16)',
 
   // ── Gradients ──
   gradientPrimary: [A.gradient[0], A.gradient[1]] as [string, string],
