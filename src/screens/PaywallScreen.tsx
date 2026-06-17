@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import ReAnimated from 'react-native-reanimated';
-import { SparklesIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { SparklesIcon } from 'react-native-heroicons/outline';
 import SectionLabel from '@/components/SectionLabel';
 import { PressableScale, enterUp } from '@/components/motion';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,10 +16,10 @@ import { TOOLS, CHECK_IN_NAME } from '@/config/tools';
 import { getActivePlan } from '@/services/activePlan';
 import { getSnapshot } from '@/services/financialSnapshot';
 import { isPayoffDebt } from '@shared/financialSnapshot';
+import { TRIAL_DURATION_DAYS } from '@shared/entitlement';
 import NeonButton from '@/components/NeonButton';
 import { trackPaywallViewed, trackPurchaseInitiated, trackPurchaseCompleted, trackPurchaseFailed } from '@/services/analytics';
 import ScreenBackground from '@/components/ScreenBackground';
-import TopScrim from '@/components/TopScrim';
 import { formatCurrency } from '@/utils/format';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -150,12 +150,6 @@ export default function PaywallScreen({ navigation }: Props) {
   return (
     <ReAnimated.View entering={enterUp(0)} style={styles.container}>
       <ScreenBackground variant="paywall" />
-      <View style={[styles.handleRow, { marginTop: insets.top + Spacing.sm }]}>
-        <View style={styles.handle} />
-      </View>
-      <PressableScale onPress={() => navigation.goBack()} haptic="light" style={[styles.closeBtn, { top: insets.top + Spacing.xs }]}>
-        <XMarkIcon size={22} color={Colors.textSecondary} />
-      </PressableScale>
 
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
@@ -177,10 +171,10 @@ export default function PaywallScreen({ navigation }: Props) {
 
         {/* 3-day free access — honest about the limit (no permanent free tier) */}
         <View style={styles.trialBox}>
-          <Text style={styles.trialTitle}>3 days free, then choose a plan</Text>
+          <Text style={styles.trialTitle}>{TRIAL_DURATION_DAYS} days free, then choose a plan</Text>
           <Text style={styles.trialBody}>
-            New users get full access to everything for 3 days. After that, Action Plan or Deep Dive
-            keeps your roasts, plan & tools.
+            New users get full access to everything for {TRIAL_DURATION_DAYS} days. After that, Action Plan
+            or Deep Dive keeps your roasts, plan & tools.
           </Text>
         </View>
 
@@ -288,16 +282,12 @@ export default function PaywallScreen({ navigation }: Props) {
           cancel anytime in your App Store settings. Payment is charged to your Apple ID.
         </Text>
       </ScrollView>
-      <TopScrim variant="paywall" />
     </ReAnimated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  handleRow: { alignItems: 'center', marginBottom: Spacing.sm },
-  handle: { width: 36, height: 5, borderRadius: Radius.pill, backgroundColor: Colors.separator },
-  closeBtn: { position: 'absolute', right: Spacing.xl, zIndex: 10, padding: Spacing.sm },
   scroll: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm },
   hero: { alignItems: 'center', marginBottom: Spacing.xl, marginTop: Spacing.xs },
   heroIcon: { width: 72, height: 72, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },

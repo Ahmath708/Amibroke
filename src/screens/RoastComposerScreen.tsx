@@ -5,9 +5,9 @@ import {
   Animated, Easing,
 } from 'react-native';
 import SectionLabel from '@/components/SectionLabel';
-import SelectableChip from '@/components/SelectableChip';
+import OptionChip from '@/components/OptionChip';
 import AppTextInput from '@/components/AppTextInput';
-import { MicrophoneIcon, StopCircleIcon, SparklesIcon } from 'react-native-heroicons/outline';
+import { MicrophoneIcon, StopCircleIcon, SparklesIcon, QuestionMarkCircleIcon } from 'react-native-heroicons/outline';
 import { TONES } from '@/config/tones';
 import NotificationBell from '@/components/NotificationBell';
 import ReAnimated from 'react-native-reanimated';
@@ -188,9 +188,8 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           ref={scrollRef}
           onScroll={onScroll}
           scrollEventThrottle={16}
-          contentContainerStyle={[styles.scroll, { paddingTop: asTab ? insets.top + Spacing.lg : Spacing.lg, paddingBottom: asTab ? Spacing.xl : insets.bottom + Spacing.xl }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: asTab ? insets.top + Spacing.lg : Spacing.xs, paddingBottom: (asTab ? TAB_BAR_HEIGHT : insets.bottom) + Spacing.xl }]}
           showsVerticalScrollIndicator={false}
-          alwaysBounceVertical={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
@@ -203,7 +202,8 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
             </View>
           )}
           <Text style={styles.pageSubtitle}>
-            Describe your finances. Get roasted by AI. Fix your life.
+            Describe your finances. Get roasted by AI.{' '}
+            <Text style={styles.pageSubtitleStrong}>Fix your life.</Text>
           </Text>
 
           {/* Input card */}
@@ -230,7 +230,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
                   typing animation the moment the user is about to type. */}
               {input.length === 0 && !inputFocused && (
                 <View style={styles.placeholderOverlay} pointerEvents="none">
-                  <TypingPlaceholder placeholders={PLACEHOLDERS} textStyle={styles.placeholderText} paused={!isFocused} />
+                  <TypingPlaceholder placeholders={PLACEHOLDERS} textStyle={styles.placeholderText} paused={!isFocused} typingSpeed={30} deletingSpeed={7} />
                 </View>
               )}
             </View>
@@ -264,7 +264,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           {/* No-Plaid honesty cue — sets expectations (input-based, not bank-linked)
               and nudges honest input, which is how we stay accurate without Plaid. */}
           <View style={styles.honestyRow}>
-            <SparklesIcon size={13} color={Colors.textTertiary} />
+            <SparklesIcon size={13} color={Colors.accentSolid} />
             <Text style={styles.honestyText}>
               I only know what you tell me — the realer the input, the sharper the roast.
             </Text>
@@ -272,7 +272,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
 
           {/* CTA — directly under the input for immediate access */}
           <NeonButton
-            label="Roast My Finances"
+            label="Roast My Finances →"
             onPress={handleAnalyze}
             disabled={!input.trim()}
             style={styles.cta}
@@ -280,11 +280,12 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           <Text style={styles.ctaHint}>Powered by Claude · Results in seconds</Text>
 
           {/* Suggestion chips */}
-          <SectionLabel>Suggestions</SectionLabel>
+          <SectionLabel>Need a starting point?</SectionLabel>
           <View style={styles.chipsScrollWrap}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {CHIPS.map((chip) => (
                 <PressableScale key={chip} style={styles.chip} onPress={() => applySuggestion(chip)} haptic="light" hitSlop={{ top: 6, bottom: 6 }}>
+                  <QuestionMarkCircleIcon size={15} color={Colors.accent} />
                   <Text style={styles.chipText}>{chip}</Text>
                 </PressableScale>
               ))}
@@ -303,7 +304,7 @@ export default function RoastComposerScreen({ navigation, asTab = false }: Props
           <SectionLabel>Roast Tone</SectionLabel>
           <View style={styles.toneWrap}>
             {TONES.map((tone) => (
-              <SelectableChip
+              <OptionChip
                 key={tone.key}
                 label={tone.label}
                 icon={tone.icon}
@@ -336,6 +337,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.subhead.fontSize, color: Colors.textSecondary,
     marginBottom: Spacing.xxl, lineHeight: 21,
   },
+  pageSubtitleStrong: { fontFamily: Typography.fonts.bodySemi, color: Colors.textPrimary },
   inputCard: { padding: Spacing.lg, marginBottom: Spacing.md },
   honestyRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
@@ -343,7 +345,7 @@ const styles = StyleSheet.create({
   },
   honestyText: {
     flex: 1, fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize,
-    color: Colors.textTertiary, lineHeight: 16,
+    color: Colors.textSecondary, lineHeight: 16,
   },
   inputFieldWrap: { position: 'relative', height: 160 },
   placeholderOverlay: {
@@ -368,13 +370,14 @@ const styles = StyleSheet.create({
   chipsFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 36 },
   chipsContent: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },
   chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: Colors.accentContainer,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.glassBorderLight,
+    borderWidth: 1, borderColor: 'rgba(255,0,122,0.4)',
   },
   chipText: { fontFamily: Typography.fonts.body, fontSize: Typography.footnote.fontSize, color: Colors.accent },
-  toneWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
+  toneWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: 0 },
   cta: { marginBottom: Spacing.sm },
   ctaHint: { fontFamily: Typography.fonts.body, fontSize: Typography.caption1.fontSize, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl },
 });

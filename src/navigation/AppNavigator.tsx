@@ -23,6 +23,7 @@ import {
 import PlusGlyph from '@/components/PlusGlyph';
 import RoastIcon from '@/components/RoastIcon';
 import HeaderBackButton from '@/components/HeaderBackButton';
+import SheetGrabber from '@/components/SheetGrabber';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,21 +67,6 @@ import { TAB_ROW_HEIGHT, TAB_FLOAT_MARGIN } from '@/navigation/constants';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
-
-// Modern iOS sheet-style modal (RNScreens UISheetPresentationController): a swipe-down
-// sheet with a visible grabber + rounded top, so the user can see it dismisses by drag.
-// NOTE (2026-06-11): temporarily unused — Paywall swapped to a card for scrollability (see the
-// TODO at the <Stack.Screen name="Paywall"> below). Kept as the target config for the proper fix.
-const sheetModal = {
-  presentation: 'formSheet' as const,
-  sheetGrabberVisible: true,
-  sheetAllowedDetents: [0.9] as number[], // ~90% tall — dimmed parent peeks (~10%); grabber forced visible
-  sheetCornerRadius: 24,
-  // Single detent → no scroll-to-expand. Off lets the inner ScrollView scroll on its
-  // own; otherwise the formSheet's gesture eats the scroll when the ScrollView isn't
-  // the screen's first child (RNScreens #2687/#3092 — our ScreenBackground is first).
-  sheetExpandsWhenScrolledToEdge: false,
-};
 
 // UI/navigation chrome → Heroicons (active = solid, inactive = outline).
 const TAB_ICONS: Record<string, { active: React.ComponentType<any>; inactive: React.ComponentType<any> }> = {
@@ -269,6 +255,34 @@ const sharedHeader = {
   contentStyle: { backgroundColor: 'transparent' },
 } as const;
 
+// Header title for the swipe-down compose modals (Roast Me / Check-In / Update Plan): a grabber pill
+// stacked above the title so the swipe-down-to-close affordance is obvious.
+//
+// WHY headerTitle (not headerBackground): native-stack silently fails to paint a custom
+// `headerBackground` here (the pill never shows, at any paddingTop). The only header slots it
+// reliably renders are the ones that hold real content — headerLeft/headerRight/headerTitle. So we
+// borrow BottomSheet's trick (the grabber is just a <View> we control) and put it in headerTitle.
+function ModalHeaderTitle({ title }: { title?: string }) {
+  return (
+    <View style={modalHeaderStyles.titleWrap}>
+      <SheetGrabber style={modalHeaderStyles.grabber} />
+      {title ? <Text style={modalHeaderStyles.title} numberOfLines={1}>{title}</Text> : null}
+    </View>
+  );
+}
+
+const modalHeaderStyles = StyleSheet.create({
+  titleWrap: { alignItems: 'center', justifyContent: 'center' },
+  grabber: { marginBottom: 6 },
+  title: { fontFamily: Typography.fonts.headingSemi, fontSize: 17, color: Colors.textPrimary },
+});
+
+const modalHeader = {
+  ...sharedHeader,
+  headerTitleAlign: 'center',
+  headerTitle: ({ children }: { children: string }) => <ModalHeaderTitle title={children} />,
+} as const;
+
 export default function AppNavigator() {
   const { loading, user, needsUsername, needsOnboarding } = useAuth();
 
@@ -299,11 +313,11 @@ export default function AppNavigator() {
           /* ─── Signed in: APP STACK ─── */
           <>
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ animation: 'fade' }} />
-            <Stack.Screen name="Analyze" component={RoastComposerScreen} options={{ ...sharedHeader, headerShown: true, title: 'New Roast', ...sheetModal }} />
+            <Stack.Screen name="Analyze" component={RoastComposerScreen} options={{ ...modalHeader, headerShown: true, title: 'New Roast', presentation: 'modal', gestureEnabled: true }} />
             <Stack.Screen name="History" component={TrendScreen} options={{ ...sharedHeader, headerShown: true, title: 'History', animation: 'slide_from_right' }} />
             <Stack.Screen name="Processing" component={ProcessingScreen} options={{ animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="Results" component={ResultsScreen} options={{ animation: 'slide_from_bottom', presentation: 'card', ...sharedHeader, headerShown: true, title: 'Your Results' }} />
-            <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...sharedHeader, headerShown: true, title: '90-Day Plan', ...sheetModal }} />
+            <Stack.Screen name="ActionPlan" component={ActionPlanScreen} options={{ ...modalHeader, headerShown: true, title: '90-Day Plan', presentation: 'modal', gestureEnabled: true }} />
             <Stack.Screen name="DebtPayoff" component={DebtPayoffScreen} options={{ ...sharedHeader, headerShown: true, title: 'Debt Payoff', animation: 'slide_from_right' }} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ ...sharedHeader, headerShown: true, title: 'Notifications', animation: 'slide_from_right' }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ ...sharedHeader, headerShown: true, title: 'Edit Profile', animation: 'slide_from_right' }} />
@@ -322,14 +336,12 @@ export default function AppNavigator() {
                 only defers scroll to a ScrollView that's the screen's FIRST child — ours is
                 ScreenBackground, so the sheet gesture ate the scroll (RNScreens #2687/#3092). */}
             <Stack.Screen name="Share" component={ShareScreen} options={{ ...sharedHeader, headerShown: true, title: 'Share Result', animation: 'slide_from_bottom', presentation: 'card' }} />
-            {/* TEMP-FIX(scroll, 2026-06-11): the formSheet gesture ate the inner ScrollView
-                (ScreenBackground is the screen's first child, not the ScrollView — RNScreens
-                #2687/#3092), so the paywall didn't scroll on device. Swapped to ShareScreen's
-                proven card + slide_from_bottom pattern (known-scrollable; the X button dismisses).
-                TODO(paywall): restore a proper bottom-sheet that still allows inner scroll
-                (e.g. make the ScrollView the screen's first child, then re-apply `sheetModal`). */}
-            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ headerShown: false, animation: 'slide_from_bottom', presentation: 'card' }} />
-            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...sharedHeader, headerShown: true, title: CHECK_IN_NAME, ...sheetModal }} />
+            {/* Same swipe-down modal as the compose modals — grabber in the header (modalHeader →
+                headerTitle), no title. Plain `modal` (not formSheet) so the inner ScrollView scrolls;
+                formSheet's gesture eats the scroll when ScreenBackground is the screen's first child
+                (RNScreens #2687/#3092). Dismiss via swipe/grabber (no X button). */}
+            <Stack.Screen name="Paywall" component={PaywallScreen} options={{ ...modalHeader, headerShown: true, title: '', presentation: 'modal', gestureEnabled: true }} />
+            <Stack.Screen name="MonthlyCheckIn" component={MonthlyCheckInScreen} options={{ ...modalHeader, headerShown: true, title: CHECK_IN_NAME, presentation: 'modal', gestureEnabled: true }} />
           </>
         )}
       </Stack.Navigator>

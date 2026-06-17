@@ -1,6 +1,5 @@
 import type { ComponentType } from 'react';
-import { ArrowTrendingDownIcon, BeakerIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
-import PlanRouteIcon from '@/components/PlanRouteIcon';
+import { ClipboardDocumentListIcon, CalculatorIcon, AdjustmentsHorizontalIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 
 export type ToolKey = 'action_plan' | 'debt_payoff' | 'scenario' | 'subscription_audit';
 
@@ -18,9 +17,9 @@ export type ToolMeta = {
 
 /**
  * Single source of truth for the premium tools — icon, name, and the two copy registers. Every
- * surface (Tools list, Dashboard plan card, Paywall preview) imports from here so they never drift.
- * The 90-day plan uses MapIcon (it IS a "week-by-week roadmap"), which frees CalendarIcon to mean
- * "check-in" everywhere else (Profile reminder + Results "Track") with no collision.
+ * surface (Dashboard plan card, Paywall preview) imports from here so they never drift. Icons match
+ * the canonical glyphs used elsewhere: plan → ClipboardDocumentList (nav FAB menu), debt → Calculator
+ * + scenario → AdjustmentsHorizontal (the Financials "Lab" rows).
  */
 export const TOOLS: Record<ToolKey, ToolMeta> = {
   action_plan: {
@@ -28,7 +27,7 @@ export const TOOLS: Record<ToolKey, ToolMeta> = {
     label: '90-Day Action Plan',
     desc: 'Your week-by-week money roadmap',
     pitch: 'Week-by-week roadmap with specific dollar targets',
-    icon: PlanRouteIcon,
+    icon: ClipboardDocumentListIcon,
     requires: 'action_plan',
   },
   debt_payoff: {
@@ -36,7 +35,7 @@ export const TOOLS: Record<ToolKey, ToolMeta> = {
     label: 'Debt Payoff',
     desc: 'Avalanche vs snowball strategy',
     pitch: "See how much interest you're burning and when you'll be free",
-    icon: ArrowTrendingDownIcon,
+    icon: CalculatorIcon,
     requires: 'deep_dive',
   },
   scenario: {
@@ -44,7 +43,7 @@ export const TOOLS: Record<ToolKey, ToolMeta> = {
     label: 'Scenario Simulator',
     desc: 'Model "what if" money moves',
     pitch: 'What if you got a raise? Cut takeout? Find out instantly',
-    icon: BeakerIcon,
+    icon: AdjustmentsHorizontalIcon,
     requires: 'deep_dive',
     soon: true,
   },

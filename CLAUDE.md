@@ -304,6 +304,17 @@ client-side.
   `app.json` plugin config, which a clean prebuild / EAS build honors — so production is covered even
   when the local `ios/` is stale. (Bit us on the share-card Save-to-Photos flow, 2026-06.)
 
+- **native-stack silently won't paint a custom `headerBackground` — host header decorations in
+  `headerTitle`/`headerLeft`/`headerRight` instead.** We added a swipe-down grabber to the FAB
+  compose modals (Roast / Check-In / Update Plan) + Paywall via `modalHeader.headerBackground` (a
+  `<View>` with the pill). It rendered *nowhere*, at any `paddingTop` — `@react-navigation/native-stack`
+  reliably renders only the header slots that hold real content. Fix: put the grabber `<View>` in
+  **`headerTitle`** (stacked above the title) — `BottomSheet`'s "the grabber is just a plain View I
+  control" trick, but inside the one header slot that always renders. The grabber pill is the shared
+  `components/SheetGrabber.tsx`. Related: don't render `TopScrim` on a screen that now shows the native
+  (opaque) header — its status-bar strip + fade double-cover the top of the content (dimmed the Paywall
+  hero icon — read as a "blur"). Also: `presentation:'formSheet'` eats the inner ScrollView when
+  `ScreenBackground` is the screen's first child (RNScreens #2687/#3092) — use plain `modal`.
 - **Simulator log noise** (CoreHaptics `hapticpatternlibrary.plist`, TextInputUI accumulator
   timeouts, `AddInstanceForFactory`) is benign and disappears on a real device — not app bugs.
 - **RevenueCat IAP is testable for free in dev via the RevenueCat Test Store** (`test_…` key in

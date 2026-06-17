@@ -154,24 +154,38 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
-### 2026-06-17 — Onboarding Acts 1–3, shared pickers, Life Context; FAB compose-modals + Paywall in flight
+### 2026-06-17 — Onboarding Acts 1–3, shared pickers, Life Context; FAB compose-modals + Paywall grabber-in-header (ready to commit)
 - **COMMITTED on `redesign`:** Onboarding Acts 1 Story + 2–3 Build/Loading/Reveal (`b31d1e9`, `2432dcc`);
   **Life Context** (renamed Financial Context → demographics-only state/bday/housing/employment; money moved
   to the Financials tab) + shared **`OptionChip`** (`0029635`). Shared `PickerField` + restyled
   `StateSelect`/`DobField`; `LoadingStage`/`RevealStage`/`ScoreGauge` (hunting→lock, haptic, no particle
   burst); `FormShell`/`MoneyStep`/`RangeSheet`/`OField`/`BuildProgress`.
-- **OPEN (uncommitted, 4 items to iterate — see the session's handoff prompt):** the 3 FAB-menu screens
-  (Roast Me / Check-In / Update Plan) + Paywall turned into swipe-down **`presentation:'modal'`** with a
-  custom grabber via a `modalHeader` (sharedHeader + headerBackground bar). Files: `AppNavigator.tsx`,
-  `RoastComposerScreen.tsx` (rebuilt to roastme.mov), `PaywallScreen.tsx` (X removed, grabber brightened),
-  `config/tools.ts` (icons aligned: plan→ClipboardDocumentList, debt→Calculator, scenario→AdjustmentsHorizontal).
-- **Landmines:** (1) `presentation:'formSheet'` (the parked `sheetModal`) eats the inner ScrollView when
-  `ScreenBackground` is the screen's first child (RNScreens #2687/#3092) → reverted to plain `modal`.
-  (2) A native opaque modal can't blur/customize the parent peek (iOS dims it) — the Paywall "blur the area
-  above the grabber to reveal the parent" needs `transparentModal` + a BlurView backdrop + custom
-  pan-to-dismiss (the BottomSheet component is the pattern). (3) `presentation:'modal'` on ActionPlan/
-  MonthlyCheckIn applies to ALL entry points, not just the FAB. (4) `insets.top` over-reports inside a page
-  sheet — use a small fixed marginTop for grabbers.
+- **RESOLVED (uncommitted — ready to commit):** the 3 FAB-menu screens (Roast Me / Check-In / Update Plan)
+  + Paywall are swipe-down **`presentation:'modal'`** with the grabber hosted IN the header via
+  `modalHeader` → **`headerTitle`** (shared **`SheetGrabber`** pill). Paywall now uses that same header
+  grabber — dropped its in-content handle + the `TopScrim` (which dimmed the hero icon once the native
+  header turned opaque; the "blur" the parked idea below worried about). Files: `AppNavigator.tsx`
+  (dead `sheetModal` removed), `PaywallScreen.tsx`, `RoastComposerScreen.tsx` (rebuilt to roastme.mov),
+  `config/tools.ts` (icons aligned: plan→ClipboardDocumentList, debt→Calculator, scenario→AdjustmentsHorizontal),
+  new `components/SheetGrabber.tsx`.
+- **Landmines:** (1) `presentation:'formSheet'` eats the inner ScrollView when `ScreenBackground` is the
+  screen's first child (RNScreens #2687/#3092) → plain `modal`. (2) **native-stack silently does NOT paint a
+  custom `headerBackground`** — the grabber never showed at any paddingTop; only the slots that hold real
+  content render reliably, so host the grabber `<View>` in **`headerTitle`** (BottomSheet's "grabber is a
+  plain View" trick). (3) `presentation:'modal'` on ActionPlan/MonthlyCheckIn applies to ALL entry points,
+  not just the FAB. (4) `TopScrim` (opaque status strip + fade) double-covers content once a native header is
+  shown → don't render it on header-shown screens.
+- **Parked idea (not done):** blurring the parent-peek above the Paywall grabber (the `transparentModal` +
+  BlurView backdrop + custom pan-to-dismiss route, à la `BottomSheet`) — abandoned; the header grabber made
+  it unnecessary.
+- **DRY/icon sweep TODO (deferred — surfaced by a consistency audit, NOT in this commit):** the Paywall
+  trial copy now uses `TRIAL_DURATION_DAYS` (fixed), but the same `3 days` literal + plan prices are still
+  hardcoded in `HelpFAQScreen`/`LandingScreen`/`TermsOfServiceScreen`. Also: (a) **Check-In icon drift** —
+  FAB uses `CalendarDaysIcon` (solid) but Results "Track" + Settings reminder use `CalendarIcon` (outline);
+  pick one glyph. (b) `'90-Day Action Plan'`/`'90-day plan'` hardcoded in `ResultsScreen`/`DashboardScreen`/
+  `ActionPlanScreen`/`PremiumCard` instead of `TOOLS.action_plan.label`. (c) `TierPill` re-declares a `LABELS`
+  dict duplicating `PURCHASE_PRODUCTS` tier labels. Icons in `config/tools.ts` are intentionally outline
+  (quiet "bare white glyph" preview) vs the FAB/Lab solid+accent — leave unless strict weight-parity wanted.
 
 ### 2026-06-16 (eve) — Claude Design REFACTOR begins: central theme + Landing + auth — COMMITTED on `redesign`
 - **Brand decision RESOLVED** (supersedes the old "neon-vs-warm A/B" in [[redesign-initiative]]): we adopt
