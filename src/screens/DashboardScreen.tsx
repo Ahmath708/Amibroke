@@ -23,7 +23,7 @@ import { isSnapshotStaleSince, type FinancialSnapshot } from '@shared/financialS
 import { getActivePlan, type ActivePlan } from '@/services/activePlan';
 import { FEATURES } from '@/config/features';
 import { capitalize } from '@/utils/string';
-import { formatCompactCurrency } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 import { TAB_BAR_HEIGHT } from '@/navigation/constants';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScoreRing from '@/components/ScoreRing';
@@ -362,21 +362,21 @@ export default function DashboardScreen({ navigation }: Props) {
               <Metric
                 color={Colors.success}
                 label="Income"
-                value={(est.income ? '~' : '') + formatCompactCurrency(fin.income)}
+                value={(est.income ? '~' : '') + formatCurrency(fin.income)}
                 foot={est.income ? '~ estimated' : '▲ steady'}
                 onPress={() => navigation.navigate('Financials')}
               />
               <Metric
                 color={Colors.danger}
                 label="Debt"
-                value={formatCompactCurrency(fin.debt)}
+                value={formatCurrency(fin.debt)}
                 foot={debtCount === 1 ? 'last debt' : debtCount > 1 ? `${debtCount} debts` : 'owed'}
                 onPress={() => navigation.navigate('Financials')}
               />
               <Metric
                 color={Colors.secondary}
                 label="Savings"
-                value={(est.savings ? '~' : '') + formatCompactCurrency(fin.savings)}
+                value={(est.savings ? '~' : '') + formatCurrency(fin.savings)}
                 foot={est.savings ? '~ estimated' : monthlySavings > 0 ? '▲ building' : 'balance'}
                 onPress={() => navigation.navigate('Financials')}
               />

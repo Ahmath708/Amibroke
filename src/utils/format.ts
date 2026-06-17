@@ -1,15 +1,10 @@
 // Shared formatters — keep currency/date formatting consistent across the app
 // (these were re-implemented identically in several screens).
 
-/** Whole-dollar money, e.g. "$1,234" (no decimals by default). */
+/** Whole-dollar money with thousands separators, e.g. "$4,000" · "$1,234". The single money
+ *  formatter app-wide — always comma-grouped (en-US) for readability; pass `decimals` for cents. */
 export function formatCurrency(n: number, decimals = 0): string {
   return '$' + n.toLocaleString('en-US', { maximumFractionDigits: decimals });
-}
-
-/** Compact money for tight tiles, e.g. "$0" · "$250" · "$5.2k" · "$12k". */
-export function formatCompactCurrency(n: number): string {
-  if (n >= 1000) return `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
-  return `$${Math.round(n)}`;
 }
 
 /** Short date, e.g. "Jun 3". */
