@@ -154,6 +154,25 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
+### 2026-06-17 — Onboarding Acts 1–3, shared pickers, Life Context; FAB compose-modals + Paywall in flight
+- **COMMITTED on `redesign`:** Onboarding Acts 1 Story + 2–3 Build/Loading/Reveal (`b31d1e9`, `2432dcc`);
+  **Life Context** (renamed Financial Context → demographics-only state/bday/housing/employment; money moved
+  to the Financials tab) + shared **`OptionChip`** (`0029635`). Shared `PickerField` + restyled
+  `StateSelect`/`DobField`; `LoadingStage`/`RevealStage`/`ScoreGauge` (hunting→lock, haptic, no particle
+  burst); `FormShell`/`MoneyStep`/`RangeSheet`/`OField`/`BuildProgress`.
+- **OPEN (uncommitted, 4 items to iterate — see the session's handoff prompt):** the 3 FAB-menu screens
+  (Roast Me / Check-In / Update Plan) + Paywall turned into swipe-down **`presentation:'modal'`** with a
+  custom grabber via a `modalHeader` (sharedHeader + headerBackground bar). Files: `AppNavigator.tsx`,
+  `RoastComposerScreen.tsx` (rebuilt to roastme.mov), `PaywallScreen.tsx` (X removed, grabber brightened),
+  `config/tools.ts` (icons aligned: plan→ClipboardDocumentList, debt→Calculator, scenario→AdjustmentsHorizontal).
+- **Landmines:** (1) `presentation:'formSheet'` (the parked `sheetModal`) eats the inner ScrollView when
+  `ScreenBackground` is the screen's first child (RNScreens #2687/#3092) → reverted to plain `modal`.
+  (2) A native opaque modal can't blur/customize the parent peek (iOS dims it) — the Paywall "blur the area
+  above the grabber to reveal the parent" needs `transparentModal` + a BlurView backdrop + custom
+  pan-to-dismiss (the BottomSheet component is the pattern). (3) `presentation:'modal'` on ActionPlan/
+  MonthlyCheckIn applies to ALL entry points, not just the FAB. (4) `insets.top` over-reports inside a page
+  sheet — use a small fixed marginTop for grabbers.
+
 ### 2026-06-16 (eve) — Claude Design REFACTOR begins: central theme + Landing + auth — COMMITTED on `redesign`
 - **Brand decision RESOLVED** (supersedes the old "neon-vs-warm A/B" in [[redesign-initiative]]): we adopt
   **Claude Design's "house rules"** verbatim. Source of truth = the rendered HTML prototypes staged in
