@@ -154,6 +154,44 @@ demo recording. All low-risk except the rename sweep. No DB migrations in any of
 
 _Newest first. One short entry per meaningful unit of work: what changed + any landmine learned._
 
+### 2026-06-16 (eve) — Claude Design REFACTOR begins: central theme + Landing + auth — COMMITTED on `redesign`
+- **Brand decision RESOLVED** (supersedes the old "neon-vs-warm A/B" in [[redesign-initiative]]): we adopt
+  **Claude Design's "house rules"** verbatim. Source of truth = the rendered HTML prototypes staged in
+  [`docs/redesign/claude-design/`](redesign/claude-design/) (7 screen HTMLs + `Design Standards.html` +
+  `ios-frame.jsx`). The briefs we sent them live in [`docs/redesign/`](redesign/) (screen-briefs / mock-content).
+- **Git setup:** pulled remote (the 2 crucial commits — debts/spending backend + the briefs). Discarded 7
+  local UI commits via `git reset --hard origin/redesign`; they're saved on branch
+  **`backup/redesign-7commits-pre-claude-design`** + a `git stash` (recoverable). **`dev` fast-forwarded to
+  `redesign`** as a checkpoint (local only, unpushed).
+- **`543d03d` central theme:** neutral canvas `#0B0B0F`/`#16161F`/`#1C1C24`, white→50%→30% ink, hairline 8%,
+  Claude status colors. New **`pink` accent ramp `#FF007A`** is the default (magenta/lime/cyan/purple kept as
+  alternates) + new **`accentBorder`** (~0.18) role. Fonts → **Geist + Geist Mono** (installed
+  `@expo-google-fonts/geist`+`geist-mono`, loaded in `App.tsx`); weight roles map 1:1 to the old Space
+  Grotesk/Inter roles + new `extrabold` (hero) / `mono`,`monoSemi` (numbers/score). Spacing/Radius keys
+  UNCHANGED (645+ call sites) — apply the 24px-padding rhythm per-screen.
+- **`4bf0619` Landing:** red "cooked", 2×2 value-prop card grid, AnalyzingHero ring 78→104 + the white
+  "comet" leading dot + `/100` + fade-on-land + band halo.
+- **`4bbf92a` Auth:** new `FloatingLabelInput` (centered placeholder floats up on focus/value, `Easings.sharp`,
+  neon focus border+glow, eye accessory); `LoginScreen` rebuilt to the reference (back + "amibroke?" brand,
+  mode-driven hero, dark OAuth pills, progressive password reveal on a valid email, agree-checkbox sign-up-only,
+  bottom mode toggle — all Supabase/OAuth/validation/legal logic preserved); `NeonButton` disabled = accent@42%
+  + opt-in `glow` prop; `AuthBackground` = ONE soft drifting neon bloom (SVG radial ellipse) above the CTA.
+- **Landmines / decisions:**
+  - **Pull exact colors/sizes from the reference HTML, not screenshots** — the icon glyph was wrongly `accent`
+    (tint `#ff5fa6`) vs the real `accentSolid` `#FF007A`. (memory [[match-html-source-colors]])
+  - **Don't render the Claude Design HTML** (CDN + SRI fail under `file://` → blank); the user supplies
+    screenshots. (memory [[claude-design-screenshots]])
+  - **Doctrine override (user-approved):** a single restrained drifting bloom IS allowed on auth — the doctrine
+    ban is about *multiple* orbs. ⚠️ `design-doctrine.md` / `screenVariants.ts` still say "banned"; do NOT let an
+    `/audit-screen` revert `AuthBackground.tsx`.
+  - react-native-svg animated `<G rotation>` ignores `originX/originY` (rotates about 0,0 → off-screen "clone").
+    Position dots directly from the arc-head angle instead.
+  - Behavior change: terms-agreement gate is now **sign-up-only** (was enforced in both modes).
+- **PROGRESS / next:** Landing + auth DONE, committed, visually verified on the 16e sim. Remaining (briefs'
+  build order): **Roast Me composer → Results → Share → Community → History/Trend → 90-Day Plan → Check-In →
+  Paywall → Profile**, then utility screens with no brief (Dashboard, Tools, DebtPayoff, Notifications,
+  EditProfile, RoastVoice, legal, Splash). Commits unpushed.
+
 ### 2026-06-16 — Claude Design briefs for the remaining app screens — UNCOMMITTED
 - Wrote [`docs/redesign/screen-briefs-for-claude-design.md`](redesign/screen-briefs-for-claude-design.md):
   one brief each for the 9 still-to-design screens (**Roast Me composer, Results, Share, Community,
