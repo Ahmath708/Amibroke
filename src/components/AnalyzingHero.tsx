@@ -56,11 +56,12 @@ function sampleForBand(bandIndex: number): Sample {
   return { score, points: buildPoints(score) };
 }
 
-const RING = 78;
-const STROKE = RING * 0.1;
+const RING = 104;
+const STROKE = 9.5;
 const R = (RING - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
-const CHART_H = 48;
+const COMET_R = 4.2;        // white leading dot at the arc head — shows only while sweeping
+const CHART_H = 44;
 const DRAW_MS = Durations.reveal; // 1500 — ring/line draw
 const HOLD_MS = 1500;             // dwell on the finished sample
 const FADE_MS = Durations.normal; // 350 — cross-fade to the next sample
@@ -74,6 +75,7 @@ const DASH = 800; // any length >= the sparkline path length
 export default function AnalyzingHero() {
   const progress = useRef(new Animated.Value(0)).current; // 0→1 drives ring + line
   const cardOpacity = useRef(new Animated.Value(1)).current;
+  const cometOpacity = useRef(new Animated.Value(0)).current; // white comet: on while sweeping, fades out on land
   const bag = useRef<number[]>([]);          // remaining band indices this round
   const lastBand = useRef<number | null>(null);
 
@@ -95,6 +97,7 @@ export default function AnalyzingHero() {
   const [sample, setSample] = useState<Sample>(() => nextSample());
   const [chartW, setChartW] = useState(0);
   const [display, setDisplay] = useState(0);
+  const [comet, setComet] = useState({ x: RING / 2, y: RING / 2 - R }); // arc-head dot, starts at top
   const [analyzing, setAnalyzing] = useState(true);
   const reduce = useReducedMotion();
 
@@ -107,6 +110,10 @@ export default function AnalyzingHero() {
         const next = Math.round(value * sample.score);
         return next === prev ? prev : next;
       });
+      // Position the comet at the arc's head — same geometry as the arc sweep
+      // (top origin, clockwise). frac = value · score/100.
+      const ang = ((-90 + value * (sample.score / 100) * 360) * Math.PI) / 180;
+      setComet({ x: RING / 2 + R * Math.cos(ang), y: RING / 2 + R * Math.sin(ang) });
     });
     return () => progress.removeListener(id);
   }, [progress, sample.score]);
@@ -114,9 +121,10 @@ export default function AnalyzingHero() {
   // The loop: draw → hold → fade out → advance sample → fade in → repeat.
   useEffect(() => {
     if (reduce) {
-      // Reduce Motion: present one fully-drawn sample, no sweep/cycle.
+      // Reduce Motion: present one fully-drawn sample, no sweep/cycle/comet.
       progress.setValue(1);
       cardOpacity.setValue(1);
+      cometOpacity.setValue(0);
       setAnalyzing(false);
       return;
     }
@@ -128,6 +136,7 @@ export default function AnalyzingHero() {
       progress.setValue(0);
       setAnalyzing(true);
       cardOpacity.setValue(1);
+      cometOpacity.setValue(1); // comet visible while the arc sweeps
       Animated.timing(progress, {
         toValue: 1,
         duration: DRAW_MS,
@@ -136,6 +145,12 @@ export default function AnalyzingHero() {
       }).start(({ finished }) => {
         if (!finished || cancelled) return;
         setAnalyzing(false);
+        // Comet fades out as the arc locks in (matches the reference's .3s ease).
+        Animated.timing(cometOpacity, {
+          toValue: 0,
+          duration: FADE_MS,
+          useNativeDriver: false, // same node as the JS-driven rotation — keep off native
+        }).start();
         holdTimer = setTimeout(() => {
           if (cancelled) return;
           Animated.timing(cardOpacity, {
@@ -156,8 +171,9 @@ export default function AnalyzingHero() {
       if (holdTimer) clearTimeout(holdTimer);
       progress.stopAnimation();
       cardOpacity.stopAnimation();
+      cometOpacity.stopAnimation();
     };
-  }, [sample, progress, cardOpacity, reduce]);
+  }, [sample, progress, cardOpacity, cometOpacity, reduce]);
 
   const onChartLayout = (e: LayoutChangeEvent) => setChartW(e.nativeEvent.layout.width);
 
@@ -180,9 +196,9 @@ export default function AnalyzingHero() {
   return (
     <Animated.View style={[styles.card, { opacity: cardOpacity }]}>
       {/* Score ring */}
-      <View style={styles.ringWrap}>
+      <View style={[styles.ringWrap, { shadowColor: band.color }]}>
         <Svg width={RING} height={RING}>
-          <Circle cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={Colors.backgroundSecondary} strokeWidth={STROKE} />
+          <Circle cx={RING / 2} cy={RING / 2} r={R} fill="none" stroke={Colors.glassBorder} strokeWidth={STROKE} />
           <AnimatedCircle
             cx={RING / 2}
             cy={RING / 2}
@@ -195,10 +211,12 @@ export default function AnalyzingHero() {
             strokeLinecap="round"
             transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />
+          <AnimatedCircle cx={comet.x} cy={comet.y} r={COMET_R} fill="#fff" opacity={cometOpacity} />
         </Svg>
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <View style={styles.ringCenter}>
             <Text style={[styles.scoreNum, { color: band.color }]}>{display}</Text>
+            <Text style={styles.scoreDen}>/100</Text>
           </View>
         </View>
       </View>
@@ -237,32 +255,48 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.xl,
+    gap: Spacing.xl,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: Radius.xxl,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.glassBorderLight,
-    padding: Spacing.md,
+    borderColor: Colors.glassBorder,
+    padding: Spacing.xl,
   },
-  ringWrap: { width: RING, height: RING },
+  // Soft band-colored halo behind the ring (shadowColor set per-sample inline).
+  ringWrap: {
+    width: RING,
+    height: RING,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+  },
   ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scoreNum: {
-    fontFamily: Typography.fonts.heading,
-    fontWeight: '700',
-    fontSize: RING * 0.32,
-    letterSpacing: -1,
+    fontFamily: Typography.fonts.extrabold,
+    fontWeight: '800',
+    fontSize: RING * 0.30,
+    letterSpacing: -1.5,
   },
-  right: { flex: 1, justifyContent: 'center', gap: Spacing.sm },
+  scoreDen: {
+    fontFamily: Typography.fonts.mono,
+    fontSize: 10,
+    color: Colors.textTertiary,
+    marginTop: 2,
+  },
+  right: { flex: 1, justifyContent: 'center', gap: Spacing.md },
   status: { fontFamily: Typography.fonts.body },
   analyzing: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.subhead.fontSize,
+    fontFamily: Typography.fonts.extrabold,
+    fontWeight: '800',
+    fontSize: Typography.title2.fontSize,
+    letterSpacing: -0.6,
     color: Colors.textSecondary,
   },
   statusValue: {
-    fontFamily: Typography.fonts.headingSemi,
-    fontSize: Typography.subhead.fontSize,
-    fontWeight: '700',
+    fontFamily: Typography.fonts.extrabold,
+    fontSize: Typography.title2.fontSize,
+    fontWeight: '800',
+    letterSpacing: -0.6,
   },
   chart: { height: CHART_H, width: '100%' },
 });

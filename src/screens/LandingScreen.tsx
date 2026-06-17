@@ -2,8 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types';
@@ -14,6 +13,7 @@ import NeonButton from '@/components/NeonButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import AnalyzingHero from '@/components/AnalyzingHero';
 import RoastIcon from '@/components/RoastIcon';
+import { getScoreBand } from '@shared/scoring/bands.ts';
 import { enterUp, useReducedMotion } from '@/components/motion';
 import { trackFunnelStep } from '@/services/analytics';
 
@@ -21,18 +21,19 @@ type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Landin
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-const HERO_LINES = [
-  { text: 'Find out if your finances', emoji: '' },
-  { text: 'are cooked.', emoji: '' },
-];
+// "cooked" is rendered in the Cooked-band color — the one intentional non-accent
+// hue on this screen (matches the score-band reference).
+const COOKED = getScoreBand(0).color;
 
+type MciName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 type IconComp = (p: { size?: number; color?: string }) => React.JSX.Element;
 const ion = (name: IoniconsName): IconComp => (p) => <Ionicons name={name} {...p} />;
-const VALUE_PROPS: { Icon: IconComp; title: string; desc: string }[] = [
-  { Icon: ion('create-outline'),    title: 'Type your finances', desc: 'Plain English. No spreadsheets.' },
-  { Icon: RoastIcon,                title: 'Get roasted by AI',  desc: 'Brutally honest but never cruel.' },
-  { Icon: ion('bar-chart-outline'), title: 'See your score',     desc: '0–100 financial health rating.' },
-  { Icon: ion('calendar-outline'),  title: 'Fix your life',      desc: 'Personalized 90-day action plan.' },
+const mci = (name: MciName): IconComp => (p) => <MaterialCommunityIcons name={name} {...p} />;
+const VALUE_PROPS: { Icon: IconComp; label: string }[] = [
+  { Icon: mci('keyboard-outline'),     label: 'Type your finances' },
+  { Icon: RoastIcon,                   label: 'Get roasted by AI' },
+  { Icon: ion('speedometer-outline'),  label: 'See your score' },
+  { Icon: ion('trending-up-outline'),  label: 'Fix your life' },
 ];
 
 export default function LandingScreen({ navigation }: Props) {
@@ -40,7 +41,7 @@ export default function LandingScreen({ navigation }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [visible, setVisible] = useState(false);
+  const [, setVisible] = useState(false);
   const reduce = useReducedMotion();
 
   useEffect(() => {
@@ -77,54 +78,44 @@ export default function LandingScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <ScreenBackground variant="home" />
-      <View style={[styles.content, { paddingTop: insets.top + Spacing.md }]}>
-        {/* Hero Section */}
-        <Animated.View style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.heroTitleWrap}>
-            {HERO_LINES.map((line, i) => (
-              <View key={i} style={styles.heroLine}>
-                <Text style={styles.heroTitle}>{line.text}</Text>
-              </View>
-            ))}
-          </View>
+      <View style={[styles.content, { paddingTop: insets.top + Spacing.xl, paddingBottom: insets.bottom + Spacing.lg }]}>
+        {/* Hero headline */}
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <Text style={styles.heroTitle}>
+            Find out if your finances are <Text style={styles.heroAccent}>cooked</Text>
+          </Text>
+        </Animated.View>
+
+        {/* Animated "analyzing" score hero — floats centered in the gap */}
+        <Animated.View style={[styles.slot, { opacity: fadeAnim }]}>
           <AnalyzingHero />
         </Animated.View>
 
-        {/* Value Props — cascade in one after another (staggered entrance) */}
-        <View style={styles.values}>
+        {/* Value props — 2×2 card grid */}
+        <View style={styles.grid}>
           {VALUE_PROPS.map((v, i) => (
-            <ReAnimated.View key={i} entering={enterUp(i + 2)} style={styles.valueRow}>
-              <View style={styles.valueIcon}>
-                <v.Icon size={22} color={Colors.accent} />
+            <ReAnimated.View key={i} entering={enterUp(i + 2)} style={styles.card}>
+              <View style={styles.cardIcon}>
+                <v.Icon size={20} color={Colors.accentSolid} />
               </View>
-              <View style={styles.valueText}>
-                <Text style={styles.valueTitle}>{v.title}</Text>
-                <Text style={styles.valueDesc}>{v.desc}</Text>
-              </View>
+              <Text style={styles.cardLabel}>{v.label}</Text>
             </ReAnimated.View>
           ))}
         </View>
 
-        {/* Social Proof */}
-        <Animated.View style={[styles.socialProof, { opacity: fadeAnim }]}>
-          <Text style={styles.socialProofText}>
-            <Text style={styles.socialProofAccent}>3 days free</Text>
-            <Text style={styles.socialProofDot}>  ·  </Text>
-            Brutally honest
-            <Text style={styles.socialProofDot}>  ·  </Text>
-            <Text style={styles.socialProofAccent}>Results in seconds</Text>
+        {/* Conversion */}
+        <Animated.View style={[styles.conversion, { opacity: fadeAnim }]}>
+          <Text style={styles.micro}>
+            3 days free <Text style={styles.microDot}>●</Text> Brutally honest{' '}
+            <Text style={styles.microDot}>●</Text> Results in seconds
           </Text>
-        </Animated.View>
-
-        {/* CTA Buttons */}
-        <Animated.View style={[styles.ctaWrap, { opacity: fadeAnim, transform: [{ scale: pulseAnim }] }]}>
-          <NeonButton
-            label="Get Started"
-            onPress={handleStart}
-            style={styles.ctaBtn}
-          />
+          <Animated.View style={{ width: '100%', transform: [{ scale: pulseAnim }] }}>
+            <NeonButton label="Get Started" onPress={handleStart} style={styles.ctaBtn} />
+          </Animated.View>
           <TouchableOpacity onPress={handleSignIn} style={styles.signInBtn} activeOpacity={0.7}>
-            <Text style={styles.signInText}>Already have an account? Sign in</Text>
+            <Text style={styles.signInText}>
+              Already have an account? <Text style={styles.signInBold}>Sign In</Text>
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -134,58 +125,73 @@ export default function LandingScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: Spacing.xl },
-  hero: { marginBottom: Spacing.lg },
-  heroTitleWrap: { marginBottom: Spacing.md },
-  heroLine: { flexDirection: 'row', alignItems: 'center' },
+  content: { flex: 1, paddingHorizontal: Spacing.xxl },
   heroTitle: {
-    fontFamily: Typography.fonts.heading,
-    fontSize: 42,
-    fontWeight: '700',
+    fontFamily: Typography.fonts.extrabold,
+    fontSize: 38,
+    fontWeight: '800',
     color: Colors.textPrimary,
-    letterSpacing: -1.5,
-    lineHeight: 44,
+    letterSpacing: -1.6,
+    lineHeight: 40,
   },
-  heroEmoji: { fontSize: 42, marginLeft: Spacing.sm },
-  values: { gap: Spacing.md, marginBottom: Spacing.lg },
-  valueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  valueIcon: {
-    width: 44, height: 44, borderRadius: Radius.lg,
+  heroAccent: { color: COOKED },
+
+  // Flexible slot pushes the value grid + conversion to the bottom while keeping
+  // the analyzing card vertically centered in the space beneath the headline.
+  slot: { flex: 1, justifyContent: 'center' },
+
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm + 3,
+    marginBottom: Spacing.xl,
+  },
+  card: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: Radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.glassBorder,
+    padding: Spacing.md + 2,
+    gap: Spacing.md,
+  },
+  cardIcon: {
+    width: 36, height: 36, borderRadius: 11,
     backgroundColor: Colors.accentContainer,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.accentBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  valueEmoji: { fontSize: Typography.title2.fontSize },
-  valueText: { flex: 1 },
-  valueTitle: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.callout.fontSize,
+  cardLabel: {
+    fontFamily: Typography.fonts.bodySemi,
+    fontSize: 14,
     color: Colors.textPrimary,
+    letterSpacing: -0.2,
   },
-  valueDesc: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.footnote.fontSize,
+
+  conversion: { alignItems: 'center' },
+  micro: {
+    fontFamily: Typography.fonts.bodyMed,
+    fontSize: 12.5,
     color: Colors.textSecondary,
-    marginTop: 1,
+    letterSpacing: -0.1,
+    marginBottom: Spacing.xxl,
+    textAlign: 'center',
   },
-  socialProof: { alignItems: 'center', marginBottom: Spacing.lg },
-  socialProofText: {
-    fontFamily: Typography.fonts.bodyMed,
-    fontSize: Typography.subhead.fontSize,
-    color: Colors.textPrimary,
-    letterSpacing: 0.3,
+  microDot: { color: Colors.textTertiary, fontSize: 9 },
+  // Pink glow under the primary CTA (matches the reference box-shadow).
+  ctaBtn: {
+    shadowColor: Colors.accentSolid,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.42,
+    shadowRadius: 17,
   },
-  socialProofAccent: {
-    fontFamily: Typography.fonts.headingSemi,
-    color: Colors.accent,
-    fontWeight: '700',
-  },
-  socialProofDot: { color: Colors.textMuted },
-  ctaWrap: { gap: Spacing.sm, marginBottom: Spacing.md },
-  ctaBtn: {},
-  signInBtn: { alignItems: 'center', paddingVertical: Spacing.sm },
+  signInBtn: { alignItems: 'center', paddingVertical: Spacing.md, marginTop: Spacing.xs },
   signInText: {
-    fontFamily: Typography.fonts.body,
-    fontSize: Typography.callout.fontSize,
+    fontFamily: Typography.fonts.bodyMed,
+    fontSize: 13.5,
     color: Colors.textSecondary,
   },
+  signInBold: { fontFamily: Typography.fonts.heading, color: Colors.textPrimary, fontWeight: '700' },
 });
