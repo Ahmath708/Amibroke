@@ -18,7 +18,7 @@ import { RootStackParamList } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import { PencilSquareIcon } from 'react-native-heroicons/outline';
 import TierPill from '@/components/TierPill';
-import LoadingState from '@/components/LoadingState';
+import Skeleton from '@/components/Skeleton';
 import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/context/AuthContext';
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile';
@@ -123,9 +123,20 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   if (loading) {
+    // Skeleton mirrors the real layout (large title → hero card → settings rows) so
+    // content swaps in without a jump — far calmer than a centered spinner.
     return (
       <View style={styles.container}>
-        <LoadingState style={{ paddingTop: insets.top + 80 }} />
+        <ScreenBackground variant="profile" />
+        <View style={[styles.scroll, { paddingTop: insets.top + 16 }]}>
+          <Skeleton width="55%" height={34} radius={Radius.sm} style={{ marginBottom: Spacing.xl }} />
+          <Skeleton height={104} radius={Radius.lg} style={{ marginBottom: Spacing.xxl }} />
+          <View style={{ gap: Spacing.md }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} height={56} radius={Radius.lg} />
+            ))}
+          </View>
+        </View>
       </View>
     );
   }

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NavigationAction } from '@react-navigation/native';
 import { RootStackParamList } from '@/types';
-import { Colors, Typography, Spacing } from '@/theme/colors';
+import { Colors, Typography, Spacing, Radius } from '@/theme/colors';
 import ScreenBackground from '@/components/ScreenBackground';
+import Skeleton from '@/components/Skeleton';
 import NeonButton from '@/components/NeonButton';
 import ConfirmSheet from '@/components/ConfirmSheet';
 import FinancialContextForm, { ContextValues } from '@/components/FinancialContextForm';
@@ -95,7 +96,18 @@ export default function FinancialContextScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground variant="home" />
       {!initial ? (
-        <View style={styles.loading}><ActivityIndicator color={Colors.accent} /></View>
+        // Skeleton mirrors the form (subtitle → labelled field groups) — calmer than a centered spinner.
+        <View style={[styles.scroll, { paddingTop: Spacing.xl }]}>
+          <Skeleton width="80%" height={18} radius={Radius.sm} style={{ marginBottom: Spacing.xl }} />
+          <View style={{ gap: Spacing.xl }}>
+            {Array.from({ length: LIFE_FIELDS.length }).map((_, i) => (
+              <View key={i} style={{ gap: Spacing.sm }}>
+                <Skeleton width="40%" height={14} radius={Radius.sm} />
+                <Skeleton height={48} radius={Radius.lg} />
+              </View>
+            ))}
+          </View>
+        </View>
       ) : (
         <>
           <ScrollView
@@ -146,7 +158,6 @@ export default function FinancialContextScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: Spacing.xl },
   subtitle: {
     fontFamily: Typography.fonts.body, fontSize: Typography.subhead.fontSize,

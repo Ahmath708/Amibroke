@@ -118,7 +118,7 @@ function IOSTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const reduce = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
-  const navOffset = Math.min(insets.bottom, 26) + TAB_FLOAT_MARGIN;
+  const navOffset = Math.min(insets.bottom, 12) + TAB_FLOAT_MARGIN;
 
   // FAB rotates the ⊕ to an ✕ while the action menu is open.
   const rot = useSharedValue(0);
