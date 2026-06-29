@@ -252,9 +252,9 @@ component, hook, util, or data call, grep for an existing one.** Specifically:
 ## Common commands
 
 ```bash
-npm run ios:e                                            # build+launch on the 16e sim (6.1" small worst-case — daily design driver)
-npm run ios:pro                                          # build+launch on the iPhone 17 Pro sim (showcase / demo)
-npm run ios:sim                                           # no-Expo fallback: xcodebuild → iphonesimulator SDK directly
+npm run ios:sim                                          # PRIMARY: build+launch on the 16e sim via xcodebuild (no signing) — daily driver
+npm run ios:sim "iPhone 17 Pro"                          # showcase/demo sim, by name
+# npm run ios:e / ios:pro                                 # BROKEN on Expo 55.0.32 + Xcode 26.6 (signing error even with sim UDID — see Gotchas)
 npx expo start                                            # Metro (press shift+i to switch sims)
 npx tsc --noEmit                                          # typecheck the app
 npm test                                                  # jest
@@ -281,15 +281,25 @@ client-side.
   read.** Note a redeploy of an *unchanged* function with this pattern also crashes — the landmine
   is the deploy, not the edit.
 
-- **`expo run:ios` works for the simulator — pass the sim's UDID, not its name.** Under Xcode 26 +
-  Expo SDK 55, `expo run:ios --device "iPhone 16e"` (the *name*)
-  mis-resolves the build destination to a device/generic target and fails with "No code signing
-  certificates are available." Passing the **simulator UDID** instead (`expo run:ios --device <UDID>`)
-  pins it to the simulator, where signing is local-only — so the build **ignores** the personal-team
-  provisioning errors (Sign in with Apple / Push Notifications need the paid Developer Program, but
-  only for *device* builds). `npm run ios:e` / `ios:pro` resolve the sim's UDID automatically, so they
-  work through Expo (Metro + dev client managed by Expo). `npm run ios:sim` (`tools/run-sim.sh`)
-  remains the no-Expo fallback — it builds the *iphonesimulator* SDK directly via `xcodebuild`.
+- **`npm run ios:e` / `ios:pro` are BROKEN — `expo run:ios` can no longer target the simulator at
+  all on this toolchain; use `npm run ios:sim`.** Originally the fix was "pass the sim's UDID not its
+  name" (the *name* mis-resolved to a device/generic target → "No code signing certificates are
+  available"). That workaround is now **dead**: on **Expo CLI 55.0.32 + Xcode 26.6**, `expo run:ios
+  --device <UDID>` classifies even a *booted-simulator* UDID as a **physical device** ("Your computer
+  requires some additional setup before you can build onto physical iOS devices") and fails the same
+  signing way — so the auto-UDID `ios:e`/`ios:pro` scripts both fail. **`npm run ios:sim`
+  (`tools/run-sim.sh`) is the primary path now** — it bypasses Expo's device picker entirely and
+  builds the *iphonesimulator* SDK directly via `xcodebuild` (`-sdk iphonesimulator`), which needs no
+  signing, then installs + launches via `simctl`. (Verified 2026-06-29: `ios:e` failed even with the
+  resolved UDID; `ios:sim` built + launched the app on the 16e.)
+  - **Don't run two sim builds against the shared `ios/build` derived-data path at once** — concurrent
+    `xcodebuild`s fail with `unable to attach DB: … database is locked … two concurrent builds running
+    in the same filesystem location`, which poisons the build. If a build dies this way, the artifacts
+    may still be intact: skip the rebuild and just `xcrun simctl install <UDID>
+    ios/build/Build/Products/Debug-iphonesimulator/AmIBroke.app` + `xcrun simctl launch <UDID>
+    com.aibroke.app` (the last two steps `run-sim.sh` does — note it's `set -euo pipefail`, so a failed
+    `xcodebuild` aborts before it ever reaches install/launch, which reads as "built but never
+    launched").
 
 - **A config-plugin's Info.plist edits need a *clean* prebuild — incremental `expo run:ios` won't apply
   them.** When `ios/` already exists, `npm run ios:e` autolinks new native modules (via pods) but does
